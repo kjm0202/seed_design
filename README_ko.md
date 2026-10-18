@@ -1,4 +1,4 @@
-# 시드 디자인 플러터
+# seed_design
 
 [영문 문서](README.md)
 
