@@ -4,6 +4,8 @@
 
 Try the package’s buttons, inputs, menus, and other components. Use the button in the top-right corner to switch between light and dark themes.
 
+[Open the web showcase](https://kjm0202.github.io/seed_design/).
+
 Requires Flutter 3.47.0 or later and Dart 3.13.0 or later.
 
 ## Run
@@ -34,4 +36,14 @@ From the example directory:
 
 ```sh
 flutter test
+```
+
+## Web deployment
+
+The [GitHub Pages workflow](../.github/workflows/showcase.yml) rebuilds and deploys the showcase when the app or library changes on `master`. You can also run it manually from the repository's Actions tab.
+
+To build the same site locally, run this from the example directory:
+
+```sh
+flutter build web --release --base-href /seed_design/
 ```

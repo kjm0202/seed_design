@@ -4,6 +4,8 @@
 
 An unofficial Flutter port of Karrot(also known as Danggn in Korea)’s [SEED Design](https://seed-design.io/).
 
+[Try the web showcase](https://kjm0202.github.io/seed_design/) in your browser.
+
 ## Requirements
 
 - Flutter 3.47.0 or later
@@ -21,7 +23,7 @@ dependencies:
   flutter:
     sdk: flutter
   material_ui: ^1.7.0
-  seed_design: ^0.1.0
+  seed_design: ^0.1.1
 ```
 
 ```sh

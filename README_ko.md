@@ -4,6 +4,8 @@
 
 당근의 [시드 디자인](https://seed-design.io/)을 플러터로 옮긴 비공식 패키지입니다.
 
+[웹 쇼케이스](https://kjm0202.github.io/seed_design/)에서 컴포넌트를 직접 써볼 수 있습니다.
+
 ## 개발 환경
 
 - Flutter >= 3.47.0
@@ -21,7 +23,7 @@ dependencies:
   flutter:
     sdk: flutter
   material_ui: ^1.7.0
-  seed_design: ^0.1.0
+  seed_design: ^0.1.1
 ```
 
 ```sh
