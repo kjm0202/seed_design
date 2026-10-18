@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:seed_design/seed_design.dart';
@@ -9,6 +10,84 @@ Widget host(Widget child) => MaterialApp(
 );
 
 void main() {
+  testWidgets('pointer focus stays hidden until keyboard interaction', (
+    tester,
+  ) async {
+    final manager = FocusManager.instance;
+    final previousStrategy = manager.highlightStrategy;
+    manager.highlightStrategy = FocusHighlightStrategy.alwaysTraditional;
+    addTearDown(() => manager.highlightStrategy = previousStrategy);
+    final focusNode = FocusNode();
+    addTearDown(focusNode.dispose);
+    var activations = 0;
+    await tester.pumpWidget(
+      host(
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SeedPressable(
+              focusNode: focusNode,
+              onTap: () => activations++,
+              child: const SizedBox(
+                width: 100,
+                height: 48,
+                child: Text('Action'),
+              ),
+            ),
+            TextButton(onPressed: () {}, child: const Text('After')),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    Border? focusBorder() {
+      final box = tester.widget<DecoratedBox>(
+        find.descendant(
+          of: find.byType(SeedPressable),
+          matching: find.byType(DecoratedBox),
+        ),
+      );
+      return (box.decoration as BoxDecoration).border as Border?;
+    }
+
+    await tester.tap(find.text('Action'), kind: PointerDeviceKind.mouse);
+    await tester.pumpAndSettle();
+    expect(focusNode.hasFocus, isTrue);
+    expect(activations, 1);
+    expect(focusBorder(), isNull);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.space);
+    await tester.pumpAndSettle();
+    expect(activations, 2);
+    expect(focusBorder()?.top.width, 2);
+
+    await tester.tap(find.text('Action'), kind: PointerDeviceKind.mouse);
+    await tester.pumpAndSettle();
+    expect(activations, 3);
+    expect(focusBorder(), isNull);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(activations, 4);
+    expect(focusBorder()?.top.width, 2);
+
+    await tester.tap(find.text('Action'), kind: PointerDeviceKind.mouse);
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pumpAndSettle();
+    expect(focusNode.hasFocus, isFalse);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pumpAndSettle();
+    expect(focusNode.hasFocus, isTrue);
+    expect(focusBorder()?.top.width, 2);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('tabs arrows wrap, skip disabled items and leave one Tab stop', (
     tester,
   ) async {

@@ -90,6 +90,7 @@ class _SeedPressableState extends State<SeedPressable>
   bool _isPressed = false;
   bool _hasFocus = false;
   bool _showFocus = false;
+  bool _focusFromPointer = false;
   final FocusNode _internalFocusNode = FocusNode();
 
   FocusNode get _focusNode => widget.focusNode ?? _internalFocusNode;
@@ -107,6 +108,7 @@ class _SeedPressableState extends State<SeedPressable>
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_handleKeyEvent);
     _controller.dispose();
     _internalFocusNode.dispose();
     super.dispose();
@@ -114,8 +116,34 @@ class _SeedPressableState extends State<SeedPressable>
 
   void _handleTapDown(TapDownDetails details) {
     if (!_interactive) return;
-    setState(() => _isPressed = true);
+    setState(() {
+      _isPressed = true;
+      _focusFromPointer = true;
+    });
     _controller.animateTo(1.0, curve: SeedCurves.pressedScale);
+  }
+
+  bool _handleKeyEvent(KeyEvent event) {
+    if (_focusFromPointer &&
+        (event is KeyDownEvent || event is KeyRepeatEvent)) {
+      setState(() => _focusFromPointer = false);
+    }
+    return false;
+  }
+
+  void _handleFocusChange(bool value) {
+    if (!mounted) return;
+    // Listen while focused so keyboard use restores the ring after a click,
+    // even when a shortcut handles the key before it reaches the focus node.
+    if (value) {
+      HardwareKeyboard.instance.addHandler(_handleKeyEvent);
+    } else {
+      HardwareKeyboard.instance.removeHandler(_handleKeyEvent);
+    }
+    setState(() {
+      _hasFocus = value;
+      if (!value) _focusFromPointer = false;
+    });
   }
 
   void _handleTapUp(TapUpDetails details) {
@@ -180,9 +208,7 @@ class _SeedPressableState extends State<SeedPressable>
         mouseCursor: _interactive
             ? SystemMouseCursors.click
             : SystemMouseCursors.basic,
-        onFocusChange: (value) {
-          if (mounted) setState(() => _hasFocus = value);
-        },
+        onFocusChange: _handleFocusChange,
         onShowFocusHighlight: (value) {
           if (mounted) setState(() => _showFocus = value);
         },
@@ -204,7 +230,7 @@ class _SeedPressableState extends State<SeedPressable>
           position: DecorationPosition.foreground,
           decoration: BoxDecoration(
             borderRadius: widget.focusBorderRadius,
-            border: _showFocus && _interactive
+            border: _showFocus && !_focusFromPointer && _interactive
                 ? Border.all(
                     color:
                         Theme.of(context)
