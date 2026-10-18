@@ -4,6 +4,8 @@
 
 버튼, 입력창, 메뉴 등 패키지에 포함된 컴포넌트를 직접 써볼 수 있습니다. 오른쪽 위 버튼으로 밝은 테마와 어두운 테마를 전환할 수 있습니다.
 
+[웹 쇼케이스 열기](https://kjm0202.github.io/seed_design/)
+
 Flutter 3.47.0 이상, Dart 3.13.0 이상에서 실행할 수 있습니다.
 
 ## 실행
@@ -34,4 +36,14 @@ flutter run
 
 ```sh
 flutter test
+```
+
+## 웹 배포
+
+`master`에서 예제나 라이브러리가 바뀌면 [GitHub Pages 배포 작업](../.github/workflows/showcase.yml)이 쇼케이스를 다시 빌드하고 게시합니다. 저장소의 Actions 탭에서 직접 실행할 수도 있습니다.
+
+같은 사이트를 로컬에서 빌드하려면 예제 폴더에서 실행합니다.
+
+```sh
+flutter build web --release --base-href /seed_design/
 ```
