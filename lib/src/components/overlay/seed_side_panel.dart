@@ -1,9 +1,12 @@
+import 'dart:math' as math;
+
 import 'package:material_ui/material_ui.dart';
 
-import '../../foundations/dimensions/seed_dimension.dart';
+import '../../foundations/feedback/seed_scale_feedback.dart';
 import '../../foundations/motion/seed_motion.dart';
+import '../../foundations/radius/seed_radius.dart';
 import '../../theme/seed_theme.dart';
-import '../layout/seed_divider.dart';
+import '../layout/seed_scroll_fog.dart';
 
 /// Shows a slide-over SEED Side Panel from the right or left edge.
 Future<T?> showSeedSidePanel<T>({
@@ -13,7 +16,7 @@ Future<T?> showSeedSidePanel<T>({
   required Widget body,
   Widget? footer,
   bool fromRight = true,
-  double width = 480.0,
+  double width = 720.0,
   bool barrierDismissible = true,
 }) {
   final capturedThemes = InheritedTheme.capture(
@@ -23,47 +26,48 @@ Future<T?> showSeedSidePanel<T>({
   return showGeneralDialog<T>(
     context: context,
     barrierDismissible: barrierDismissible,
-    barrierLabel: 'Dismiss',
+    barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
     barrierColor: context.seedColor.bg.overlay,
-    transitionDuration: const Duration(milliseconds: 300),
-    pageBuilder: (context, animation, secondaryAnimation) {
-      return capturedThemes.wrap(
-        Align(
-          alignment: fromRight ? Alignment.centerRight : Alignment.centerLeft,
-          child: Material(
-            type: MaterialType.transparency,
-            child: SeedSidePanel(
-              title: title,
-              description: description,
-              body: body,
-              footer: footer,
-              width: width,
-              onClose: () => Navigator.of(context).pop(),
-            ),
+    transitionDuration: MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : SeedDuration.d6,
+    pageBuilder: (context, animation, secondaryAnimation) =>
+        capturedThemes.wrap(
+          SeedSidePanel(
+            title: title,
+            description: description,
+            body: body,
+            footer: footer,
+            width: width,
+            fromRight: fromRight,
+            onClose: () => Navigator.of(context).pop(),
           ),
         ),
-      );
-    },
     transitionBuilder: (context, animation, secondaryAnimation, child) {
-      final curved = CurvedAnimation(
-        parent: animation,
-        curve: SeedCurves.enterExpressive,
-        reverseCurve: SeedCurves.exitExpressive,
-      );
-      final offset = fromRight ? const Offset(1, 0) : const Offset(-1, 0);
-      return SlideTransition(
-        position: Tween<Offset>(
-          begin: offset,
-          end: Offset.zero,
-        ).animate(curved),
-        child: child,
+      final curve = animation.status == AnimationStatus.reverse
+          ? SeedCurves.exitExpressive.flipped
+          : SeedCurves.enterExpressive;
+      return Align(
+        alignment: fromRight ? Alignment.centerRight : Alignment.centerLeft,
+        // Translate by the panel's own width, rather than the whole viewport.
+        child: SlideTransition(
+          position: animation
+              .drive(CurveTween(curve: curve))
+              .drive(
+                Tween<Offset>(
+                  begin: fromRight ? const Offset(1, 0) : const Offset(-1, 0),
+                  end: Offset.zero,
+                ),
+              ),
+          child: child,
+        ),
       );
     },
   );
 }
 
-/// A SEED Design Side Panel component for desktop/tablet slide-over drawers.
-class SeedSidePanel extends StatelessWidget {
+/// A modal SEED Side Panel with a fixed header/footer and scrolling body.
+class SeedSidePanel extends StatefulWidget {
   const SeedSidePanel({
     super.key,
     required this.title,
@@ -71,106 +75,202 @@ class SeedSidePanel extends StatelessWidget {
     required this.body,
     this.footer,
     this.onClose,
-    this.width = 480.0,
-  });
+    this.width = 720.0,
+    this.fromRight = true,
+  }) : assert(width > 0);
 
-  /// Panel title.
   final String title;
-
-  /// Optional sub-description.
   final String? description;
-
-  /// Main content widget.
   final Widget body;
-
-  /// Optional footer with actions.
   final Widget? footer;
-
-  /// Callback when close button is pressed.
   final VoidCallback? onClose;
 
-  /// Width of the panel.
+  /// Preferred content width, capped at 80% of the available safe width.
+  /// Official small, medium (default), and large widths are 480, 720, and 960.
   final double width;
+  final bool fromRight;
+
+  @override
+  State<SeedSidePanel> createState() => _SeedSidePanelState();
+}
+
+class _SeedSidePanelState extends State<SeedSidePanel> {
+  final ScrollController _scrollController = ScrollController();
+  bool _scrolled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_updateScrolled);
+  }
+
+  void _updateScrolled() {
+    final scrolled =
+        _scrollController.hasClients && _scrollController.offset > 0;
+    if (_scrolled != scrolled) setState(() => _scrolled = scrolled);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.seedColor;
     final typography = context.seedTypography;
-    final shadows = context.seedShadows;
+    final mediaQuery = MediaQuery.of(context);
+    final insets = mediaQuery.padding;
 
-    return Container(
-      width: width,
-      constraints: BoxConstraints(
-        maxWidth: MediaQuery.sizeOf(context).width * 0.8,
-      ),
-      height: double.infinity,
-      decoration: BoxDecoration(
-        color: colors.bg.layerFloating,
-        boxShadow: shadows.s3,
-      ),
-      child: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableWidth = math.min(
+          constraints.maxWidth,
+          mediaQuery.size.width,
+        );
+        final safeWidth = math.max(0.0, availableWidth - insets.horizontal);
+        final contentWidth = math.min(widget.width, safeWidth * 0.8);
+        final edgeInset = widget.fromRight ? insets.right : insets.left;
+
+        return SizedBox(
+          width: contentWidth + edgeInset,
+          height: double.infinity,
+          child: Material(
+            color: colors.bg.layerFloating,
+            child: DefaultTextStyle(
+              style: typography.t5Regular.copyWith(color: colors.fg.neutral),
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: widget.fromRight ? 0 : edgeInset,
+                  right: widget.fromRight ? edgeInset : 0,
+                  bottom: insets.bottom,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Stack(
                       children: [
-                        Text(
-                          title,
-                          style: typography.t8Bold.copyWith(
-                            color: colors.fg.neutral,
+                        ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minHeight: 70 + insets.top,
+                          ),
+                          child: Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              24,
+                              24 + insets.top,
+                              widget.onClose == null ? 24 : 52,
+                              16,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Text(
+                                  widget.title,
+                                  style: typography.t8Bold.copyWith(
+                                    color: colors.fg.neutral,
+                                  ),
+                                ),
+                                if (widget.description != null) ...[
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    widget.description!,
+                                    style: typography.t5Regular.copyWith(
+                                      color: colors.fg.neutralMuted,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
                           ),
                         ),
-                        if (description != null) ...[
-                          const SizedBox(height: SeedDimension.x1_5),
-                          Text(
-                            description!,
-                            style: typography.t5Regular.copyWith(
-                              color: colors.fg.neutralMuted,
+                        if (widget.onClose != null)
+                          Positioned(
+                            // The 52px target extends 15px around the 22px icon.
+                            top: 13 + insets.top,
+                            right: 9,
+                            child: SeedPressable(
+                              semanticsLabel: '닫기',
+                              onTap: widget.onClose,
+                              builder: (context, pressed) => AnimatedContainer(
+                                width: 52,
+                                height: 52,
+                                duration: mediaQuery.disableAnimations
+                                    ? Duration.zero
+                                    : SeedDuration.colorTransition,
+                                curve: SeedCurves.easing,
+                                decoration: BoxDecoration(
+                                  color: pressed
+                                      ? colors.bg.transparentPressed
+                                      : colors.bg.transparent,
+                                  borderRadius: SeedBorderRadius.r3,
+                                ),
+                                child: Center(
+                                  child: Icon(
+                                    Icons.close,
+                                    size: 22,
+                                    color: colors.fg.neutralSubtle,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    Expanded(
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          SingleChildScrollView(
+                            controller: _scrollController,
+                            padding: const EdgeInsets.fromLTRB(24, 0, 24, 48),
+                            child: widget.body,
+                          ),
+                          Positioned(
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            child: IgnorePointer(
+                              child: AnimatedContainer(
+                                key: const ValueKey(
+                                  'seed-side-panel-scroll-divider',
+                                ),
+                                height: 1,
+                                duration: mediaQuery.disableAnimations
+                                    ? Duration.zero
+                                    : SeedDuration.colorTransition,
+                                curve: SeedCurves.easing,
+                                color: _scrolled
+                                    ? colors.stroke.neutralMuted
+                                    : Colors.transparent,
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            child: SeedScrollFog(
+                              placement: SeedScrollFogPlacement.bottom,
+                              size: 48,
+                              color: colors.bg.layerFloating,
                             ),
                           ),
                         ],
-                      ],
+                      ),
                     ),
-                  ),
-                  if (onClose != null)
-                    IconButton(
-                      icon: Icon(Icons.close, color: colors.fg.neutralSubtle),
-                      onPressed: onClose,
-                      splashRadius: 20,
-                    ),
-                ],
+                    if (widget.footer != null)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                        child: widget.footer,
+                      ),
+                  ],
+                ),
               ),
             ),
-
-            const SeedDivider(),
-
-            // Body
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 48),
-                child: body,
-              ),
-            ),
-
-            // Footer
-            if (footer != null) ...[
-              const SeedDivider(),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-                child: footer!,
-              ),
-            ],
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

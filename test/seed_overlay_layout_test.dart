@@ -1,8 +1,10 @@
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
+import 'support/official_spec.dart';
 import 'support/seed_test_fonts.dart';
 
 Future<void> mount(
@@ -158,4 +160,128 @@ void main() {
     expect(find.text('항목 29').hitTestable(), findsOneWidget);
     expect(find.text('닫기').hitTestable(), findsOneWidget);
   });
+
+  testWidgets('side panel uses official default width and header geometry', (
+    tester,
+  ) async {
+    addTearDown(tester.view.reset);
+    for (final size in [const Size(390, 800), const Size(1400, 900)]) {
+      await mount(
+        tester,
+        Align(
+          alignment: Alignment.centerRight,
+          child: SeedSidePanel(
+            title: '상세 정보',
+            body: const Text('본문'),
+            onClose: () {},
+          ),
+        ),
+        size: size,
+      );
+      final panel = tester.getRect(find.byType(SeedSidePanel));
+      expect(panel.width, (size.width * 0.8).clamp(0, 720));
+      expect(panel.right, size.width);
+      final title = tester.getRect(find.text('상세 정보'));
+      expect(title.top - panel.top, 24);
+      expect(title.left - panel.left, 24);
+      expect(tester.getTopLeft(find.text('본문')).dy, 70);
+      final closeIcon = tester.getRect(find.byIcon(Icons.close));
+      expect(closeIcon.size, const Size(22, 22));
+      expect(closeIcon.top, 28);
+      expect(panel.right - closeIcon.right, 24);
+      expect(tester.takeException(), isNull);
+    }
+  });
+
+  testWidgets('side panel shows a divider only after scrolling its body', (
+    tester,
+  ) async {
+    addTearDown(tester.view.reset);
+    for (final dark in [false, true]) {
+      await mount(
+        tester,
+        SeedSidePanel(
+          key: ValueKey(dark),
+          title: '상세 정보',
+          body: Column(children: List.generate(40, (i) => Text('본문 $i'))),
+          footer: const Text('고정 액션'),
+          onClose: () {},
+        ),
+        dark: dark,
+      );
+      final divider = find.byKey(
+        const ValueKey('seed-side-panel-scroll-divider'),
+      );
+      expect(
+        (tester.widget<AnimatedContainer>(divider).decoration as BoxDecoration)
+            .color,
+        Colors.transparent,
+      );
+      expect(tester.getSize(find.byType(SeedScrollFog)).height, 48);
+      final footer = tester.getRect(find.text('고정 액션'));
+      await tester.drag(
+        find.byType(SingleChildScrollView),
+        const Offset(0, -200),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        (tester.widget<AnimatedContainer>(divider).decoration as BoxDecoration)
+            .color,
+        officialColor(r'$color.stroke.neutral-muted', dark: dark),
+      );
+      expect(tester.getRect(find.text('고정 액션')), footer);
+      expect(tester.takeException(), isNull);
+    }
+  });
+
+  testWidgets(
+    'side panel routes slide by their own width and honor safe areas',
+    (tester) async {
+      addTearDown(tester.view.reset);
+      const size = Size(1400, 900);
+      const padding = EdgeInsets.fromLTRB(30, 20, 70, 24);
+      for (final fromRight in [false, true]) {
+        await mount(
+          tester,
+          Builder(
+            builder: (context) => TextButton(
+              onPressed: () => showSeedSidePanel<void>(
+                context: context,
+                title: '안전 영역',
+                body: const Text('본문'),
+                fromRight: fromRight,
+              ),
+              child: const Text('Open'),
+            ),
+          ),
+          size: size,
+          padding: padding,
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+        final panel = find.byType(SeedSidePanel);
+        final slide = tester.widget<SlideTransition>(
+          find.ancestor(of: panel, matching: find.byType(SlideTransition)),
+        );
+        final bounds = tester.getRect(panel);
+        final edgeInset = fromRight ? padding.right : padding.left;
+        expect(bounds.width, 720 + edgeInset);
+        final restingLeft = fromRight ? size.width - bounds.width : 0;
+        expect(
+          bounds.left,
+          closeTo(restingLeft + slide.position.value.dx * bounds.width, 0.01),
+        );
+        await tester.pumpAndSettle();
+        final title = tester.getRect(find.text('안전 영역'));
+        expect(title.top, 24 + padding.top);
+        final close = tester.getRect(find.byIcon(Icons.close));
+        expect(close.top, 28 + padding.top);
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pumpAndSettle();
+        expect(panel, findsNothing);
+        expect(tester.takeException(), isNull);
+      }
+    },
+  );
 }
