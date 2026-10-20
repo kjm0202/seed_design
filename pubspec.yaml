@@ -1,6 +1,6 @@
 name: seed_design
 description: "An unofficial Flutter port of Karrot's SEED Design System, with semantic tokens, accessible controls and Material theme integration."
-version: 0.2.0
+version: 0.3.0
 repository: https://github.com/kjm0202/seed_design
 issue_tracker: https://github.com/kjm0202/seed_design/issues
 topics:

@@ -1,3 +1,11 @@
+## 0.3.0
+
+- Fix Menu Sheet width and safe-area alignment on wide screens.
+- Align Side Panel layout and scrolling with official specifications; change the
+  default width from 480px to 720px.
+- Refine confirmation dialog, bottom sheet, and detail panel examples.
+- Center numbered pagination in the catalog.
+
 ## 0.2.0
 
 - Add gradient tokens, `articleNote`, reaction button labels, input/picker size
