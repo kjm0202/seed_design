@@ -26,7 +26,7 @@ class OverlaysTab extends StatelessWidget {
               onPressed: () {
                 showSeedAlertDialog(
                   context: context,
-                  title: '알림 설정을 저장하시겠습니까?',
+                  title: '알림 설정을 저장할까요?',
                   description: '설정하신 키워드에 대한 푸시 알림이 즉시 활성화됩니다.',
                   confirmText: '저장하기',
                   cancelText: '취소',
