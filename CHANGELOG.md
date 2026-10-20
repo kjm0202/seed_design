@@ -1,6 +1,14 @@
-## Unreleased
+## 0.2.0
 
-* Show control focus rings for keyboard interaction and hide them after pointer clicks.
+- Add gradient tokens, `articleNote`, reaction button labels, input/picker size
+  options, and vertical select box layouts.
+- Align component dimensions, typography, colors, and interaction states with
+  official SEED specifications, including changes to default sizes and styles.
+- Improve Bottom Sheet layout, keyboard handling, and header customization.
+  Show the close button and hide the handle by default.
+- Fix narrow-screen pagination and segmented controls, add Result Section padding
+  overrides, and align Alert Dialog text to the direction start.
+- Show focus rings for keyboard interaction and hide them after pointer clicks.
 
 ## 0.1.1
 
