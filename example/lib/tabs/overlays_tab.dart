@@ -1,7 +1,9 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
+
 import '../widgets/section_header.dart';
 import '../widgets/seed_menu_example.dart';
+import '../widgets/side_panel_details.dart';
 
 /// Tab showcasing dialogs, alert dialogs, bottom sheets, menu sheets, side panels, snackbars, and migration bridge.
 class OverlaysTab extends StatelessWidget {
@@ -136,7 +138,10 @@ class OverlaysTab extends StatelessWidget {
                         SeedMenuItemData(
                           label: '끌어올리기',
                           prefixIcon: const Icon(Icons.arrow_upward),
-                          onTap: () => showSeedSnackbar(context: context, message: '끌어올렸습니다.'),
+                          onTap: () => showSeedSnackbar(
+                            context: context,
+                            message: '끌어올렸습니다.',
+                          ),
                         ),
                         SeedMenuItemData(
                           label: '숨기기',
@@ -160,8 +165,8 @@ class OverlaysTab extends StatelessWidget {
                 showSeedSidePanel(
                   context: context,
                   title: '상세 정보 패널',
-                  description: '현재 화면 컨텍스트를 유지하면서 우측에서 슬라이드됩니다.',
-                  body: const Text('SEED Side Panel의 본문 영역입니다.'),
+                  description: '상품 정보와 거래 조건을 한눈에 확인하세요.',
+                  body: const SidePanelDetails(),
                   footer: SeedButton(
                     label: '확인 완료',
                     isFullWidth: true,

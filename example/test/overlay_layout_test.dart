@@ -84,4 +84,26 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets(
+    'detail panel shows listing content at phone and foldable widths',
+    (tester) async {
+      addTearDown(tester.view.reset);
+      for (final width in [320.0, 900.0]) {
+        for (final dark in [false, true]) {
+          await mount(tester, width: width, scale: 2, dark: dark);
+          await open(tester, '사이드 패널 슬라이드');
+          expect(find.text('상품 정보'), findsOneWidget);
+          expect(find.text('무선 헤드폰'), findsOneWidget);
+          expect(find.text('거래 안내'), findsOneWidget);
+          expect(find.text('SEED Side Panel의 본문 영역입니다.'), findsNothing);
+          expect(find.text('확인 완료').hitTestable(), findsOneWidget);
+          expect(tester.takeException(), isNull);
+          await tester.tap(find.text('확인 완료'));
+          await tester.pumpAndSettle();
+          expect(find.byType(SeedSidePanel), findsNothing);
+        }
+      }
+    },
+  );
 }
