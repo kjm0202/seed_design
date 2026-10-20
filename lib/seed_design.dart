@@ -8,6 +8,9 @@ library;
 export 'src/foundations/colors/seed_palette.dart';
 export 'src/foundations/colors/seed_color_scheme.dart';
 
+// Foundations - Gradients
+export 'src/foundations/gradient/seed_gradient.dart';
+
 // Foundations - Typography
 export 'src/foundations/typography/seed_typography.dart';
 
