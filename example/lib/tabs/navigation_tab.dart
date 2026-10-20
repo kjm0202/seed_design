@@ -69,10 +69,12 @@ class _NavigationTabState extends State<NavigationTab> {
           title: 'Pagination & Table Controls',
           subtitle: '페이지네이션 및 데이터 테이블 컨트롤',
         ),
-        SeedPagination(
-          currentPage: _currentPage,
-          totalPages: 10,
-          onPageChanged: (p) => setState(() => _currentPage = p),
+        Center(
+          child: SeedPagination(
+            currentPage: _currentPage,
+            totalPages: 10,
+            onPageChanged: (p) => setState(() => _currentPage = p),
+          ),
         ),
         const SizedBox(height: SeedDimension.x4),
         SeedTablePagination(
