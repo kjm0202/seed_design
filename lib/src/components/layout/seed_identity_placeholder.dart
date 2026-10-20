@@ -1,11 +1,10 @@
 import 'package:material_ui/material_ui.dart';
+
 import '../../theme/seed_theme.dart';
+import '../../foundations/colors/seed_palette.dart';
 
 /// The type of identity for [SeedIdentityPlaceholder].
-enum SeedIdentityType {
-  person,
-  business,
-}
+enum SeedIdentityType { person, business }
 
 /// A SEED Design Identity Placeholder component.
 ///
@@ -15,7 +14,7 @@ class SeedIdentityPlaceholder extends StatelessWidget {
   const SeedIdentityPlaceholder({
     super.key,
     this.type = SeedIdentityType.person,
-    this.size = 40.0,
+    this.size = 42.0,
     this.backgroundColor,
     this.iconColor,
   });
@@ -45,14 +44,18 @@ class SeedIdentityPlaceholder extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: backgroundColor ?? colors.bg.neutralWeak,
+        color:
+            backgroundColor ??
+            (colors.isDark
+                ? SeedPalette.gray500Dark
+                : SeedPalette.gray500Light),
         shape: BoxShape.circle,
       ),
       child: Center(
         child: Icon(
           iconData,
           size: size * 0.55,
-          color: iconColor ?? colors.fg.neutralSubtle,
+          color: iconColor ?? SeedPalette.staticWhiteAlpha800,
         ),
       ),
     );

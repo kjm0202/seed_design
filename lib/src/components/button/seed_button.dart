@@ -222,7 +222,12 @@ class SeedButton extends StatelessWidget {
             minHeight: size.height,
             minWidth: isIconOnly ? size.height : 0,
           ),
-          padding: isIconOnly ? EdgeInsets.zero : size.padding,
+          padding: isIconOnly
+              ? EdgeInsets.zero
+              : size.padding -
+                    (strokeColor != null
+                        ? const EdgeInsets.all(1)
+                        : EdgeInsets.zero),
           decoration: BoxDecoration(
             color: bgColor,
             borderRadius: size.borderRadius,

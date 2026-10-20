@@ -10,6 +10,9 @@ import '../../foundations/feedback/seed_scale_feedback.dart';
 /// Variant options for [SeedTextInput].
 enum SeedTextInputVariant { outline, underline }
 
+/// Size options for [SeedTextInput].
+enum SeedTextInputSize { medium, large }
+
 /// Text input component of SEED Design System.
 ///
 /// Supports single-line and multi-line modes, outline/underline styles,
@@ -35,6 +38,7 @@ class SeedTextInput extends StatefulWidget {
   final Widget? prefixIcon;
   final Widget? suffixIcon;
   final SeedTextInputVariant variant;
+  final SeedTextInputSize size;
 
   const SeedTextInput({
     super.key,
@@ -58,6 +62,7 @@ class SeedTextInput extends StatefulWidget {
     this.prefixIcon,
     this.suffixIcon,
     this.variant = SeedTextInputVariant.outline,
+    this.size = SeedTextInputSize.medium,
   });
 
   @override
@@ -151,19 +156,54 @@ class _SeedTextInputState extends State<SeedTextInput> {
     final typography = context.seedTypography;
 
     final Color strokeColor = _resolveStrokeColor(colors);
-    final Color bgColor = !widget.enabled
+    final Color bgColor =
+        !widget.enabled ||
+            (widget.readOnly && widget.variant == SeedTextInputVariant.outline)
         ? colors.bg.disabled
-        : (widget.variant == SeedTextInputVariant.outline
-              ? colors.bg.layerDefault
-              : colors.bg.transparent);
+        : colors.bg.transparent;
 
-    final TextStyle textStyle = typography.t4Regular.copyWith(
-      color: widget.enabled ? colors.fg.neutral : colors.fg.disabled,
+    final bool isLarge = widget.size == SeedTextInputSize.large;
+    final bool isOutline = widget.variant == SeedTextInputVariant.outline;
+    final bool isSingleLine = widget.maxLines == 1;
+
+    final inputStyle = isOutline
+        ? (isLarge ? typography.t5Regular : typography.t4Regular)
+        : (isLarge ? typography.t6Regular : typography.t5Regular);
+
+    final TextStyle textStyle = inputStyle.copyWith(
+      color: !widget.enabled
+          ? colors.fg.disabled
+          : widget.readOnly && !isOutline
+          ? colors.fg.neutralMuted
+          : colors.fg.neutral,
     );
 
-    final TextStyle hintStyle = typography.t4Regular.copyWith(
-      color: colors.fg.placeholder,
+    final TextStyle hintStyle = inputStyle.copyWith(
+      color: !widget.enabled
+          ? colors.fg.disabled
+          : widget.readOnly && !isOutline
+          ? colors.fg.neutralMuted
+          : colors.fg.placeholder,
     );
+
+    final double minHeight = isSingleLine
+        ? (isOutline ? (isLarge ? 52.0 : 40.0) : (isLarge ? 40.0 : 34.0))
+        : (isLarge ? 94.0 : 82.0);
+
+    final EdgeInsets padding = EdgeInsets.symmetric(
+      horizontal: isOutline ? (isLarge ? 16.0 : 14.0) : 0.0,
+      vertical: isSingleLine
+          ? (isOutline ? 6.0 : (isLarge ? 8.0 : 6.0))
+          : (isLarge ? 14.0 : 12.0),
+    );
+
+    final double gap = isLarge ? 10.0 : 8.0;
+
+    final double iconSize = isOutline
+        ? (isLarge ? 20.0 : 16.0)
+        : (isLarge ? 24.0 : 20.0);
+
+    final double clearButtonSize = isLarge ? 22.0 : 18.0;
 
     Widget fieldWidget = TextField(
       controller: _controller,
@@ -198,28 +238,31 @@ class _SeedTextInputState extends State<SeedTextInput> {
     );
 
     return AnimatedContainer(
-      duration: SeedDuration.colorTransition,
+      duration: SeedDuration.d2,
       curve: SeedCurves.easing,
       constraints: BoxConstraints(
-        minHeight: widget.maxLines == 1 ? 48.0 : 80.0,
+        minHeight: minHeight,
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 12.0),
+      padding: padding,
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: widget.variant == SeedTextInputVariant.outline
-            ? SeedBorderRadius.r2_5
+        borderRadius: isOutline
+            ? (isLarge ? SeedBorderRadius.r3 : SeedBorderRadius.r2)
             : BorderRadius.zero,
-        border: widget.variant == SeedTextInputVariant.outline
-            ? Border.all(color: strokeColor, width: _isFocused ? 1.5 : 1.0)
+        border: isOutline
+            ? Border.all(
+                color: strokeColor,
+                width: _isFocused || widget.hasError ? 2 : 1,
+              )
             : Border(
                 bottom: BorderSide(
                   color: strokeColor,
-                  width: _isFocused ? 1.5 : 1.0,
+                  width: _isFocused || widget.hasError ? 2 : 1,
                 ),
               ),
       ),
       child: Row(
-        crossAxisAlignment: widget.maxLines == 1
+        crossAxisAlignment: isSingleLine
             ? CrossAxisAlignment.center
             : CrossAxisAlignment.start,
         children: [
@@ -227,13 +270,13 @@ class _SeedTextInputState extends State<SeedTextInput> {
             IconTheme(
               data: IconThemeData(
                 color: widget.enabled
-                    ? colors.fg.neutralSubtle
+                    ? colors.fg.neutralMuted
                     : colors.fg.disabled,
-                size: 20.0,
+                size: iconSize,
               ),
               child: widget.prefixIcon!,
             ),
-            const SizedBox(width: SeedDimension.x2),
+            SizedBox(width: gap),
           ],
           Expanded(child: fieldWidget),
           if (widget.clearable &&
@@ -253,8 +296,8 @@ class _SeedTextInputState extends State<SeedTextInput> {
                 height: 24,
                 child: Center(
                   child: Container(
-                    width: 18.0,
-                    height: 18.0,
+                    width: clearButtonSize,
+                    height: clearButtonSize,
                     decoration: BoxDecoration(
                       color: colors.fg.placeholder,
                       shape: BoxShape.circle,
@@ -262,7 +305,7 @@ class _SeedTextInputState extends State<SeedTextInput> {
                     alignment: Alignment.center,
                     child: Icon(
                       Icons.close_rounded,
-                      size: 14.0,
+                      size: clearButtonSize * 0.7,
                       color: colors.bg.layerDefault,
                     ),
                   ),
@@ -271,13 +314,13 @@ class _SeedTextInputState extends State<SeedTextInput> {
             ),
           ],
           if (widget.suffixIcon != null) ...[
-            const SizedBox(width: SeedDimension.x2),
+            SizedBox(width: gap),
             IconTheme(
               data: IconThemeData(
                 color: widget.enabled
-                    ? colors.fg.neutralSubtle
+                    ? colors.fg.neutralMuted
                     : colors.fg.disabled,
-                size: 20.0,
+                size: iconSize,
               ),
               child: widget.suffixIcon!,
             ),
@@ -293,7 +336,7 @@ class _SeedTextInputState extends State<SeedTextInput> {
       return colors.stroke.criticalSolid;
     }
     if (_isFocused) {
-      return colors.stroke.focusRing;
+      return colors.stroke.neutralContrast;
     }
     return colors.stroke.neutralWeak;
   }

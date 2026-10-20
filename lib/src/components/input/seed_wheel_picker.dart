@@ -1,9 +1,20 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
+
 import '../../foundations/dimensions/seed_dimension.dart';
 import '../../foundations/radius/seed_radius.dart';
 import '../../theme/seed_theme.dart';
 import '../layout/seed_scroll_fog.dart';
+
+/// Size options for [SeedWheelPicker].
+enum SeedWheelPickerSize {
+  small(height: 180.0, itemExtent: 36.0),
+  medium(height: 220.0, itemExtent: 44.0);
+
+  const SeedWheelPickerSize({required this.height, required this.itemExtent});
+  final double height;
+  final double itemExtent;
+}
 
 /// Specification for a single column in [SeedWheelPicker].
 abstract class SeedWheelColumn {
@@ -52,7 +63,8 @@ class _SeedWheelColumnImpl<T> extends SeedWheelColumn {
   final int initialIndex;
   @override
   final ValueChanged<int>? onChanged;
-  final Widget Function(BuildContext context, T item, bool isSelected)? itemBuilder;
+  final Widget Function(BuildContext context, T item, bool isSelected)?
+  itemBuilder;
   @override
   final double itemExtent;
   @override
@@ -73,8 +85,8 @@ class _SeedWheelColumnImpl<T> extends SeedWheelColumn {
       child: Text(
         item.toString(),
         style: isSelected
-            ? typography.t5Bold.copyWith(color: colors.fg.neutral)
-            : typography.t5Regular.copyWith(color: colors.fg.neutralSubtle),
+            ? typography.t10Medium.copyWith(color: colors.fg.neutral)
+            : typography.t10Medium.copyWith(color: colors.fg.disabled),
       ),
     );
   }
@@ -91,7 +103,8 @@ class SeedWheelPicker extends StatefulWidget {
   const SeedWheelPicker({
     super.key,
     required this.columns,
-    this.height = 220.0,
+    this.size = SeedWheelPickerSize.medium,
+    this.height,
     this.showFog = true,
     this.showIndicator = true,
   });
@@ -99,14 +112,19 @@ class SeedWheelPicker extends StatefulWidget {
   /// The columns of data to display in the wheel picker.
   final List<SeedWheelColumn> columns;
 
-  /// Overall height of the picker.
-  final double height;
+  /// The size variant of the wheel picker.
+  final SeedWheelPickerSize size;
+
+  /// Overall height of the picker. If null, defaults to [size.height].
+  final double? height;
 
   /// Whether to show the top and bottom fade/fog gradients.
   final bool showFog;
 
   /// Whether to display the centered selection indicator.
   final bool showIndicator;
+
+  double get effectiveHeight => height ?? size.height;
 
   @override
   State<SeedWheelPicker> createState() => _SeedWheelPickerState();
@@ -150,19 +168,23 @@ class _SeedWheelPickerState extends State<SeedWheelPicker> {
   @override
   Widget build(BuildContext context) {
     final colors = context.seedColor;
-    final itemHeight = widget.columns.isNotEmpty ? widget.columns.first.itemExtent : 44.0;
-    final fogHeight = (widget.height * 0.4).clamp(0.0, itemHeight * 2.5);
+    final itemHeight = widget.columns.isNotEmpty
+        ? widget.columns.first.itemExtent
+        : widget.size.itemExtent;
+    final pickerHeight = widget.effectiveHeight;
+    final fogHeight = (pickerHeight * 0.4).clamp(0.0, 132.0);
 
-    return SizedBox(
-      height: widget.height,
+    return Container(
+      color: colors.bg.layerFloating,
+      height: pickerHeight,
       child: Stack(
         alignment: Alignment.center,
         children: [
           // Centered selection indicator band
           if (widget.showIndicator)
             Positioned(
-              left: SeedDimension.x2,
-              right: SeedDimension.x2,
+              left: SeedDimension.x4,
+              right: SeedDimension.x4,
               height: itemHeight,
               child: Container(
                 decoration: BoxDecoration(
@@ -220,7 +242,7 @@ class _SeedWheelPickerState extends State<SeedWheelPicker> {
               child: IgnorePointer(
                 child: SeedScrollFog(
                   placement: SeedScrollFogPlacement.top,
-                  color: colors.bg.layerDefault,
+                  color: colors.bg.layerFloating,
                   size: fogHeight,
                 ),
               ),
@@ -236,7 +258,7 @@ class _SeedWheelPickerState extends State<SeedWheelPicker> {
               child: IgnorePointer(
                 child: SeedScrollFog(
                   placement: SeedScrollFogPlacement.bottom,
-                  color: colors.bg.layerDefault,
+                  color: colors.bg.layerFloating,
                   size: fogHeight,
                 ),
               ),

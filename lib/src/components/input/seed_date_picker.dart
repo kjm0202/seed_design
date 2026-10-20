@@ -1,13 +1,11 @@
 import 'package:material_ui/material_ui.dart';
+
 import '../../foundations/dimensions/seed_dimension.dart';
 import '../../foundations/radius/seed_radius.dart';
 import '../../theme/seed_theme.dart';
 
 /// Selection mode for [SeedDatePicker].
-enum SeedDatePickerMode {
-  single,
-  range,
-}
+enum SeedDatePickerMode { single, range }
 
 /// A SEED Design Date Picker calendar component.
 ///
@@ -53,16 +51,29 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
   @override
   void initState() {
     super.initState();
-    final init = widget.initialDate ?? widget.initialStartDate ?? DateTime.now();
+    final init =
+        widget.initialDate ?? widget.initialStartDate ?? DateTime.now();
     _currentMonth = DateTime(init.year, init.month);
     _selectedDate = widget.initialDate != null
-        ? DateTime(widget.initialDate!.year, widget.initialDate!.month, widget.initialDate!.day)
+        ? DateTime(
+            widget.initialDate!.year,
+            widget.initialDate!.month,
+            widget.initialDate!.day,
+          )
         : null;
     _startDate = widget.initialStartDate != null
-        ? DateTime(widget.initialStartDate!.year, widget.initialStartDate!.month, widget.initialStartDate!.day)
+        ? DateTime(
+            widget.initialStartDate!.year,
+            widget.initialStartDate!.month,
+            widget.initialStartDate!.day,
+          )
         : null;
     _endDate = widget.initialEndDate != null
-        ? DateTime(widget.initialEndDate!.year, widget.initialEndDate!.month, widget.initialEndDate!.day)
+        ? DateTime(
+            widget.initialEndDate!.year,
+            widget.initialEndDate!.month,
+            widget.initialEndDate!.day,
+          )
         : null;
   }
 
@@ -79,8 +90,14 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
   }
 
   bool _isDateSelectable(DateTime date) {
-    if (widget.firstDate != null && date.isBefore(DateUtils.dateOnly(widget.firstDate!))) return false;
-    if (widget.lastDate != null && date.isAfter(DateUtils.dateOnly(widget.lastDate!))) return false;
+    if (widget.firstDate != null &&
+        date.isBefore(DateUtils.dateOnly(widget.firstDate!))) {
+      return false;
+    }
+    if (widget.lastDate != null &&
+        date.isAfter(DateUtils.dateOnly(widget.lastDate!))) {
+      return false;
+    }
     if (widget.selectableDayPredicate != null) {
       return widget.selectableDayPredicate!(date);
     }
@@ -117,8 +134,16 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
     final colors = context.seedColor;
     final typography = context.seedTypography;
 
-    final firstDayOfMonth = DateTime(_currentMonth.year, _currentMonth.month, 1);
-    final daysInMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 0).day;
+    final firstDayOfMonth = DateTime(
+      _currentMonth.year,
+      _currentMonth.month,
+      1,
+    );
+    final daysInMonth = DateTime(
+      _currentMonth.year,
+      _currentMonth.month + 1,
+      0,
+    ).day;
     final startingWeekday = firstDayOfMonth.weekday % 7;
 
     final weekdays = ['일', '월', '화', '수', '목', '금', '토'];
@@ -127,7 +152,7 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
       constraints: const BoxConstraints(maxWidth: 360),
       padding: const EdgeInsets.all(SeedDimension.x4),
       decoration: BoxDecoration(
-        color: colors.bg.layerDefault,
+        color: colors.bg.layerFloating,
         borderRadius: SeedBorderRadius.r3,
       ),
       child: Column(
@@ -139,7 +164,7 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
             children: [
               Text(
                 '${_currentMonth.year}년 ${_currentMonth.month}월',
-                style: typography.t6Bold.copyWith(color: colors.fg.neutral),
+                style: typography.t5Bold.copyWith(color: colors.fg.neutral),
               ),
               Row(
                 children: [
@@ -163,11 +188,14 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
           Row(
             children: weekdays.map((weekday) {
               return Expanded(
-                child: Center(
-                  child: Text(
-                    weekday,
-                    style: typography.t2Bold.copyWith(
-                      color: colors.fg.neutralSubtle,
+                child: SizedBox(
+                  height: 48,
+                  child: Center(
+                    child: Text(
+                      weekday,
+                      style: typography.t4Medium.copyWith(
+                        color: colors.fg.neutralSubtle,
+                      ),
                     ),
                   ),
                 ),
@@ -183,44 +211,52 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
             itemCount: startingWeekday + daysInMonth,
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 7,
-              mainAxisSpacing: 4,
-              crossAxisSpacing: 4,
+              mainAxisExtent: 48,
             ),
             itemBuilder: (context, index) {
               if (index < startingWeekday) {
                 return const SizedBox.shrink();
               }
               final dayNumber = index - startingWeekday + 1;
-              final date = DateTime(_currentMonth.year, _currentMonth.month, dayNumber);
+              final date = DateTime(
+                _currentMonth.year,
+                _currentMonth.month,
+                dayNumber,
+              );
               final isSelectable = _isDateSelectable(date);
 
-              final isSelectedSingle = widget.mode == SeedDatePickerMode.single &&
+              final isSelectedSingle =
+                  widget.mode == SeedDatePickerMode.single &&
                   _selectedDate != null &&
                   _selectedDate!.year == date.year &&
                   _selectedDate!.month == date.month &&
                   _selectedDate!.day == date.day;
 
-              final isStart = _startDate != null &&
+              final isStart =
+                  _startDate != null &&
                   _startDate!.year == date.year &&
                   _startDate!.month == date.month &&
                   _startDate!.day == date.day;
 
-              final isEnd = _endDate != null &&
+              final isEnd =
+                  _endDate != null &&
                   _endDate!.year == date.year &&
                   _endDate!.month == date.month &&
                   _endDate!.day == date.day;
 
-              final isInRange = _startDate != null &&
+              final isInRange =
+                  _startDate != null &&
                   _endDate != null &&
                   date.isAfter(_startDate!) &&
                   date.isBefore(_endDate!);
 
-              final isToday = DateTime.now().year == date.year &&
+              final isToday =
+                  DateTime.now().year == date.year &&
                   DateTime.now().month == date.month &&
                   DateTime.now().day == date.day;
 
               BoxDecoration? decoration;
-              Color textColor = colors.fg.neutral;
+              Color textColor = colors.fg.neutralMuted;
 
               if (isSelectedSingle || isStart || isEnd) {
                 decoration = BoxDecoration(
@@ -250,14 +286,15 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
               return InkWell(
                 onTap: isSelectable ? () => _handleDayTap(date) : null,
                 borderRadius: SeedBorderRadius.r2,
-                child: Container(
-                  decoration: decoration,
-                  alignment: Alignment.center,
-                  child: Text(
-                    '$dayNumber',
-                    style: typography.t4Regular.copyWith(
-                      color: textColor,
-                      fontWeight: (isSelectedSingle || isStart || isEnd) ? FontWeight.bold : FontWeight.normal,
+                child: Center(
+                  child: Container(
+                    width: 42,
+                    height: 42,
+                    decoration: decoration,
+                    alignment: Alignment.center,
+                    child: Text(
+                      '$dayNumber',
+                      style: typography.t5Medium.copyWith(color: textColor),
                     ),
                   ),
                 ),

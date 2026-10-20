@@ -61,10 +61,18 @@ class SeedBottomNavigation extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const SeedDivider(),
+              SeedDivider(
+                thickness: Theme.of(context).platform == TargetPlatform.iOS
+                    ? 1 / MediaQuery.devicePixelRatioOf(context)
+                    : 1,
+              ),
               Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 480.0),
+                  constraints: BoxConstraints(
+                    maxWidth: Theme.of(context).platform == TargetPlatform.iOS
+                        ? double.infinity
+                        : 480,
+                  ),
                   child: SizedBox(
                     height: 56.0,
                     child: Row(
@@ -119,7 +127,12 @@ class SeedBottomNavigation extends StatelessWidget {
                                   ],
                                 ),
                                 const SizedBox(height: SeedDimension.x0_5),
-                                Text(item.label, style: textStyle, maxLines: 1),
+                                Text(
+                                  item.label,
+                                  style: textStyle,
+                                  maxLines: 1,
+                                  textScaler: TextScaler.noScaling,
+                                ),
                               ],
                             ),
                           ),

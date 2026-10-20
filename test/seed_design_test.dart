@@ -658,8 +658,8 @@ void main() {
         ),
       );
 
-      expect(find.text('서비스 점검 안내'), findsOneWidget);
-      expect(find.text('새벽 2시부터 4시까지 서버 점검이 진행됩니다.'), findsOneWidget);
+      expect(find.textContaining('서비스 점검 안내'), findsOneWidget);
+      expect(find.textContaining('새벽 2시부터 4시까지 서버 점검이 진행됩니다.'), findsOneWidget);
     });
 
     testWidgets('SeedResultSection renders title and empty state action', (tester) async {

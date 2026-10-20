@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+
 import '../../foundations/dimensions/seed_dimension.dart';
 import '../../theme/seed_theme.dart';
 import '../layout/seed_divider.dart';
@@ -25,7 +26,10 @@ class SeedTopNavigation extends StatelessWidget implements PreferredSizeWidget {
     this.centerTitle = true,
     this.showBottomDivider = true,
     this.backgroundColor,
-  }) : assert(title == null || titleText == null, 'Cannot provide both title and titleText');
+  }) : assert(
+         title == null || titleText == null,
+         'Cannot provide both title and titleText',
+       );
 
   @override
   Size get preferredSize => const Size.fromHeight(56.0);
@@ -67,7 +71,9 @@ class SeedTopNavigation extends StatelessWidget implements PreferredSizeWidget {
               child: NavigationToolbar(
                 leading: effectiveLeading != null
                     ? Padding(
-                        padding: const EdgeInsets.only(left: SeedDimension.x2),
+                        padding: const EdgeInsets.only(
+                          left: SeedDimension.x1_5,
+                        ),
                         child: effectiveLeading,
                       )
                     : null,
@@ -77,7 +83,7 @@ class SeedTopNavigation extends StatelessWidget implements PreferredSizeWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           ...actions!,
-                          const SizedBox(width: SeedDimension.x2),
+                          const SizedBox(width: SeedDimension.x1_5),
                         ],
                       )
                     : null,

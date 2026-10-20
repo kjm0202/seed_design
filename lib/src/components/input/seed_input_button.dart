@@ -7,8 +7,8 @@ import '../../theme/seed_theme.dart';
 
 /// Size of [SeedInputButton].
 enum SeedInputButtonSize {
-  medium(height: 48.0, paddingX: 16.0),
-  small(height: 40.0, paddingX: 12.0);
+  medium(height: 52.0, paddingX: 16.0),
+  small(height: 40.0, paddingX: 14.0);
 
   const SeedInputButtonSize({required this.height, required this.paddingX});
   final double height;
@@ -73,16 +73,14 @@ class SeedInputButton extends StatelessWidget {
 
     Color borderColor;
     if (!enabled) {
-      borderColor = colors.stroke.neutralMuted.withValues(alpha: 0.5);
+      borderColor = colors.stroke.neutralWeak;
     } else if (isError) {
       borderColor = colors.stroke.criticalSolid;
     } else {
       borderColor = colors.stroke.neutralWeak;
     }
 
-    final effectiveBg = enabled
-        ? colors.bg.layerDefault
-        : colors.bg.neutralWeak;
+    final effectiveBg = enabled ? colors.bg.transparent : colors.bg.disabled;
 
     final effectiveTextColor = !enabled
         ? colors.fg.disabled
@@ -96,23 +94,25 @@ class SeedInputButton extends StatelessWidget {
           height: size.height,
           padding: EdgeInsets.symmetric(horizontal: size.paddingX),
           decoration: BoxDecoration(
-            color: isPressed ? colors.bg.layerDefaultPressed : effectiveBg,
-            borderRadius: SeedBorderRadius.r2,
-            border: Border.all(color: borderColor, width: 1.0),
+            color: isPressed ? colors.bg.transparentPressed : effectiveBg,
+            borderRadius: size == SeedInputButtonSize.medium
+                ? SeedBorderRadius.r3
+                : SeedBorderRadius.r2,
+            border: Border.all(color: borderColor, width: isError ? 2 : 1),
           ),
           child: Row(
             children: [
               if (prefixIcon != null) ...[
                 IconTheme(
                   data: IconThemeData(
-                    size: 20,
+                    size: size == SeedInputButtonSize.medium ? 20 : 16,
                     color: enabled
-                        ? colors.fg.neutralSubtle
+                        ? colors.fg.neutralMuted
                         : colors.fg.disabled,
                   ),
                   child: prefixIcon!,
                 ),
-                const SizedBox(width: SeedDimension.x2),
+                SizedBox(width: size == SeedInputButtonSize.medium ? 10 : 8),
               ],
               Expanded(
                 child: Text(
@@ -141,8 +141,8 @@ class SeedInputButton extends StatelessWidget {
                       heightFactor: 1,
                       child: Icon(
                         Icons.cancel,
-                        size: 18,
-                        color: colors.fg.neutralMuted,
+                        size: size == SeedInputButtonSize.medium ? 22.0 : 18.0,
+                        color: colors.fg.neutralSubtle,
                       ),
                     ),
                   ),
@@ -151,8 +151,8 @@ class SeedInputButton extends StatelessWidget {
               ],
               IconTheme(
                 data: IconThemeData(
-                  size: 20,
-                  color: enabled ? colors.fg.neutralSubtle : colors.fg.disabled,
+                  size: size == SeedInputButtonSize.medium ? 20 : 16,
+                  color: enabled ? colors.fg.neutralMuted : colors.fg.disabled,
                 ),
                 child: suffixIcon ?? const Icon(Icons.keyboard_arrow_down),
               ),

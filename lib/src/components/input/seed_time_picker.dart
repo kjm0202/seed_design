@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+
 import '../../theme/seed_theme.dart';
 import 'seed_wheel_picker.dart';
 
@@ -61,7 +62,11 @@ class _SeedTimePickerState extends State<SeedTimePicker> {
     _hour = h % 12 == 0 ? 12 : h % 12;
 
     if (widget.minuteStep <= 0 || widget.minuteStep > 60) {
-      throw ArgumentError.value(widget.minuteStep, 'minuteStep', 'Must be between 1 and 60');
+      throw ArgumentError.value(
+        widget.minuteStep,
+        'minuteStep',
+        'Must be between 1 and 60',
+      );
     }
     _minutes = [];
     for (int i = 0; i < 60; i += widget.minuteStep) {
@@ -118,8 +123,8 @@ class _SeedTimePickerState extends State<SeedTimePicker> {
             return Text(
               item.label,
               style: isSelected
-                  ? typography.t6Bold.copyWith(color: colors.fg.neutral)
-                  : typography.t5Regular.copyWith(color: colors.fg.neutralSubtle),
+                  ? typography.t10Medium.copyWith(color: colors.fg.neutral)
+                  : typography.t10Medium.copyWith(color: colors.fg.disabled),
             );
           },
         ),
@@ -139,8 +144,8 @@ class _SeedTimePickerState extends State<SeedTimePicker> {
             return Text(
               item.toString(),
               style: isSelected
-                  ? typography.t6Bold.copyWith(color: colors.fg.neutral)
-                  : typography.t5Regular.copyWith(color: colors.fg.neutralSubtle),
+                  ? typography.t10Medium.copyWith(color: colors.fg.neutral)
+                  : typography.t10Medium.copyWith(color: colors.fg.disabled),
             );
           },
         ),
@@ -160,8 +165,8 @@ class _SeedTimePickerState extends State<SeedTimePicker> {
             return Text(
               item.toString().padLeft(2, '0'),
               style: isSelected
-                  ? typography.t6Bold.copyWith(color: colors.fg.neutral)
-                  : typography.t5Regular.copyWith(color: colors.fg.neutralSubtle),
+                  ? typography.t10Medium.copyWith(color: colors.fg.neutral)
+                  : typography.t10Medium.copyWith(color: colors.fg.disabled),
             );
           },
         ),

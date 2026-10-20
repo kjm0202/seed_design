@@ -1,5 +1,7 @@
 import 'package:material_ui/material_ui.dart';
+
 import '../../theme/seed_theme.dart';
+import '../../foundations/colors/seed_palette.dart';
 
 /// Progress Circle component of SEED Design System.
 ///
@@ -17,14 +19,18 @@ class SeedProgressCircle extends StatelessWidget {
     this.value,
     this.color,
     this.trackColor,
-    this.strokeWidth = 2.5,
-  });
+    double? strokeWidth,
+  }) : strokeWidth = strokeWidth ?? size / 8;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.seedColor;
-    final effectiveColor = color ?? colors.fg.neutralSubtle;
-    final effectiveTrackColor = trackColor ?? colors.stroke.neutralWeak;
+    final effectiveColor =
+        color ??
+        (colors.isDark ? SeedPalette.gray500Dark : SeedPalette.gray500Light);
+    final effectiveTrackColor =
+        trackColor ??
+        (colors.isDark ? SeedPalette.gray200Dark : SeedPalette.gray200Light);
 
     return SizedBox(
       width: size,

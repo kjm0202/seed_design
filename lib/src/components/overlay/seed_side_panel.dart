@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../foundations/dimensions/seed_dimension.dart';
+import '../../foundations/motion/seed_motion.dart';
 import '../../theme/seed_theme.dart';
 import '../layout/seed_divider.dart';
 
@@ -12,7 +13,7 @@ Future<T?> showSeedSidePanel<T>({
   required Widget body,
   Widget? footer,
   bool fromRight = true,
-  double width = 380.0,
+  double width = 480.0,
   bool barrierDismissible = true,
 }) {
   final capturedThemes = InheritedTheme.capture(
@@ -23,8 +24,8 @@ Future<T?> showSeedSidePanel<T>({
     context: context,
     barrierDismissible: barrierDismissible,
     barrierLabel: 'Dismiss',
-    barrierColor: Colors.black.withValues(alpha: 0.4),
-    transitionDuration: const Duration(milliseconds: 250),
+    barrierColor: context.seedColor.bg.overlay,
+    transitionDuration: const Duration(milliseconds: 300),
     pageBuilder: (context, animation, secondaryAnimation) {
       return capturedThemes.wrap(
         Align(
@@ -46,7 +47,8 @@ Future<T?> showSeedSidePanel<T>({
     transitionBuilder: (context, animation, secondaryAnimation, child) {
       final curved = CurvedAnimation(
         parent: animation,
-        curve: Curves.easeOutCubic,
+        curve: SeedCurves.enterExpressive,
+        reverseCurve: SeedCurves.exitExpressive,
       );
       final offset = fromRight ? const Offset(1, 0) : const Offset(-1, 0);
       return SlideTransition(
@@ -69,7 +71,7 @@ class SeedSidePanel extends StatelessWidget {
     required this.body,
     this.footer,
     this.onClose,
-    this.width = 380.0,
+    this.width = 480.0,
   });
 
   /// Panel title.
@@ -98,9 +100,12 @@ class SeedSidePanel extends StatelessWidget {
 
     return Container(
       width: width,
+      constraints: BoxConstraints(
+        maxWidth: MediaQuery.sizeOf(context).width * 0.8,
+      ),
       height: double.infinity,
       decoration: BoxDecoration(
-        color: colors.bg.layerDefault,
+        color: colors.bg.layerFloating,
         boxShadow: shadows.s3,
       ),
       child: SafeArea(
@@ -109,10 +114,7 @@ class SeedSidePanel extends StatelessWidget {
           children: [
             // Header
             Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: SeedDimension.x5,
-                vertical: SeedDimension.x4,
-              ),
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -122,16 +124,16 @@ class SeedSidePanel extends StatelessWidget {
                       children: [
                         Text(
                           title,
-                          style: typography.t7Bold.copyWith(
+                          style: typography.t8Bold.copyWith(
                             color: colors.fg.neutral,
                           ),
                         ),
                         if (description != null) ...[
-                          const SizedBox(height: SeedDimension.x1),
+                          const SizedBox(height: SeedDimension.x1_5),
                           Text(
                             description!,
-                            style: typography.t4Regular.copyWith(
-                              color: colors.fg.neutralSubtle,
+                            style: typography.t5Regular.copyWith(
+                              color: colors.fg.neutralMuted,
                             ),
                           ),
                         ],
@@ -153,7 +155,7 @@ class SeedSidePanel extends StatelessWidget {
             // Body
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(SeedDimension.x5),
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 48),
                 child: body,
               ),
             ),
@@ -162,7 +164,7 @@ class SeedSidePanel extends StatelessWidget {
             if (footer != null) ...[
               const SeedDivider(),
               Padding(
-                padding: const EdgeInsets.all(SeedDimension.x4),
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
                 child: footer!,
               ),
             ],

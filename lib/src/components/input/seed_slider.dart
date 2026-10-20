@@ -1,5 +1,7 @@
 import 'package:material_ui/material_ui.dart';
+
 import '../../theme/seed_theme.dart';
+import '../../foundations/colors/seed_palette.dart';
 
 /// Slider component of SEED Design System.
 ///
@@ -21,7 +23,7 @@ class SeedSlider extends StatelessWidget {
     this.min = 0.0,
     this.max = 100.0,
     this.divisions,
-    this.isBrand = true,
+    this.isBrand = false,
     this.enabled = true,
   });
 
@@ -29,15 +31,22 @@ class SeedSlider extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.seedColor;
 
-    final Color activeColor = isBrand ? colors.fg.brand : colors.bg.neutralSolid;
-    final Color inactiveColor = colors.bg.neutralWeak;
+    final Color activeColor = isBrand
+        ? colors.fg.brand
+        : colors.bg.neutralSolid;
+    final Color inactiveColor = colors.isDark
+        ? SeedPalette.gray400Dark
+        : SeedPalette.gray400Light;
     final Color thumbColor = activeColor;
 
     return SliderTheme(
       data: SliderThemeData(
         trackHeight: 4.0,
         activeTrackColor: enabled ? activeColor : colors.bg.disabled,
-        inactiveTrackColor: enabled ? inactiveColor : colors.bg.disabled.withValues(alpha: 0.5),
+        inactiveTrackColor: enabled ? inactiveColor : colors.bg.disabled,
+        disabledActiveTrackColor: colors.fg.disabled,
+        disabledInactiveTrackColor: colors.bg.disabled,
+        disabledThumbColor: colors.fg.disabled,
         thumbColor: enabled ? thumbColor : colors.fg.disabled,
         overlayColor: activeColor.withValues(alpha: 0.12),
         thumbShape: const RoundSliderThumbShape(

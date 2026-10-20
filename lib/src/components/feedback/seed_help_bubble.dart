@@ -34,17 +34,16 @@ class SeedHelpBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.seedColor;
     final typography = context.seedTypography;
-    final shadows = context.seedShadows;
 
     final Color bgColor = isBrand
         ? colors.bg.brandSolid
-        : colors.bg.neutralInverted;
+        : colors.bg.neutralSolid;
     final Color fgColor = isBrand
         ? colors.fg.onBrandSolid
-        : colors.fg.neutralInverted;
+        : colors.fg.onNeutralSolid;
 
     Widget arrow = CustomPaint(
-      size: const Size(14.0, 7.0),
+      size: const Size(12.0, 8.0),
       painter: _TrianglePainter(
         color: bgColor,
         isPointingUp: arrowPlacement == SeedHelpBubbleArrowPlacement.top,
@@ -52,16 +51,11 @@ class SeedHelpBubble extends StatelessWidget {
     );
 
     Widget bubbleBody = Container(
-      padding: const EdgeInsets.fromLTRB(
-        SeedDimension.x4,
-        SeedDimension.x3,
-        SeedDimension.x3,
-        SeedDimension.x3,
-      ),
+      constraints: const BoxConstraints(maxWidth: 280),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: SeedBorderRadius.r3,
-        boxShadow: shadows.s2,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -74,19 +68,17 @@ class SeedHelpBubble extends StatelessWidget {
               children: [
                 Text(title, style: typography.t3Bold.copyWith(color: fgColor)),
                 if (description != null) ...[
-                  const SizedBox(height: SeedDimension.x1),
+                  const SizedBox(height: SeedDimension.x0_5),
                   Text(
                     description!,
-                    style: typography.t2Regular.copyWith(
-                      color: fgColor.withValues(alpha: 0.85),
-                    ),
+                    style: typography.t3Regular.copyWith(color: fgColor),
                   ),
                 ],
               ],
             ),
           ),
           if (onClose != null) ...[
-            const SizedBox(width: SeedDimension.x2),
+            const SizedBox(width: SeedDimension.x1),
             SeedPressable(
               semanticsLabel: '닫기',
               enableScale: false,
@@ -98,13 +90,13 @@ class SeedHelpBubble extends StatelessWidget {
                   widthFactor: 1,
                   heightFactor: 1,
                   child: SizedBox(
-                    width: 24.0,
-                    height: 24.0,
+                    width: 38.0,
+                    height: 38.0,
                     child: Center(
                       child: Icon(
                         Icons.close_rounded,
-                        size: 16.0,
-                        color: fgColor.withValues(alpha: 0.8),
+                        size: 14.0,
+                        color: fgColor,
                       ),
                     ),
                   ),

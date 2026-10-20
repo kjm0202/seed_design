@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+
 import '../../foundations/dimensions/seed_dimension.dart';
 import '../../foundations/radius/seed_radius.dart';
 import '../../theme/seed_theme.dart';
@@ -13,7 +14,7 @@ Future<T?> showSeedDialog<T>({
   return showDialog<T>(
     context: context,
     barrierDismissible: barrierDismissible,
-    barrierColor: const Color(0x74000000), // bg.overlay
+    barrierColor: context.seedColor.bg.overlay,
     builder: (context) => child,
   );
 }
@@ -70,12 +71,12 @@ class SeedAlertDialog extends StatelessWidget {
 
     return Center(
       child: Container(
-        width: 320.0,
-        margin: const EdgeInsets.symmetric(horizontal: 24.0),
+        width: 272.0,
+        margin: const EdgeInsets.symmetric(horizontal: 32, vertical: 64),
         padding: const EdgeInsets.all(SeedDimension.x5),
         decoration: BoxDecoration(
           color: colors.bg.layerFloating,
-          borderRadius: SeedBorderRadius.r4,
+          borderRadius: SeedBorderRadius.r5,
           boxShadow: shadows.s3,
         ),
         child: Material(
@@ -86,20 +87,20 @@ class SeedAlertDialog extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: typography.t6Bold.copyWith(color: colors.fg.neutral),
-                textAlign: TextAlign.center,
+                style: typography.t7Bold.copyWith(color: colors.fg.neutral),
+                textAlign: TextAlign.start,
               ),
               if (description != null) ...[
-                const SizedBox(height: SeedDimension.x2),
+                const SizedBox(height: SeedDimension.x1_5),
                 Text(
                   description!,
-                  style: typography.t3Regular.copyWith(
-                    color: colors.fg.neutralMuted,
+                  style: typography.t5Regular.copyWith(
+                    color: colors.fg.neutral,
                   ),
-                  textAlign: TextAlign.center,
+                  textAlign: TextAlign.start,
                 ),
               ],
-              const SizedBox(height: SeedDimension.x6),
+              const SizedBox(height: SeedDimension.x4),
               Row(
                 children: [
                   if (cancelText != null) ...[
@@ -180,7 +181,9 @@ class SeedDialog extends StatelessWidget {
 
     Widget? effectiveFooter = footer;
     if (effectiveFooter == null &&
-        (subAction != null || secondaryAction != null || primaryAction != null)) {
+        (subAction != null ||
+            secondaryAction != null ||
+            primaryAction != null)) {
       effectiveFooter = Row(
         children: [
           ?subAction,
@@ -196,15 +199,12 @@ class SeedDialog extends StatelessWidget {
 
     return Center(
       child: Container(
-        width: maxWidth,
-        constraints: BoxConstraints(
-          maxWidth: mediaQuery.size.width * 0.9,
-          maxHeight: maxHeight,
-        ),
-        margin: const EdgeInsets.all(24.0),
+        width: mediaQuery.size.width * 0.9,
+        constraints: BoxConstraints(maxWidth: maxWidth, maxHeight: maxHeight),
+        margin: const EdgeInsets.symmetric(horizontal: 20),
         decoration: BoxDecoration(
           color: colors.bg.layerFloating,
-          borderRadius: SeedBorderRadius.r4,
+          borderRadius: SeedBorderRadius.r5,
           boxShadow: shadows.s3,
         ),
         child: Material(
@@ -217,12 +217,7 @@ class SeedDialog extends StatelessWidget {
                 header!
               else if (title != null)
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    SeedDimension.x5,
-                    SeedDimension.x5,
-                    SeedDimension.x3,
-                    SeedDimension.x2,
-                  ),
+                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
                   child: Row(
                     children: [
                       Expanded(
@@ -231,15 +226,15 @@ class SeedDialog extends StatelessWidget {
                           children: [
                             Text(
                               title!,
-                              style: typography.t6Bold.copyWith(
+                              style: typography.t8Bold.copyWith(
                                 color: colors.fg.neutral,
                               ),
                             ),
                             if (description != null) ...[
-                              const SizedBox(height: SeedDimension.x1),
+                              const SizedBox(height: SeedDimension.x1_5),
                               Text(
                                 description!,
-                                style: typography.t3Regular.copyWith(
+                                style: typography.t5Regular.copyWith(
                                   color: colors.fg.neutralMuted,
                                 ),
                               ),
@@ -258,16 +253,13 @@ class SeedDialog extends StatelessWidget {
                 ),
               Flexible(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: SeedDimension.x5,
-                    vertical: SeedDimension.x3,
-                  ),
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 48),
                   child: content,
                 ),
               ),
               if (effectiveFooter != null)
                 Padding(
-                  padding: const EdgeInsets.all(SeedDimension.x5),
+                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
                   child: effectiveFooter,
                 ),
             ],

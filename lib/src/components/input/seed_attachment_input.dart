@@ -39,7 +39,7 @@ class SeedAttachmentInput extends StatelessWidget {
     this.onAdd,
     this.onRemove,
     this.onRetry,
-    this.itemSize = 72.0,
+    this.itemSize = 80.0,
     this.representativeLabel = '대표',
     this.enabled = true,
   });
@@ -89,9 +89,9 @@ class SeedAttachmentInput extends StatelessWidget {
                 height: itemSize,
                 decoration: BoxDecoration(
                   color: isPressed
-                      ? colors.bg.layerDefaultPressed
-                      : colors.bg.layerDefault,
-                  borderRadius: SeedBorderRadius.r2,
+                      ? colors.bg.transparentPressed
+                      : colors.bg.transparent,
+                  borderRadius: SeedBorderRadius.r3,
                   border: Border.all(
                     color: canAdd
                         ? colors.stroke.neutralWeak
@@ -109,16 +109,27 @@ class SeedAttachmentInput extends StatelessWidget {
                           ? colors.fg.neutralSubtle
                           : colors.fg.disabled,
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${items.length}/$maxCount',
-                      style: typography.t1Regular.copyWith(
-                        color: items.isNotEmpty && canAdd
-                            ? colors.fg.brand
-                            : colors.fg.neutralMuted,
-                        fontWeight: items.isNotEmpty
-                            ? FontWeight.bold
-                            : FontWeight.normal,
+                    const SizedBox(height: 4),
+                    Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(
+                            text: '${items.length}',
+                            style: typography.t2Regular.copyWith(
+                              color: canAdd
+                                  ? colors.fg.neutral
+                                  : colors.fg.disabled,
+                            ),
+                          ),
+                          TextSpan(
+                            text: '/$maxCount',
+                            style: typography.t2Regular.copyWith(
+                              color: canAdd
+                                  ? colors.fg.neutralSubtle
+                                  : colors.fg.disabled,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -153,11 +164,11 @@ class SeedAttachmentInput extends StatelessWidget {
           height: itemSize,
           decoration: BoxDecoration(
             color: colors.bg.neutralWeak,
-            borderRadius: SeedBorderRadius.r2,
+            borderRadius: SeedBorderRadius.r3,
             border: Border.all(
               color: item.status == SeedAttachmentStatus.error
                   ? colors.stroke.criticalSolid
-                  : colors.stroke.neutralMuted.withValues(alpha: 0.4),
+                  : colors.stroke.neutralSubtle,
               width: 1.0,
             ),
             image: item.imageProvider != null
@@ -169,7 +180,7 @@ class SeedAttachmentInput extends StatelessWidget {
                   child: Icon(
                     Icons.insert_drive_file_outlined,
                     color: colors.fg.neutralSubtle,
-                    size: 28,
+                    size: 24,
                   ),
                 )
               : null,
@@ -182,19 +193,21 @@ class SeedAttachmentInput extends StatelessWidget {
             right: 0,
             bottom: 0,
             child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 2),
+              height: SeedDimension.x6,
+              padding: const EdgeInsets.symmetric(horizontal: SeedDimension.x1),
+              alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: colors.bg.neutralInverted.withValues(alpha: 0.7),
+                color: colors.bg.overlay,
                 borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(8.0),
-                  bottomRight: Radius.circular(8.0),
+                  bottomLeft: Radius.circular(SeedRadius.r3),
+                  bottomRight: Radius.circular(SeedRadius.r3),
                 ),
               ),
               child: Text(
                 representativeLabel,
                 textAlign: TextAlign.center,
-                style: typography.t1Bold.copyWith(
-                  color: colors.fg.neutralInverted,
+                style: typography.t2Medium.copyWith(
+                  color: const Color(0xFFFFFFFF),
                 ),
               ),
             ),
@@ -206,7 +219,7 @@ class SeedAttachmentInput extends StatelessWidget {
             child: Container(
               decoration: BoxDecoration(
                 color: colors.bg.layerDefault.withValues(alpha: 0.6),
-                borderRadius: SeedBorderRadius.r2,
+                borderRadius: SeedBorderRadius.r3,
               ),
               child: const Center(child: SeedProgressCircle(size: 24)),
             ),
@@ -218,13 +231,13 @@ class SeedAttachmentInput extends StatelessWidget {
             child: Container(
               decoration: BoxDecoration(
                 color: colors.bg.neutralInverted.withValues(alpha: 0.5),
-                borderRadius: SeedBorderRadius.r2,
+                borderRadius: SeedBorderRadius.r3,
               ),
               child: Center(
                 child: IconButton(
-                  icon: Icon(
+                  icon: const Icon(
                     Icons.refresh,
-                    color: colors.fg.neutralInverted,
+                    color: Color(0xFFFFFFFF),
                     size: 24,
                   ),
                   onPressed: () => onRetry?.call(item),
@@ -236,31 +249,35 @@ class SeedAttachmentInput extends StatelessWidget {
         // Delete button in top right
         if (enabled && onRemove != null)
           Positioned(
-            top: 2,
-            right: 2,
+            top: SeedDimension.x1,
+            right: SeedDimension.x1,
             child: SeedPressable(
               semanticsLabel: '첨부 파일 삭제',
-              enableScale: false,
+              enableScale: true,
               onTap: () => onRemove?.call(item),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-                child: Center(
-                  widthFactor: 1,
-                  heightFactor: 1,
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      color: colors.bg.neutralInverted.withValues(alpha: 0.6),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.close,
-                      size: 14,
-                      color: colors.fg.neutralInverted,
+              builder: (context, isPressed) {
+                return Container(
+                  width: SeedDimension.x5,
+                  height: SeedDimension.x5,
+                  decoration: BoxDecoration(
+                    color: isPressed
+                        ? colors.bg.layerDefaultPressed
+                        : colors.bg.layerDefault,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: colors.stroke.neutralWeak,
+                      width: 1.0,
                     ),
                   ),
-                ),
-              ),
+                  child: Center(
+                    child: Icon(
+                      Icons.close_rounded,
+                      size: SeedDimension.x2_5,
+                      color: colors.fg.neutral,
+                    ),
+                  ),
+                );
+              },
             ),
           ),
       ],

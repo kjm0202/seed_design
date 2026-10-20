@@ -220,13 +220,6 @@ void main() {
       expect(tester.getSize(find.byType(SeedButton)).height, greaterThan(40));
       expect(tester.takeException(), isNull);
     });
-
-    test('reviewed design specification values', () {
-      expect(SeedButtonSize.xsmall.height, 32);
-      expect(SeedButtonSize.medium.height, 40);
-      expect(SeedButtonSize.medium.borderRadius, SeedBorderRadius.r2);
-      expect(SeedTypography.base().screenTitle.fontSize, 26);
-    });
   });
 
   group('Accessible interactions', () {

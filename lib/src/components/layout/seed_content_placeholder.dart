@@ -1,6 +1,8 @@
 import 'package:material_ui/material_ui.dart';
+
 import '../../foundations/radius/seed_radius.dart';
 import '../../theme/seed_theme.dart';
+import '../../foundations/colors/seed_palette.dart';
 
 /// A SEED Design Content Placeholder component.
 ///
@@ -12,7 +14,7 @@ class SeedContentPlaceholder extends StatelessWidget {
     this.width,
     this.height,
     this.icon,
-    this.iconSize = 32.0,
+    this.iconSize,
     this.borderRadius,
   });
 
@@ -26,7 +28,7 @@ class SeedContentPlaceholder extends StatelessWidget {
   final Widget? icon;
 
   /// Size of the fallback icon.
-  final double iconSize;
+  final double? iconSize;
 
   /// Border radius of the placeholder box. Defaults to [SeedBorderRadius.r2].
   final BorderRadius? borderRadius;
@@ -42,13 +44,23 @@ class SeedContentPlaceholder extends StatelessWidget {
         color: colors.bg.neutralWeak,
         borderRadius: borderRadius ?? SeedBorderRadius.r2,
       ),
-      child: Center(
-        child: icon ??
-            Icon(
-              Icons.image_outlined,
-              size: iconSize,
-              color: colors.fg.placeholder,
-            ),
+      child: LayoutBuilder(
+        builder: (context, constraints) => Center(
+          child:
+              icon ??
+              Icon(
+                Icons.image_outlined,
+                size:
+                    iconSize ??
+                    (constraints.maxHeight.isFinite
+                            ? constraints.maxHeight * 0.5
+                            : 32.0)
+                        .clamp(16.0, 160.0),
+                color: colors.isDark
+                    ? SeedPalette.gray400Dark
+                    : SeedPalette.gray400Light,
+              ),
+        ),
       ),
     );
   }
