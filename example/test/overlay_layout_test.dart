@@ -59,4 +59,29 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(SeedAlertDialog), findsNothing);
   });
+
+  testWidgets(
+    'sorting uses SEED row spacing and one horizontal screen gutter',
+    (tester) async {
+      addTearDown(tester.view.reset);
+      await mount(tester);
+      await open(tester, '바텀 시트 열기');
+      final rows = find.byType(SeedListItem);
+      expect(rows, findsNWidgets(3));
+      final bounds = tester.getRect(find.byType(SeedBottomSheet));
+      final title = tester.getRect(find.text('정렬 옵션 선택'));
+      expect(title.top - bounds.top, 24);
+      final first = tester.getRect(rows.first);
+      expect(first.top - title.bottom, 16);
+      expect(first.height, SeedLineHeight.t5 + 2 * SeedDimension.x3);
+      expect(
+        tester.getTopLeft(find.byIcon(Icons.access_time)).dx - bounds.left,
+        16,
+      );
+      await tester.tap(find.text('최신순'));
+      await tester.pumpAndSettle();
+      expect(find.byType(SeedBottomSheet), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }
