@@ -1,5 +1,9 @@
 import 'package:material_ui/material_ui.dart';
+
 import '../../foundations/radius/seed_radius.dart';
+import '../../foundations/gradient/seed_gradient.dart';
+import '../../foundations/motion/seed_motion.dart';
+import '../../foundations/colors/seed_palette.dart';
 import '../../theme/seed_theme.dart';
 
 /// Skeleton component of SEED Design System.
@@ -19,13 +23,11 @@ class SeedSkeleton extends StatefulWidget {
     this.shape = BoxShape.rectangle,
   });
 
-  const SeedSkeleton.circle({
-    super.key,
-    required double size,
-  })  : width = size,
-        height = size,
-        borderRadius = null,
-        shape = BoxShape.circle;
+  const SeedSkeleton.circle({super.key, required double size})
+    : width = size,
+      height = size,
+      borderRadius = null,
+      shape = BoxShape.circle;
 
   @override
   State<SeedSkeleton> createState() => _SeedSkeletonState();
@@ -40,7 +42,7 @@ class _SeedSkeletonState extends State<SeedSkeleton>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1400),
+      duration: const Duration(milliseconds: 1500),
     );
   }
 
@@ -64,8 +66,10 @@ class _SeedSkeletonState extends State<SeedSkeleton>
   Widget build(BuildContext context) {
     final colors = context.seedColor;
 
-    final Color baseColor = colors.bg.neutralWeak;
-    final Color highlightColor = colors.bg.layerDefault.withValues(alpha: 0.5);
+    final Color baseColor = colors.isDark
+        ? SeedPalette.gray200Dark
+        : SeedPalette.gray200Light;
+    final shimmer = SeedGradients.shimmerNeutral(isDark: colors.isDark);
 
     return AnimatedBuilder(
       animation: _controller,
@@ -78,23 +82,31 @@ class _SeedSkeletonState extends State<SeedSkeleton>
             borderRadius: widget.shape == BoxShape.rectangle
                 ? (widget.borderRadius ?? SeedBorderRadius.r2)
                 : null,
+            color: baseColor,
+          ),
+          foregroundDecoration: BoxDecoration(
+            shape: widget.shape,
+            borderRadius: widget.shape == BoxShape.rectangle
+                ? (widget.borderRadius ?? SeedBorderRadius.r2)
+                : null,
             gradient: LinearGradient(
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-              stops: [
-                (_controller.value - 0.3).clamp(0.0, 1.0),
-                _controller.value,
-                (_controller.value + 0.3).clamp(0.0, 1.0),
-              ],
-              colors: [
-                baseColor,
-                highlightColor,
-                baseColor,
-              ],
+              colors: shimmer.colors,
+              stops: shimmer.stops,
+              transform: _ShimmerTransform(
+                SeedCurves.easing.transform(_controller.value),
+              ),
             ),
           ),
         );
       },
     );
   }
+}
+
+class _ShimmerTransform extends GradientTransform {
+  final double progress;
+  const _ShimmerTransform(this.progress);
+  @override
+  Matrix4 transform(Rect bounds, {TextDirection? textDirection}) =>
+      Matrix4.translationValues(bounds.width * (progress * 2 - 1), 0, 0);
 }

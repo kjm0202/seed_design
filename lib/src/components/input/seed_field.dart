@@ -1,12 +1,10 @@
 import 'package:material_ui/material_ui.dart';
+
 import '../../foundations/dimensions/seed_dimension.dart';
 import '../../theme/seed_theme.dart';
 
 /// Weight for [SeedField] label.
-enum SeedFieldLabelWeight {
-  medium,
-  bold,
-}
+enum SeedFieldLabelWeight { medium, bold }
 
 /// Field container component of SEED Design System.
 ///
@@ -42,88 +40,96 @@ class SeedField extends StatelessWidget {
     final typography = context.seedTypography;
 
     final bool hasHeader = label != null || subAction != null;
-    final bool hasFooter = errorMessage != null || helperText != null || characterCount != null;
+    final bool hasFooter =
+        errorMessage != null || helperText != null || characterCount != null;
 
-    final TextStyle labelStyle = (labelWeight == SeedFieldLabelWeight.bold
-            ? typography.t4Bold
-            : typography.t4Medium)
-        .copyWith(color: colors.fg.neutral);
+    final TextStyle labelStyle =
+        (labelWeight == SeedFieldLabelWeight.bold
+                ? typography.t5Bold
+                : typography.t5Medium)
+            .copyWith(color: colors.fg.neutral);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
         if (hasHeader) ...[
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (label != null)
-                    Text(
-                      label!,
-                      style: labelStyle,
-                    ),
-                  if (required) ...[
-                    const SizedBox(width: SeedDimension.x0_5),
-                    Text(
-                      '*',
-                      style: typography.t4Bold.copyWith(
-                        color: colors.fg.critical,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: SeedDimension.x0_5),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (label != null) Text(label!, style: labelStyle),
+                    if (required) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(left: 2.0, top: 4.0),
+                        child: Text(
+                          '*',
+                          style: typography.t5Bold.copyWith(
+                            color: colors.fg.critical,
+                            height: 1.0,
+                          ),
+                        ),
                       ),
-                    ),
-                  ] else if (optional) ...[
-                    const SizedBox(width: SeedDimension.x1),
-                    Text(
-                      '(선택)',
-                      style: typography.t3Regular.copyWith(
-                        color: colors.fg.neutralSubtle,
+                    ] else if (optional) ...[
+                      const SizedBox(width: SeedDimension.x1),
+                      Text(
+                        '(선택)',
+                        style: typography.t4Regular.copyWith(
+                          height: 22 / 14,
+                          color: colors.fg.neutralSubtle,
+                        ),
                       ),
-                    ),
+                    ],
                   ],
-                ],
-              ),
-              ?subAction,
-            ],
+                ),
+                ?subAction,
+              ],
+            ),
           ),
-          const SizedBox(height: SeedDimension.x1_5),
+          const SizedBox(height: SeedDimension.x2),
         ],
         child,
         if (hasFooter) ...[
-          const SizedBox(height: SeedDimension.x1),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: errorMessage != null
-                    ? Text(
-                        errorMessage!,
-                        style: typography.t2Regular.copyWith(
-                          color: colors.fg.critical,
-                        ),
-                      )
-                    : helperText != null
-                        ? Text(
-                            helperText!,
-                            style: typography.t2Regular.copyWith(
-                              color: colors.fg.neutralMuted,
-                            ),
-                          )
-                        : const SizedBox.shrink(),
-              ),
-              if (characterCount != null) ...[
-                const SizedBox(width: SeedDimension.x2),
-                Text(
-                  characterCount!,
-                  style: typography.t2Regular.copyWith(
-                    color: colors.fg.neutralMuted,
-                  ),
+          const SizedBox(height: SeedDimension.x2),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: SeedDimension.x0_5),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: errorMessage != null
+                      ? Text(
+                          errorMessage!,
+                          style: typography.t4Regular.copyWith(
+                            color: colors.fg.critical,
+                          ),
+                        )
+                      : helperText != null
+                      ? Text(
+                          helperText!,
+                          style: typography.t4Regular.copyWith(
+                            color: colors.fg.neutralSubtle,
+                          ),
+                        )
+                      : const SizedBox.shrink(),
                 ),
+                if (characterCount != null) ...[
+                  const SizedBox(width: SeedDimension.x2),
+                  Text(
+                    characterCount!,
+                    style: typography.t4Regular.copyWith(
+                      color: colors.fg.neutralSubtle,
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ],
       ],

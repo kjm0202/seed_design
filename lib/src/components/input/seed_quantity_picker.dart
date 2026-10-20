@@ -1,4 +1,6 @@
 import 'package:material_ui/material_ui.dart';
+
+import '../../foundations/colors/seed_color_scheme.dart';
 import '../../foundations/dimensions/seed_dimension.dart';
 import '../../foundations/radius/seed_radius.dart';
 import '../../foundations/feedback/seed_scale_feedback.dart';
@@ -13,16 +15,20 @@ enum SeedQuantityPickerSize {
   double get height {
     switch (this) {
       case SeedQuantityPickerSize.small:
-        return 32.0;
+        return 36.0;
       case SeedQuantityPickerSize.medium:
         return 40.0;
       case SeedQuantityPickerSize.large:
-        return 48.0;
+        return 52.0;
     }
   }
 
   double get buttonWidth => height;
-  double get iconSize => height * 0.45;
+  double get iconSize => switch (this) {
+    SeedQuantityPickerSize.small => 16,
+    SeedQuantityPickerSize.medium => 18,
+    SeedQuantityPickerSize.large => 22,
+  };
 }
 
 /// Quantity picker component of SEED Design System.
@@ -62,19 +68,20 @@ class SeedQuantityPicker extends StatelessWidget {
         ? colors.stroke.criticalSolid
         : colors.stroke.neutralWeak;
 
-    final TextStyle textStyle = (size == SeedQuantityPickerSize.small
-            ? typography.t3Bold
-            : typography.t4Bold)
-        .copyWith(
-      color: enabled ? colors.fg.neutral : colors.fg.disabled,
-    );
+    final TextStyle textStyle =
+        (size == SeedQuantityPickerSize.large
+                ? typography.t6Medium
+                : typography.t5Medium)
+            .copyWith(color: enabled ? colors.fg.neutral : colors.fg.disabled);
 
     return Container(
       height: size.height,
       decoration: BoxDecoration(
         color: colors.bg.layerDefault,
-        borderRadius: SeedBorderRadius.r2_5,
-        border: Border.all(color: strokeColor, width: 1.0),
+        borderRadius: size == SeedQuantityPickerSize.large
+            ? SeedBorderRadius.r3
+            : SeedBorderRadius.r2,
+        border: Border.all(color: strokeColor, width: hasError ? 2 : 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -85,18 +92,27 @@ class SeedQuantityPicker extends StatelessWidget {
             canAction: _canDecrement,
             onPressed: () => onChanged?.call(value - step),
             colors: colors,
+            borderRadius: BorderRadius.horizontal(
+              left: Radius.circular(
+                size == SeedQuantityPickerSize.large
+                    ? SeedRadius.r3
+                    : SeedRadius.r2,
+              ),
+            ),
           ),
+
+          // Divider
+          _buildDivider(colors),
 
           // Value display
           Container(
-            constraints: BoxConstraints(minWidth: size.height * 1.1),
             padding: const EdgeInsets.symmetric(horizontal: SeedDimension.x2),
             alignment: Alignment.center,
-            child: Text(
-              '$value',
-              style: textStyle,
-            ),
+            child: Text('$value', style: textStyle),
           ),
+
+          // Divider
+          _buildDivider(colors),
 
           // Increment Button
           _buildButton(
@@ -104,9 +120,24 @@ class SeedQuantityPicker extends StatelessWidget {
             canAction: _canIncrement,
             onPressed: () => onChanged?.call(value + step),
             colors: colors,
+            borderRadius: BorderRadius.horizontal(
+              right: Radius.circular(
+                size == SeedQuantityPickerSize.large
+                    ? SeedRadius.r3
+                    : SeedRadius.r2,
+              ),
+            ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildDivider(SeedColorScheme colors) {
+    return Container(
+      width: 1.0,
+      height: SeedDimension.x4,
+      color: colors.stroke.neutralSubtle,
     );
   }
 
@@ -114,22 +145,29 @@ class SeedQuantityPicker extends StatelessWidget {
     required IconData icon,
     required bool canAction,
     required VoidCallback onPressed,
-    required dynamic colors,
+    required SeedColorScheme colors,
+    required BorderRadius borderRadius,
   }) {
     return SeedPressable(
       enabled: canAction,
       onTap: canAction ? onPressed : null,
-      child: SizedBox(
-        width: size.buttonWidth,
-        height: size.height,
-        child: Center(
-          child: Icon(
-            icon,
-            size: size.iconSize,
-            color: canAction ? colors.fg.neutral : colors.fg.disabled,
+      builder: (context, isPressed) {
+        return Container(
+          width: size.buttonWidth,
+          height: size.height,
+          decoration: BoxDecoration(
+            color: isPressed ? colors.bg.transparentPressed : colors.bg.transparent,
+            borderRadius: borderRadius,
           ),
-        ),
-      ),
+          child: Center(
+            child: Icon(
+              icon,
+              size: size.iconSize,
+              color: canAction ? colors.fg.neutral : colors.fg.disabled,
+            ),
+          ),
+        );
+      },
     );
   }
 }

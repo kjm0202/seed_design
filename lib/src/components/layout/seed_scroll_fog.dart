@@ -1,13 +1,10 @@
 import 'package:material_ui/material_ui.dart';
+
 import '../../theme/seed_theme.dart';
+import '../../foundations/gradient/seed_gradient.dart';
 
 /// Placement of [SeedScrollFog].
-enum SeedScrollFogPlacement {
-  top,
-  bottom,
-  left,
-  right,
-}
+enum SeedScrollFogPlacement { top, bottom, left, right }
 
 /// Scroll Fog component of SEED Design System.
 ///
@@ -36,28 +33,29 @@ class SeedScrollFog extends StatelessWidget {
 
     switch (placement) {
       case SeedScrollFogPlacement.top:
-        effectiveSize = size ?? 24.0;
+        effectiveSize = size ?? 20.0;
         begin = Alignment.topCenter;
         end = Alignment.bottomCenter;
         break;
       case SeedScrollFogPlacement.bottom:
-        effectiveSize = size ?? 64.0;
+        effectiveSize = size ?? 20.0;
         begin = Alignment.bottomCenter;
         end = Alignment.topCenter;
         break;
       case SeedScrollFogPlacement.left:
-        effectiveSize = size ?? 24.0;
+        effectiveSize = size ?? 20.0;
         begin = Alignment.centerLeft;
         end = Alignment.centerRight;
         break;
       case SeedScrollFogPlacement.right:
-        effectiveSize = size ?? 24.0;
+        effectiveSize = size ?? 20.0;
         begin = Alignment.centerRight;
         end = Alignment.centerLeft;
         break;
     }
 
-    final isVertical = placement == SeedScrollFogPlacement.top ||
+    final isVertical =
+        placement == SeedScrollFogPlacement.top ||
         placement == SeedScrollFogPlacement.bottom;
 
     return IgnorePointer(
@@ -68,10 +66,14 @@ class SeedScrollFog extends StatelessWidget {
           gradient: LinearGradient(
             begin: begin,
             end: end,
-            colors: [
-              fogColor,
-              fogColor.withValues(alpha: 0.0),
-            ],
+            colors: SeedGradients.fadeMask().colors.reversed
+                .map(
+                  (color) => fogColor.withValues(alpha: color.a * fogColor.a),
+                )
+                .toList(),
+            stops: SeedGradients.fadeMask().stops!.reversed
+                .map((stop) => 1 - stop)
+                .toList(),
           ),
         ),
       ),

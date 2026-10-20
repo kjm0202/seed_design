@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+
 import '../../foundations/dimensions/seed_dimension.dart';
 import '../../foundations/radius/seed_radius.dart';
 import '../../foundations/feedback/seed_scale_feedback.dart';
@@ -6,10 +7,7 @@ import '../../theme/seed_theme.dart';
 import '../feedback/seed_progress_circle.dart';
 
 /// Style tone for [SeedContextualFloatingButton].
-enum SeedContextualFloatingButtonTone {
-  solid,
-  layer,
-}
+enum SeedContextualFloatingButtonTone { solid, layer }
 
 /// Contextual Floating Button component of SEED Design System.
 ///
@@ -56,7 +54,6 @@ class SeedContextualFloatingButton extends StatelessWidget {
 
     Color bgColor;
     Color fgColor;
-    Border? border;
 
     if (!enabled) {
       bgColor = colors.bg.disabled;
@@ -68,28 +65,36 @@ class SeedContextualFloatingButton extends StatelessWidget {
       // Layer
       bgColor = colors.bg.layerFloating;
       fgColor = isBrand ? colors.fg.brand : colors.fg.neutral;
-      border = Border.all(color: colors.stroke.neutralWeak, width: 1.0);
     }
 
-    final TextStyle textStyle = typography.t3Bold.copyWith(color: fgColor);
+    final TextStyle textStyle = typography.t4Medium.copyWith(color: fgColor);
 
     return SeedPressable(
       semanticsLabel: semanticsLabel ?? label,
       enabled: enabled && !loading,
       onTap: onPressed,
-      child: Container(
-        height: 40.0,
+      builder: (context, isPressed) => Container(
         constraints: BoxConstraints(
-          minWidth: label == null ? 40.0 : 0.0,
+          minHeight: label == null ? 44 : 36,
+          minWidth: label == null ? 44 : 0,
         ),
+
         padding: EdgeInsets.symmetric(
-          horizontal: label == null ? SeedDimension.x2 : SeedDimension.x4,
+          horizontal: label == null ? 0 : SeedDimension.x3_5,
+          vertical: label == null ? 0 : SeedDimension.x2,
         ),
         decoration: BoxDecoration(
-          color: bgColor,
+          color: !enabled
+              ? colors.bg.disabled
+              : (isPressed || loading)
+              ? (tone == SeedContextualFloatingButtonTone.solid
+                    ? (isBrand
+                          ? colors.bg.brandSolidPressed
+                          : colors.bg.neutralSolidPressed)
+                    : colors.bg.layerFloatingPressed)
+              : bgColor,
           borderRadius: SeedBorderRadius.full,
-          border: border,
-          boxShadow: shadows.s2,
+          boxShadow: shadows.s3,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -99,12 +104,16 @@ class SeedContextualFloatingButton extends StatelessWidget {
               SeedProgressCircle(size: 16.0, color: fgColor),
             ] else if (icon != null) ...[
               IconTheme(
-                data: IconThemeData(color: fgColor, size: 18.0),
+                data: IconThemeData(
+                  color: fgColor,
+                  size: label == null ? 22 : 16,
+                ),
                 child: icon!,
               ),
             ],
             if (label != null) ...[
-              if (icon != null || loading) const SizedBox(width: SeedDimension.x1_5),
+              if (icon != null || loading)
+                const SizedBox(width: SeedDimension.x1),
               Text(label!, style: textStyle),
             ],
           ],

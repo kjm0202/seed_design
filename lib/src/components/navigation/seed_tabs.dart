@@ -20,11 +20,11 @@ enum SeedTabsSize {
   double get height {
     switch (this) {
       case SeedTabsSize.small:
-        return 36.0;
+        return 40.0;
       case SeedTabsSize.medium:
         return 44.0;
       case SeedTabsSize.large:
-        return 48.0;
+        return 44.0;
     }
   }
 }
@@ -84,43 +84,79 @@ class SeedTabs extends StatelessWidget {
     return Container(
       height: size.height,
       decoration: BoxDecoration(
+        color: colors.bg.layerDefault,
         border: Border(
-          bottom: BorderSide(color: colors.stroke.neutralWeak, width: 1.0),
+          bottom: BorderSide(color: colors.stroke.neutralMuted, width: 1.0),
         ),
       ),
       child: fill
-          ? Row(
-              children: List.generate(items.length, (index) {
-                return Expanded(
-                  child: _buildLineTabItem(context, index, nodes[index]),
+          ? LayoutBuilder(
+              builder: (context, constraints) {
+                final tabWidth = constraints.maxWidth / items.length;
+                return Stack(
+                  children: [
+                    Row(
+                      children: List.generate(items.length, (index) {
+                        return Expanded(
+                          child: _buildLineTabItem(
+                            context,
+                            index,
+                            nodes[index],
+                            showBottomIndicator: false,
+                          ),
+                        );
+                      }),
+                    ),
+                    AnimatedPositioned(
+                      duration: SeedDuration.d4,
+                      curve: SeedCurves.easing,
+                      left: selectedIndex * tabWidth,
+                      bottom: 0,
+                      width: tabWidth,
+                      height: 2.0,
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: SeedSpacingX.globalGutter),
+                        color: colors.fg.neutral,
+                      ),
+                    ),
+                  ],
                 );
-              }),
+              },
             )
           : SingleChildScrollView(
               scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: SeedSpacingX.globalGutter),
               child: Row(
                 children: List.generate(items.length, (index) {
-                  return _buildLineTabItem(context, index, nodes[index]);
+                  return _buildLineTabItem(
+                    context,
+                    index,
+                    nodes[index],
+                    showBottomIndicator: true,
+                  );
                 }),
               ),
             ),
     );
   }
 
-  Widget _buildLineTabItem(BuildContext context, int index, FocusNode node) {
+  Widget _buildLineTabItem(
+    BuildContext context,
+    int index,
+    FocusNode node, {
+    bool showBottomIndicator = true,
+  }) {
     final colors = context.seedColor;
     final typography = context.seedTypography;
     final item = items[index];
     final bool isSelected = index == selectedIndex;
 
     final TextStyle textStyle =
-        (size == SeedTabsSize.small
-                ? (isSelected ? typography.t3Bold : typography.t3Regular)
-                : (isSelected ? typography.t4Bold : typography.t4Regular))
+        (size == SeedTabsSize.small ? typography.t4Bold : typography.t5Bold)
             .copyWith(
               color: !item.enabled
                   ? colors.fg.disabled
-                  : (isSelected ? colors.fg.neutral : colors.fg.neutralMuted),
+                  : (isSelected ? colors.fg.neutral : colors.fg.neutralSubtle),
             );
 
     return SeedPressable(
@@ -129,25 +165,39 @@ class SeedTabs extends StatelessWidget {
       focusNode: node,
       onTap: () => onTabSelected(index),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: SeedDimension.x4),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          border: isSelected
-              ? Border(bottom: BorderSide(color: colors.fg.neutral, width: 2.0))
-              : null,
+        padding: const EdgeInsets.symmetric(
+          horizontal: SeedDimension.x2_5,
+          vertical: SeedDimension.x2_5,
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
+        alignment: Alignment.center,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(item.label, style: textStyle),
-            if (item.notificationCount != null || item.showNotificationDot) ...[
-              const SizedBox(width: SeedDimension.x1),
-              SeedNotificationBadge(
-                count: item.notificationCount,
-                showDot: item.showNotificationDot,
+            Expanded(
+              child: Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(item.label, style: textStyle),
+                    if (item.notificationCount != null || item.showNotificationDot) ...[
+                      const SizedBox(width: SeedDimension.x1),
+                      SeedNotificationBadge(
+                        count: item.notificationCount,
+                        showDot: item.showNotificationDot,
+                      ),
+                    ],
+                  ],
+                ),
               ),
-            ],
+            ),
+            if (showBottomIndicator)
+              AnimatedContainer(
+                duration: SeedDuration.d4,
+                curve: SeedCurves.easing,
+                height: 2.0,
+                color: isSelected ? colors.fg.neutral : Colors.transparent,
+              ),
           ],
         ),
       ),
@@ -157,17 +207,18 @@ class SeedTabs extends StatelessWidget {
   Widget _buildChipTabs(BuildContext context, List<FocusNode> nodes) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: SeedDimension.x4),
       child: Row(
         children: List.generate(items.length, (index) {
           final item = items[index];
-          final bool isSelected = index == selectedIndex;
+          final bool isLast = index == items.length - 1;
           return Padding(
-            padding: const EdgeInsets.only(right: SeedDimension.x2),
+            padding: EdgeInsets.only(right: isLast ? 0 : SeedDimension.x2),
             child: _buildChipTabItem(
               context,
               index,
               item,
-              isSelected,
+              index == selectedIndex,
               nodes[index],
             ),
           );
@@ -210,14 +261,12 @@ class SeedTabs extends StatelessWidget {
       } else {
         bgColor = colors.bg.transparent;
         fgColor = colors.fg.neutral;
-        strokeColor = colors.stroke.neutralWeak;
+        strokeColor = colors.stroke.neutralMuted;
       }
     }
 
     final TextStyle textStyle =
-        (size == SeedTabsSize.small
-                ? (isSelected ? typography.t2Bold : typography.t2Medium)
-                : (isSelected ? typography.t3Bold : typography.t3Medium))
+        (size == SeedTabsSize.small ? typography.t4Medium : typography.t4Medium)
             .copyWith(color: fgColor);
 
     return SeedPressable(
@@ -229,7 +278,7 @@ class SeedTabs extends StatelessWidget {
         return AnimatedContainer(
           duration: SeedDuration.colorTransition,
           curve: SeedCurves.easing,
-          height: size == SeedTabsSize.small ? 32.0 : 38.0,
+          height: size == SeedTabsSize.small ? 32.0 : 36.0,
           padding: const EdgeInsets.symmetric(horizontal: 14.0),
           decoration: BoxDecoration(
             color: bgColor,

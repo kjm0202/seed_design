@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+
 import '../../foundations/colors/seed_color_scheme.dart';
 import '../../foundations/dimensions/seed_dimension.dart';
 import '../../foundations/radius/seed_radius.dart';
@@ -32,10 +33,7 @@ class SeedMenuItemData {
 
 /// A group of items in [SeedMenu].
 class SeedMenuGroupData {
-  const SeedMenuGroupData({
-    this.label,
-    required this.items,
-  });
+  const SeedMenuGroupData({this.label, required this.items});
 
   final String? label;
   final List<SeedMenuItemData> items;
@@ -43,11 +41,7 @@ class SeedMenuGroupData {
 
 /// A SEED Design Menu component providing a list of actions or options.
 class SeedMenu extends StatelessWidget {
-  const SeedMenu({
-    super.key,
-    required this.groups,
-    this.width = 220.0,
-  });
+  const SeedMenu({super.key, required this.groups, this.width = 240.0});
 
   /// The groups of items in the menu.
   final List<SeedMenuGroupData> groups;
@@ -62,39 +56,45 @@ class SeedMenu extends StatelessWidget {
     final shadows = context.seedShadows;
 
     return Container(
+      constraints: const BoxConstraints(maxHeight: 480),
       width: width,
       decoration: BoxDecoration(
-        color: colors.bg.layerDefault,
-        borderRadius: SeedBorderRadius.r3,
-        boxShadow: shadows.s2,
-        border: Border.all(
-          color: colors.stroke.neutralMuted.withValues(alpha: 0.3),
-          width: 0.5,
-        ),
+        color: colors.bg.layerFloating,
+        borderRadius: SeedBorderRadius.r5,
+        boxShadow: shadows.s3,
       ),
-      padding: const EdgeInsets.symmetric(vertical: SeedDimension.x1),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (int g = 0; g < groups.length; g++) ...[
-            if (g > 0) const SeedDivider(),
-            if (groups[g].label != null)
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: SeedDimension.x4,
-                  vertical: SeedDimension.x2,
+      padding: const EdgeInsets.symmetric(vertical: SeedDimension.x2),
+      child: SingleChildScrollView(
+        primary: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (int g = 0; g < groups.length; g++) ...[
+              if (g > 0)
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: SeedDimension.x4),
+                  child: SeedDivider(),
                 ),
-                child: Text(
-                  groups[g].label!,
-                  style: typography.t3Bold.copyWith(
-                    color: colors.fg.neutralSubtle,
+              if (groups[g].label != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: SeedDimension.x4,
+                    vertical: SeedDimension.x2_5,
+                  ),
+                  child: Text(
+                    groups[g].label!,
+                    style: typography.t4Medium.copyWith(
+                      color: colors.fg.neutralSubtle,
+                    ),
                   ),
                 ),
+              ...groups[g].items.map(
+                (item) => _buildMenuItem(context, item, colors, typography),
               ),
-            ...groups[g].items.map((item) => _buildMenuItem(context, item, colors, typography)),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -115,21 +115,24 @@ class SeedMenu extends StatelessWidget {
     }
 
     return InkWell(
+      overlayColor: WidgetStatePropertyAll(colors.bg.transparentPressed),
       onTap: item.enabled ? item.onTap : null,
       child: Padding(
         padding: const EdgeInsets.symmetric(
           horizontal: SeedDimension.x4,
-          vertical: SeedDimension.x2_5,
+          vertical: SeedDimension.x3,
         ),
         child: Row(
           children: [
             if (item.prefixIcon != null) ...[
               IconTheme(
                 data: IconThemeData(
-                  size: 20,
+                  size: 22,
                   color: !item.enabled
                       ? colors.fg.disabled
-                      : (item.isDestructive ? colors.fg.critical : colors.fg.neutralSubtle),
+                      : (item.isDestructive
+                            ? colors.fg.critical
+                            : colors.fg.neutral),
                 ),
                 child: item.prefixIcon!,
               ),
@@ -149,7 +152,9 @@ class SeedMenu extends StatelessWidget {
                     Text(
                       item.description!,
                       style: typography.t3Regular.copyWith(
-                        color: item.enabled ? colors.fg.neutralSubtle : colors.fg.disabled,
+                        color: item.enabled
+                            ? colors.fg.neutralSubtle
+                            : colors.fg.disabled,
                       ),
                     ),
                   ],
@@ -159,7 +164,9 @@ class SeedMenu extends StatelessWidget {
             if (item.badge != null) ...[
               SeedBadge(
                 label: item.badge!,
-                tone: item.isDestructive ? SeedBadgeTone.critical : SeedBadgeTone.neutral,
+                tone: item.isDestructive
+                    ? SeedBadgeTone.critical
+                    : SeedBadgeTone.neutral,
               ),
               const SizedBox(width: SeedDimension.x2),
             ],
@@ -167,7 +174,11 @@ class SeedMenu extends StatelessWidget {
               IconTheme(
                 data: IconThemeData(
                   size: 18,
-                  color: item.enabled ? colors.fg.neutralMuted : colors.fg.disabled,
+                  color: item.enabled
+                      ? (item.isDestructive
+                            ? colors.fg.critical
+                            : colors.fg.neutral)
+                      : colors.fg.disabled,
                 ),
                 child: item.suffixIcon!,
               ),

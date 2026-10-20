@@ -1,6 +1,8 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../foundations/dimensions/seed_dimension.dart';
+import '../../foundations/colors/seed_palette.dart';
+import '../../foundations/motion/seed_motion.dart';
 import '../../theme/seed_theme.dart';
 import '../../foundations/feedback/seed_scale_feedback.dart';
 
@@ -10,7 +12,7 @@ enum SeedRadioSize {
   large;
 
   double get diameter => this == SeedRadioSize.medium ? 20.0 : 24.0;
-  double get innerDiameter => this == SeedRadioSize.medium ? 10.0 : 12.0;
+  double get innerDiameter => this == SeedRadioSize.medium ? 8.0 : 10.0;
 }
 
 /// Radio button component of SEED Design System.
@@ -78,32 +80,57 @@ class _SeedRadioState<T> extends State<SeedRadio<T>> with RadioClient<T> {
     final colors = context.seedColor;
     final typography = context.seedTypography;
 
+    final gray300 = colors.isDark
+        ? SeedPalette.gray300Dark
+        : SeedPalette.gray300Light;
     final Color strokeColor = !enabled
-        ? colors.stroke.neutralWeak
+        ? (_isSelected ? gray300 : colors.stroke.neutralWeak)
         : (_isSelected
               ? colors.stroke.neutralContrast
               : colors.stroke.neutralWeak);
 
-    final Color innerColor = !enabled ? colors.fg.disabled : colors.fg.neutral;
+    final Color innerColor = !enabled ? gray300 : colors.fg.onNeutralSolid;
 
-    final Widget mark = Container(
-      width: widget.size.diameter,
-      height: widget.size.diameter,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: strokeColor, width: 1.5),
-      ),
-      alignment: Alignment.center,
-      child: _isSelected
-          ? Container(
-              width: widget.size.innerDiameter,
-              height: widget.size.innerDiameter,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: innerColor,
-              ),
+    Widget mark(bool pressed) => AnimatedScale(
+      scale: pressed
+          ? SeedScaleCalculator.calculateScale(
+              width: widget.size.diameter,
+              height: widget.size.diameter,
+              disableAnimations: MediaQuery.disableAnimationsOf(context),
             )
-          : null,
+          : 1,
+      duration: SeedDuration.pressedScale,
+      curve: SeedCurves.pressedScale,
+      child: Container(
+        width: widget.size.diameter,
+        height: widget.size.diameter,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: enabled && _isSelected
+              ? (pressed
+                    ? colors.bg.neutralSolidPressed
+                    : colors.bg.neutralSolid)
+              : pressed
+              ? colors.bg.transparentPressed
+              : !enabled && !_isSelected
+              ? gray300
+              : colors.bg.transparent,
+          border: enabled && _isSelected
+              ? null
+              : Border.all(color: strokeColor),
+        ),
+        alignment: Alignment.center,
+        child: _isSelected
+            ? Container(
+                width: widget.size.innerDiameter + (enabled ? 0 : 2),
+                height: widget.size.innerDiameter + (enabled ? 0 : 2),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: innerColor,
+                ),
+              )
+            : null,
+      ),
     );
 
     if (widget.label == null) {
@@ -116,7 +143,11 @@ class _SeedRadioState<T> extends State<SeedRadio<T>> with RadioClient<T> {
         checked: _isSelected,
         inMutuallyExclusiveGroup: true,
         onTap: _handleTap,
-        child: SizedBox(width: 44, height: 44, child: Center(child: mark)),
+        builder: (context, pressed) => SizedBox(
+          width: 44,
+          height: 44,
+          child: Center(child: mark(pressed)),
+        ),
       );
     }
 
@@ -135,13 +166,13 @@ class _SeedRadioState<T> extends State<SeedRadio<T>> with RadioClient<T> {
       checked: _isSelected,
       inMutuallyExclusiveGroup: true,
       onTap: _handleTap,
-      child: ConstrainedBox(
+      builder: (context, pressed) => ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 44),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            mark,
+            mark(pressed),
             const SizedBox(width: SeedDimension.x2),
             Flexible(child: Text(widget.label!, style: textStyle)),
           ],

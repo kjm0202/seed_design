@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../foundations/dimensions/seed_dimension.dart';
+import '../../foundations/motion/seed_motion.dart';
 import '../../foundations/radius/seed_radius.dart';
 import '../../theme/seed_theme.dart';
 import '../../foundations/feedback/seed_scale_feedback.dart';
@@ -22,6 +23,7 @@ class SeedCheckmark extends StatelessWidget {
   final SeedCheckboxShape shape;
   final SeedCheckboxSize size;
   final bool enabled;
+  final bool pressed;
 
   const SeedCheckmark({
     super.key,
@@ -29,6 +31,7 @@ class SeedCheckmark extends StatelessWidget {
     this.shape = SeedCheckboxShape.square,
     this.size = SeedCheckboxSize.medium,
     this.enabled = true,
+    this.pressed = false,
   });
 
   @override
@@ -42,18 +45,28 @@ class SeedCheckmark extends StatelessWidget {
     Color strokeColor;
     Color iconColor;
 
-    if (!enabled) {
-      bgColor = isActive ? colors.bg.disabled : colors.bg.transparent;
-      strokeColor = colors.stroke.neutralWeak;
-      iconColor = colors.fg.disabled;
-    } else if (shape == SeedCheckboxShape.ghost) {
-      bgColor = colors.bg.transparent;
+    if (shape == SeedCheckboxShape.ghost) {
+      bgColor = pressed
+          ? (isActive ? colors.bg.neutralWeak : colors.bg.transparentPressed)
+          : colors.bg.transparent;
       strokeColor = colors.bg.transparent;
-      iconColor = isActive ? colors.fg.neutral : colors.fg.placeholder;
+      iconColor = !enabled
+          ? colors.fg.disabled
+          : isActive
+          ? colors.fg.neutral
+          : colors.fg.placeholder;
+    } else if (!enabled) {
+      bgColor = colors.bg.disabled;
+      strokeColor = colors.stroke.neutralMuted;
+      iconColor = colors.fg.disabled;
     } else {
-      bgColor = isActive ? colors.bg.neutralSolid : colors.bg.transparent;
+      bgColor = isActive
+          ? (pressed ? colors.bg.neutralSolidPressed : colors.bg.neutralSolid)
+          : pressed
+          ? colors.bg.transparentPressed
+          : colors.bg.transparent;
       strokeColor = isActive
-          ? colors.bg.neutralSolid
+          ? colors.bg.transparent
           : colors.stroke.neutralWeak;
       iconColor = colors.fg.onNeutralSolid;
     }
@@ -69,8 +82,8 @@ class SeedCheckmark extends StatelessWidget {
         shape: shape == SeedCheckboxShape.ghost
             ? BoxShape.circle
             : BoxShape.rectangle,
-        border: shape == SeedCheckboxShape.square
-            ? Border.all(color: strokeColor, width: 1.5)
+        border: shape == SeedCheckboxShape.square && !(enabled && isActive)
+            ? Border.all(color: strokeColor)
             : null,
       ),
       alignment: Alignment.center,
@@ -83,10 +96,12 @@ class SeedCheckmark extends StatelessWidget {
                 borderRadius: SeedBorderRadius.full,
               ),
             )
-          : isChecked
+          : isChecked || shape == SeedCheckboxShape.ghost
           ? Icon(
               Icons.check_rounded,
-              size: size.markSize * 0.75,
+              size: shape == SeedCheckboxShape.ghost
+                  ? (size == SeedCheckboxSize.medium ? 14 : 18)
+                  : (size == SeedCheckboxSize.medium ? 12 : 14),
               color: iconColor,
             )
           : null,
@@ -151,11 +166,23 @@ class SeedCheckbox extends StatelessWidget {
                   : colors.fg.disabled,
             );
 
-    final Widget mark = SeedCheckmark(
-      value: value,
-      shape: shape,
-      size: size,
-      enabled: enabled && onChanged != null,
+    Widget mark(bool pressed) => AnimatedScale(
+      scale: pressed
+          ? SeedScaleCalculator.calculateScale(
+              width: size.markSize,
+              height: size.markSize,
+              disableAnimations: MediaQuery.disableAnimationsOf(context),
+            )
+          : 1,
+      duration: SeedDuration.pressedScale,
+      curve: SeedCurves.pressedScale,
+      child: SeedCheckmark(
+        value: value,
+        shape: shape,
+        size: size,
+        enabled: enabled && onChanged != null,
+        pressed: pressed,
+      ),
     );
 
     if (label == null && customLabel == null) {
@@ -168,7 +195,11 @@ class SeedCheckbox extends StatelessWidget {
         checked: value,
         mixed: value == null,
         onTap: _handleTap,
-        child: SizedBox(width: 44, height: 44, child: Center(child: mark)),
+        builder: (context, pressed) => SizedBox(
+          width: 44,
+          height: 44,
+          child: Center(child: mark(pressed)),
+        ),
       );
     }
 
@@ -181,13 +212,13 @@ class SeedCheckbox extends StatelessWidget {
       checked: value,
       mixed: value == null,
       onTap: _handleTap,
-      child: ConstrainedBox(
+      builder: (context, pressed) => ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 44),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            mark,
+            mark(pressed),
             const SizedBox(width: SeedDimension.x2),
             if (customLabel != null)
               customLabel!

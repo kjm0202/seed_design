@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+
 import '../../foundations/radius/seed_radius.dart';
 import '../../theme/seed_theme.dart';
 
@@ -16,7 +17,7 @@ class SeedNotificationBadge extends StatelessWidget {
   /// Maximum count before showing "+", e.g. 99 -> "99+".
   final int maxCount;
 
-  /// Optional custom background color. Defaults to `colors.bg.criticalSolid`.
+  /// Optional custom background color. Defaults to `colors.bg.brandSolid`.
   final Color? color;
 
   const SeedNotificationBadge({
@@ -28,27 +29,22 @@ class SeedNotificationBadge extends StatelessWidget {
   });
 
   /// Factory for a simple unread dot.
-  const SeedNotificationBadge.dot({
-    super.key,
-    this.color,
-  })  : count = null,
-        showDot = true,
-        maxCount = 99;
+  const SeedNotificationBadge.dot({super.key, this.color})
+    : count = null,
+      showDot = true,
+      maxCount = 99;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.seedColor;
     final typography = context.seedTypography;
-    final bgColor = color ?? colors.bg.criticalSolid;
+    final bgColor = color ?? colors.bg.brandSolid;
 
     if (showDot && (count == null || count == 0)) {
       return Container(
         width: 6.0,
         height: 6.0,
-        decoration: BoxDecoration(
-          color: bgColor,
-          shape: BoxShape.circle,
-        ),
+        decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
       );
     }
 
@@ -59,8 +55,8 @@ class SeedNotificationBadge extends StatelessWidget {
     final String text = count! > maxCount ? '$maxCount+' : count.toString();
 
     return Container(
-      height: 16.0,
-      constraints: const BoxConstraints(minWidth: 16.0),
+      height: 18.0,
+      constraints: const BoxConstraints(minWidth: 18.0),
       padding: const EdgeInsets.symmetric(horizontal: 4.0),
       decoration: BoxDecoration(
         color: bgColor,
@@ -70,9 +66,10 @@ class SeedNotificationBadge extends StatelessWidget {
         widthFactor: 1.0,
         child: Text(
           text,
+          textScaler: TextScaler.noScaling,
           style: typography.t1Bold.copyWith(
-            color: colors.fg.onCriticalSolid,
-            height: 1.0,
+            color: colors.fg.onBrandSolid,
+            height: 15 / 11,
           ),
           maxLines: 1,
         ),

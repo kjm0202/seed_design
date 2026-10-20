@@ -1,6 +1,8 @@
 import 'package:material_ui/material_ui.dart';
+
 import '../../foundations/radius/seed_radius.dart';
 import '../../theme/seed_theme.dart';
+import 'seed_identity_placeholder.dart';
 
 /// Size options for [SeedAvatar].
 enum SeedAvatarSize {
@@ -12,13 +14,13 @@ enum SeedAvatarSize {
   double get dimension {
     switch (this) {
       case SeedAvatarSize.small:
-        return 32.0;
+        return 36.0;
       case SeedAvatarSize.medium:
-        return 40.0;
+        return 42.0;
       case SeedAvatarSize.large:
         return 56.0;
       case SeedAvatarSize.xlarge:
-        return 72.0;
+        return 80.0;
     }
   }
 
@@ -54,20 +56,16 @@ class SeedAvatar extends StatelessWidget {
         color: colors.bg.neutralWeak,
         borderRadius: effectiveRadius,
         image: image != null
-            ? DecorationImage(
-                image: image!,
-                fit: BoxFit.cover,
-              )
+            ? DecorationImage(image: image!, fit: BoxFit.cover)
             : null,
+      ),
+      foregroundDecoration: BoxDecoration(
+        borderRadius: effectiveRadius,
+        border: Border.all(color: colors.stroke.neutralSubtle),
       ),
       alignment: Alignment.center,
       child: image == null
-          ? (placeholder ??
-              Icon(
-                Icons.person_rounded,
-                size: size.iconSize,
-                color: colors.fg.placeholder,
-              ))
+          ? (placeholder ?? SeedIdentityPlaceholder(size: size.dimension))
           : null,
     );
   }

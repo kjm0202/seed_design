@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+
 import '../../foundations/colors/seed_color_scheme.dart';
 import '../../foundations/dimensions/seed_dimension.dart';
 import '../../foundations/radius/seed_radius.dart';
@@ -26,10 +27,7 @@ class SeedSelectItem<T> {
 
 /// A group of items in a [SeedSelect].
 class SeedSelectGroup<T> {
-  const SeedSelectGroup({
-    this.label,
-    required this.items,
-  });
+  const SeedSelectGroup({this.label, required this.items});
 
   final String? label;
   final List<SeedSelectItem<T>> items;
@@ -101,14 +99,14 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
     return MenuAnchor(
       controller: _menuController,
       style: MenuStyle(
-        backgroundColor: WidgetStatePropertyAll(colors.bg.layerDefault),
+        backgroundColor: WidgetStatePropertyAll(colors.bg.layerFloating),
         surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
         elevation: const WidgetStatePropertyAll(6.0),
         shape: WidgetStatePropertyAll(
-          RoundedRectangleBorder(borderRadius: SeedBorderRadius.r3),
+          RoundedRectangleBorder(borderRadius: SeedBorderRadius.r5),
         ),
         padding: const WidgetStatePropertyAll(
-          EdgeInsets.symmetric(vertical: SeedDimension.x1),
+          EdgeInsets.symmetric(vertical: SeedDimension.x2),
         ),
       ),
       menuChildren: _buildMenuChildren(context, colors, typography),
@@ -119,8 +117,10 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
           placeholder: widget.placeholder,
           prefixIcon: selectedItem?.prefixIcon ?? widget.prefixIcon,
           suffixIcon: Icon(
-            controller.isOpen ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-            size: 20,
+            controller.isOpen
+                ? Icons.keyboard_arrow_up
+                : Icons.keyboard_arrow_down,
+            size: widget.size == SeedInputButtonSize.medium ? 20 : 16,
           ),
           enabled: widget.enabled,
           isError: widget.isError,
@@ -147,21 +147,29 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
       final group = widget.groups[g];
 
       if (g > 0) {
-        children.add(const SeedDivider());
+        children.add(
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: SeedDimension.x4),
+            child: SeedDivider(),
+          ),
+        );
       }
 
       if (group.label != null) {
         children.add(
           Padding(
-            padding: const EdgeInsets.symmetric(
+            padding: EdgeInsets.symmetric(
               horizontal: SeedDimension.x4,
-              vertical: SeedDimension.x2,
+              vertical: widget.size == SeedInputButtonSize.medium
+                  ? SeedDimension.x2_5
+                  : SeedDimension.x2,
             ),
             child: Text(
               group.label!,
-              style: typography.t3Bold.copyWith(
-                color: colors.fg.neutralSubtle,
-              ),
+              style: (widget.size == SeedInputButtonSize.medium
+                      ? typography.t4Medium
+                      : typography.t3Regular)
+                  .copyWith(color: colors.fg.neutralSubtle),
             ),
           ),
         );
@@ -172,6 +180,21 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
 
         children.add(
           MenuItemButton(
+            style: ButtonStyle(
+              padding: WidgetStatePropertyAll(
+                EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: widget.size == SeedInputButtonSize.medium ? 12 : 10,
+                ),
+              ),
+              minimumSize: const WidgetStatePropertyAll(Size.zero),
+              overlayColor: WidgetStatePropertyAll(
+                colors.bg.transparentPressed,
+              ),
+              shape: const WidgetStatePropertyAll(
+                RoundedRectangleBorder(borderRadius: SeedBorderRadius.r3),
+              ),
+            ),
             onPressed: item.enabled
                 ? () {
                     widget.onChanged?.call(item.value);
@@ -180,8 +203,10 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
             leadingIcon: item.prefixIcon != null
                 ? IconTheme(
                     data: IconThemeData(
-                      size: 20,
-                      color: item.enabled ? colors.fg.neutralSubtle : colors.fg.disabled,
+                      size: widget.size == SeedInputButtonSize.medium ? 22 : 18,
+                      color: item.enabled
+                          ? colors.fg.neutralSubtle
+                          : colors.fg.disabled,
                     ),
                     child: item.prefixIcon!,
                   )
@@ -189,8 +214,8 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
             trailingIcon: isSelected
                 ? Icon(
                     Icons.check,
-                    color: colors.fg.brand,
-                    size: 20,
+                    color: colors.fg.neutral,
+                    size: widget.size == SeedInputButtonSize.medium ? 14 : 12,
                   )
                 : null,
             child: Column(
@@ -199,18 +224,30 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
               children: [
                 Text(
                   item.label,
-                  style: typography.t5Regular.copyWith(
-                    color: item.enabled ? colors.fg.neutral : colors.fg.disabled,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  ),
+                  style:
+                      (widget.size == SeedInputButtonSize.medium
+                              ? typography.t5Regular
+                              : typography.t4Regular)
+                          .copyWith(
+                            color: item.enabled
+                                ? colors.fg.neutral
+                                : colors.fg.disabled,
+                            fontWeight: FontWeight.normal,
+                          ),
                 ),
                 if (item.description != null) ...[
                   const SizedBox(height: 2),
                   Text(
                     item.description!,
-                    style: typography.t3Regular.copyWith(
-                      color: item.enabled ? colors.fg.neutralSubtle : colors.fg.disabled,
-                    ),
+                    style:
+                        (widget.size == SeedInputButtonSize.medium
+                                ? typography.t3Regular
+                                : typography.t2Regular)
+                            .copyWith(
+                              color: item.enabled
+                                  ? colors.fg.neutralSubtle
+                                  : colors.fg.disabled,
+                            ),
                   ),
                 ],
               ],

@@ -1,6 +1,8 @@
 import 'package:material_ui/material_ui.dart';
+
 import '../../foundations/dimensions/seed_dimension.dart';
 import '../../theme/seed_theme.dart';
+import '../../foundations/colors/seed_palette.dart';
 
 /// Size of [SeedTagItem] and [SeedTagGroup].
 enum SeedTagGroupSize {
@@ -10,11 +12,7 @@ enum SeedTagGroupSize {
 }
 
 /// Tone of [SeedTagItem].
-enum SeedTagTone {
-  neutralSubtle,
-  neutral,
-  brand,
-}
+enum SeedTagTone { neutralSubtle, neutral, brand }
 
 /// An individual tag item in a [SeedTagGroup].
 class SeedTagItem {
@@ -67,17 +65,23 @@ class SeedTagGroup extends StatelessWidget {
 
     final double iconSize = size == SeedTagGroupSize.t2
         ? 12.0
-        : (size == SeedTagGroupSize.t3 ? 14.0 : 16.0);
+        : (size == SeedTagGroupSize.t3 ? 13.0 : 14.0);
 
     return Wrap(
       crossAxisAlignment: WrapCrossAlignment.center,
-      children: List.generate(items.length * 2 - 1, (index) {
+      children: List.generate(items.isEmpty ? 0 : items.length * 2 - 1, (
+        index,
+      ) {
         if (index.isOdd) {
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: SeedDimension.x1),
             child: Text(
               separator,
-              style: baseStyle.copyWith(color: colors.fg.neutralSubtle),
+              style: baseStyle.copyWith(
+                color: colors.isDark
+                    ? SeedPalette.gray600Dark
+                    : SeedPalette.gray600Light,
+              ),
             ),
           );
         }

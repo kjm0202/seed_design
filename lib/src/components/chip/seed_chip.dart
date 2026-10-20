@@ -19,11 +19,11 @@ enum SeedChipSize {
   double get height {
     switch (this) {
       case SeedChipSize.small:
-        return 28.0;
+        return 32.0;
       case SeedChipSize.medium:
         return 36.0;
       case SeedChipSize.large:
-        return 44.0;
+        return 40.0;
     }
   }
 
@@ -34,16 +34,38 @@ enum SeedChipSize {
       case SeedChipSize.medium:
         return 16.0;
       case SeedChipSize.large:
-        return 18.0;
+        return 16.0;
+    }
+  }
+
+  double get suffixIconSize {
+    switch (this) {
+      case SeedChipSize.small:
+        return 14.0;
+      case SeedChipSize.medium:
+        return 14.0;
+      case SeedChipSize.large:
+        return 16.0;
+    }
+  }
+
+  double get rootPaddingX {
+    switch (this) {
+      case SeedChipSize.small:
+        return SeedDimension.x1_5;
+      case SeedChipSize.medium:
+        return SeedDimension.x2;
+      case SeedChipSize.large:
+        return SeedDimension.x2_5;
     }
   }
 
   EdgeInsets get padding {
     switch (this) {
       case SeedChipSize.small:
-        return const EdgeInsets.symmetric(horizontal: 10.0);
-      case SeedChipSize.medium:
         return const EdgeInsets.symmetric(horizontal: 12.0);
+      case SeedChipSize.medium:
+        return const EdgeInsets.symmetric(horizontal: 14.0);
       case SeedChipSize.large:
         return const EdgeInsets.symmetric(horizontal: 16.0);
     }
@@ -91,13 +113,13 @@ class SeedChip extends StatelessWidget {
     TextStyle textStyle;
     switch (size) {
       case SeedChipSize.small:
-        textStyle = selected ? typography.t2Bold : typography.t2Medium;
+        textStyle = typography.t4Medium;
         break;
       case SeedChipSize.medium:
-        textStyle = selected ? typography.t3Bold : typography.t3Medium;
+        textStyle = typography.t4Medium;
         break;
       case SeedChipSize.large:
-        textStyle = selected ? typography.t4Bold : typography.t4Medium;
+        textStyle = typography.t4Medium;
         break;
     }
 
@@ -117,65 +139,82 @@ class SeedChip extends StatelessWidget {
           isPressed: isPressed,
         );
 
-        return AnimatedContainer(
-          duration: SeedDuration.colorTransition,
-          curve: SeedCurves.easing,
-          height: size.height,
-          padding: size.padding,
-          decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: size.borderRadius,
-            border: strokeColor != null
-                ? Border.all(color: strokeColor, width: 1.0)
-                : null,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              if (prefix != null) ...[
-                IconTheme(
-                  data: IconThemeData(color: fgColor, size: size.iconSize),
-                  child: prefix!,
+        return Opacity(
+          opacity: enabled ? 1 : 0.5,
+          child: AnimatedContainer(
+            duration: SeedDuration.colorTransition,
+            curve: SeedCurves.easing,
+            constraints: BoxConstraints(
+              minHeight: size.height,
+              minWidth: switch (size) {
+                SeedChipSize.small => 44,
+                SeedChipSize.medium => 48,
+                SeedChipSize.large => 52,
+              },
+            ),
+            padding: EdgeInsets.only(
+              left: prefix != null
+                  ? size.rootPaddingX
+                  : size.rootPaddingX + SeedDimension.x1_5,
+              right: (suffix != null || onDeleted != null)
+                  ? size.rootPaddingX
+                  : size.rootPaddingX + SeedDimension.x1_5,
+            ),
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: size.borderRadius,
+              border: strokeColor != null
+                  ? Border.all(color: strokeColor, width: 1.0)
+                  : null,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                if (prefix != null) ...[
+                  IconTheme(
+                    data: IconThemeData(color: fgColor, size: size.iconSize),
+                    child: prefix!,
+                  ),
+                  const SizedBox(width: SeedDimension.x1_5),
+                ],
+                Text(
+                  label,
+                  style: textStyle.copyWith(color: fgColor),
+                  maxLines: 1,
                 ),
-                const SizedBox(width: SeedDimension.x1),
-              ],
-              Text(
-                label,
-                style: textStyle.copyWith(color: fgColor),
-                maxLines: 1,
-              ),
-              if (onDeleted != null) ...[
-                const SizedBox(width: SeedDimension.x1),
-                SeedPressable(
-                  semanticsLabel: '$label 삭제',
-                  enableScale: false,
-                  behavior: HitTestBehavior.opaque,
-                  onTap: enabled ? onDeleted : null,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      minWidth: 24,
-                      minHeight: 24,
-                    ),
-                    child: Center(
-                      widthFactor: 1,
-                      heightFactor: 1,
-                      child: Icon(
-                        Icons.close_rounded,
-                        size: size.iconSize,
-                        color: fgColor,
+                if (onDeleted != null) ...[
+                  const SizedBox(width: SeedDimension.x1_5),
+                  SeedPressable(
+                    semanticsLabel: '$label 삭제',
+                    enableScale: false,
+                    behavior: HitTestBehavior.opaque,
+                    onTap: enabled ? onDeleted : null,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        minWidth: 24,
+                        minHeight: 24,
+                      ),
+                      child: Center(
+                        widthFactor: 1,
+                        heightFactor: 1,
+                        child: Icon(
+                          Icons.close_rounded,
+                          size: size.suffixIconSize,
+                          color: fgColor,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ] else if (suffix != null) ...[
-                const SizedBox(width: SeedDimension.x1),
-                IconTheme(
-                  data: IconThemeData(color: fgColor, size: size.iconSize),
-                  child: suffix!,
-                ),
+                ] else if (suffix != null) ...[
+                  const SizedBox(width: SeedDimension.x1_5),
+                  IconTheme(
+                    data: IconThemeData(color: fgColor, size: size.suffixIconSize),
+                    child: suffix!,
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         );
       },
@@ -186,16 +225,6 @@ class SeedChip extends StatelessWidget {
     required SeedColorScheme colors,
     required bool isPressed,
   }) {
-    if (!enabled) {
-      return (
-        variant == SeedChipVariant.solid
-            ? colors.bg.disabled
-            : colors.bg.transparent,
-        colors.fg.disabled,
-        variant != SeedChipVariant.solid ? colors.stroke.neutralWeak : null,
-      );
-    }
-
     switch (variant) {
       case SeedChipVariant.solid:
         if (selected) {
@@ -206,7 +235,9 @@ class SeedChip extends StatelessWidget {
           );
         } else {
           return (
-            isPressed ? colors.bg.neutralWeakPressed : colors.bg.neutralWeak,
+            isPressed
+                ? colors.bg.neutralWeakAlphaPressed
+                : colors.bg.neutralWeakAlpha,
             colors.fg.neutral,
             null,
           );
@@ -215,15 +246,15 @@ class SeedChip extends StatelessWidget {
       case SeedChipVariant.outlineStrong:
         if (selected) {
           return (
-            isPressed ? colors.bg.brandWeakPressed : colors.bg.brandWeak,
-            colors.fg.brand,
-            colors.stroke.brandSolid,
+            isPressed ? colors.bg.neutralSolidPressed : colors.bg.neutralSolid,
+            colors.fg.onNeutralSolid,
+            null,
           );
         } else {
           return (
-            isPressed ? colors.bg.neutralWeakPressed : colors.bg.transparent,
+            isPressed ? colors.bg.transparentPressed : colors.bg.transparent,
             colors.fg.neutral,
-            colors.stroke.neutralSolid,
+            colors.stroke.neutralMuted,
           );
         }
 
@@ -236,9 +267,9 @@ class SeedChip extends StatelessWidget {
           );
         } else {
           return (
-            isPressed ? colors.bg.neutralWeakPressed : colors.bg.transparent,
+            isPressed ? colors.bg.transparentPressed : colors.bg.transparent,
             colors.fg.neutral,
-            colors.stroke.neutralWeak,
+            colors.stroke.neutralMuted,
           );
         }
     }

@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../foundations/dimensions/seed_dimension.dart';
+import '../../foundations/colors/seed_palette.dart';
 import '../../foundations/radius/seed_radius.dart';
 import '../../theme/seed_theme.dart';
 import '../../foundations/feedback/seed_scale_feedback.dart';
@@ -95,19 +96,22 @@ class SeedImageFrame extends StatelessWidget {
             // Bottom badge
             if (badge != null && badge!.isNotEmpty)
               Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
+                right: 6,
+                bottom: 6,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
-                    color: colors.bg.neutralInverted.withValues(alpha: 0.7),
+                    color: SeedPalette.staticBlackAlpha800,
+                    borderRadius: SeedBorderRadius.full,
                   ),
                   child: Text(
                     badge!,
                     textAlign: TextAlign.center,
-                    style: typography.t1Bold.copyWith(
-                      color: colors.fg.neutralInverted,
+                    style: typography.t1Medium.copyWith(
+                      color: SeedPalette.staticWhite,
                     ),
                   ),
                 ),
@@ -141,7 +145,7 @@ class SeedImageFrame extends StatelessWidget {
                         child: Icon(
                           Icons.close,
                           size: 16,
-                          color: colors.fg.neutralInverted,
+                          color: SeedPalette.staticWhite,
                         ),
                       ),
                     ),

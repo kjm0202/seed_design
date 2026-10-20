@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+
 import '../../foundations/dimensions/seed_dimension.dart';
 import '../../foundations/motion/seed_motion.dart';
 import '../../foundations/radius/seed_radius.dart';
@@ -7,10 +8,7 @@ import '../../theme/seed_theme.dart';
 import '../layout/seed_divider.dart';
 
 /// Variant of [SeedAccordionItem].
-enum SeedAccordionVariant {
-  inline,
-  separated,
-}
+enum SeedAccordionVariant { inline, separated }
 
 /// Size of [SeedAccordionItem].
 enum SeedAccordionSize {
@@ -19,8 +17,14 @@ enum SeedAccordionSize {
 
   double get iconSize => this == SeedAccordionSize.medium ? 20.0 : 24.0;
   EdgeInsets get padding => this == SeedAccordionSize.medium
-      ? const EdgeInsets.symmetric(horizontal: SeedDimension.x4, vertical: SeedDimension.x3_5)
-      : const EdgeInsets.symmetric(horizontal: SeedDimension.x5, vertical: SeedDimension.x4);
+      ? const EdgeInsets.symmetric(
+          horizontal: SeedDimension.x4,
+          vertical: SeedDimension.x4,
+        )
+      : const EdgeInsets.symmetric(
+          horizontal: SeedDimension.x4,
+          vertical: SeedDimension.x5,
+        );
 }
 
 /// Accordion item component of SEED Design System.
@@ -67,16 +71,17 @@ class _SeedAccordionItemState extends State<SeedAccordionItem>
     super.initState();
     _isExpanded = widget.initiallyExpanded;
     _controller = AnimationController(
-      duration: SeedDuration.d4,
+      duration: SeedDuration.d6,
       vsync: this,
       value: _isExpanded ? 1.0 : 0.0,
     );
     _iconTurns = _controller.drive(
-      Tween<double>(begin: 0.0, end: 0.5).chain(CurveTween(curve: SeedCurves.easing)),
+      Tween<double>(
+        begin: 0.0,
+        end: 0.5,
+      ).chain(CurveTween(curve: SeedCurves.easing)),
     );
-    _heightFactor = _controller.drive(
-      CurveTween(curve: SeedCurves.easing),
-    );
+    _heightFactor = _controller.drive(CurveTween(curve: SeedCurves.easing));
   }
 
   @override
@@ -103,19 +108,23 @@ class _SeedAccordionItemState extends State<SeedAccordionItem>
     final colors = context.seedColor;
     final typography = context.seedTypography;
 
-    final TextStyle titleStyle = (widget.size == SeedAccordionSize.medium
-            ? typography.t4Bold
-            : typography.t5Bold)
-        .copyWith(
-      color: widget.enabled ? colors.fg.neutral : colors.fg.disabled,
-    );
+    final TextStyle titleStyle =
+        (widget.size == SeedAccordionSize.medium
+                ? typography.t5Medium
+                : typography.t7Medium)
+            .copyWith(
+              color: widget.enabled ? colors.fg.neutral : colors.fg.disabled,
+            );
 
-    final TextStyle descStyle = (widget.size == SeedAccordionSize.medium
-            ? typography.t3Regular
-            : typography.t4Regular)
-        .copyWith(
-      color: widget.enabled ? colors.fg.neutralMuted : colors.fg.disabled,
-    );
+    final TextStyle descStyle =
+        (widget.size == SeedAccordionSize.medium
+                ? typography.t3Medium
+                : typography.t5Medium)
+            .copyWith(
+              color: widget.enabled
+                  ? colors.fg.neutralSubtle
+                  : colors.fg.disabled,
+            );
 
     Widget trigger = SeedPressable(
       enabled: widget.enabled,
@@ -125,7 +134,9 @@ class _SeedAccordionItemState extends State<SeedAccordionItem>
       builder: (context, isPressed) {
         return Container(
           padding: widget.size.padding,
-          color: isPressed ? colors.bg.layerDefaultPressed : colors.bg.layerDefault,
+          color: isPressed
+              ? colors.bg.layerDefaultPressed
+              : colors.bg.layerDefault,
           child: Row(
             children: [
               if (widget.prefix != null) ...[
@@ -145,12 +156,15 @@ class _SeedAccordionItemState extends State<SeedAccordionItem>
                   ],
                 ),
               ),
+              const SizedBox(width: SeedDimension.x3),
               RotationTransition(
                 turns: _iconTurns,
                 child: Icon(
                   Icons.keyboard_arrow_down_rounded,
                   size: widget.size.iconSize,
-                  color: widget.enabled ? colors.fg.neutralSubtle : colors.fg.disabled,
+                  color: widget.enabled
+                      ? colors.fg.neutralSubtle
+                      : colors.fg.disabled,
                 ),
               ),
             ],
@@ -185,7 +199,9 @@ class _SeedAccordionItemState extends State<SeedAccordionItem>
 
     if (widget.variant == SeedAccordionVariant.separated) {
       return Container(
-        margin: const EdgeInsets.only(bottom: SeedDimension.x2),
+        margin: EdgeInsets.only(
+          bottom: widget.size == SeedAccordionSize.medium ? 12 : 16,
+        ),
         decoration: BoxDecoration(
           color: colors.bg.layerDefault,
           borderRadius: SeedBorderRadius.r3,
@@ -194,21 +210,14 @@ class _SeedAccordionItemState extends State<SeedAccordionItem>
         clipBehavior: Clip.antiAlias,
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: [
-            trigger,
-            contentBody,
-          ],
+          children: [trigger, contentBody],
         ),
       );
     }
 
     return Column(
       mainAxisSize: MainAxisSize.min,
-      children: [
-        trigger,
-        contentBody,
-        const SeedDivider(),
-      ],
+      children: [trigger, contentBody, const SeedDivider()],
     );
   }
 }

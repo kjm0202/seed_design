@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+
 import '../../foundations/colors/seed_color_scheme.dart';
 import '../../foundations/dimensions/seed_dimension.dart';
 import '../../foundations/radius/seed_radius.dart';
@@ -70,8 +71,8 @@ class SeedMenuSheet extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.bg.layerFloating,
         borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(SeedRadius.r4),
-          topRight: Radius.circular(SeedRadius.r4),
+          topLeft: Radius.circular(SeedRadius.r5),
+          topRight: Radius.circular(SeedRadius.r5),
         ),
       ),
       child: SafeArea(
@@ -83,7 +84,7 @@ class SeedMenuSheet extends StatelessWidget {
             // Handle bar
             Center(
               child: Container(
-                margin: const EdgeInsets.only(top: SeedDimension.x3),
+                margin: const EdgeInsets.only(top: SeedDimension.x1_5),
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
@@ -107,14 +108,16 @@ class SeedMenuSheet extends StatelessWidget {
                     if (title != null)
                       Text(
                         title!,
-                        style: typography.t6Bold.copyWith(color: colors.fg.neutral),
+                        style: typography.t6Bold.copyWith(
+                          color: colors.fg.neutral,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                     if (description != null) ...[
                       const SizedBox(height: SeedDimension.x1),
                       Text(
                         description!,
-                        style: typography.t3Regular.copyWith(
+                        style: typography.t4Regular.copyWith(
                           color: colors.fg.neutralMuted,
                         ),
                         textAlign: TextAlign.center,
@@ -151,7 +154,7 @@ class SeedMenuSheet extends StatelessWidget {
                 ),
                 decoration: BoxDecoration(
                   color: colors.bg.neutralWeak,
-                  borderRadius: SeedBorderRadius.r3,
+                  borderRadius: SeedBorderRadius.r4,
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: Column(
@@ -162,9 +165,16 @@ class SeedMenuSheet extends StatelessWidget {
                         Divider(
                           height: 1,
                           thickness: 1,
-                          color: colors.stroke.neutralWeak.withValues(alpha: 0.5),
+                          color: colors.stroke.neutralWeak.withValues(
+                            alpha: 0.5,
+                          ),
                         ),
-                      _buildSheetItem(context, groups[g].items[i], colors, typography),
+                      _buildSheetItem(
+                        context,
+                        groups[g].items[i],
+                        colors,
+                        typography,
+                      ),
                     ],
                   ],
                 ),
@@ -192,7 +202,7 @@ class SeedMenuSheet extends StatelessWidget {
                     alignment: Alignment.center,
                     child: Text(
                       cancelLabel,
-                      style: typography.t5Bold.copyWith(
+                      style: typography.t5Medium.copyWith(
                         color: colors.fg.neutral,
                       ),
                     ),
@@ -230,8 +240,8 @@ class SeedMenuSheet extends StatelessWidget {
           : null,
       child: Padding(
         padding: const EdgeInsets.symmetric(
-          horizontal: SeedDimension.x5,
-          vertical: SeedDimension.x3,
+          horizontal: SeedDimension.x4,
+          vertical: SeedDimension.x3_5,
         ),
         child: Row(
           children: [
@@ -241,11 +251,13 @@ class SeedMenuSheet extends StatelessWidget {
                   size: 22,
                   color: !item.enabled
                       ? colors.fg.disabled
-                      : (item.isDestructive ? colors.fg.critical : colors.fg.neutralSubtle),
+                      : (item.isDestructive
+                            ? colors.fg.critical
+                            : colors.fg.neutralSubtle),
                 ),
                 child: item.prefixIcon!,
               ),
-              const SizedBox(width: SeedDimension.x3),
+              const SizedBox(width: SeedDimension.x3_5),
             ],
             Expanded(
               child: Column(
@@ -256,21 +268,25 @@ class SeedMenuSheet extends StatelessWidget {
                 children: [
                   Text(
                     item.label,
-                    textAlign:
-                        item.prefixIcon == null ? TextAlign.center : TextAlign.start,
+                    textAlign: item.prefixIcon == null
+                        ? TextAlign.center
+                        : TextAlign.start,
                     style: typography.t5Regular.copyWith(
                       color: labelColor,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w400,
                     ),
                   ),
                   if (item.description != null) ...[
                     const SizedBox(height: 2),
                     Text(
                       item.description!,
-                      textAlign:
-                          item.prefixIcon == null ? TextAlign.center : TextAlign.start,
-                      style: typography.t3Regular.copyWith(
-                        color: item.enabled ? colors.fg.neutralSubtle : colors.fg.disabled,
+                      textAlign: item.prefixIcon == null
+                          ? TextAlign.center
+                          : TextAlign.start,
+                      style: typography.t3Medium.copyWith(
+                        color: item.enabled
+                            ? colors.fg.neutralSubtle
+                            : colors.fg.disabled,
                       ),
                     ),
                   ],
@@ -280,7 +296,9 @@ class SeedMenuSheet extends StatelessWidget {
             if (item.badge != null)
               SeedBadge(
                 label: item.badge!,
-                tone: item.isDestructive ? SeedBadgeTone.critical : SeedBadgeTone.neutral,
+                tone: item.isDestructive
+                    ? SeedBadgeTone.critical
+                    : SeedBadgeTone.neutral,
               ),
           ],
         ),

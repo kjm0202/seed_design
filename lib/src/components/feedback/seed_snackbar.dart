@@ -24,49 +24,66 @@ class SeedSnackbar extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.seedColor;
     final typography = context.seedTypography;
-    final shadows = context.seedShadows;
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: SeedDimension.x4,
-        vertical: SeedDimension.x3,
+      padding: EdgeInsets.symmetric(
+        horizontal: SeedDimension.x2_5,
+        vertical: actionLabel != null && onAction != null
+            ? 0
+            : SeedDimension.x2_5,
       ),
+      constraints: const BoxConstraints(minHeight: 44, maxWidth: 464),
       decoration: BoxDecoration(
-        color: colors.bg.neutralInverted,
-        borderRadius: SeedBorderRadius.r3,
-        boxShadow: shadows.s2,
+        color: colors.bg.neutralSolid,
+        borderRadius: SeedBorderRadius.r2,
       ),
       child: Row(
         children: [
-          if (prefixIcon != null) ...[
-            prefixIcon!,
-            const SizedBox(width: SeedDimension.x2),
-          ],
           Expanded(
-            child: Text(
-              message,
-              style: typography.t3Regular.copyWith(
-                color: colors.fg.neutralInverted,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: Row(
+                children: [
+                  if (prefixIcon != null) ...[
+                    IconTheme(
+                      data: IconThemeData(
+                        size: 24,
+                        color: colors.fg.onNeutralSolid,
+                      ),
+                      child: prefixIcon!,
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                  Expanded(
+                    child: Text(
+                      message,
+                      style: typography.t4Regular.copyWith(
+                        color: colors.fg.onNeutralSolid,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-          if (actionLabel != null && onAction != null) ...[
-            const SizedBox(width: SeedDimension.x3),
+          if (actionLabel != null && onAction != null)
             SeedPressable(
               semanticsLabel: actionLabel,
               enableScale: false,
               onTap: onAction,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-                child: Center(
-                  child: Text(
-                    actionLabel!,
-                    style: typography.t3Bold.copyWith(color: colors.fg.brand),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 44),
+                  child: Center(
+                    child: Text(
+                      actionLabel!,
+                      style: typography.t4Bold.copyWith(color: colors.fg.brand),
+                    ),
                   ),
                 ),
               ),
             ),
-          ],
         ],
       ),
     );
@@ -89,7 +106,7 @@ ScaffoldFeatureController<SnackBar, SnackBarClosedReason> showSeedSnackbar({
       behavior: SnackBarBehavior.floating,
       elevation: 0.0,
       backgroundColor: Colors.transparent,
-      margin: const EdgeInsets.all(SeedDimension.x4),
+      margin: const EdgeInsets.all(SeedDimension.x2),
       padding: EdgeInsets.zero,
       duration: duration,
       content: SeedSnackbar(

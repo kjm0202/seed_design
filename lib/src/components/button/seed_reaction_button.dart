@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+
 import '../../foundations/dimensions/seed_dimension.dart';
 import '../../foundations/radius/seed_radius.dart';
 import '../../foundations/feedback/seed_scale_feedback.dart';
@@ -10,8 +11,8 @@ enum SeedReactionButtonSize {
   xsmall,
   small;
 
-  double get height => this == SeedReactionButtonSize.xsmall ? 28.0 : 36.0;
-  double get iconSize => this == SeedReactionButtonSize.xsmall ? 14.0 : 16.0;
+  double get height => this == SeedReactionButtonSize.xsmall ? 32.0 : 36.0;
+  double get iconSize => 18.0;
 }
 
 /// Reaction button component of SEED Design System.
@@ -20,6 +21,7 @@ enum SeedReactionButtonSize {
 class SeedReactionButton extends StatelessWidget {
   final bool isReacted;
   final int count;
+  final String? label;
   final ValueChanged<bool>? onReactedChanged;
   final Widget? prefixIcon;
   final SeedReactionButtonSize size;
@@ -31,6 +33,7 @@ class SeedReactionButton extends StatelessWidget {
     super.key,
     this.isReacted = false,
     this.count = 0,
+    this.label,
     this.onReactedChanged,
     this.prefixIcon,
     this.size = SeedReactionButtonSize.small,
@@ -46,16 +49,18 @@ class SeedReactionButton extends StatelessWidget {
 
     final Color bgColor = !enabled
         ? colors.bg.disabled
-        : (isReacted ? colors.bg.brandWeak : colors.bg.neutralWeak);
+        : (loading
+              ? (isReacted
+                    ? colors.bg.transparentPressed
+                    : colors.bg.neutralWeakPressed)
+              : colors.bg.transparent);
 
     final Color fgColor = !enabled
         ? colors.fg.disabled
         : (isReacted ? colors.fg.brand : colors.fg.neutral);
 
-    final TextStyle textStyle = (size == SeedReactionButtonSize.xsmall
-            ? typography.t2Bold
-            : typography.t3Bold)
-        .copyWith(color: fgColor);
+    final TextStyle labelStyle = typography.t3Medium.copyWith(color: fgColor);
+    final TextStyle countStyle = typography.t3Bold.copyWith(color: fgColor);
 
     return SeedPressable(
       enabled: enabled && !loading && onReactedChanged != null,
@@ -63,14 +68,25 @@ class SeedReactionButton extends StatelessWidget {
       semanticsLabel: semanticsLabel,
       semanticsValue: '$count',
       onTap: () => onReactedChanged?.call(!isReacted),
-      child: Container(
-        height: size.height,
-        padding: const EdgeInsets.symmetric(horizontal: 10.0),
+      builder: (context, isPressed) => Container(
+        constraints: BoxConstraints(minHeight: size.height),
+        padding: EdgeInsets.symmetric(
+          horizontal: size == SeedReactionButtonSize.xsmall
+              ? SeedDimension.x3
+              : SeedDimension.x3_5,
+          vertical: size == SeedReactionButtonSize.xsmall
+              ? SeedDimension.x1_5
+              : SeedDimension.x2,
+        ),
         decoration: BoxDecoration(
-          color: bgColor,
+          color: enabled && isPressed ? colors.bg.transparentPressed : bgColor,
           borderRadius: SeedBorderRadius.full,
-          border: isReacted
-              ? Border.all(color: colors.stroke.brandWeak, width: 1.0)
+          border: enabled
+              ? Border.all(
+                  color: isReacted
+                      ? colors.stroke.brandWeak
+                      : colors.stroke.neutralMuted,
+                )
               : null,
         ),
         child: Row(
@@ -78,17 +94,27 @@ class SeedReactionButton extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             if (loading)
-              SeedProgressCircle(size: size.iconSize, color: fgColor)
+              SeedProgressCircle(size: 14, strokeWidth: 2, color: fgColor)
             else
-              prefixIcon ??
-                  Icon(
-                    isReacted ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                    size: size.iconSize,
-                    color: fgColor,
-                  ),
+              IconTheme(
+                data: IconThemeData(size: size.iconSize, color: fgColor),
+                child:
+                    prefixIcon ??
+                    Icon(
+                      isReacted
+                          ? Icons.favorite_rounded
+                          : Icons.favorite_border_rounded,
+                      size: size.iconSize,
+                      color: fgColor,
+                    ),
+              ),
+            if (label != null) ...[
+              const SizedBox(width: SeedDimension.x1),
+              Text(label!, style: labelStyle),
+            ],
             if (count > 0) ...[
               const SizedBox(width: SeedDimension.x1),
-              Text('$count', style: textStyle),
+              Text('$count', style: countStyle),
             ],
           ],
         ),
