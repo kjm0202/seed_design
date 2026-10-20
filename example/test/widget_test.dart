@@ -1,4 +1,3 @@
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:seed_design/seed_design.dart';
@@ -91,7 +90,7 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('정렬 옵션 선택'), findsOneWidget);
-    expect(find.byType(ListTile), findsNWidgets(3));
+    expect(find.byType(SeedListItem), findsNWidgets(3));
 
     await tester.tap(find.text('최신순'));
     await tester.pumpAndSettle();

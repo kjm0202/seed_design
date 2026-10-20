@@ -89,25 +89,35 @@ class OverlaysTab extends StatelessWidget {
                   child: SeedBottomSheet(
                     title: '정렬 옵션 선택',
                     showHandle: true,
-                    content: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        ListTile(
-                          title: const Text('최신순'),
-                          leading: const Icon(Icons.access_time),
-                          onTap: () => Navigator.pop(context),
-                        ),
-                        ListTile(
-                          title: const Text('정확도순'),
-                          leading: const Icon(Icons.thumb_up_alt_outlined),
-                          onTap: () => Navigator.pop(context),
-                        ),
-                        ListTile(
-                          title: const Text('가격 낮은순'),
-                          leading: const Icon(Icons.arrow_downward),
-                          onTap: () => Navigator.pop(context),
-                        ),
-                      ],
+                    contentPadding: EdgeInsets.zero,
+                    content: Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SeedListItem(
+                            titleText: '최신순',
+                            prefix: const Icon(Icons.access_time, size: 22),
+                            showDivider: false,
+                            onTap: () => Navigator.pop(context),
+                          ),
+                          SeedListItem(
+                            titleText: '정확도순',
+                            prefix: const Icon(
+                              Icons.thumb_up_alt_outlined,
+                              size: 22,
+                            ),
+                            showDivider: false,
+                            onTap: () => Navigator.pop(context),
+                          ),
+                          SeedListItem(
+                            titleText: '가격 낮은순',
+                            prefix: const Icon(Icons.arrow_downward, size: 22),
+                            showDivider: false,
+                            onTap: () => Navigator.pop(context),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 );
