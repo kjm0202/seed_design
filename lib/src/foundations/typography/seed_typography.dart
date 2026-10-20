@@ -114,6 +114,8 @@ class SeedTypography extends ThemeExtension<SeedTypography> {
   TextStyle get screenTitle => t10Bold;
   TextStyle get articleBody =>
       t5Regular.copyWith(height: SeedLineHeight.t6 / SeedFontSize.t5);
+  TextStyle get articleNote =>
+      t4Regular.copyWith(height: SeedLineHeight.t5 / SeedFontSize.t4);
   TextStyle get sectionTitle => t6Bold;
   TextStyle get body => t5Regular;
   TextStyle get bodyMedium => t5Medium;

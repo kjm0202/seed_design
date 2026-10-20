@@ -4,9 +4,9 @@
 
 Reference: https://github.com/daangn/seed-design
 
-Reviewed revision: `0684acaa7012a68d9858c971c51db46b680978dd` (2026-10-18).
+Reviewed revision: `d18f14e70f7b73ba84c032717d6413610bce0437` (2026-10-20).
 
-The reviewed design specification values and manner-temperature boundaries are based on the official source. The upstream project uses Apache License 2.0; a copy is included at `third_party/seed-design/LICENSE`. Manner-temperature boundary logic was adapted to Dart with finite-number validation. Official emote images are not bundled.
+The full YAML token/component snapshot in `test/fixtures/seed_official_reference.json`, gradient stop definitions generated into `lib/src/foundations/gradient/seed_gradient.dart`, reviewed design specification values and manner-temperature boundaries are based on the official source. The upstream project uses Apache License 2.0; a copy is included at `third_party/seed-design/LICENSE`. Manner-temperature boundary logic was adapted to Dart with finite-number validation. Official emote images are not bundled.
 
 The upstream attribution notice is reproduced without changes at `third_party/seed-design/NOTICE`. SEED-derived material remains subject to Apache License 2.0; the package's MIT license applies to its original Flutter-specific implementation. The adapted temperature logic is in `lib/src/components/manner_temp/seed_manner_temp.dart`, which identifies the source and modifications.
 
