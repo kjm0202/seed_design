@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../foundations/dimensions/seed_dimension.dart';
+import '../../foundations/colors/seed_palette.dart';
 import '../../foundations/motion/seed_motion.dart';
 import '../../foundations/radius/seed_radius.dart';
 import '../../foundations/feedback/seed_scale_feedback.dart';
@@ -50,7 +51,6 @@ class SeedSegmentedControl<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.seedColor;
     final typography = context.seedTypography;
-    final shadows = context.seedShadows;
 
     final int selectedIndex = segments.indexWhere(
       (s) => s.value == selectedValue,
@@ -61,11 +61,11 @@ class SeedSegmentedControl<T> extends StatelessWidget {
       enabled: segments.map((s) => enabled && s.enabled).toList(),
       onSelected: (index) => onValueChanged(segments[index].value),
       builder: (context, nodes) => Container(
-        height: 40.0,
-        padding: const EdgeInsets.all(SeedDimension.x0_5),
+        height: 42.0,
+        padding: const EdgeInsets.all(SeedDimension.x1),
         decoration: BoxDecoration(
-          color: colors.bg.neutralWeak,
-          borderRadius: SeedBorderRadius.r2_5,
+          color: colors.bg.neutralWeakAlpha,
+          borderRadius: SeedBorderRadius.full,
         ),
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -76,7 +76,7 @@ class SeedSegmentedControl<T> extends StatelessWidget {
                 // Animated Floating Pill Indicator
                 if (selectedIndex != -1)
                   AnimatedPositioned(
-                    duration: SeedDuration.d3,
+                    duration: SeedDuration.d4,
                     curve: SeedCurves.easing,
                     left: selectedIndex * segmentWidth,
                     top: 0,
@@ -84,9 +84,13 @@ class SeedSegmentedControl<T> extends StatelessWidget {
                     width: segmentWidth,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: colors.bg.layerFloating,
-                        borderRadius: SeedBorderRadius.r2,
-                        boxShadow: shadows.s1,
+                        color: enabled
+                            ? (colors.isDark
+                                  ? SeedPalette.gray00Dark
+                                  : SeedPalette.gray00Light)
+                            : colors.bg.disabled,
+                        borderRadius: SeedBorderRadius.full,
+                        border: Border.all(color: colors.stroke.neutralMuted),
                       ),
                     ),
                   ),
@@ -98,15 +102,13 @@ class SeedSegmentedControl<T> extends StatelessWidget {
                     final bool isSelected = index == selectedIndex;
                     final bool isSegmentEnabled = enabled && segment.enabled;
 
-                    final TextStyle textStyle =
-                        (isSelected ? typography.t3Bold : typography.t3Medium)
-                            .copyWith(
-                              color: !isSegmentEnabled
-                                  ? colors.fg.disabled
-                                  : (isSelected
-                                        ? colors.fg.neutral
-                                        : colors.fg.neutralMuted),
-                            );
+                    final TextStyle textStyle = typography.t5Bold.copyWith(
+                      color: !isSegmentEnabled
+                          ? colors.fg.disabled
+                          : (isSelected
+                                ? colors.fg.neutral
+                                : colors.fg.neutralSubtle),
+                    );
 
                     return Expanded(
                       child: SeedPressable(
@@ -116,20 +118,30 @@ class SeedSegmentedControl<T> extends StatelessWidget {
                         enableScale: false,
                         onTap: () => onValueChanged(segment.value),
                         child: Container(
+                          constraints: const BoxConstraints(
+                            minWidth: 86.0,
+                            minHeight: 34.0,
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: SeedDimension.x6,
+                            vertical: SeedDimension.x1_5,
+                          ),
                           alignment: Alignment.center,
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Text(
-                                segment.label,
-                                style: textStyle,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                              Flexible(
+                                child: Text(
+                                  segment.label,
+                                  style: textStyle,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                               if (segment.notificationCount != null ||
                                   segment.showNotificationDot) ...[
-                                const SizedBox(width: SeedDimension.x1),
+                                const SizedBox(width: SeedDimension.x1_5),
                                 SeedNotificationBadge(
                                   count: segment.notificationCount,
                                   showDot: segment.showNotificationDot,
