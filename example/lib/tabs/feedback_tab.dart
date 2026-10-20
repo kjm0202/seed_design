@@ -102,6 +102,8 @@ class _FeedbackTabState extends State<FeedbackTab> {
           subtitle: '데이터 조회 결과 없음 또는 완료 상태 안내',
         ),
         const SeedResultSection(
+          // The catalog page already supplies the horizontal screen gutter.
+          padding: EdgeInsets.symmetric(vertical: SeedDimension.x4),
           title: '주변에 등록된 매물이 없습니다',
           description: '동네 범위를 넓혀서 검색하거나 키워드 알림을 설정해보세요.',
         ),

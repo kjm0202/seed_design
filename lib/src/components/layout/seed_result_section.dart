@@ -1,13 +1,11 @@
 import 'package:material_ui/material_ui.dart';
+
 import '../../foundations/dimensions/seed_dimension.dart';
 import '../../theme/seed_theme.dart';
 import '../button/seed_button.dart';
 
 /// Size of [SeedResultSection].
-enum SeedResultSectionSize {
-  medium,
-  large,
-}
+enum SeedResultSectionSize { medium, large }
 
 /// Result Section component of SEED Design System.
 ///
@@ -23,6 +21,10 @@ class SeedResultSection extends StatelessWidget {
   final VoidCallback? onSecondaryAction;
   final SeedResultSectionSize size;
 
+  /// Space around the section. Override horizontal padding when the parent
+  /// already provides the screen gutter.
+  final EdgeInsetsGeometry padding;
+
   const SeedResultSection({
     super.key,
     this.asset,
@@ -33,6 +35,7 @@ class SeedResultSection extends StatelessWidget {
     this.secondaryActionLabel,
     this.onSecondaryAction,
     this.size = SeedResultSectionSize.large,
+    this.padding = const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
   });
 
   @override
@@ -40,19 +43,21 @@ class SeedResultSection extends StatelessWidget {
     final colors = context.seedColor;
     final typography = context.seedTypography;
 
-    final TextStyle titleStyle = (size == SeedResultSectionSize.large
-            ? typography.t7Bold
-            : typography.t5Bold)
-        .copyWith(color: colors.fg.neutral);
+    final TextStyle titleStyle =
+        (size == SeedResultSectionSize.large
+                ? typography.t8Bold
+                : typography.t5Bold)
+            .copyWith(color: colors.fg.neutral);
 
-    final TextStyle descStyle = (size == SeedResultSectionSize.large
-            ? typography.t4Regular
-            : typography.t3Regular)
-        .copyWith(color: colors.fg.neutralMuted);
+    final TextStyle descStyle =
+        (size == SeedResultSectionSize.large
+                ? typography.t5Regular
+                : typography.t4Regular)
+            .copyWith(color: colors.fg.neutralMuted);
 
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(SeedDimension.x6),
+        padding: padding,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -61,38 +66,31 @@ class SeedResultSection extends StatelessWidget {
               asset!,
               const SizedBox(height: SeedDimension.x5),
             ],
-            Text(
-              title,
-              style: titleStyle,
-              textAlign: TextAlign.center,
-            ),
+            Text(title, style: titleStyle, textAlign: TextAlign.center),
             if (description != null) ...[
-              const SizedBox(height: SeedDimension.x2),
-              Text(
-                description!,
-                style: descStyle,
-                textAlign: TextAlign.center,
-              ),
+              SizedBox(height: size == SeedResultSectionSize.large ? 12 : 8),
+              Text(description!, style: descStyle, textAlign: TextAlign.center),
             ],
             if (primaryActionLabel != null || secondaryActionLabel != null) ...[
-              const SizedBox(height: SeedDimension.x6),
-              Row(
+              SizedBox(height: size == SeedResultSectionSize.large ? 28 : 24),
+              Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (secondaryActionLabel != null) ...[
-                    SeedButton(
-                      label: secondaryActionLabel!,
-                      variant: SeedButtonVariant.neutralWeak,
-                      onPressed: onSecondaryAction,
-                    ),
-                    if (primaryActionLabel != null)
-                      const SizedBox(width: SeedDimension.x2),
-                  ],
                   if (primaryActionLabel != null)
                     SeedButton(
                       label: primaryActionLabel!,
-                      variant: SeedButtonVariant.brandSolid,
+                      variant: SeedButtonVariant.neutralWeak,
                       onPressed: onPrimaryAction,
+                    ),
+                  if (primaryActionLabel != null &&
+                      secondaryActionLabel != null)
+                    const SizedBox(height: SeedDimension.x5),
+                  if (secondaryActionLabel != null)
+                    SeedButton(
+                      label: secondaryActionLabel!,
+                      variant: SeedButtonVariant.ghost,
+                      size: SeedButtonSize.small,
+                      onPressed: onSecondaryAction,
                     ),
                 ],
               ),
