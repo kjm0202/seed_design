@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:material_ui/material_ui.dart';
 
 import '../../foundations/colors/seed_color_scheme.dart';
@@ -6,9 +8,10 @@ import '../../foundations/radius/seed_radius.dart';
 import '../../foundations/typography/seed_typography.dart';
 import '../../theme/seed_theme.dart';
 import '../badge/seed_badge.dart';
+import 'seed_bottom_sheet.dart';
 import 'seed_menu.dart';
 
-/// Shows a SEED Design modal bottom Menu Sheet.
+/// Shows a SEED Menu Sheet centered within the available safe area.
 Future<T?> showSeedMenuSheet<T>({
   required BuildContext context,
   String? title,
@@ -16,27 +19,18 @@ Future<T?> showSeedMenuSheet<T>({
   required List<SeedMenuGroupData> groups,
   String cancelLabel = '닫기',
   bool showCancelButton = true,
-}) {
-  return showModalBottomSheet<T>(
-    context: context,
-    backgroundColor: Colors.transparent,
-    showDragHandle: false,
-    isScrollControlled: true,
-    builder: (context) {
-      return SeedMenuSheet(
-        title: title,
-        description: description,
-        groups: groups,
-        cancelLabel: cancelLabel,
-        showCancelButton: showCancelButton,
-      );
-    },
-  );
-}
+}) => showSeedBottomSheet<T>(
+  context: context,
+  child: SeedMenuSheet(
+    title: title,
+    description: description,
+    groups: groups,
+    cancelLabel: cancelLabel,
+    showCancelButton: showCancelButton,
+  ),
+);
 
-/// A SEED Design Menu Sheet component.
-///
-/// Presents a group of actionable options in a mobile-optimized modal bottom sheet.
+/// A grouped action menu with a fixed header/footer and a scrolling list.
 class SeedMenuSheet extends StatelessWidget {
   const SeedMenuSheet({
     super.key,
@@ -47,170 +41,192 @@ class SeedMenuSheet extends StatelessWidget {
     this.showCancelButton = true,
   });
 
-  /// Optional sheet title.
   final String? title;
-
-  /// Optional sheet description.
   final String? description;
-
-  /// The groups of menu items to display.
   final List<SeedMenuGroupData> groups;
-
-  /// Text for the bottom cancel button.
   final String cancelLabel;
-
-  /// Whether to display a bottom cancel button.
   final bool showCancelButton;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.seedColor;
     final typography = context.seedTypography;
+    final mediaQuery = MediaQuery.of(context);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.bg.layerFloating,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(SeedRadius.r5),
-          topRight: Radius.circular(SeedRadius.r5),
-        ),
-      ),
+    return Align(
+      alignment: Alignment.bottomCenter,
+      widthFactor: 1,
+      heightFactor: 1,
       child: SafeArea(
         top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Handle bar
-            Center(
-              child: Container(
-                margin: const EdgeInsets.only(top: SeedDimension.x1_5),
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: colors.stroke.neutralWeak,
-                  borderRadius: SeedBorderRadius.full,
+        bottom: false,
+        child: LayoutBuilder(
+          builder: (context, constraints) => ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 480,
+              maxHeight: math.max(
+                0,
+                math.min(constraints.maxHeight, mediaQuery.size.height * 0.9),
+              ),
+            ),
+            child: SizedBox(
+              width: double.infinity,
+              child: Material(
+                color: colors.bg.layerFloating,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(SeedRadius.r5),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Stack(
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        16,
+                        24,
+                        16,
+                        16 + mediaQuery.padding.bottom,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (title != null || description != null)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: Column(
+                                children: [
+                                  if (title != null)
+                                    Text(
+                                      title!,
+                                      style: typography.t6Bold.copyWith(
+                                        color: colors.fg.neutral,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  if (description != null) ...[
+                                    if (title != null)
+                                      const SizedBox(height: 4),
+                                    Text(
+                                      description!,
+                                      style: typography.t4Regular.copyWith(
+                                        color: colors.fg.neutralMuted,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          Flexible(
+                            child: SingleChildScrollView(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  for (int g = 0; g < groups.length; g++) ...[
+                                    if (g > 0) const SizedBox(height: 10),
+                                    if (groups[g].label != null)
+                                      Padding(
+                                        padding: const EdgeInsets.fromLTRB(
+                                          4,
+                                          8,
+                                          4,
+                                          4,
+                                        ),
+                                        child: Text(
+                                          groups[g].label!,
+                                          style: typography.t3Bold.copyWith(
+                                            color: colors.fg.neutralSubtle,
+                                          ),
+                                        ),
+                                      ),
+                                    Material(
+                                      color: colors.bg.neutralWeak,
+                                      borderRadius: SeedBorderRadius.r4,
+                                      clipBehavior: Clip.antiAlias,
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
+                                        children: [
+                                          for (
+                                            int i = 0;
+                                            i < groups[g].items.length;
+                                            i++
+                                          ) ...[
+                                            if (i > 0)
+                                              Divider(
+                                                height: 1,
+                                                thickness: 1,
+                                                color:
+                                                    colors.stroke.neutralMuted,
+                                              ),
+                                            _buildSheetItem(
+                                              context,
+                                              groups[g].items[i],
+                                              colors,
+                                              typography,
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                          if (showCancelButton)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 10),
+                              child: Material(
+                                color: colors.bg.neutralWeak,
+                                borderRadius: SeedBorderRadius.r3,
+                                clipBehavior: Clip.antiAlias,
+                                child: InkWell(
+                                  onTap: () => Navigator.of(context).pop(),
+                                  child: Container(
+                                    constraints: const BoxConstraints(
+                                      minHeight: 52,
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 14,
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      cancelLabel,
+                                      style: typography.t5Medium.copyWith(
+                                        color: colors.fg.neutral,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    Positioned(
+                      top: 6,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: Container(
+                          width: 36,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: colors.stroke.neutralWeak,
+                            borderRadius: SeedBorderRadius.full,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-
-            // Header title & description
-            if (title != null || description != null) ...[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  SeedDimension.x4,
-                  SeedDimension.x4,
-                  SeedDimension.x4,
-                  SeedDimension.x3,
-                ),
-                child: Column(
-                  children: [
-                    if (title != null)
-                      Text(
-                        title!,
-                        style: typography.t6Bold.copyWith(
-                          color: colors.fg.neutral,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    if (description != null) ...[
-                      const SizedBox(height: SeedDimension.x1),
-                      Text(
-                        description!,
-                        style: typography.t4Regular.copyWith(
-                          color: colors.fg.neutralMuted,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ] else ...[
-              const SizedBox(height: SeedDimension.x3),
-            ],
-
-            // Menu Groups in rounded cards
-            for (int g = 0; g < groups.length; g++) ...[
-              if (groups[g].label != null)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    SeedDimension.x5,
-                    SeedDimension.x2,
-                    SeedDimension.x5,
-                    SeedDimension.x1,
-                  ),
-                  child: Text(
-                    groups[g].label!,
-                    style: typography.t3Bold.copyWith(
-                      color: colors.fg.neutralSubtle,
-                    ),
-                  ),
-                ),
-              Container(
-                margin: const EdgeInsets.symmetric(
-                  horizontal: SeedDimension.x4,
-                  vertical: SeedDimension.x1,
-                ),
-                decoration: BoxDecoration(
-                  color: colors.bg.neutralWeak,
-                  borderRadius: SeedBorderRadius.r4,
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    for (int i = 0; i < groups[g].items.length; i++) ...[
-                      if (i > 0)
-                        Divider(
-                          height: 1,
-                          thickness: 1,
-                          color: colors.stroke.neutralWeak.withValues(
-                            alpha: 0.5,
-                          ),
-                        ),
-                      _buildSheetItem(
-                        context,
-                        groups[g].items[i],
-                        colors,
-                        typography,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-
-            // Cancel button
-            if (showCancelButton) ...[
-              Container(
-                margin: const EdgeInsets.fromLTRB(
-                  SeedDimension.x4,
-                  SeedDimension.x2,
-                  SeedDimension.x4,
-                  SeedDimension.x4,
-                ),
-                decoration: BoxDecoration(
-                  color: colors.bg.neutralWeak,
-                  borderRadius: SeedBorderRadius.r3,
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: InkWell(
-                  onTap: () => Navigator.of(context).pop(),
-                  child: Container(
-                    height: 52,
-                    alignment: Alignment.center,
-                    child: Text(
-                      cancelLabel,
-                      style: typography.t5Medium.copyWith(
-                        color: colors.fg.neutral,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ],
+          ),
         ),
       ),
     );
@@ -253,7 +269,7 @@ class SeedMenuSheet extends StatelessWidget {
                       ? colors.fg.disabled
                       : (item.isDestructive
                             ? colors.fg.critical
-                            : colors.fg.neutralSubtle),
+                            : colors.fg.neutral),
                 ),
                 child: item.prefixIcon!,
               ),
