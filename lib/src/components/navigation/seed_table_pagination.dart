@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+
 import '../../foundations/dimensions/seed_dimension.dart';
 import '../../foundations/radius/seed_radius.dart';
 import '../../theme/seed_theme.dart';
@@ -17,7 +18,7 @@ class SeedTablePagination extends StatelessWidget {
     required this.currentPage,
     required this.totalItems,
     required this.rowsPerPage,
-    this.rowsPerPageOptions = const [10, 20, 50, 100],
+    this.rowsPerPageOptions = const [10, 25, 50],
     required this.onPageChanged,
     required this.onRowsPerPageChanged,
   });
@@ -53,84 +54,108 @@ class SeedTablePagination extends StatelessWidget {
     final canGoPrev = currentPage > 1;
     final canGoNext = currentPage < _totalPages;
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        // Left: Rows per page selector
-        Row(
-          mainAxisSize: MainAxisSize.min,
+    return LayoutBuilder(
+      builder: (context, constraints) => SizedBox(
+        width: constraints.hasBoundedWidth ? constraints.maxWidth : null,
+        child: Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: SeedDimension.x4,
+          runSpacing: SeedDimension.x3,
           children: [
-            SizedBox(
-              width: 100,
-              child: SeedSelect<int>(
-                size: SeedInputButtonSize.small,
-                value: rowsPerPage,
-                groups: [
-                  SeedSelectGroup<int>(
-                    items: rowsPerPageOptions.map((opt) {
-                      return SeedSelectItem<int>(
-                        value: opt,
-                        label: '$opt개',
-                      );
-                    }).toList(),
+            // Left: Rows per page selector
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: SeedDimension.x2,
+              runSpacing: SeedDimension.x2,
+              children: [
+                SizedBox(
+                  width: 96,
+                  child: SeedSelect<int>(
+                    size: SeedInputButtonSize.small,
+                    value: rowsPerPage,
+                    groups: [
+                      SeedSelectGroup<int>(
+                        items: rowsPerPageOptions.map((opt) {
+                          return SeedSelectItem<int>(
+                            value: opt,
+                            label: '$opt개',
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                    onChanged: (val) => onRowsPerPageChanged(val),
                   ),
-                ],
-                onChanged: (val) => onRowsPerPageChanged(val),
-              ),
+                ),
+                Text(
+                  '씩 보기',
+                  style: typography.t4Regular.copyWith(
+                    color: colors.fg.neutral,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: SeedDimension.x2),
-            Text(
-              '씩 보기',
-              style: typography.t4Regular.copyWith(
-                color: colors.fg.neutralSubtle,
-              ),
-            ),
-          ],
-        ),
 
-        // Right: Range display & Next/Prev buttons
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              '$startItem–$endItem / 총 $totalItems개',
-              style: typography.t4Regular.copyWith(
-                color: colors.fg.neutral,
-              ),
-            ),
-            const SizedBox(width: SeedDimension.x3),
-            InkWell(
-              onTap: canGoPrev ? () => onPageChanged(currentPage - 1) : null,
-              borderRadius: SeedBorderRadius.r2,
-              child: Container(
-                width: 32,
-                height: 32,
-                alignment: Alignment.center,
-                child: Icon(
-                  Icons.chevron_left,
-                  size: 20,
-                  color: canGoPrev ? colors.fg.neutral : colors.fg.disabled,
+            // Right: Range display & Next/Prev buttons
+            Wrap(
+              alignment: WrapAlignment.end,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: SeedDimension.x4,
+              runSpacing: SeedDimension.x2,
+              children: [
+                Text(
+                  '$startItem–$endItem / 총 $totalItems개',
+                  style: typography.t4Regular.copyWith(
+                    color: colors.fg.neutral,
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(width: SeedDimension.x1),
-            InkWell(
-              onTap: canGoNext ? () => onPageChanged(currentPage + 1) : null,
-              borderRadius: SeedBorderRadius.r2,
-              child: Container(
-                width: 32,
-                height: 32,
-                alignment: Alignment.center,
-                child: Icon(
-                  Icons.chevron_right,
-                  size: 20,
-                  color: canGoNext ? colors.fg.neutral : colors.fg.disabled,
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    InkWell(
+                      onTap: canGoPrev
+                          ? () => onPageChanged(currentPage - 1)
+                          : null,
+                      borderRadius: SeedBorderRadius.r2,
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        alignment: Alignment.center,
+                        child: Icon(
+                          Icons.chevron_left,
+                          size: 16,
+                          color: canGoPrev
+                              ? colors.fg.neutral
+                              : colors.fg.disabled,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: SeedDimension.x1),
+                    InkWell(
+                      onTap: canGoNext
+                          ? () => onPageChanged(currentPage + 1)
+                          : null,
+                      borderRadius: SeedBorderRadius.r2,
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        alignment: Alignment.center,
+                        child: Icon(
+                          Icons.chevron_right,
+                          size: 16,
+                          color: canGoNext
+                              ? colors.fg.neutral
+                              : colors.fg.disabled,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
+              ],
             ),
           ],
         ),
-      ],
+      ),
     );
   }
 }

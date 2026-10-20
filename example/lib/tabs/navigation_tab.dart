@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
+
 import '../widgets/section_header.dart';
 
 /// Tab showcasing tabs, segmented control, pagination, avatars, image frames, and side navigation.
@@ -16,16 +17,14 @@ class _NavigationTabState extends State<NavigationTab> {
   String _selectedSegment = 'all';
   int _currentPage = 1;
   int _rowsPerPage = 10;
+  int _tablePage = 1;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionHeader(
-          title: 'Tabs',
-          subtitle: 'Line 및 Chip 스타일 탭 바',
-        ),
+        const SectionHeader(title: 'Tabs', subtitle: 'Line 및 Chip 스타일 탭 바'),
         SeedTabs(
           selectedIndex: _selectedTopTab,
           variant: SeedTabsVariant.line,
@@ -77,11 +76,14 @@ class _NavigationTabState extends State<NavigationTab> {
         ),
         const SizedBox(height: SeedDimension.x4),
         SeedTablePagination(
-          currentPage: _currentPage,
+          currentPage: _tablePage,
           totalItems: 320,
           rowsPerPage: _rowsPerPage,
-          onPageChanged: (p) => setState(() => _currentPage = p),
-          onRowsPerPageChanged: (r) => setState(() => _rowsPerPage = r),
+          onPageChanged: (p) => setState(() => _tablePage = p),
+          onRowsPerPageChanged: (r) => setState(() {
+            _rowsPerPage = r;
+            _tablePage = 1;
+          }),
         ),
         const SizedBox(height: SeedDimension.x6),
 
@@ -116,15 +118,9 @@ class _NavigationTabState extends State<NavigationTab> {
         const SizedBox(height: SeedDimension.x4),
         Row(
           children: const [
-            SeedIdentityPlaceholder(
-              type: SeedIdentityType.person,
-              size: 56,
-            ),
+            SeedIdentityPlaceholder(type: SeedIdentityType.person, size: 56),
             SizedBox(width: SeedDimension.x3),
-            SeedIdentityPlaceholder(
-              type: SeedIdentityType.business,
-              size: 56,
-            ),
+            SeedIdentityPlaceholder(type: SeedIdentityType.business, size: 56),
           ],
         ),
         const SizedBox(height: SeedDimension.x6),
@@ -170,8 +166,16 @@ class _NavigationTabState extends State<NavigationTab> {
               SeedSideNavGroup(
                 label: '광고 관리',
                 items: [
-                  SeedSideNavItem(id: 'camp', label: '캠페인 목록', icon: Icons.campaign),
-                  SeedSideNavItem(id: 'rep', label: '보고서', icon: Icons.bar_chart),
+                  SeedSideNavItem(
+                    id: 'camp',
+                    label: '캠페인 목록',
+                    icon: Icons.campaign,
+                  ),
+                  SeedSideNavItem(
+                    id: 'rep',
+                    label: '보고서',
+                    icon: Icons.bar_chart,
+                  ),
                 ],
               ),
             ],
