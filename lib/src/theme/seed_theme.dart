@@ -17,10 +17,23 @@ class SeedTheme extends StatelessWidget {
   const SeedTheme({super.key, required this.data, required this.child});
 
   static SeedThemeData of(BuildContext context) {
-    return maybeOf(context) ??
-        (Theme.of(context).brightness == Brightness.dark
-            ? SeedThemeData.dark()
-            : SeedThemeData.light());
+    final inherited = Theme.of(context);
+    final existing = maybeOf(context);
+    if (existing != null) return existing;
+
+    // Keep the app's configured font when a consumer reads SEED tokens before
+    // installing the optional SEED ThemeExtensions.
+    final inheritedFont = inherited.textTheme.bodyMedium;
+    final fallback = inherited.brightness == Brightness.dark
+        ? SeedThemeData.dark(fontFamily: inheritedFont?.fontFamily)
+        : SeedThemeData.light(fontFamily: inheritedFont?.fontFamily);
+    return fallback.copyWith(
+      typography: fallback.typography.mapStyles(
+        (style) => style.copyWith(
+          fontFamilyFallback: inheritedFont?.fontFamilyFallback,
+        ),
+      ),
+    );
   }
 
   static SeedThemeData? maybeOf(BuildContext context) {

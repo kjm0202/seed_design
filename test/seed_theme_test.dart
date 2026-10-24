@@ -3,6 +3,29 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:seed_design/seed_design.dart';
 
 void main() {
+  testWidgets('fallback SEED typography preserves host application font', (
+    tester,
+  ) async {
+    late SeedThemeData fallback;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(fontFamily: 'HostSans'),
+        home: Builder(
+          builder: (context) {
+            fallback = SeedTheme.of(context);
+            return const SizedBox();
+          },
+        ),
+      ),
+    );
+    expect(fallback.typography.body.fontFamily, 'HostSans');
+    expect(fallback.typography.body.fontSize, SeedFontSize.t5);
+    expect(
+      fallback.typography.body.height,
+      SeedLineHeight.t5 / SeedFontSize.t5,
+    );
+  });
+
   group('SeedThemeData Material 3 integration', () {
     test('toThemeData() produces fully populated Material 3 ThemeData', () {
       final seedLight = SeedThemeData.light();
