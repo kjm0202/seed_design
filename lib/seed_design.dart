@@ -41,6 +41,8 @@ export 'src/components/button/seed_button.dart';
 export 'src/components/button/seed_floating_action_button.dart';
 export 'src/components/button/seed_reaction_button.dart';
 export 'src/components/button/seed_contextual_floating_button.dart';
+export 'src/components/button/seed_toggle_button.dart';
+export 'src/components/button/seed_text_button.dart';
 
 // Components - Badge
 export 'src/components/badge/seed_badge.dart';
@@ -66,6 +68,7 @@ export 'src/components/selection/seed_checkbox.dart';
 export 'src/components/selection/seed_radio.dart';
 export 'src/components/selection/seed_switch.dart';
 export 'src/components/selection/seed_select_box.dart';
+export 'src/components/selection/seed_select_box_group.dart';
 
 // Components - Input
 export 'src/components/input/seed_text_input.dart';
@@ -82,6 +85,7 @@ export 'src/components/input/seed_select.dart';
 // Components - Navigation
 export 'src/components/navigation/seed_tabs.dart';
 export 'src/components/navigation/seed_top_navigation.dart';
+export 'src/components/navigation/seed_top_navigation_button.dart';
 export 'src/components/navigation/seed_bottom_navigation.dart';
 export 'src/components/navigation/seed_segmented_control.dart';
 export 'src/components/navigation/seed_pagination.dart';
@@ -91,6 +95,7 @@ export 'src/components/navigation/seed_side_navigation.dart';
 // Components - Layout
 export 'src/components/layout/seed_divider.dart';
 export 'src/components/layout/seed_avatar.dart';
+export 'src/components/avatar/seed_avatar_stack.dart';
 export 'src/components/layout/seed_result_section.dart';
 export 'src/components/layout/seed_scroll_fog.dart';
 export 'src/components/layout/seed_tag_group.dart';
@@ -108,6 +113,7 @@ export 'src/components/overlay/seed_bottom_sheet.dart';
 export 'src/components/overlay/seed_menu.dart';
 export 'src/components/overlay/seed_menu_sheet.dart';
 export 'src/components/overlay/seed_side_panel.dart';
+export 'src/components/popover/seed_popover.dart';
 
 // Components - Feedback
 export 'src/components/feedback/seed_progress_circle.dart';

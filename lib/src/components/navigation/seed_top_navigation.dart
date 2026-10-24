@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../foundations/dimensions/seed_dimension.dart';
 import '../../theme/seed_theme.dart';
 import '../layout/seed_divider.dart';
+import 'seed_top_navigation_button.dart';
 
 /// Top navigation bar component of SEED Design System.
 ///
@@ -43,9 +44,8 @@ class SeedTopNavigation extends StatelessWidget implements PreferredSizeWidget {
 
     Widget? effectiveLeading = leading;
     if (effectiveLeading == null && canPop) {
-      effectiveLeading = IconButton(
-        icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20.0),
-        color: colors.fg.neutral,
+      effectiveLeading = SeedTopNavigationIconButton(
+        icon: const Icon(Icons.arrow_back_ios_new_rounded),
         onPressed: () => Navigator.maybePop(context),
       );
     }
