@@ -56,6 +56,15 @@ class _SeedTimePickerState extends State<SeedTimePicker> {
     _initValues();
   }
 
+  @override
+  void didUpdateWidget(SeedTimePicker oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialTime != widget.initialTime ||
+        oldWidget.minuteStep != widget.minuteStep) {
+      _initValues();
+    }
+  }
+
   void _initValues() {
     final h = widget.initialTime.hour;
     _period = h >= 12 ? SeedTimePeriod.pm : SeedTimePeriod.am;

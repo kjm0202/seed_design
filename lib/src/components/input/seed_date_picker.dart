@@ -53,7 +53,7 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
     super.initState();
     final init =
         widget.initialDate ?? widget.initialStartDate ?? DateTime.now();
-    _currentMonth = DateTime(init.year, init.month);
+    _currentMonth = _clampMonth(DateTime(init.year, init.month));
     _selectedDate = widget.initialDate != null
         ? DateTime(
             widget.initialDate!.year,
@@ -77,13 +77,57 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
         : null;
   }
 
+  DateTime _clampMonth(DateTime month) {
+    final first = widget.firstDate;
+    final last = widget.lastDate;
+    if (first != null && month.isBefore(DateTime(first.year, first.month))) {
+      return DateTime(first.year, first.month);
+    }
+    if (last != null && month.isAfter(DateTime(last.year, last.month))) {
+      return DateTime(last.year, last.month);
+    }
+    return month;
+  }
+
+  bool _canShowMonth(DateTime month) {
+    final first = widget.firstDate;
+    final last = widget.lastDate;
+    if (first != null &&
+        DateTime(
+          month.year,
+          month.month + 1,
+          0,
+        ).isBefore(DateUtils.dateOnly(first))) {
+      return false;
+    }
+    if (last != null && month.isAfter(DateUtils.dateOnly(last))) {
+      return false;
+    }
+    return true;
+  }
+
+  @override
+  void didUpdateWidget(SeedDatePicker oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.firstDate != widget.firstDate ||
+        oldWidget.lastDate != widget.lastDate) {
+      _currentMonth = _clampMonth(_currentMonth);
+    }
+  }
+
   void _onPrevMonth() {
+    if (!_canShowMonth(DateTime(_currentMonth.year, _currentMonth.month - 1))) {
+      return;
+    }
     setState(() {
       _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1);
     });
   }
 
   void _onNextMonth() {
+    if (!_canShowMonth(DateTime(_currentMonth.year, _currentMonth.month + 1))) {
+      return;
+    }
     setState(() {
       _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1);
     });
@@ -145,6 +189,12 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
       0,
     ).day;
     final startingWeekday = firstDayOfMonth.weekday % 7;
+    final canGoToPreviousMonth = _canShowMonth(
+      DateTime(_currentMonth.year, _currentMonth.month - 1),
+    );
+    final canGoToNextMonth = _canShowMonth(
+      DateTime(_currentMonth.year, _currentMonth.month + 1),
+    );
 
     final weekdays = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -169,13 +219,19 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
               Row(
                 children: [
                   IconButton(
-                    icon: Icon(Icons.chevron_left, color: colors.fg.neutral),
-                    onPressed: _onPrevMonth,
+                    icon: const Icon(Icons.chevron_left),
+                    color: colors.fg.neutral,
+                    disabledColor: colors.fg.disabled,
+                    tooltip: '이전 달',
+                    onPressed: canGoToPreviousMonth ? _onPrevMonth : null,
                     splashRadius: 20,
                   ),
                   IconButton(
-                    icon: Icon(Icons.chevron_right, color: colors.fg.neutral),
-                    onPressed: _onNextMonth,
+                    icon: const Icon(Icons.chevron_right),
+                    color: colors.fg.neutral,
+                    disabledColor: colors.fg.disabled,
+                    tooltip: '다음 달',
+                    onPressed: canGoToNextMonth ? _onNextMonth : null,
                     splashRadius: 20,
                   ),
                 ],
@@ -283,18 +339,25 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
                 textColor = colors.fg.disabled;
               }
 
-              return InkWell(
-                onTap: isSelectable ? () => _handleDayTap(date) : null,
-                borderRadius: SeedBorderRadius.r2,
-                child: Center(
-                  child: Container(
-                    width: 42,
-                    height: 42,
-                    decoration: decoration,
-                    alignment: Alignment.center,
-                    child: Text(
-                      '$dayNumber',
-                      style: typography.t5Medium.copyWith(color: textColor),
+              return Semantics(
+                container: true,
+                label: '${date.year}년 ${date.month}월 ${date.day}일',
+                selected: isSelectedSingle || isStart || isEnd,
+                child: InkWell(
+                  onTap: isSelectable ? () => _handleDayTap(date) : null,
+                  borderRadius: SeedBorderRadius.r2,
+                  child: Center(
+                    child: Container(
+                      width: 42,
+                      height: 42,
+                      decoration: decoration,
+                      alignment: Alignment.center,
+                      child: ExcludeSemantics(
+                        child: Text(
+                          '$dayNumber',
+                          style: typography.t5Medium.copyWith(color: textColor),
+                        ),
+                      ),
                     ),
                   ),
                 ),

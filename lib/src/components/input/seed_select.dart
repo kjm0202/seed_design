@@ -81,6 +81,14 @@ class SeedSelect<T> extends StatefulWidget {
 class _SeedSelectState<T> extends State<SeedSelect<T>> {
   final MenuController _menuController = MenuController();
 
+  @override
+  void didUpdateWidget(SeedSelect<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.enabled && !widget.enabled && _menuController.isOpen) {
+      _menuController.close();
+    }
+  }
+
   SeedSelectItem<T>? get _selectedItem {
     for (final group in widget.groups) {
       for (final item in group.items) {
@@ -166,10 +174,11 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
             ),
             child: Text(
               group.label!,
-              style: (widget.size == SeedInputButtonSize.medium
-                      ? typography.t4Medium
-                      : typography.t3Regular)
-                  .copyWith(color: colors.fg.neutralSubtle),
+              style:
+                  (widget.size == SeedInputButtonSize.medium
+                          ? typography.t4Medium
+                          : typography.t3Regular)
+                      .copyWith(color: colors.fg.neutralSubtle),
             ),
           ),
         );
@@ -195,7 +204,7 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
                 RoundedRectangleBorder(borderRadius: SeedBorderRadius.r3),
               ),
             ),
-            onPressed: item.enabled
+            onPressed: widget.enabled && item.enabled
                 ? () {
                     widget.onChanged?.call(item.value);
                   }

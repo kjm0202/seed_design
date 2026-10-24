@@ -138,23 +138,50 @@ class _SeedWheelPickerState extends State<SeedWheelPicker> {
   void initState() {
     super.initState();
     _controllers = widget.columns.map((col) {
-      return FixedExtentScrollController(initialItem: col.initialIndex);
+      return FixedExtentScrollController(initialItem: _validIndex(col));
     }).toList();
-    _selectedIndices = widget.columns.map((col) => col.initialIndex).toList();
+    _selectedIndices = widget.columns.map(_validIndex).toList();
   }
+
+  int _validIndex(SeedWheelColumn col) =>
+      col.itemCount == 0 ? 0 : col.initialIndex.clamp(0, col.itemCount - 1);
 
   @override
   void didUpdateWidget(SeedWheelPicker oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.columns.length != oldWidget.columns.length) {
-      for (final c in _controllers) {
-        c.dispose();
+    final oldControllers = _controllers;
+    final updatedControllers = <FixedExtentScrollController>[];
+    final updatedSelections = <int>[];
+    for (var i = 0; i < widget.columns.length; i++) {
+      final column = widget.columns[i];
+      final keepSelection =
+          i < oldWidget.columns.length &&
+          column.itemCount == oldWidget.columns[i].itemCount &&
+          column.itemExtent == oldWidget.columns[i].itemExtent &&
+          _validIndex(column) == _validIndex(oldWidget.columns[i]);
+
+      if (keepSelection) {
+        // Parent rebuilds must not reset another column's user selection.
+        updatedControllers.add(oldControllers[i]);
+        updatedSelections.add(_selectedIndices[i]);
+      } else {
+        updatedControllers.add(
+          FixedExtentScrollController(initialItem: _validIndex(column)),
+        );
+        updatedSelections.add(_validIndex(column));
       }
-      _controllers = widget.columns.map((col) {
-        return FixedExtentScrollController(initialItem: col.initialIndex);
-      }).toList();
-      _selectedIndices = widget.columns.map((col) => col.initialIndex).toList();
     }
+
+    // The previous ListWheelScrollView remains attached for this frame.
+    for (final controller in oldControllers) {
+      if (!updatedControllers.contains(controller)) {
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => controller.dispose(),
+        );
+      }
+    }
+    _controllers = updatedControllers;
+    _selectedIndices = updatedSelections;
   }
 
   @override
@@ -208,6 +235,10 @@ class _SeedWheelPickerState extends State<SeedWheelPicker> {
                     return false;
                   },
                   child: ListWheelScrollView.useDelegate(
+                    // A new controller means an externally supplied selection
+                    // or item count changed. Reset the wheel's Scrollable state
+                    // so its old scroll offset cannot override initialItem.
+                    key: ObjectKey(_controllers[colIdx]),
                     controller: _controllers[colIdx],
                     itemExtent: col.itemExtent,
                     perspective: 0.003,

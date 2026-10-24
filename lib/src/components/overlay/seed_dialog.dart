@@ -214,7 +214,21 @@ class SeedDialog extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (header != null)
-                header!
+                Row(
+                  children: [
+                    Expanded(child: header!),
+                    if (showCloseButton)
+                      Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: IconButton(
+                          tooltip: '닫기',
+                          icon: const Icon(Icons.close_rounded),
+                          color: colors.fg.neutralSubtle,
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                      ),
+                  ],
+                )
               else if (title != null)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
@@ -244,11 +258,25 @@ class SeedDialog extends StatelessWidget {
                       ),
                       if (showCloseButton)
                         IconButton(
+                          tooltip: '닫기',
                           icon: const Icon(Icons.close_rounded),
                           color: colors.fg.neutralSubtle,
                           onPressed: () => Navigator.of(context).pop(),
                         ),
                     ],
+                  ),
+                )
+              else if (showCloseButton)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+                    child: IconButton(
+                      tooltip: '닫기',
+                      icon: const Icon(Icons.close_rounded),
+                      color: colors.fg.neutralSubtle,
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
                   ),
                 ),
               Flexible(
