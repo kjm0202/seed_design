@@ -20,25 +20,31 @@ class SeedNotificationBadge extends StatelessWidget {
   /// Optional custom background color. Defaults to `colors.bg.brandSolid`.
   final Color? color;
 
+  /// Optional custom text color. Defaults to `colors.fg.onBrandSolid`.
+  final Color? textColor;
+
   const SeedNotificationBadge({
     super.key,
     this.count,
     this.showDot = false,
     this.maxCount = 99,
     this.color,
+    this.textColor,
   });
 
   /// Factory for a simple unread dot.
   const SeedNotificationBadge.dot({super.key, this.color})
     : count = null,
       showDot = true,
-      maxCount = 99;
+      maxCount = 99,
+      textColor = null;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.seedColor;
     final typography = context.seedTypography;
     final bgColor = color ?? colors.bg.brandSolid;
+    final fgColor = textColor ?? colors.fg.onBrandSolid;
 
     if (showDot && (count == null || count == 0)) {
       return Container(
@@ -68,7 +74,7 @@ class SeedNotificationBadge extends StatelessWidget {
           text,
           textScaler: TextScaler.noScaling,
           style: typography.t1Bold.copyWith(
-            color: colors.fg.onBrandSolid,
+            color: fgColor,
             height: 15 / 11,
           ),
           maxLines: 1,

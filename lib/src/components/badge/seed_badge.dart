@@ -25,6 +25,15 @@ enum SeedBadgeSize {
     }
   }
 
+  double get iconSize {
+    switch (this) {
+      case SeedBadgeSize.medium:
+        return 12.0;
+      case SeedBadgeSize.large:
+        return 14.0;
+    }
+  }
+
   EdgeInsets get padding {
     switch (this) {
       case SeedBadgeSize.medium:
@@ -47,8 +56,11 @@ enum SeedBadgeSize {
 /// Badge component of SEED Design System.
 ///
 /// Communicates entity attributes, categories, and concise states.
+/// Supports prefix icons, label, and action buttons.
 class SeedBadge extends StatelessWidget {
   final String label;
+  final Widget? prefix;
+  final Widget? action;
   final SeedBadgeTone tone;
   final SeedBadgeVariant variant;
   final SeedBadgeSize size;
@@ -57,6 +69,8 @@ class SeedBadge extends StatelessWidget {
   const SeedBadge({
     super.key,
     required this.label,
+    this.prefix,
+    this.action,
     this.tone = SeedBadgeTone.neutral,
     this.variant = SeedBadgeVariant.weak,
     this.size = SeedBadgeSize.medium,
@@ -78,6 +92,55 @@ class SeedBadge extends StatelessWidget {
 
     final (bgColor, fgColor, strokeColor) = _resolveColors(colors);
 
+    Widget content;
+    if (prefix != null || action != null) {
+      content = Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          if (prefix != null) ...[
+            IconTheme(
+              data: IconThemeData(
+                color: fgColor,
+                size: size.iconSize,
+              ),
+              child: prefix!,
+            ),
+            const SizedBox(width: 2.0),
+          ],
+          Flexible(
+            child: Text(
+              label,
+              style: textStyle.copyWith(color: fgColor),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          if (action != null) ...[
+            const SizedBox(width: 2.0),
+            IconTheme(
+              data: IconThemeData(
+                color: fgColor,
+                size: size.iconSize,
+              ),
+              child: action!,
+            ),
+          ],
+        ],
+      );
+    } else {
+      content = Center(
+        widthFactor: 1.0,
+        heightFactor: 1.0,
+        child: Text(
+          label,
+          style: textStyle.copyWith(color: fgColor),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      );
+    }
+
     return Container(
       constraints: BoxConstraints(
         minHeight: size.height,
@@ -93,16 +156,7 @@ class SeedBadge extends StatelessWidget {
             ? Border.all(color: strokeColor, width: 1.0)
             : null,
       ),
-      child: Center(
-        widthFactor: 1.0,
-        heightFactor: 1.0,
-        child: Text(
-          label,
-          style: textStyle.copyWith(color: fgColor),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ),
+      child: content,
     );
   }
 

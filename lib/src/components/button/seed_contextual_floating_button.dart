@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../foundations/colors/seed_palette.dart';
 import '../../foundations/dimensions/seed_dimension.dart';
 import '../../foundations/radius/seed_radius.dart';
 import '../../foundations/feedback/seed_scale_feedback.dart';
@@ -101,7 +102,17 @@ class SeedContextualFloatingButton extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             if (loading) ...[
-              SeedProgressCircle(size: 16.0, color: fgColor),
+              SeedProgressCircle(
+                size: 16.0,
+                color: fgColor,
+                trackColor: tone == SeedContextualFloatingButtonTone.solid
+                    ? (colors.isDark
+                        ? SeedPalette.gray700Dark
+                        : SeedPalette.gray700Light)
+                    : (colors.isDark
+                        ? SeedPalette.gray500Dark
+                        : SeedPalette.gray500Light),
+              ),
             ] else if (icon != null) ...[
               IconTheme(
                 data: IconThemeData(

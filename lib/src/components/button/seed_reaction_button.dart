@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../foundations/colors/seed_palette.dart';
 import '../../foundations/dimensions/seed_dimension.dart';
 import '../../foundations/radius/seed_radius.dart';
 import '../../foundations/feedback/seed_scale_feedback.dart';
@@ -94,7 +95,18 @@ class SeedReactionButton extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             if (loading)
-              SeedProgressCircle(size: 14, strokeWidth: 2, color: fgColor)
+              SeedProgressCircle(
+                size: 14,
+                strokeWidth: 2,
+                color: fgColor,
+                trackColor: isReacted
+                    ? (colors.isDark
+                        ? SeedPalette.carrot200Dark
+                        : SeedPalette.carrot200Light)
+                    : (colors.isDark
+                        ? SeedPalette.gray500Dark
+                        : SeedPalette.gray500Light),
+              )
             else
               IconTheme(
                 data: IconThemeData(size: size.iconSize, color: fgColor),

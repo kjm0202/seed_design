@@ -2,8 +2,10 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../foundations/dimensions/seed_dimension.dart';
 import '../../foundations/feedback/seed_scale_feedback.dart';
-import '../../theme/seed_theme.dart';
 import '../../foundations/gradient/seed_gradient.dart';
+import '../../foundations/motion/seed_motion.dart';
+import '../../foundations/radius/seed_radius.dart';
+import '../../theme/seed_theme.dart';
 
 /// Tone options for [SeedPageBanner].
 enum SeedPageBannerTone {
@@ -128,11 +130,14 @@ class SeedPageBanner extends StatelessWidget {
                 if (linkText != null)
                   SeedPressable(
                     semanticsLabel: linkText,
-                    enableScale: false,
                     onTap: onLinkTap,
-                    child: Text(
-                      linkText!,
-                      style: typography.t3Bold.copyWith(color: fgColor),
+                    builder: (context, linkPressed) => Container(
+                      constraints: const BoxConstraints(minHeight: 40),
+                      alignment: Alignment.center,
+                      child: Text(
+                        linkText!,
+                        style: typography.t3Bold.copyWith(color: fgColor),
+                      ),
                     ),
                   ),
               ],
@@ -142,17 +147,24 @@ class SeedPageBanner extends StatelessWidget {
             const SizedBox(width: SeedDimension.x2),
             SeedPressable(
               semanticsLabel: '닫기',
-              enableScale: false,
               behavior: HitTestBehavior.opaque,
+              focusBorderRadius: SeedBorderRadius.r2,
               onTap: onDismiss,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+              builder: (context, isClosePressed) => AnimatedContainer(
+                duration: SeedDuration.colorTransition,
+                curve: SeedCurves.easing,
+                width: SeedDimension.x10,
+                height: SeedDimension.x10,
+                decoration: BoxDecoration(
+                  color: isClosePressed
+                      ? colors.bg.transparentPressed
+                      : colors.bg.transparent,
+                  borderRadius: SeedBorderRadius.r2,
+                ),
                 child: Center(
-                  widthFactor: 1,
-                  heightFactor: 1,
                   child: Icon(
                     Icons.close_rounded,
-                    size: 16.0,
+                    size: SeedDimension.x4,
                     color: iconColor,
                   ),
                 ),

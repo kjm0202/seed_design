@@ -3,9 +3,9 @@ import 'package:material_ui/material_ui.dart';
 import '../../foundations/colors/seed_color_scheme.dart';
 import '../../foundations/colors/seed_palette.dart';
 import '../../foundations/dimensions/seed_dimension.dart';
+import '../../foundations/feedback/seed_scale_feedback.dart';
 import '../../foundations/motion/seed_motion.dart';
 import '../../foundations/radius/seed_radius.dart';
-import '../../foundations/feedback/seed_scale_feedback.dart';
 import '../../theme/seed_theme.dart';
 import '../feedback/seed_progress_circle.dart';
 
@@ -40,7 +40,8 @@ enum SeedButtonSize {
     }
   }
 
-  double get iconSize {
+  /// Icon size for icon-only buttons as defined by SEED Design.
+  double get iconOnlySize {
     switch (this) {
       case SeedButtonSize.xsmall:
         return 14.0;
@@ -52,6 +53,23 @@ enum SeedButtonSize {
         return 22.0;
     }
   }
+
+  /// Icon size for buttons with text as defined by SEED Design Rootage.
+  double get withTextIconSize {
+    switch (this) {
+      case SeedButtonSize.xsmall:
+        return 14.0;
+      case SeedButtonSize.small:
+        return 14.0;
+      case SeedButtonSize.medium:
+        return 16.0;
+      case SeedButtonSize.large:
+        return 22.0;
+    }
+  }
+
+  /// Default icon size (defaults to [iconOnlySize] for backward compatibility).
+  double get iconSize => iconOnlySize;
 
   EdgeInsets get padding {
     switch (this) {
@@ -95,6 +113,10 @@ class SeedButton extends StatelessWidget {
   final bool isFullWidth;
   final bool loading;
   final bool enabled;
+  final bool disableOnLoading;
+  final bool bleed;
+  final Color? textColor;
+  final FontWeight? fontWeight;
   final String? semanticsLabel;
   final FocusNode? focusNode;
   final bool autofocus;
@@ -111,6 +133,10 @@ class SeedButton extends StatelessWidget {
     this.isFullWidth = false,
     this.loading = false,
     this.enabled = true,
+    this.disableOnLoading = true,
+    this.bleed = false,
+    this.textColor,
+    this.fontWeight,
     this.semanticsLabel,
     this.focusNode,
     this.autofocus = false,
@@ -128,6 +154,10 @@ class SeedButton extends StatelessWidget {
     this.size = SeedButtonSize.medium,
     this.loading = false,
     this.enabled = true,
+    this.disableOnLoading = true,
+    this.bleed = false,
+    this.textColor,
+    this.fontWeight,
     this.semanticsLabel,
     this.focusNode,
     this.autofocus = false,
@@ -136,7 +166,8 @@ class SeedButton extends StatelessWidget {
        suffixIcon = null,
        isFullWidth = false;
 
-  bool get _effectiveEnabled => enabled && !loading && onPressed != null;
+  bool get _effectiveEnabled =>
+      enabled && (!disableOnLoading || !loading) && onPressed != null;
 
   @override
   Widget build(BuildContext context) {
@@ -159,6 +190,10 @@ class SeedButton extends StatelessWidget {
         break;
     }
 
+    if (fontWeight != null) {
+      textStyle = textStyle.copyWith(fontWeight: fontWeight);
+    }
+
     return SeedPressable(
       enabled: _effectiveEnabled,
       semanticsLabel: semanticsLabel ?? label,
@@ -177,8 +212,9 @@ class SeedButton extends StatelessWidget {
           enabled: enabled && (onPressed != null || loading),
         );
 
+        final effectiveFg = textColor ?? fgColor;
         final isIconOnly = icon != null && label == null;
-        final normalContent = _buildContent(fgColor, textStyle);
+        final normalContent = _buildContent(effectiveFg, textStyle);
         final content = Stack(
           alignment: Alignment.center,
           children: [
@@ -197,7 +233,7 @@ class SeedButton extends StatelessWidget {
                   SeedButtonSize.large => 18,
                 },
                 strokeWidth: 2,
-                color: fgColor,
+                color: effectiveFg,
                 trackColor: switch (variant) {
                   SeedButtonVariant.brandSolid ||
                   SeedButtonVariant.neutralSolid ||
@@ -215,6 +251,11 @@ class SeedButton extends StatelessWidget {
               ),
           ],
         );
+
+        final basePadding = bleed
+            ? EdgeInsets.symmetric(vertical: size.padding.vertical / 2)
+            : size.padding;
+
         final container = AnimatedContainer(
           duration: SeedDuration.colorTransition,
           curve: SeedCurves.easing,
@@ -224,7 +265,7 @@ class SeedButton extends StatelessWidget {
           ),
           padding: isIconOnly
               ? EdgeInsets.zero
-              : size.padding -
+              : basePadding -
                     (strokeColor != null
                         ? const EdgeInsets.all(1)
                         : EdgeInsets.zero),
@@ -256,10 +297,12 @@ class SeedButton extends StatelessWidget {
 
     if (icon != null && label == null) {
       return IconTheme(
-        data: IconThemeData(color: fgColor, size: size.iconSize),
+        data: IconThemeData(color: fgColor, size: size.iconOnlySize),
         child: icon!,
       );
     }
+
+    final iconSize = size.withTextIconSize;
 
     return Row(
       mainAxisSize: isFullWidth ? MainAxisSize.max : MainAxisSize.min,
@@ -269,11 +312,7 @@ class SeedButton extends StatelessWidget {
           IconTheme(
             data: IconThemeData(
               color: fgColor,
-              size: size == SeedButtonSize.small
-                  ? 14
-                  : size == SeedButtonSize.medium
-                  ? 16
-                  : size.iconSize,
+              size: iconSize,
             ),
             child: prefixIcon!,
           ),
@@ -305,11 +344,7 @@ class SeedButton extends StatelessWidget {
           IconTheme(
             data: IconThemeData(
               color: fgColor,
-              size: size == SeedButtonSize.small
-                  ? 14
-                  : size == SeedButtonSize.medium
-                  ? 16
-                  : size.iconSize,
+              size: iconSize,
             ),
             child: suffixIcon!,
           ),
