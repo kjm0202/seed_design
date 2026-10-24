@@ -18,6 +18,7 @@ class _NavigationTabState extends State<NavigationTab> {
   int _currentPage = 1;
   int _rowsPerPage = 10;
   int _tablePage = 1;
+  bool _unknownTotal = false;
 
   @override
   Widget build(BuildContext context) {
@@ -77,9 +78,26 @@ class _NavigationTabState extends State<NavigationTab> {
           ),
         ),
         const SizedBox(height: SeedDimension.x4),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              _unknownTotal ? '모드: 미확인 총량 (Unknown Total)' : '모드: 고정 총량 (320개)',
+              style: context.seedTypography.t3Medium.copyWith(color: context.seedColor.fg.neutralSubtle),
+            ),
+            SeedSwitch(
+              value: _unknownTotal,
+              label: 'Unknown Total',
+              onChanged: (v) => setState(() => _unknownTotal = v),
+            ),
+          ],
+        ),
+        const SizedBox(height: SeedDimension.x2),
         SeedTablePagination(
           currentPage: _tablePage,
-          totalItems: 320,
+          totalItems: _unknownTotal ? null : 320,
+          hasPreviousPage: _unknownTotal ? _tablePage > 1 : null,
+          hasNextPage: _unknownTotal ? true : null,
           rowsPerPage: _rowsPerPage,
           onPageChanged: (p) => setState(() => _tablePage = p),
           onRowsPerPageChanged: (r) => setState(() {
@@ -90,8 +108,48 @@ class _NavigationTabState extends State<NavigationTab> {
         const SizedBox(height: SeedDimension.x6),
 
         const SectionHeader(
-          title: 'Avatar & Identity',
-          subtitle: '4가지 규격(32, 40, 56, 72px) 아바타 및 사용자/비즈니스 플레이스홀더',
+          title: 'Top Navigation Buttons (New)',
+          subtitle: '44px 터치 타겟과 자체 스케일 피드백이 규격화된 상단 바 전용 버튼',
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: SeedDimension.x2, vertical: SeedDimension.x1),
+          decoration: BoxDecoration(
+            color: context.seedColor.bg.layerDefault,
+            borderRadius: SeedBorderRadius.r2,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  SeedTopNavigationIconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed: () {},
+                  ),
+                  const SizedBox(width: SeedDimension.x2),
+                  Text('상단 바 미리보기', style: context.seedTypography.t5Bold),
+                ],
+              ),
+              Row(
+                children: [
+                  SeedTopNavigationIconButton(
+                    icon: const Icon(Icons.share_outlined),
+                    onPressed: () {},
+                  ),
+                  SeedTopNavigationTextButton(
+                    text: '완료',
+                    onPressed: () {},
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: SeedDimension.x6),
+
+        const SectionHeader(
+          title: 'Avatar & Avatar Stack (New)',
+          subtitle: '10가지 규격(20..108px) 아바타 및 음수 간격 중첩 스택(AvatarStack)',
         ),
         Row(
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -118,6 +176,23 @@ class _NavigationTabState extends State<NavigationTab> {
           ],
         ),
         const SizedBox(height: SeedDimension.x4),
+        Text(
+          '중첩 아바타 스택 (AvatarStack):',
+          style: context.seedTypography.t3Medium.copyWith(color: context.seedColor.fg.neutralSubtle),
+        ),
+        const SizedBox(height: SeedDimension.x2),
+        const SeedAvatarStack(
+          size: SeedAvatarSize.medium,
+          maxVisible: 3,
+          children: [
+            SeedAvatar(placeholder: Text('김')),
+            SeedAvatar(placeholder: Text('이')),
+            SeedAvatar(placeholder: Text('박')),
+            SeedAvatar(placeholder: Text('최')),
+            SeedAvatar(placeholder: Text('정')),
+          ],
+        ),
+        const SizedBox(height: SeedDimension.x4),
         Row(
           children: const [
             SeedIdentityPlaceholder(type: SeedIdentityType.person, size: 56),
@@ -129,7 +204,7 @@ class _NavigationTabState extends State<NavigationTab> {
 
         const SectionHeader(
           title: 'Image Frame & Content Placeholders',
-          subtitle: '정규 1:1 비율 이미지 프레임 및 미디어 콘텐츠 로딩 대체 영역',
+          subtitle: '정규 1:1 이미지 프레임 및 공식 도메인별 대체 시각 요소(ContentPlaceholder)',
         ),
         Row(
           children: [
@@ -148,9 +223,46 @@ class _NavigationTabState extends State<NavigationTab> {
               child: SizedBox(
                 height: 120,
                 child: SeedContentPlaceholder(
-                  icon: Icon(Icons.broken_image_outlined, size: 36),
+                  type: SeedContentPlaceholderType.buySell,
                 ),
               ),
+            ),
+          ],
+        ),
+        const SizedBox(height: SeedDimension.x3),
+        Text(
+          '공식 도메인 프리셋 (Rootage 12종):',
+          style: context.seedTypography.t3Medium.copyWith(color: context.seedColor.fg.neutralSubtle),
+        ),
+        const SizedBox(height: SeedDimension.x2),
+        Wrap(
+          spacing: SeedDimension.x2,
+          runSpacing: SeedDimension.x2,
+          children: const [
+            SizedBox(
+              width: 72,
+              height: 72,
+              child: SeedContentPlaceholder(type: SeedContentPlaceholderType.car),
+            ),
+            SizedBox(
+              width: 72,
+              height: 72,
+              child: SeedContentPlaceholder(type: SeedContentPlaceholderType.food),
+            ),
+            SizedBox(
+              width: 72,
+              height: 72,
+              child: SeedContentPlaceholder(type: SeedContentPlaceholderType.commerce),
+            ),
+            SizedBox(
+              width: 72,
+              height: 72,
+              child: SeedContentPlaceholder(type: SeedContentPlaceholderType.jobs),
+            ),
+            SizedBox(
+              width: 72,
+              height: 72,
+              child: SeedContentPlaceholder(type: SeedContentPlaceholderType.realty),
             ),
           ],
         ),

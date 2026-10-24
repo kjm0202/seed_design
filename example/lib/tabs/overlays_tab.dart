@@ -75,6 +75,69 @@ class OverlaysTab extends StatelessWidget {
         const SizedBox(height: SeedDimension.x6),
 
         const SectionHeader(
+          title: 'Popover (New)',
+          subtitle: '트리거 요소에 앵커링되는 팝오버 컨테이너 (Header, 52px 닫기 버튼, Body, Footer)',
+        ),
+        Wrap(
+          spacing: SeedDimension.x3,
+          runSpacing: SeedDimension.x3,
+          children: [
+            Builder(
+              builder: (btnContext) => SeedButton(
+                label: '앵커 팝오버 띄우기',
+                variant: SeedButtonVariant.brandSolid,
+                prefixIcon: const Icon(Icons.open_in_new),
+                onPressed: () {
+                  final renderBox = btnContext.findRenderObject() as RenderBox?;
+                  final rect = renderBox != null
+                      ? (renderBox.localToGlobal(Offset.zero) & renderBox.size)
+                      : Rect.zero;
+                  showSeedPopover(
+                    context: btnContext,
+                    anchorRect: rect,
+                    builder: (popContext) => SeedPopover(
+                      titleText: '새로운 키워드 알림',
+                      descriptionText: '관심있는 물품의 키워드를 등록하면 실시간 알림을 받을 수 있어요.',
+                      body: const Text('예: 맥북 M3, 다이슨 에어랩, 캠핑의자'),
+                      footer: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          SeedButton(
+                            label: '확인',
+                            size: SeedButtonSize.small,
+                            onPressed: () => Navigator.pop(popContext),
+                          ),
+                        ],
+                      ),
+                      onClose: () => Navigator.pop(popContext),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: SeedDimension.x3),
+        SeedPopover(
+          titleText: '인라인 Popover 카드',
+          descriptionText: r'모바일/데스크탑 반응형 팝오버 규격 ($radius.r5, $shadow.s3)',
+          body: const Text('자유롭게 위젯을 배치할 수 있는 본문 슬롯입니다.'),
+          footer: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              SeedButton(
+                label: '자세히 보기',
+                variant: SeedButtonVariant.neutralWeak,
+                size: SeedButtonSize.small,
+                onPressed: () {},
+              ),
+            ],
+          ),
+          onClose: () {},
+        ),
+        const SizedBox(height: SeedDimension.x6),
+
+        const SectionHeader(
           title: 'Bottom Sheet & Side Panel',
           subtitle: '하단 시트, 메뉴 시트, 슬라이드 사이드 패널',
         ),

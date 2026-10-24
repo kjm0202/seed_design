@@ -12,11 +12,14 @@ class ComponentsTab extends StatefulWidget {
 
 class _ComponentsTabState extends State<ComponentsTab> {
   bool _loadingButton = false;
+  bool _toggleBrandVal = true;
+  bool _toggleNeutralVal = false;
   int _selectedChipIndex = 0;
   bool _checkboxVal = true;
   bool _switchVal = true;
   String _radioVal = 'opt1';
   bool _selectBoxVal = true;
+  bool _selectBoxVal2 = false;
 
   @override
   Widget build(BuildContext context) {
@@ -75,6 +78,63 @@ class _ComponentsTabState extends State<ComponentsTab> {
                 await Future.delayed(const Duration(seconds: 2));
                 if (mounted) setState(() => _loadingButton = false);
               },
+            ),
+          ],
+        ),
+        const SizedBox(height: SeedDimension.x4),
+        Wrap(
+          spacing: SeedDimension.x2,
+          runSpacing: SeedDimension.x2,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            SeedButton(
+              label: 'Ghost (Custom Color & Weight)',
+              variant: SeedButtonVariant.ghost,
+              textColor: context.seedColor.fg.brand,
+              fontWeight: FontWeight.w700,
+              bleed: true,
+              prefixIcon: const Icon(Icons.bolt),
+              onPressed: () {},
+            ),
+            SeedTextButton(
+              label: '독립 Text Button',
+              prefixIcon: const Icon(Icons.arrow_forward),
+              onPressed: () {},
+            ),
+          ],
+        ),
+        const SizedBox(height: SeedDimension.x6),
+
+        const SectionHeader(
+          title: 'Toggle Buttons (New)',
+          subtitle: '상태를 켜고 끄는 토글 전용 버튼 (brandSolid / neutralWeak)',
+        ),
+        Wrap(
+          spacing: SeedDimension.x3,
+          runSpacing: SeedDimension.x2,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            SeedToggleButton(
+              label: _toggleBrandVal ? '알림 켜짐' : '알림 꺼짐',
+              prefixIcon: Icon(_toggleBrandVal ? Icons.notifications_active : Icons.notifications_off),
+              variant: SeedToggleButtonVariant.brandSolid,
+              size: SeedToggleButtonSize.small,
+              selected: _toggleBrandVal,
+              onSelectedChanged: (val) => setState(() => _toggleBrandVal = val),
+            ),
+            SeedToggleButton(
+              label: _toggleNeutralVal ? '북마크됨' : '북마크',
+              prefixIcon: Icon(_toggleNeutralVal ? Icons.bookmark : Icons.bookmark_border),
+              variant: SeedToggleButtonVariant.neutralWeak,
+              size: SeedToggleButtonSize.small,
+              selected: _toggleNeutralVal,
+              onSelectedChanged: (val) => setState(() => _toggleNeutralVal = val),
+            ),
+            SeedToggleButton(
+              label: 'xsmall 크기',
+              size: SeedToggleButtonSize.xsmall,
+              selected: _toggleBrandVal,
+              onSelectedChanged: (val) => setState(() => _toggleBrandVal = val),
             ),
           ],
         ),
@@ -145,14 +205,19 @@ class _ComponentsTabState extends State<ComponentsTab> {
           spacing: SeedDimension.x2,
           runSpacing: SeedDimension.x2,
           crossAxisAlignment: WrapCrossAlignment.center,
-          children: const [
-            SeedBadge(label: '거래중', tone: SeedBadgeTone.brand),
-            SeedBadge(label: '예약중', tone: SeedBadgeTone.warning),
-            SeedBadge(label: '판매완료', tone: SeedBadgeTone.neutral),
-            SeedBadge(label: '나눔', tone: SeedBadgeTone.positive),
-            SeedBadge(label: '인기매물', tone: SeedBadgeTone.critical),
-            SeedNotificationBadge(count: 7),
-            SeedNotificationBadge(count: 120, maxCount: 99),
+          children: [
+            const SeedBadge(label: '거래중', tone: SeedBadgeTone.brand),
+            const SeedBadge(label: '예약중', tone: SeedBadgeTone.warning),
+            const SeedBadge(label: '판매완료', tone: SeedBadgeTone.neutral),
+            const SeedBadge(
+              label: '추천매물',
+              tone: SeedBadgeTone.positive,
+              prefix: Icon(Icons.thumb_up, size: 12),
+              action: Icon(Icons.info_outline, size: 12),
+            ),
+            const SeedBadge(label: '인기매물', tone: SeedBadgeTone.critical),
+            const SeedNotificationBadge(count: 7),
+            const SeedNotificationBadge(count: 120, maxCount: 99),
           ],
         ),
         const SizedBox(height: SeedDimension.x3),
@@ -221,12 +286,23 @@ class _ComponentsTabState extends State<ComponentsTab> {
           ],
         ),
         const SizedBox(height: SeedDimension.x3),
-        SeedSelectBox(
-          selected: _selectBoxVal,
-          title: '택배거래 지원',
-          description: '택배로 물품을 안전하게 발송해요',
-          control: SeedSelectBoxControl.checkmark,
-          onSelected: (val) => setState(() => _selectBoxVal = val),
+        SeedSelectBoxGroup(
+          children: [
+            SeedSelectBox(
+              selected: _selectBoxVal,
+              title: '택배거래 지원',
+              description: '택배로 물품을 안전하게 발송해요',
+              control: SeedSelectBoxControl.checkmark,
+              onSelected: (val) => setState(() => _selectBoxVal = val),
+            ),
+            SeedSelectBox(
+              selected: _selectBoxVal2,
+              title: '직거래 희망',
+              description: '만나서 직접 물건을 확인하고 거래해요',
+              control: SeedSelectBoxControl.checkmark,
+              onSelected: (val) => setState(() => _selectBoxVal2 = val),
+            ),
+          ],
         ),
         const SizedBox(height: SeedDimension.x6),
 

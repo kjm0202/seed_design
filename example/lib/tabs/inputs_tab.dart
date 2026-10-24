@@ -17,6 +17,12 @@ class _InputsTabState extends State<InputsTab> {
   final List<SeedAttachmentItem> _attachments = [
     const SeedAttachmentItem(id: '1', isRepresentative: true),
     const SeedAttachmentItem(id: '2'),
+    const SeedAttachmentItem(
+      id: '3',
+      name: 'receipt_2026.pdf',
+      sizeText: '2.4 MB',
+      type: SeedAttachmentType.file,
+    ),
   ];
   int _selectedYear = 2026;
   int _selectedMonth = 10;
@@ -33,7 +39,17 @@ class _InputsTabState extends State<InputsTab> {
         const SeedField(
           label: '상품명',
           required: true,
+          descriptionIcon: Icon(Icons.info_outline),
+          helperText: '최대 40자까지 입력 가능합니다.',
           child: SeedTextInput(hintText: '판매할 물품 이름을 입력하세요'),
+        ),
+        const SizedBox(height: SeedDimension.x3),
+        const SeedField(
+          label: '판매 희망 가격',
+          required: true,
+          errorMessage: '가격을 올바르게 입력해주세요',
+          errorIcon: Icon(Icons.error_outline),
+          child: SeedTextInput(hintText: '가격을 입력하세요'),
         ),
         const SizedBox(height: SeedDimension.x4),
 
@@ -96,9 +112,22 @@ class _InputsTabState extends State<InputsTab> {
         const SizedBox(height: SeedDimension.x6),
 
         const SectionHeader(
-          title: 'Attachment Input',
-          subtitle: '사진/동영상 첨부 관리 (대표 배지, 삭제, 추가)',
+          title: 'Attachment Input & Dropzone',
+          subtitle: '120px 파일 드롭존 및 사진/파일 첨부 관리 (대표 배지, 가로형 파일 카드)',
         ),
+        SeedAttachmentDropzone(
+          onTap: () {
+            setState(() {
+              _attachments.add(SeedAttachmentItem(
+                id: '${_attachments.length + 1}',
+                name: 'contract_signed.pdf',
+                sizeText: '1.8 MB',
+                type: SeedAttachmentType.file,
+              ));
+            });
+          },
+        ),
+        const SizedBox(height: SeedDimension.x3),
         SeedAttachmentInput(
           items: _attachments,
           onAdd: () {

@@ -91,14 +91,13 @@ class _CatalogHomePageState extends State<CatalogHomePage> {
       appBar: SeedTopNavigation(
         titleText: 'SEED Design System',
         actions: [
-          IconButton(
+          SeedTopNavigationIconButton(
             icon: Icon(
               widget.isDark
                   ? Icons.light_mode_rounded
                   : Icons.dark_mode_rounded,
-              color: colors.fg.neutral,
             ),
-            tooltip: widget.isDark ? '라이트 모드로 전환' : '다크 모드로 전환',
+            semanticsLabel: widget.isDark ? '라이트 모드로 전환' : '다크 모드로 전환',
             onPressed: widget.onToggleTheme,
           ),
         ],
