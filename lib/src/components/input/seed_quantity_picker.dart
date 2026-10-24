@@ -56,8 +56,10 @@ class SeedQuantityPicker extends StatelessWidget {
     this.hasError = false,
   });
 
-  bool get _canDecrement => enabled && value - step >= min;
-  bool get _canIncrement => enabled && value + step <= max;
+  bool get _canDecrement =>
+      enabled && onChanged != null && step > 0 && value - step >= min;
+  bool get _canIncrement =>
+      enabled && onChanged != null && step > 0 && value + step <= max;
 
   @override
   Widget build(BuildContext context) {
@@ -156,7 +158,9 @@ class SeedQuantityPicker extends StatelessWidget {
           width: size.buttonWidth,
           height: size.height,
           decoration: BoxDecoration(
-            color: isPressed ? colors.bg.transparentPressed : colors.bg.transparent,
+            color: isPressed
+                ? colors.bg.transparentPressed
+                : colors.bg.transparent,
             borderRadius: borderRadius,
           ),
           child: Center(

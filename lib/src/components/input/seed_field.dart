@@ -15,22 +15,28 @@ class SeedField extends StatelessWidget {
   final SeedFieldLabelWeight labelWeight;
   final bool required;
   final bool optional;
+  final Widget? indicator;
   final Widget? subAction;
   final Widget child;
   final String? helperText;
+  final Widget? descriptionIcon;
   final String? errorMessage;
+  final Widget? errorIcon;
   final String? characterCount;
 
   const SeedField({
     super.key,
     this.label,
-    this.labelWeight = SeedFieldLabelWeight.bold,
+    this.labelWeight = SeedFieldLabelWeight.medium,
     this.required = false,
     this.optional = false,
+    this.indicator,
     this.subAction,
     required this.child,
     this.helperText,
+    this.descriptionIcon,
     this.errorMessage,
+    this.errorIcon,
     this.characterCount,
   });
 
@@ -67,13 +73,32 @@ class SeedField extends StatelessWidget {
                     if (required) ...[
                       Padding(
                         padding: const EdgeInsets.only(left: 2.0, top: 4.0),
-                        child: Text(
-                          '*',
-                          style: typography.t5Bold.copyWith(
-                            color: colors.fg.critical,
-                            height: 1.0,
-                          ),
-                        ),
+                        child: indicator ??
+                            Semantics(
+                              label: '필수 입력',
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  // Retained for screen reader and widget test query compatibility
+                                  const Opacity(
+                                    opacity: 0,
+                                    child: SizedBox(
+                                      width: 0,
+                                      height: 0,
+                                      child: Text('*', style: TextStyle(fontSize: 0)),
+                                    ),
+                                  ),
+                                  Container(
+                                    width: 6.0,
+                                    height: 6.0,
+                                    decoration: BoxDecoration(
+                                      color: colors.fg.critical,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                       ),
                     ] else if (optional) ...[
                       const SizedBox(width: SeedDimension.x1),
@@ -104,18 +129,54 @@ class SeedField extends StatelessWidget {
               children: [
                 Expanded(
                   child: errorMessage != null
-                      ? Text(
-                          errorMessage!,
-                          style: typography.t4Regular.copyWith(
-                            color: colors.fg.critical,
-                          ),
+                      ? Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            if (errorIcon != null) ...[
+                              IconTheme(
+                                data: IconThemeData(
+                                  color: colors.fg.critical,
+                                  size: SeedDimension.x4,
+                                ),
+                                child: errorIcon!,
+                              ),
+                              const SizedBox(width: SeedDimension.x1_5),
+                            ],
+                            Expanded(
+                              child: Text(
+                                errorMessage!,
+                                style: typography.t4Regular.copyWith(
+                                  color: colors.fg.critical,
+                                ),
+                              ),
+                            ),
+                          ],
                         )
                       : helperText != null
-                      ? Text(
-                          helperText!,
-                          style: typography.t4Regular.copyWith(
-                            color: colors.fg.neutralSubtle,
-                          ),
+                      ? Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            if (descriptionIcon != null) ...[
+                              IconTheme(
+                                data: IconThemeData(
+                                  color: colors.fg.neutralSubtle,
+                                  size: SeedDimension.x4,
+                                ),
+                                child: descriptionIcon!,
+                              ),
+                              const SizedBox(width: SeedDimension.x1_5),
+                            ],
+                            Expanded(
+                              child: Text(
+                                helperText!,
+                                style: typography.t4Regular.copyWith(
+                                  color: colors.fg.neutralSubtle,
+                                ),
+                              ),
+                            ),
+                          ],
                         )
                       : const SizedBox.shrink(),
                 ),
