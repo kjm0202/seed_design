@@ -44,6 +44,7 @@ class SeedField extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.seedColor;
     final typography = context.seedTypography;
+    final textScaler = MediaQuery.textScalerOf(context);
 
     final bool hasHeader = label != null || subAction != null;
     final bool hasFooter =
@@ -66,51 +67,72 @@ class SeedField extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (label != null) Text(label!, style: labelStyle),
-                    if (required) ...[
-                      Padding(
-                        padding: const EdgeInsets.only(left: 2.0, top: 4.0),
-                        child: indicator ??
-                            Semantics(
-                              label: '필수 입력',
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  // Retained for screen reader and widget test query compatibility
-                                  const Opacity(
-                                    opacity: 0,
-                                    child: SizedBox(
-                                      width: 0,
-                                      height: 0,
-                                      child: Text('*', style: TextStyle(fontSize: 0)),
-                                    ),
-                                  ),
-                                  Container(
-                                    width: 6.0,
-                                    height: 6.0,
-                                    decoration: BoxDecoration(
-                                      color: colors.fg.critical,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                      ),
-                    ] else if (optional) ...[
-                      const SizedBox(width: SeedDimension.x1),
-                      Text(
-                        '(선택)',
-                        style: typography.t4Regular.copyWith(
-                          height: 22 / 14,
-                          color: colors.fg.neutralSubtle,
+                Flexible(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    // The required mark is offset from the label's top edge.
+                    crossAxisAlignment: required
+                        ? CrossAxisAlignment.start
+                        : CrossAxisAlignment.center,
+                    children: [
+                      if (label != null)
+                        Flexible(
+                          child: Text(
+                            label!,
+                            style: labelStyle,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                      ),
+                      if (required) ...[
+                        Padding(
+                          padding: EdgeInsets.only(
+                            left: textScaler.scale(2.0),
+                            top: textScaler.scale(4.0),
+                          ),
+                          child:
+                              indicator ??
+                              Semantics(
+                                label: '필수 입력',
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    // Retained for screen reader and widget test query compatibility
+                                    const Opacity(
+                                      opacity: 0,
+                                      child: SizedBox(
+                                        width: 0,
+                                        height: 0,
+                                        child: Text(
+                                          '*',
+                                          style: TextStyle(fontSize: 0),
+                                        ),
+                                      ),
+                                    ),
+                                    Container(
+                                      width: textScaler.scale(6.0),
+                                      height: textScaler.scale(6.0),
+                                      decoration: BoxDecoration(
+                                        color: colors.fg.critical,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                        ),
+                      ] else if (optional) ...[
+                        const SizedBox(width: SeedDimension.x1),
+                        Text(
+                          '(선택)',
+                          style: typography.t4Regular.copyWith(
+                            height: 22 / 14,
+                            color: colors.fg.neutralSubtle,
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
                 ?subAction,
               ],

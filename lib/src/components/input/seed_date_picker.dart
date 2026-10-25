@@ -212,9 +212,11 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                '${_currentMonth.year}년 ${_currentMonth.month}월',
-                style: typography.t5Bold.copyWith(color: colors.fg.neutral),
+              Expanded(
+                child: Text(
+                  '${_currentMonth.year}년 ${_currentMonth.month}월',
+                  style: typography.t5Bold.copyWith(color: colors.fg.neutral),
+                ),
               ),
               Row(
                 children: [

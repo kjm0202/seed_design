@@ -112,6 +112,21 @@ void main() {
       expect(find.text('Error occurred'), findsOneWidget);
       expect(find.byIcon(Icons.error), findsOneWidget);
       expect(find.text('*'), findsOneWidget); // Screen reader / test compatibility
+
+      final mark = find.descendant(
+        of: find.byType(SeedField),
+        matching: find.byWidgetPredicate((widget) {
+          if (widget is! Container) return false;
+          final decoration = widget.decoration;
+          return decoration is BoxDecoration &&
+              decoration.shape == BoxShape.circle;
+        }),
+      );
+      expect(tester.getSize(mark), const Size(6, 6));
+      final labelRect = tester.getRect(find.text('Required Field'));
+      final markRect = tester.getRect(mark);
+      expect(markRect.top - labelRect.top, 4);
+      expect(markRect.left - labelRect.right, 2);
     });
   });
 

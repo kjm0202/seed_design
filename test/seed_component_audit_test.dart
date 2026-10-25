@@ -341,7 +341,7 @@ void main() {
             );
             final minHeight = officialProp(
               'text-input',
-              'variant=${variant.name},size=medium',
+              'variant=${variant.name},size=large',
               'root',
               'minHeight',
             ) as num;
@@ -351,7 +351,7 @@ void main() {
               greaterThanOrEqualTo(minHeight),
             );
             if (variant == SeedTextInputVariant.outline) {
-              expect((root.borderRadius as BorderRadius).topLeft.x, 8);
+              expect((root.borderRadius as BorderRadius).topLeft.x, 12);
             }
           }
         }

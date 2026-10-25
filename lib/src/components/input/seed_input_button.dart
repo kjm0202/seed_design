@@ -7,7 +7,10 @@ import '../../theme/seed_theme.dart';
 
 /// Size of [SeedInputButton].
 enum SeedInputButtonSize {
+  /// Official `large` (52px), retaining the original Flutter API name.
   medium(height: 52.0, paddingX: 16.0),
+
+  /// Official `medium` (40px), intended for desktop use.
   small(height: 40.0, paddingX: 14.0);
 
   const SeedInputButtonSize({required this.height, required this.paddingX});

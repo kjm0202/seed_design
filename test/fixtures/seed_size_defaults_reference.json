@@ -1,0 +1,132 @@
+{
+  "upstream": "https://github.com/daangn/seed-design",
+  "revision": "14aa12a20fc1ce39044212f531b2127c6787eab0",
+  "checkedOn": "2026-10-25",
+  "components": {
+    "accordion": {
+      "size": "medium",
+      "source": "packages/qvism-preset/src/recipes/accordion.ts",
+      "sha256": "0a20956264b164cbde38c1114a918beb2ce6018271ff90b074ca9bb1dc1d8708"
+    },
+    "action-button": {
+      "size": "medium",
+      "source": "packages/qvism-preset/src/recipes/action-button.ts",
+      "sha256": "932b9ca779a765e6a62af7bba0f39239ae3b6896dc63b6c4ef0fc5bb94ba1faa"
+    },
+    "avatar": {
+      "size": 48,
+      "source": "packages/qvism-preset/src/recipes/avatar.ts",
+      "sha256": "3936179faf6223b3e018680542417a598892c6638575e3a65db67f59c38a8231"
+    },
+    "avatar-stack": {
+      "size": 48,
+      "source": "packages/qvism-preset/src/recipes/avatar-stack.ts",
+      "sha256": "2266c65e8c4c8c913bd1d98a5b1bb825960b486910f570f74866621f9decd77c"
+    },
+    "badge": {
+      "size": "medium",
+      "source": "packages/qvism-preset/src/recipes/badge.ts",
+      "sha256": "5d2d2bd009f15e4a897cd1b3c03ce4977b210e0b31b9e9303c876f3204d30969"
+    },
+    "checkbox": {
+      "size": "medium",
+      "source": "packages/qvism-preset/src/recipes/checkbox.ts",
+      "sha256": "9d676cc62de9b036a40030890c4edc028442f68b75fcb887942e812c5b25a2a0"
+    },
+    "chip": {
+      "size": "medium",
+      "source": "packages/qvism-preset/src/recipes/chip.ts",
+      "sha256": "b4550a4245249ce49795083dacf900ba872ee0e3da36a3b0358a8c1bd79c0489"
+    },
+    "chip-tabs": {
+      "size": "medium",
+      "source": "packages/qvism-preset/src/recipes/chip-tabs.ts",
+      "sha256": "7d639d4c65ef4d48bc2f78ef6436c9a890f3d0af30090761f37dc76c73349790"
+    },
+    "dialog": {
+      "size": "medium",
+      "source": "packages/qvism-preset/src/recipes/dialog.ts",
+      "sha256": "3908b24ab7133eae579fca637f294fff8f7a7ed8e1ec9217df8f177cd221f2ba"
+    },
+    "input-button": {
+      "size": "large",
+      "source": "packages/qvism-preset/src/recipes/input-button.ts",
+      "sha256": "8021e00198f740e41a1c670e02d924b5c6f115a31bcc0ec1edbcc53e53d62429"
+    },
+    "menu": {
+      "size": "medium",
+      "source": "packages/qvism-preset/src/recipes/menu.ts",
+      "sha256": "3bb8c41b866eee66b300fd1303f0c33dff45a59117c1e448b2536459886ffe47"
+    },
+    "progress-circle": {
+      "size": 40,
+      "source": "packages/qvism-preset/src/recipes/progress-circle.ts",
+      "sha256": "333bc2bec95eb44d741c95d2b61cbb561301bb48b9cb8239c5aa20b8cdf73816"
+    },
+    "quantity-picker": {
+      "size": "medium",
+      "source": "packages/qvism-preset/src/recipes/quantity-picker.ts",
+      "sha256": "512c89bb9c7dd8d85ced70a3dbc953ecd9c5e1db0f28a3bafd5440699e667c26"
+    },
+    "radio": {
+      "size": "medium",
+      "source": "packages/qvism-preset/src/recipes/radio.ts",
+      "sha256": "bfc2e5c0fa7e7d7618e1373f5b158ec4bf7c53424d47ebd0b4f3cbcaa5fb87e1"
+    },
+    "reaction-button": {
+      "size": "small",
+      "source": "packages/qvism-preset/src/recipes/reaction-button.ts",
+      "sha256": "edb89c7b9b3a5f36b1cdf9e345e72f660c506337a0412b69fb3848597dbf53f7"
+    },
+    "side-panel": {
+      "size": "medium",
+      "source": "packages/qvism-preset/src/recipes/side-panel.ts",
+      "sha256": "f2ad0cee29b5d01d7926b56e07746b9bdbf051e9d210874a32785b8176db2146"
+    },
+    "switch": {
+      "size": 32,
+      "source": "packages/qvism-preset/src/recipes/switch.ts",
+      "sha256": "3f87461a058740e155bb508297a5f90c5c6b6fde26e21c95bb3f9d2db7de4f58"
+    },
+    "switchmark": {
+      "size": 32,
+      "source": "packages/qvism-preset/src/recipes/switchmark.ts",
+      "sha256": "7b78495b1b0112f3f1ea0ad7fba05a020bfdb78e3858324f8d870a065fa0cac0"
+    },
+    "tabs": {
+      "size": "small",
+      "source": "packages/qvism-preset/src/recipes/tabs.ts",
+      "sha256": "125043463e9ae180801ea830a25609389a7c46c199e1ae4a5379725afe17906a"
+    },
+    "tag-group": {
+      "size": "t2",
+      "source": "packages/qvism-preset/src/recipes/tag-group.ts",
+      "sha256": "e710d369a605397975c7941bbb1fd031e591f80c8b8c1cbcf7b6c1c5ab4a23f9"
+    },
+    "text-input": {
+      "size": "large",
+      "source": "packages/qvism-preset/src/recipes/text-input.ts",
+      "sha256": "a8e5b824ac139e02ed4e09f7398a70d08e354fec91f1e9d27a4bcd0d2739122d"
+    },
+    "toggle-button": {
+      "size": "small",
+      "source": "packages/qvism-preset/src/recipes/toggle-button.ts",
+      "sha256": "417b76a225fd4e005d99a4f1f69b19d2145bd7e0b148b302e5af5eff79252e5f"
+    },
+    "wheel-picker": {
+      "size": "medium",
+      "source": "packages/qvism-preset/src/recipes/wheel-picker.ts",
+      "sha256": "4c96ee9d0a9aa3b83ccfc18d416d64816741cfcaf7dd70b8960878149be8df7e"
+    },
+    "result-section": {
+      "size": "large",
+      "source": "docs/registry/react/ui/result-section.tsx",
+      "sha256": "277668b1e38609cb46c7f60bfe6cf48e536d3da6c7deb5e92c76ec062d364ec3"
+    },
+    "select": {
+      "size": "large",
+      "source": "packages/qvism-preset/src/recipes/select.ts",
+      "sha256": "50c96e6445dac1a4bd33c8d12c01db48ae5bce03d5aa15fbf58b61cc1df6f298"
+    }
+  }
+}

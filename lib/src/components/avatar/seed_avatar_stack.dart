@@ -17,7 +17,7 @@ class SeedAvatarStack extends StatelessWidget {
   const SeedAvatarStack({
     super.key,
     required this.children,
-    this.size = SeedAvatarSize.medium,
+    this.size = SeedAvatarSize.size48,
     this.maxVisible,
     this.overflowBadge,
     this.strokeColor,

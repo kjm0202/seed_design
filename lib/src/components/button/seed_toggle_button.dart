@@ -21,7 +21,7 @@ enum SeedToggleButtonSize {
 
   double get height => this == SeedToggleButtonSize.xsmall ? 32.0 : 36.0;
 
-  double get iconSize => this == SeedToggleButtonSize.xsmall ? 14.0 : 16.0;
+  double get iconSize => 14.0;
 
   EdgeInsets get padding {
     switch (this) {
@@ -63,7 +63,7 @@ class SeedToggleButton extends StatelessWidget {
     this.prefixIcon,
     this.suffixIcon,
     this.variant = SeedToggleButtonVariant.brandSolid,
-    this.size = SeedToggleButtonSize.xsmall,
+    this.size = SeedToggleButtonSize.small,
     this.loading = false,
     this.enabled = true,
     this.semanticsLabel,

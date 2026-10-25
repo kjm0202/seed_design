@@ -69,7 +69,7 @@ class SeedAvatar extends StatelessWidget {
     super.key,
     this.image,
     this.placeholder,
-    this.size = SeedAvatarSize.medium,
+    this.size = SeedAvatarSize.size48,
     this.borderRadius,
     this.badge,
     this.badgeAlignment = Alignment.bottomRight,

@@ -15,7 +15,7 @@ class SeedProgressCircle extends StatelessWidget {
 
   const SeedProgressCircle({
     super.key,
-    this.size = 24.0,
+    this.size = 40.0,
     this.value,
     this.color,
     this.trackColor,

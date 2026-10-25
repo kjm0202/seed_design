@@ -11,6 +11,8 @@ import '../../foundations/feedback/seed_scale_feedback.dart';
 enum SeedTextInputVariant { outline, underline }
 
 /// Size options for [SeedTextInput].
+///
+/// [large] is the default for all viewports. [medium] is a compact desktop size.
 enum SeedTextInputSize { medium, large }
 
 /// Text input component of SEED Design System.
@@ -62,7 +64,7 @@ class SeedTextInput extends StatefulWidget {
     this.prefixIcon,
     this.suffixIcon,
     this.variant = SeedTextInputVariant.outline,
-    this.size = SeedTextInputSize.medium,
+    this.size = SeedTextInputSize.large,
   });
 
   @override

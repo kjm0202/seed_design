@@ -62,9 +62,13 @@ class SeedTabs extends StatelessWidget {
     required this.selectedIndex,
     required this.onTabSelected,
     this.variant = SeedTabsVariant.line,
-    this.size = SeedTabsSize.medium,
+    SeedTabsSize? size,
     this.fill = false,
-  });
+  }) : size =
+           size ??
+           (variant == SeedTabsVariant.line
+               ? SeedTabsSize.small
+               : SeedTabsSize.medium);
 
   @override
   Widget build(BuildContext context) {
@@ -115,7 +119,9 @@ class SeedTabs extends StatelessWidget {
                       width: tabWidth,
                       height: 2.0,
                       child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: SeedSpacingX.globalGutter),
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: SeedSpacingX.globalGutter,
+                        ),
                         color: colors.fg.neutral,
                       ),
                     ),
@@ -125,7 +131,9 @@ class SeedTabs extends StatelessWidget {
             )
           : SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: SeedSpacingX.globalGutter),
+              padding: const EdgeInsets.symmetric(
+                horizontal: SeedSpacingX.globalGutter,
+              ),
               child: Row(
                 children: List.generate(items.length, (index) {
                   return _buildLineTabItem(
@@ -180,7 +188,8 @@ class SeedTabs extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Text(item.label, style: textStyle),
-                    if (item.notificationCount != null || item.showNotificationDot) ...[
+                    if (item.notificationCount != null ||
+                        item.showNotificationDot) ...[
                       const SizedBox(width: SeedDimension.x1),
                       SeedNotificationBadge(
                         count: item.notificationCount,
