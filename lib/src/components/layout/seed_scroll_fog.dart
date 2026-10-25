@@ -10,6 +10,10 @@ enum SeedScrollFogPlacement { top, bottom, left, right }
 ///
 /// Overlays a subtle gradient fade at the edges of scrollable areas
 /// indicating to the user that more content is available.
+///
+/// The fog stays visible at scroll boundaries. Give the scrollable content
+/// padding at least as deep as [size] so endpoint items remain unobscured,
+/// and set [color] to match the surface behind the scrollable area.
 class SeedScrollFog extends StatelessWidget {
   final SeedScrollFogPlacement placement;
   final double? size;

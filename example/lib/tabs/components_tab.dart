@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
+
 import '../widgets/section_header.dart';
 
 /// Tab showcasing buttons, FABs, badges, chips, tag groups, lists, selection controls, and accordions.
@@ -14,6 +15,7 @@ class _ComponentsTabState extends State<ComponentsTab> {
   bool _loadingButton = false;
   bool _toggleBrandVal = true;
   bool _toggleNeutralVal = false;
+  bool _toggleSmallVal = false;
   int _selectedChipIndex = 0;
   bool _checkboxVal = true;
   bool _switchVal = true;
@@ -27,114 +29,141 @@ class _ComponentsTabState extends State<ComponentsTab> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SectionHeader(
-          title: 'SeedButton Variants',
-          subtitle: '7가지 버튼 베리언트와 물리 피드백 스케일 인터랙션',
+          title: 'Action Button',
+          subtitle: '한 번의 행동을 실행하는 버튼입니다. 용도에 따라 강조 수준을 선택하세요.',
         ),
-        Wrap(
-          spacing: SeedDimension.x2,
-          runSpacing: SeedDimension.x2,
+        _ButtonExamples(
           children: [
-            SeedButton(
-              label: 'Brand Solid',
-              variant: SeedButtonVariant.brandSolid,
-              onPressed: () {},
-            ),
-            SeedButton(
-              label: 'Neutral Solid',
-              variant: SeedButtonVariant.neutralSolid,
-              onPressed: () {},
-            ),
-            SeedButton(
-              label: 'Brand Outline',
-              variant: SeedButtonVariant.brandOutline,
-              onPressed: () {},
-            ),
-            SeedButton(
-              label: 'Neutral Outline',
-              variant: SeedButtonVariant.neutralOutline,
-              onPressed: () {},
-            ),
-            SeedButton(
-              label: 'Neutral Weak',
-              variant: SeedButtonVariant.neutralWeak,
-              onPressed: () {},
-            ),
-            SeedButton(
-              label: 'Ghost',
-              variant: SeedButtonVariant.ghost,
-              onPressed: () {},
-            ),
-            SeedButton(
-              label: 'Critical',
-              variant: SeedButtonVariant.criticalSolid,
-              onPressed: () {},
-            ),
-            SeedButton(
-              label: _loadingButton ? '로딩중...' : '로딩 시뮬레이션',
-              loading: _loadingButton,
-              variant: SeedButtonVariant.brandSolid,
-              onPressed: () async {
-                setState(() => _loadingButton = true);
-                await Future.delayed(const Duration(seconds: 2));
-                if (mounted) setState(() => _loadingButton = false);
-              },
-            ),
+            for (final (label, variant, description) in [
+              (
+                'Brand Solid',
+                SeedButtonVariant.brandSolid,
+                '등록·구매 등 가장 중요한 행동',
+              ),
+              (
+                'Neutral Solid',
+                SeedButtonVariant.neutralSolid,
+                '확인·완료 등 일반적인 주요 행동',
+              ),
+              (
+                'Brand Outline',
+                SeedButtonVariant.brandOutline,
+                '브랜드 색으로 강조하는 보조 행동',
+              ),
+              (
+                'Neutral Outline',
+                SeedButtonVariant.neutralOutline,
+                '테두리로 구분하는 보조 행동',
+              ),
+              ('Neutral Weak', SeedButtonVariant.neutralWeak, '낮은 강조도의 보조 행동'),
+              ('Ghost', SeedButtonVariant.ghost, '배경 없이 가볍게 제공하는 행동'),
+              (
+                'Critical',
+                SeedButtonVariant.criticalSolid,
+                '삭제·차단 등 주의가 필요한 행동',
+              ),
+            ])
+              _ButtonExample(
+                description: description,
+                child: SeedButton(
+                  label: label,
+                  variant: variant,
+                  onPressed: () => showSeedSnackbar(
+                    context: context,
+                    message: '$label 버튼을 눌렀어요',
+                  ),
+                ),
+              ),
           ],
         ),
         const SizedBox(height: SeedDimension.x4),
-        Wrap(
-          spacing: SeedDimension.x2,
-          runSpacing: SeedDimension.x2,
-          crossAxisAlignment: WrapCrossAlignment.center,
+        _ButtonExamples(
           children: [
-            SeedButton(
-              label: 'Ghost (Custom Color & Weight)',
-              variant: SeedButtonVariant.ghost,
-              textColor: context.seedColor.fg.brand,
-              fontWeight: FontWeight.w700,
-              bleed: true,
-              prefixIcon: const Icon(Icons.bolt),
-              onPressed: () {},
+            _ButtonExample(
+              description: '로딩 상태 · 처리 중에는 중복 실행을 막아요',
+              child: SeedButton(
+                label: _loadingButton ? '로딩중...' : '로딩 시뮬레이션',
+                loading: _loadingButton,
+                variant: SeedButtonVariant.brandSolid,
+                onPressed: () async {
+                  setState(() => _loadingButton = true);
+                  await Future.delayed(const Duration(seconds: 2));
+                  if (mounted) setState(() => _loadingButton = false);
+                },
+              ),
             ),
-            SeedTextButton(
-              label: '독립 Text Button',
-              prefixIcon: const Icon(Icons.arrow_forward),
-              onPressed: () {},
+            _ButtonExample(
+              description: '커스텀 구성 · Ghost에 아이콘과 색상 적용',
+              child: SeedButton(
+                label: '자세히 보기',
+                variant: SeedButtonVariant.ghost,
+                textColor: context.seedColor.fg.brand,
+                fontWeight: FontWeight.w700,
+                bleed: true,
+                prefixIcon: const Icon(Icons.bolt),
+                onPressed: () =>
+                    showSeedSnackbar(context: context, message: '상세 안내를 열었어요'),
+              ),
             ),
           ],
         ),
         const SizedBox(height: SeedDimension.x6),
-
         const SectionHeader(
-          title: 'Toggle Buttons (New)',
-          subtitle: '상태를 켜고 끄는 토글 전용 버튼 (brandSolid / neutralWeak)',
+          title: 'Text Button',
+          subtitle: '도움말·이용 안내처럼 낮은 강조도의 보조 행동에 사용하는 텍스트 버튼입니다.',
         ),
-        Wrap(
-          spacing: SeedDimension.x3,
-          runSpacing: SeedDimension.x2,
-          crossAxisAlignment: WrapCrossAlignment.center,
+        SeedTextButton(
+          label: '이용 안내',
+          prefixIcon: const Icon(Icons.help_outline),
+          onPressed: () =>
+              showSeedSnackbar(context: context, message: '이용 안내를 확인했어요'),
+        ),
+        const SizedBox(height: SeedDimension.x6),
+        const SectionHeader(
+          title: 'Toggle Button',
+          subtitle: '누를 때마다 선택 상태가 바뀌는 버튼입니다. 각 버튼을 눌러 켜짐·꺼짐을 비교하세요.',
+        ),
+        _ButtonExamples(
           children: [
-            SeedToggleButton(
-              label: _toggleBrandVal ? '알림 켜짐' : '알림 꺼짐',
-              prefixIcon: Icon(_toggleBrandVal ? Icons.notifications_active : Icons.notifications_off),
-              variant: SeedToggleButtonVariant.brandSolid,
-              size: SeedToggleButtonSize.small,
-              selected: _toggleBrandVal,
-              onSelectedChanged: (val) => setState(() => _toggleBrandVal = val),
+            _ButtonExample(
+              description: 'brandSolid · small\n키워드 알림의 활성화 상태',
+              child: SeedToggleButton(
+                label: _toggleBrandVal ? '키워드 알림 켜짐' : '키워드 알림 꺼짐',
+                prefixIcon: Icon(
+                  _toggleBrandVal
+                      ? Icons.notifications_active
+                      : Icons.notifications_off,
+                ),
+                variant: SeedToggleButtonVariant.brandSolid,
+                size: SeedToggleButtonSize.small,
+                selected: _toggleBrandVal,
+                onSelectedChanged: (val) =>
+                    setState(() => _toggleBrandVal = val),
+              ),
             ),
-            SeedToggleButton(
-              label: _toggleNeutralVal ? '북마크됨' : '북마크',
-              prefixIcon: Icon(_toggleNeutralVal ? Icons.bookmark : Icons.bookmark_border),
-              variant: SeedToggleButtonVariant.neutralWeak,
-              size: SeedToggleButtonSize.small,
-              selected: _toggleNeutralVal,
-              onSelectedChanged: (val) => setState(() => _toggleNeutralVal = val),
+            _ButtonExample(
+              description: 'neutralWeak · small\n관심 목록에 저장한 상태',
+              child: SeedToggleButton(
+                label: _toggleNeutralVal ? '관심 목록에 저장됨' : '관심 목록에 저장',
+                prefixIcon: Icon(
+                  _toggleNeutralVal ? Icons.bookmark : Icons.bookmark_border,
+                ),
+                variant: SeedToggleButtonVariant.neutralWeak,
+                size: SeedToggleButtonSize.small,
+                selected: _toggleNeutralVal,
+                onSelectedChanged: (val) =>
+                    setState(() => _toggleNeutralVal = val),
+              ),
             ),
-            SeedToggleButton(
-              label: 'xsmall 크기',
-              size: SeedToggleButtonSize.xsmall,
-              selected: _toggleBrandVal,
-              onSelectedChanged: (val) => setState(() => _toggleBrandVal = val),
+            _ButtonExample(
+              description: 'brandSolid · xsmall\n더 작은 크기로 표시한 알림 상태',
+              child: SeedToggleButton(
+                label: _toggleSmallVal ? '동네 소식 켜짐' : '동네 소식 꺼짐',
+                size: SeedToggleButtonSize.xsmall,
+                selected: _toggleSmallVal,
+                onSelectedChanged: (val) =>
+                    setState(() => _toggleSmallVal = val),
+              ),
             ),
           ],
         ),
@@ -240,7 +269,11 @@ class _ComponentsTabState extends State<ComponentsTab> {
         ),
         const SeedTagGroup(
           items: [
-            SeedTagItem(label: '서울 강남구 역삼동', tone: SeedTagTone.brand, bold: true),
+            SeedTagItem(
+              label: '서울 강남구 역삼동',
+              tone: SeedTagTone.brand,
+              bold: true,
+            ),
             SeedTagItem(label: '2분 전', tone: SeedTagTone.neutralSubtle),
             SeedTagItem(label: '끌올 1회', tone: SeedTagTone.neutral),
             SeedTagItem(label: '조회 42', tone: SeedTagTone.neutralSubtle),
@@ -252,14 +285,16 @@ class _ComponentsTabState extends State<ComponentsTab> {
           title: 'Selection Controls',
           subtitle: '체크박스, 스위치, 라디오 버튼 및 카드형 셀렉트 박스',
         ),
-        Row(
+        Wrap(
+          spacing: SeedDimension.x4,
+          runSpacing: SeedDimension.x2,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             SeedCheckbox(
               value: _checkboxVal,
               label: '알림 동의',
               onChanged: (v) => setState(() => _checkboxVal = v ?? false),
             ),
-            const SizedBox(width: SeedDimension.x4),
             SeedSwitch(
               value: _switchVal,
               label: '채팅 알림',
@@ -268,7 +303,10 @@ class _ComponentsTabState extends State<ComponentsTab> {
           ],
         ),
         const SizedBox(height: SeedDimension.x2),
-        Row(
+        Wrap(
+          spacing: SeedDimension.x4,
+          runSpacing: SeedDimension.x2,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             SeedRadio<String>(
               value: 'opt1',
@@ -276,7 +314,6 @@ class _ComponentsTabState extends State<ComponentsTab> {
               label: '일반거래',
               onChanged: (v) => setState(() => _radioVal = v!),
             ),
-            const SizedBox(width: SeedDimension.x4),
             SeedRadio<String>(
               value: 'opt2',
               groupValue: _radioVal,
@@ -323,7 +360,10 @@ class _ComponentsTabState extends State<ComponentsTab> {
               prefix: const Icon(Icons.location_on_outlined),
               titleText: '동네 인증하기',
               detailText: '현재 위치: 서울시 강남구 역삼1동 (인증 완료)',
-              suffix: const SeedBadge(label: '인증됨', tone: SeedBadgeTone.positive),
+              suffix: const SeedBadge(
+                label: '인증됨',
+                tone: SeedBadgeTone.positive,
+              ),
               onTap: () {},
             ),
             SeedListItem(
@@ -367,4 +407,54 @@ class _ComponentsTabState extends State<ComponentsTab> {
       ],
     );
   }
+}
+
+/// Consistent specimen columns that collapse when enlarged text needs more room.
+class _ButtonExamples extends StatelessWidget {
+  const _ButtonExamples({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+      final columns = (constraints.maxWidth / (160 * scale)).floor().clamp(
+        1,
+        3,
+      );
+      final width =
+          (constraints.maxWidth - (columns - 1) * SeedDimension.x3) / columns;
+      return Wrap(
+        spacing: SeedDimension.x3,
+        runSpacing: SeedDimension.x4,
+        children: [
+          for (final child in children) SizedBox(width: width, child: child),
+        ],
+      );
+    },
+  );
+}
+
+class _ButtonExample extends StatelessWidget {
+  const _ButtonExample({required this.description, required this.child});
+
+  final String description;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    mainAxisSize: MainAxisSize.min,
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      child,
+      const SizedBox(height: SeedDimension.x1_5),
+      Text(
+        description,
+        style: context.seedTypography.t2Regular.copyWith(
+          color: context.seedColor.fg.neutralMuted,
+        ),
+      ),
+    ],
+  );
 }

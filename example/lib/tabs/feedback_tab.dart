@@ -58,7 +58,7 @@ class _FeedbackTabState extends State<FeedbackTab> {
           children: const [
             SeedProgressCircle(size: 24),
             SizedBox(width: SeedDimension.x4),
-            SeedProgressCircle(size: 32, value: 0.7),
+            SeedProgressCircle(value: 0.7),
             SizedBox(width: SeedDimension.x4),
             Text('70% 완료 인디케이터'),
           ],

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
@@ -75,8 +77,8 @@ class OverlaysTab extends StatelessWidget {
         const SizedBox(height: SeedDimension.x6),
 
         const SectionHeader(
-          title: 'Popover (New)',
-          subtitle: '트리거 요소에 앵커링되는 팝오버 컨테이너 (Header, 52px 닫기 버튼, Body, Footer)',
+          title: '키워드 알림 안내',
+          subtitle: '필요할 때 안내를 열어보고 닫을 수 있어요',
         ),
         Wrap(
           spacing: SeedDimension.x3,
@@ -84,9 +86,9 @@ class OverlaysTab extends StatelessWidget {
           children: [
             Builder(
               builder: (btnContext) => SeedButton(
-                label: '앵커 팝오버 띄우기',
-                variant: SeedButtonVariant.brandSolid,
-                prefixIcon: const Icon(Icons.open_in_new),
+                label: '키워드 알림이란?',
+                variant: SeedButtonVariant.neutralWeak,
+                prefixIcon: const Icon(Icons.info_outline),
                 onPressed: () {
                   final renderBox = btnContext.findRenderObject() as RenderBox?;
                   final rect = renderBox != null
@@ -96,9 +98,16 @@ class OverlaysTab extends StatelessWidget {
                     context: btnContext,
                     anchorRect: rect,
                     builder: (popContext) => SeedPopover(
-                      titleText: '새로운 키워드 알림',
-                      descriptionText: '관심있는 물품의 키워드를 등록하면 실시간 알림을 받을 수 있어요.',
-                      body: const Text('예: 맥북 M3, 다이슨 에어랩, 캠핑의자'),
+                      minWidth: 0,
+                      maxWidth: math.min(
+                        480,
+                        MediaQuery.sizeOf(popContext).width - 32,
+                      ),
+                      titleText: '키워드 알림',
+                      descriptionText: '찾고 있는 물건을 놓치지 마세요',
+                      body: const Text(
+                        '원하는 물품 이름을 등록하면 새로운 판매 글을 알려드려요.\n예: 맥북, 캠핑 의자',
+                      ),
                       footer: Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
@@ -116,24 +125,6 @@ class OverlaysTab extends StatelessWidget {
               ),
             ),
           ],
-        ),
-        const SizedBox(height: SeedDimension.x3),
-        SeedPopover(
-          titleText: '인라인 Popover 카드',
-          descriptionText: r'모바일/데스크탑 반응형 팝오버 규격 ($radius.r5, $shadow.s3)',
-          body: const Text('자유롭게 위젯을 배치할 수 있는 본문 슬롯입니다.'),
-          footer: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              SeedButton(
-                label: '자세히 보기',
-                variant: SeedButtonVariant.neutralWeak,
-                size: SeedButtonSize.small,
-                onPressed: () {},
-              ),
-            ],
-          ),
-          onClose: () {},
         ),
         const SizedBox(height: SeedDimension.x6),
 

@@ -11,6 +11,7 @@ class InputsTab extends StatefulWidget {
 }
 
 class _InputsTabState extends State<InputsTab> {
+  static const _scrollFogSize = 20.0;
   int _quantity = 1;
   double _sliderVal = 20.0;
   String? _selectedValue = 'electronics';
@@ -200,32 +201,48 @@ class _InputsTabState extends State<InputsTab> {
             children: [
               ListView.builder(
                 scrollDirection: Axis.horizontal,
+                // Scroll Fog stays visible at both ends. Keep endpoint items
+                // outside the fade by reserving the same depth as padding.
+                padding: const EdgeInsets.symmetric(horizontal: _scrollFogSize),
                 itemCount: 20,
                 itemBuilder: (context, index) {
                   return Container(
                     width: 72,
-                    margin: const EdgeInsets.only(right: 8),
+                    margin: EdgeInsets.only(right: index == 19 ? 0 : 8),
                     decoration: BoxDecoration(
                       color: context.seedColor.bg.layerDefault,
                       borderRadius: SeedBorderRadius.r2,
                       border: Border.all(color: context.seedColor.stroke.neutralWeak),
                     ),
                     alignment: Alignment.center,
-                    child: Text('Item $index'),
+                    child: Text(
+                      'Item $index',
+                      style: context.seedTypography.t4Regular.copyWith(
+                        color: context.seedColor.fg.neutral,
+                      ),
+                    ),
                   );
                 },
               ),
-              const Positioned(
+              Positioned(
                 left: 0,
                 top: 0,
                 bottom: 0,
-                child: SeedScrollFog(placement: SeedScrollFogPlacement.left, size: 28),
+                child: SeedScrollFog(
+                  placement: SeedScrollFogPlacement.left,
+                  size: _scrollFogSize,
+                  color: context.seedColor.bg.layerBasement,
+                ),
               ),
-              const Positioned(
+              Positioned(
                 right: 0,
                 top: 0,
                 bottom: 0,
-                child: SeedScrollFog(placement: SeedScrollFogPlacement.right, size: 28),
+                child: SeedScrollFog(
+                  placement: SeedScrollFogPlacement.right,
+                  size: _scrollFogSize,
+                  color: context.seedColor.bg.layerBasement,
+                ),
               ),
             ],
           ),
