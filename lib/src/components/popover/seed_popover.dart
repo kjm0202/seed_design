@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:material_ui/material_ui.dart';
 
 import '../../foundations/dimensions/seed_dimension.dart';
@@ -172,51 +174,92 @@ Future<T?> showSeedPopover<T>({
 }) {
   return showDialog<T>(
     context: context,
+    // Anchor rectangles use global coordinates. Apply safe-area bounds in the
+    // layout delegate instead of offsetting the dialog's coordinate origin.
+    useSafeArea: false,
     barrierDismissible: barrierDismissible,
     barrierColor: Colors.transparent,
     builder: (dialogContext) {
       final mediaQuery = MediaQuery.of(dialogContext);
-      final screenSize = mediaQuery.size;
       const overflowPadding = 16.0;
-      const gutter = 8.0;
+      final overlay =
+          Navigator.of(dialogContext).overlay!.context.findRenderObject()!
+              as RenderBox;
+      final localAnchor =
+          overlay.globalToLocal(anchorRect.topLeft) & anchorRect.size;
 
-      // Vertical placement: preference below anchor, fallback above
-      final spaceBelow =
-          screenSize.height - anchorRect.bottom - gutter - overflowPadding;
-      final spaceAbove = anchorRect.top - gutter - overflowPadding;
-
-      final bool placeBelow = spaceBelow >= 200 || spaceBelow >= spaceAbove;
-      final top = placeBelow
-          ? (anchorRect.bottom + gutter).clamp(
-              overflowPadding,
-              screenSize.height - 100,
-            )
-          : (anchorRect.top - gutter - 300).clamp(
-              overflowPadding,
-              screenSize.height - 100,
-            );
-
-      // Horizontal placement: align to anchor left, bounded by screen
-      final left = anchorRect.left.clamp(
-        overflowPadding,
-        (screenSize.width - 320 - overflowPadding).clamp(
-          overflowPadding,
-          double.infinity,
-        ),
-      );
-
-      return Stack(
-        children: [
-          Positioned(
-            left: left,
-            top: top,
-            child: Material(
-              type: MaterialType.transparency,
-              child: builder(dialogContext),
-            ),
+      return CustomSingleChildLayout(
+        delegate: _SeedPopoverPositionDelegate(
+          anchor: localAnchor,
+          insets: EdgeInsets.fromLTRB(
+            math.max(mediaQuery.padding.left, mediaQuery.viewInsets.left) +
+                overflowPadding,
+            math.max(mediaQuery.padding.top, mediaQuery.viewInsets.top) +
+                overflowPadding,
+            math.max(mediaQuery.padding.right, mediaQuery.viewInsets.right) +
+                overflowPadding,
+            math.max(mediaQuery.padding.bottom, mediaQuery.viewInsets.bottom) +
+                overflowPadding,
           ),
-        ],
+        ),
+        child: Material(
+          type: MaterialType.transparency,
+          child: builder(dialogContext),
+        ),
       );
     },
   );
+}
+
+class _SeedPopoverPositionDelegate extends SingleChildLayoutDelegate {
+  const _SeedPopoverPositionDelegate({
+    required this.anchor,
+    required this.insets,
+  });
+
+  final Rect anchor;
+  final EdgeInsets insets;
+  static const _gutter = 8.0;
+
+  Rect _bounds(Size size) => Rect.fromLTRB(
+    math.min(insets.left, size.width),
+    math.min(insets.top, size.height),
+    math.max(math.min(insets.left, size.width), size.width - insets.right),
+    math.max(math.min(insets.top, size.height), size.height - insets.bottom),
+  );
+
+  double _spaceBelow(Rect bounds) =>
+      (bounds.bottom - anchor.bottom - _gutter).clamp(0.0, bounds.height);
+  double _spaceAbove(Rect bounds) =>
+      (anchor.top - _gutter - bounds.top).clamp(0.0, bounds.height);
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) {
+    final bounds = _bounds(constraints.biggest);
+    return BoxConstraints.loose(
+      Size(bounds.width, math.max(_spaceBelow(bounds), _spaceAbove(bounds))),
+    );
+  }
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) {
+    final bounds = _bounds(size);
+    final below = _spaceBelow(bounds);
+    final above = _spaceAbove(bounds);
+    final placeBelow = childSize.height <= below || below >= above;
+    return Offset(
+      (anchor.center.dx - childSize.width / 2).clamp(
+        bounds.left,
+        bounds.right - childSize.width,
+      ),
+      (placeBelow
+              ? anchor.bottom + _gutter
+              : anchor.top - _gutter - childSize.height)
+          .clamp(bounds.top, bounds.bottom - childSize.height),
+    );
+  }
+
+  @override
+  bool shouldRelayout(_SeedPopoverPositionDelegate oldDelegate) =>
+      anchor != oldDelegate.anchor || insets != oldDelegate.insets;
 }

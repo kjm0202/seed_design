@@ -56,6 +56,114 @@ final menuGroups = [
 void main() {
   setUpAll(loadSeedTestFonts);
 
+  testWidgets(
+    'popover uses actual dimensions and global anchor coordinates within safe areas',
+    (tester) async {
+      addTearDown(tester.view.reset);
+      const triggerKey = ValueKey('popover-trigger');
+      const contentKey = ValueKey('popover-content');
+      for (final (screen, padding, anchorOffset, contentSize) in [
+        (
+          const Size(390, 844),
+          const EdgeInsets.only(top: 59, bottom: 34),
+          const Offset(20, 150),
+          const Size(320, 120),
+        ),
+        (
+          const Size(390, 844),
+          const EdgeInsets.only(top: 59, bottom: 34),
+          const Offset(240, 650),
+          const Size(320, 180),
+        ),
+        (
+          const Size(900, 700),
+          const EdgeInsets.only(left: 18, right: 74, top: 24),
+          const Offset(700, 200),
+          const Size(480, 260),
+        ),
+        (
+          const Size(320, 700),
+          const EdgeInsets.only(top: 44, bottom: 24),
+          const Offset(20, 300),
+          const Size(480, 450),
+        ),
+      ]) {
+        await mount(
+          tester,
+          Builder(
+            builder: (context) => Stack(
+              children: [
+                Positioned(
+                  left: anchorOffset.dx,
+                  top: anchorOffset.dy,
+                  child: SizedBox(
+                    width: 100,
+                    height: 40,
+                    child: TextButton(
+                      key: triggerKey,
+                      onPressed: () {
+                        final box = tester.renderObject<RenderBox>(
+                          find.byKey(triggerKey),
+                        );
+                        showSeedPopover<void>(
+                          context: context,
+                          anchorRect: box.localToGlobal(Offset.zero) & box.size,
+                          builder: (_) => SizedBox(
+                            key: contentKey,
+                            width: contentSize.width,
+                            height: contentSize.height,
+                          ),
+                        );
+                      },
+                      child: const Text('Open'),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          size: screen,
+          padding: padding,
+        );
+        final anchor = tester.getRect(find.byKey(triggerKey));
+        await tester.tap(find.byKey(triggerKey));
+        await tester.pumpAndSettle();
+        final popup = tester.getRect(find.byKey(contentKey));
+        final safeBounds = Rect.fromLTRB(
+          padding.left + 16,
+          padding.top + 16,
+          screen.width - padding.right - 16,
+          screen.height - padding.bottom - 16,
+        );
+        final below = safeBounds.bottom - anchor.bottom - 8;
+        final above = anchor.top - safeBounds.top - 8;
+        if (popup.height <= below || below >= above) {
+          expect(popup.top - anchor.bottom, closeTo(8, 0.01));
+        } else {
+          expect(anchor.top - popup.bottom, closeTo(8, 0.01));
+        }
+        expect(popup.left, greaterThanOrEqualTo(safeBounds.left));
+        expect(popup.right, lessThanOrEqualTo(safeBounds.right));
+        expect(popup.top, greaterThanOrEqualTo(safeBounds.top));
+        expect(popup.bottom, lessThanOrEqualTo(safeBounds.bottom));
+        expect(
+          popup.center.dx,
+          closeTo(
+            anchor.center.dx.clamp(
+              safeBounds.left + popup.width / 2,
+              safeBounds.right - popup.width / 2,
+            ),
+            0.01,
+          ),
+        );
+        expect(tester.takeException(), isNull);
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pumpAndSettle();
+        expect(find.byKey(contentKey), findsNothing);
+      }
+    },
+  );
+
   testWidgets('alert titles wrap naturally inside the official 272px surface', (
     tester,
   ) async {
