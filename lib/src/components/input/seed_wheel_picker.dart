@@ -254,7 +254,11 @@ class _SeedWheelPickerState extends State<SeedWheelPicker> {
                       childCount: col.itemCount,
                       builder: (context, index) {
                         final isSelected = _selectedIndices[colIdx] == index;
-                        return col.buildItem(context, index, isSelected);
+                        // Wheel slots have a tight itemExtent height. Center
+                        // custom content within the slot, just like defaults.
+                        return Center(
+                          child: col.buildItem(context, index, isSelected),
+                        );
                       },
                     ),
                   ),
