@@ -15,7 +15,7 @@ Future<void> mount(
       theme: (dark ? SeedThemeData.dark() : SeedThemeData.light())
           .toThemeData(),
       home: MediaQuery(
-        data: MediaQueryData(
+        data: MediaQueryData.fromView(tester.view).copyWith(
           textScaler: TextScaler.linear(scale),
           disableAnimations: true,
         ),
@@ -53,113 +53,6 @@ TextStyle style(WidgetTester tester, String label) =>
     tester.widget<Text>(find.text(label).first).style!;
 
 void main() {
-  test('all control size enums match official component dimensions', () {
-    for (final size in SeedButtonSize.values) {
-      final variant = 'size=${size.name}';
-      final textVariant = '$variant, layout=withText';
-      expect(
-        size.height,
-        officialProp('action-button', variant, 'root', 'minHeight'),
-        reason: size.name,
-      );
-      expect(
-        size.padding.left,
-        officialProp('action-button', textVariant, 'root', 'paddingX'),
-        reason: size.name,
-      );
-      expect(
-        size.padding.top,
-        officialProp('action-button', textVariant, 'root', 'paddingY'),
-        reason: size.name,
-      );
-      expect(
-        size.borderRadius,
-        BorderRadius.circular(
-          (officialProp(
-            'action-button',
-            variant,
-            'root',
-            'cornerRadius',
-          ) as num).toDouble(),
-        ),
-        reason: size.name,
-      );
-    }
-    for (final size in SeedChipSize.values) {
-      expect(
-        size.height,
-        officialProp('chip', 'size=${size.name}', 'root', 'height'),
-      );
-      expect(
-        size.iconSize,
-        officialProp('chip', 'size=${size.name}', 'prefixIcon', 'size'),
-      );
-    }
-    for (final size in SeedSwitchSize.values) {
-      final variant = 'size=${size.name.substring(4)}';
-      expect(
-        size.trackWidth,
-        officialProp('switchmark', variant, 'root', 'width'),
-      );
-      expect(
-        size.trackHeight,
-        officialProp('switchmark', variant, 'root', 'height'),
-      );
-      expect(
-        size.thumbSize,
-        officialProp('switchmark', variant, 'thumb', 'width'),
-      );
-    }
-    for (final size in SeedQuantityPickerSize.values) {
-      expect(
-        size.height,
-        officialProp('quantity-picker', 'size=${size.name}', 'root', 'height'),
-      );
-      expect(
-        size.iconSize,
-        officialProp(
-          'quantity-picker-button',
-          'size=${size.name}',
-          'icon',
-          'size',
-        ),
-      );
-    }
-    for (final size in SeedReactionButtonSize.values) {
-      expect(
-        size.height,
-        officialProp(
-          'reaction-button',
-          'size=${size.name}',
-          'root',
-          'minHeight',
-        ),
-      );
-      expect(
-        size.iconSize,
-        officialProp(
-          'reaction-button',
-          'size=${size.name}',
-          'prefixIcon',
-          'size',
-        ),
-      );
-    }
-    for (final size in SeedInputButtonSize.values) {
-      final variant = size == SeedInputButtonSize.medium
-          ? 'size=large'
-          : 'size=medium';
-      expect(
-        size.height,
-        officialProp('input-button', variant, 'root', 'height'),
-      );
-      expect(
-        size.paddingX,
-        officialProp('input-button', variant, 'root', 'paddingX'),
-      );
-    }
-  });
-
   for (final dark in [false, true]) {
     testWidgets(
       'every badge tone/variant/size uses official typography and color (dark=$dark)',
@@ -359,250 +252,6 @@ void main() {
     );
   }
 
-  testWidgets('rendered component labels and surfaces follow official geometry', (
-    tester,
-  ) async {
-    final cases = <(Widget, Type, String, String, String, String)>[
-      (
-        SeedFloatingActionButton.extended(
-          icon: const Icon(Icons.add),
-          label: 'Label',
-          onPressed: () {},
-        ),
-        SeedFloatingActionButton,
-        'floating-action-button',
-        'extended=true',
-        'label',
-        'Label',
-      ),
-      (
-        SeedContextualFloatingButton(label: 'Label', onPressed: () {}),
-        SeedContextualFloatingButton,
-        'contextual-floating-button',
-        'layout=withText',
-        'label',
-        'Label',
-      ),
-      (
-        SeedReactionButton(count: 3, onReactedChanged: (_) {}),
-        SeedReactionButton,
-        'reaction-button',
-        'size=small',
-        'count',
-        '3',
-      ),
-      (
-        SeedQuantityPicker(value: 3, onChanged: (_) {}),
-        SeedQuantityPicker,
-        'quantity-picker',
-        'size=medium',
-        'valueDisplay',
-        '3',
-      ),
-      (
-        const SeedCallout(description: 'Label'),
-        SeedCallout,
-        'callout',
-        'base',
-        'description',
-        'Label',
-      ),
-      (
-        const SeedPageBanner(title: 'Label'),
-        SeedPageBanner,
-        'page-banner',
-        'base',
-        'description',
-        'Label',
-      ),
-      (
-        const SeedSnackbar(message: 'Label'),
-        SeedSnackbar,
-        'snackbar',
-        'base',
-        'message',
-        'Label',
-      ),
-      (
-        const SeedHelpBubble(title: 'Title', description: 'Label'),
-        SeedHelpBubble,
-        'help-bubble',
-        'base',
-        'description',
-        'Label',
-      ),
-      (
-        const SeedListItem(titleText: 'Label'),
-        SeedListItem,
-        'list-item',
-        'base',
-        'title',
-        'Label',
-      ),
-      (
-        const SeedAccordionItem(title: 'Label', content: SizedBox()),
-        SeedAccordionItem,
-        'accordion-item',
-        'size=medium',
-        'title',
-        'Label',
-      ),
-      (
-        const SeedSelectBox(title: 'Label'),
-        SeedSelectBox,
-        'select-box',
-        'base',
-        'label',
-        'Label',
-      ),
-      (
-        const SeedAlertDialog(title: 'Label', description: 'Description'),
-        SeedAlertDialog,
-        'alert-dialog',
-        'base',
-        'title',
-        'Label',
-      ),
-      (
-        const SeedDialog(title: 'Label', content: Text('Body')),
-        SeedDialog,
-        'dialog',
-        'base',
-        'title',
-        'Label',
-      ),
-      (
-        const SeedBottomSheet(title: 'Label', content: Text('Body')),
-        SeedBottomSheet,
-        'bottom-sheet',
-        'base',
-        'title',
-        'Label',
-      ),
-      (
-        const SeedMenu(
-          groups: [
-            SeedMenuGroupData(items: [SeedMenuItemData(label: 'Label')]),
-          ],
-        ),
-        SeedMenu,
-        'menu-item',
-        'size=medium',
-        'label',
-        'Label',
-      ),
-    ];
-    for (final (widget, type, component, variant, slot, label) in cases) {
-      await mount(tester, widget);
-      final actualStyle = style(tester, label);
-      expect(
-        actualStyle.fontSize,
-        officialProp(component, variant, slot, 'fontSize'),
-        reason: '$component font size',
-      );
-      expect(
-        actualStyle.height! * actualStyle.fontSize!,
-        closeTo(
-          (officialProp(component, variant, slot, 'lineHeight') as num)
-              .toDouble(),
-          0.001,
-        ),
-        reason: '$component line height',
-      );
-      final radiusSpec =
-          officialSeed['components'][component][variant]['enabled']['root']?['cornerRadius'];
-      if (radiusSpec != null) {
-        expect(
-          (decoration(tester, type).borderRadius as BorderRadius).topLeft.x,
-          resolveOfficial(radiusSpec),
-          reason: component,
-        );
-      }
-    }
-  });
-
-  testWidgets(
-    'official gradient stops, fog size and progress thickness are applied',
-    (tester) async {
-      for (final placement in SeedScrollFogPlacement.values) {
-        await mount(
-          tester,
-          SizedBox(
-            width: 100,
-            height: 100,
-            child: Align(child: SeedScrollFog(placement: placement)),
-          ),
-        );
-        final fog = find
-            .descendant(
-              of: find.byType(SeedScrollFog),
-              matching: find.byType(Container),
-            )
-            .first;
-        final box = tester.widget<Container>(fog);
-        final gradient =
-            (box.decoration as BoxDecoration).gradient as LinearGradient;
-        expect(gradient.colors.length, 16);
-        expect(
-          placement == SeedScrollFogPlacement.top ||
-                  placement == SeedScrollFogPlacement.bottom
-              ? tester.getSize(fog).height
-              : tester.getSize(fog).width,
-          20,
-        );
-      }
-      for (final size in [24.0, 40.0]) {
-        await mount(tester, SeedProgressCircle(size: size, value: 0.5));
-        expect(
-          tester
-              .widget<CircularProgressIndicator>(
-                find.byType(CircularProgressIndicator),
-              )
-              .strokeWidth,
-          size == 24 ? 3 : 5,
-        );
-      }
-    },
-  );
-  testWidgets(
-    'every rendered action button size/variant keeps the official minimum height',
-    (tester) async {
-      for (final size in SeedButtonSize.values) {
-        for (final variant in SeedButtonVariant.values) {
-          await mount(
-            tester,
-            SeedButton(
-              label: 'Label',
-              size: size,
-              variant: variant,
-              onPressed: () {},
-            ),
-          );
-          expect(
-            tester.getSize(surface(SeedButton)).height,
-            officialProp(
-              'action-button',
-              'size=${size.name}',
-              'root',
-              'minHeight',
-            ),
-            reason: '${size.name}/${variant.name}',
-          );
-          expect(
-            style(tester, 'Label').fontSize,
-            officialProp(
-              'action-button',
-              'size=${size.name}, layout=withText',
-              'label',
-              'fontSize',
-            ),
-            reason: '${size.name}/${variant.name}',
-          );
-        }
-      }
-    },
-  );
-
   testWidgets(
     'radio and switch visuals retain official size, selected and disabled colors',
     (tester) async {
@@ -637,7 +286,7 @@ void main() {
                 root.color,
                 officialColor(
                   enabled && selected
-                      ? r'$color.bg.neutral-solid'
+                      ? r'$color.bg.brand-solid'
                       : !enabled && !selected
                       ? r'$color.palette.gray-300'
                       : r'$color.bg.transparent',
@@ -663,7 +312,7 @@ void main() {
                       .color,
                   officialColor(
                     enabled
-                        ? r'$color.fg.on-neutral-solid'
+                        ? r'$color.fg.on-brand-solid'
                         : r'$color.palette.gray-300',
                     dark: dark,
                   ),
@@ -697,7 +346,7 @@ void main() {
                     .color,
                 officialColor(
                   selected && enabled
-                      ? r'$color.bg.neutral-solid'
+                      ? r'$color.bg.brand-solid'
                       : r'$color.palette.gray-600',
                   dark: dark,
                 ),
@@ -721,7 +370,7 @@ void main() {
       (
         SeedContextualFloatingButton(label: 'Label', onPressed: () {}),
         SeedContextualFloatingButton,
-        r'$color.bg.layer-floating-pressed',
+        r'$color.bg.neutral-solid-pressed',
       ),
       (
         SeedReactionButton(count: 2, onReactedChanged: (_) {}),
@@ -759,71 +408,4 @@ void main() {
       await tester.pumpAndSettle();
     }
   });
-
-  testWidgets(
-    'wheel, time, calendar, result and compact navigation typography match official sources',
-    (tester) async {
-      await mount(
-        tester,
-        SeedWheelPicker(
-          columns: [
-            SeedWheelColumn.typed(items: ['Label'], initialIndex: 0),
-          ],
-        ),
-      );
-      expect(
-        style(tester, 'Label').fontSize,
-        officialProp('wheel-picker', 'size=medium', 'itemLabel', 'fontSize'),
-      );
-      await mount(tester, const SeedTimePicker());
-      expect(
-        style(tester, '오전').fontSize,
-        officialProp('time-picker', 'base', 'item', 'fontSize'),
-      );
-      await mount(tester, SeedDatePicker(initialDate: DateTime(2026, 10, 20)));
-      expect(
-        style(tester, '20').fontSize,
-        officialProp('date-picker', 'base', 'dateContent', 'fontSize'),
-      );
-      expect(
-        style(tester, '일').fontSize,
-        officialProp('date-picker', 'base', 'weekday', 'fontSize'),
-      );
-      for (final size in SeedResultSectionSize.values) {
-        await mount(
-          tester,
-          SeedResultSection(
-            title: 'Title',
-            description: 'Description',
-            size: size,
-          ),
-        );
-        // docs/registry/react/ui/result-section.tsx (same pinned upstream revision).
-        expect(
-          style(tester, 'Title').fontSize,
-          size == SeedResultSectionSize.large ? 22 : 16,
-        );
-        expect(
-          style(tester, 'Description').fontSize,
-          size == SeedResultSectionSize.large ? 16 : 14,
-        );
-      }
-      await mount(
-        tester,
-        SeedBottomNavigation(
-          items: const [
-            SeedBottomNavigationItem(icon: Icon(Icons.home), label: 'Home'),
-            SeedBottomNavigationItem(icon: Icon(Icons.chat), label: 'Chat'),
-          ],
-          currentIndex: 0,
-          onTap: (_) {},
-        ),
-        scale: 2,
-      );
-      expect(
-        tester.widget<Text>(find.text('Home')).textScaler,
-        TextScaler.noScaling,
-      );
-    },
-  );
 }

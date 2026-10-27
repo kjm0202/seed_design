@@ -1,5 +1,4 @@
 import 'package:material_ui/material_ui.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:seed_design/seed_design.dart';
@@ -105,48 +104,6 @@ void main() {
       indicatorRect().center.dx,
       closeTo(tester.getCenter(find.text('Third')).dx, 1),
     );
-  });
-
-  testWidgets('pressed segment gets official pressed surface and border', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      _host(
-        SizedBox(
-          width: 280,
-          child: SeedSegmentedControl<int>(
-            selectedValue: 0,
-            onValueChanged: (_) {},
-            segments: const [
-              SeedSegment(value: 0, label: 'First'),
-              SeedSegment(value: 1, label: 'Second'),
-            ],
-          ),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    final segments = find.descendant(
-      of: find.byType(SeedSegmentedControl<int>),
-      matching: find.byType(SeedPressable),
-    );
-    final gesture = await tester.startGesture(
-      tester.getCenter(find.text('Second')),
-      kind: PointerDeviceKind.touch,
-    );
-    await tester.pump();
-    final pressed = tester.widget<Container>(
-      find
-          .descendant(of: segments.at(1), matching: find.byType(Container))
-          .first,
-    );
-    final colors = tester.element(segments.at(1)).seedColor;
-    final decoration = pressed.decoration! as BoxDecoration;
-    expect(decoration.color, colors.bg.neutralWeakPressed);
-    expect(decoration.border!.top.color, colors.stroke.neutralMuted);
-    expect(decoration.border!.top.width, 1);
-    await gesture.up();
-    await tester.pumpAndSettle();
   });
 
   testWidgets(

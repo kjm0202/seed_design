@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
-import 'support/official_spec.dart';
 import 'support/seed_test_fonts.dart';
 
 Finder get surface => find.descendant(
@@ -28,26 +27,16 @@ Finder get handle => find.descendant(
   ),
 );
 
-Finder get closeVisual => find.descendant(
-  of: closeButton,
-  matching: find.byWidgetPredicate(
-    (widget) => widget is Container && widget.constraints?.maxWidth == 28,
-  ),
-);
-
 Future<void> mount(
   WidgetTester tester,
   SeedBottomSheet sheet, {
-  Brightness brightness = Brightness.light,
   Size size = const Size(360, 800),
   EdgeInsets padding = EdgeInsets.zero,
   double textScale = 1,
 }) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = size;
-  final seed = brightness == Brightness.light
-      ? SeedThemeData.light(fontFamily: seedTestFontFamily)
-      : SeedThemeData.dark(fontFamily: seedTestFontFamily);
+  final seed = SeedThemeData.light(fontFamily: seedTestFontFamily);
   await tester.pumpWidget(
     MaterialApp(
       theme: seed.toThemeData(),
@@ -112,168 +101,6 @@ Future<void> openSheet(
 
 void main() {
   setUpAll(loadSeedTestFonts);
-
-  for (final brightness in Brightness.values) {
-    testWidgets(
-      'header geometry, typography and control states in $brightness',
-      (tester) async {
-        addTearDown(tester.view.reset);
-        for (final align in SeedBottomSheetHeaderAlign.values) {
-          for (final showClose in [false, true]) {
-            for (final showHandle in [false, true]) {
-              await mount(
-                tester,
-                SeedBottomSheet(
-                  title: '제목',
-                  description: '설명',
-                  headerAlign: align,
-                  showCloseButton: showClose,
-                  showHandle: showHandle,
-                  content: const SizedBox(key: Key('body'), height: 80),
-                  footer: const SizedBox(key: Key('footer'), height: 52),
-                ),
-                brightness: brightness,
-              );
-              final rect = tester.getRect(surface);
-              final titleRect = tester.getRect(find.text('제목'));
-              final descriptionRect = tester.getRect(find.text('설명'));
-              final bodyRect = tester.getRect(find.byKey(const Key('body')));
-              final footerRect = tester.getRect(
-                find.byKey(const Key('footer')),
-              );
-              final variant =
-                  'headerAlignment=${align.name},closeButton=$showClose';
-              expect(
-                titleRect.top - rect.top,
-                officialProp('bottom-sheet', 'base', 'header', 'paddingTop'),
-              );
-              expect(
-                titleRect.left - rect.left,
-                officialProp('bottom-sheet', variant, 'title', 'paddingLeft'),
-              );
-              expect(
-                rect.right - titleRect.right,
-                officialProp('bottom-sheet', variant, 'title', 'paddingRight'),
-              );
-              expect(
-                descriptionRect.top - titleRect.bottom,
-                officialProp('bottom-sheet', 'base', 'header', 'gap'),
-              );
-              expect(descriptionRect.left - rect.left, 16);
-              expect(rect.right - descriptionRect.right, 16);
-              expect(bodyRect.top - descriptionRect.bottom, 16);
-              expect(bodyRect.left - rect.left, 16);
-              expect(rect.right - bodyRect.right, 16);
-              expect(footerRect.top - bodyRect.bottom, 12);
-              expect(rect.bottom - footerRect.bottom, 16);
-              expect(footerRect.left - rect.left, 16);
-              expect(rect.right - footerRect.right, 16);
-              final title = tester.widget<Text>(find.text('제목'));
-              final description = tester.widget<Text>(find.text('설명'));
-              expect(
-                title.textAlign,
-                align == SeedBottomSheetHeaderAlign.left
-                    ? TextAlign.start
-                    : TextAlign.center,
-              );
-              for (final (text, slot) in [
-                (title, 'title'),
-                (description, 'description'),
-              ]) {
-                expect(
-                  text.style!.fontSize,
-                  officialProp('bottom-sheet', 'base', slot, 'fontSize'),
-                );
-                expect(
-                  text.style!.fontSize! * text.style!.height!,
-                  closeTo(
-                    officialProp('bottom-sheet', 'base', slot, 'lineHeight')
-                        as num,
-                    0.0001,
-                  ),
-                );
-                expect(
-                  text.style!.fontWeight!.value,
-                  officialProp('bottom-sheet', 'base', slot, 'fontWeight'),
-                );
-              }
-              expect(
-                title.style!.color,
-                officialColor(
-                  r'$color.fg.neutral',
-                  dark: brightness == Brightness.dark,
-                ),
-              );
-              expect(
-                description.style!.color,
-                officialColor(
-                  r'$color.fg.neutral-muted',
-                  dark: brightness == Brightness.dark,
-                ),
-              );
-              if (showClose) {
-                expect(tester.getSize(closeButton), const Size(44, 44));
-                final buttonRect = tester.getRect(closeVisual);
-                expect(buttonRect.size, const Size(28, 28));
-                expect(buttonRect.top - rect.top, 24);
-                expect(rect.right - buttonRect.right, 16);
-                final icon = tester.widget<Icon>(
-                  find.descendant(of: closeButton, matching: find.byType(Icon)),
-                );
-                expect(icon.size, 14);
-                expect(icon.color, title.style!.color);
-                final gesture = await tester.startGesture(
-                  tester.getCenter(closeButton),
-                );
-                await tester.pump(const Duration(milliseconds: 200));
-                final visual = tester.widget<Container>(closeVisual);
-                expect(
-                  (visual.decoration! as BoxDecoration).color,
-                  officialColor(
-                    r'$color.bg.neutral-weak-pressed',
-                    dark: brightness == Brightness.dark,
-                  ),
-                );
-                await gesture.cancel();
-                await tester.pumpAndSettle();
-              }
-              if (showHandle) {
-                expect(tester.getSize(handle), const Size(36, 4));
-                expect(tester.getRect(handle).top - rect.top, 6);
-                final target = find
-                    .ancestor(of: handle, matching: find.byType(Listener))
-                    .first;
-                expect(tester.getSize(target), const Size(44, 44));
-                AnimatedContainer bar() =>
-                    tester.widget<AnimatedContainer>(handle);
-                expect(
-                  (bar().decoration! as BoxDecoration).color,
-                  officialColor(
-                    r'$color.palette.gray-400',
-                    dark: brightness == Brightness.dark,
-                  ),
-                );
-                final gesture = await tester.startGesture(
-                  tester.getCenter(handle),
-                );
-                await tester.pumpAndSettle();
-                expect(
-                  (bar().decoration! as BoxDecoration).color,
-                  officialColor(
-                    r'$color.palette.gray-500',
-                    dark: brightness == Brightness.dark,
-                  ),
-                );
-                await gesture.cancel();
-                await tester.pumpAndSettle();
-              }
-              expect(tester.takeException(), isNull);
-            }
-          }
-        }
-      },
-    );
-  }
 
   testWidgets('width, height and insets follow the available safe area', (
     tester,

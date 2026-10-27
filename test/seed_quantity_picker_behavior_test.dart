@@ -45,13 +45,9 @@ void main() {
     await tester.tap(find.byIcon(Icons.add_rounded));
     expect(changes, [3]);
 
-    await mount(
-      tester,
-      SeedQuantityPicker(value: 3, step: 0, onChanged: changes.add),
+    expect(
+      () => SeedQuantityPicker(value: 3, step: 0, onChanged: changes.add),
+      throwsAssertionError,
     );
-    buttons = tester
-        .widgetList<SeedPressable>(find.byType(SeedPressable))
-        .toList();
-    expect(buttons.every((button) => !button.enabled), isTrue);
   });
 }

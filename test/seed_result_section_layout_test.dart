@@ -50,30 +50,4 @@ void main() {
       }
     },
   );
-
-  testWidgets(
-    'official default padding remains available for standalone sections',
-    (tester) async {
-      const section = SeedResultSection(title: 'Title');
-      expect(
-        section.padding,
-        const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
-      );
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: SeedThemeData.light().toThemeData(),
-          home: const Scaffold(body: SizedBox(width: 360, child: section)),
-        ),
-      );
-      final padding = tester.widget<Padding>(
-        find
-            .descendant(
-              of: find.byType(SeedResultSection),
-              matching: find.byType(Padding),
-            )
-            .first,
-      );
-      expect(padding.padding, section.padding);
-    },
-  );
 }

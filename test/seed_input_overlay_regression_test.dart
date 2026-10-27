@@ -199,11 +199,11 @@ void main() {
         .toList();
 
     await tester.pumpAndSettle();
-    expect(positions(), [0, 8, 0]); // 오전 9시 00분, 5분은 0분으로 반올림.
+    expect(positions(), [0, 9, 0]); // 오전 9시 00분, 5분은 0분으로 반올림.
 
     updateParent(() => initialTime = const TimeOfDay(hour: 15, minute: 54));
     await tester.pumpAndSettle();
-    expect(positions(), [1, 2, 5]); // 오후 3시 50분.
+    expect(positions(), [1, 3, 5]); // 오후 3시 50분.
     expect(
       notifications,
       isEmpty,

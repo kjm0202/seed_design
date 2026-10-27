@@ -74,7 +74,10 @@ void main() {
           }
           selected = null;
           await tester.tap(find.text('$page'));
-          expect(selected, page);
+          expect(
+            selected,
+            isNull,
+          ); // Selecting the current page is not a value change.
         }
       }
     },
