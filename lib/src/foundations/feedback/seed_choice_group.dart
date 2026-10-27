@@ -9,6 +9,7 @@ class SeedChoiceGroup extends StatefulWidget {
   final List<bool> enabled;
   final ValueChanged<int> onSelected;
   final Widget Function(BuildContext, List<FocusNode>) builder;
+  final Axis? axis;
 
   const SeedChoiceGroup({
     super.key,
@@ -16,6 +17,7 @@ class SeedChoiceGroup extends StatefulWidget {
     required this.enabled,
     required this.onSelected,
     required this.builder,
+    this.axis,
   });
 
   @override
@@ -39,18 +41,22 @@ class _SeedChoiceGroupState extends State<SeedChoiceGroup> {
     if (current < 0) return KeyEventResult.ignored;
     final key = event.logicalKey;
     final rtl = Directionality.of(context) == TextDirection.rtl;
+    final allowHorizontal = widget.axis == null || widget.axis == Axis.horizontal;
+    final allowVertical = widget.axis == null || widget.axis == Axis.vertical;
     final forward =
-        key == LogicalKeyboardKey.arrowDown ||
-        key ==
-            (rtl
-                ? LogicalKeyboardKey.arrowLeft
-                : LogicalKeyboardKey.arrowRight);
+        (allowVertical && key == LogicalKeyboardKey.arrowDown) ||
+        (allowHorizontal &&
+            key ==
+                (rtl
+                    ? LogicalKeyboardKey.arrowLeft
+                    : LogicalKeyboardKey.arrowRight));
     final backward =
-        key == LogicalKeyboardKey.arrowUp ||
-        key ==
-            (rtl
-                ? LogicalKeyboardKey.arrowRight
-                : LogicalKeyboardKey.arrowLeft);
+        (allowVertical && key == LogicalKeyboardKey.arrowUp) ||
+        (allowHorizontal &&
+            key ==
+                (rtl
+                    ? LogicalKeyboardKey.arrowRight
+                    : LogicalKeyboardKey.arrowLeft));
     if (!forward &&
         !backward &&
         key != LogicalKeyboardKey.home &&

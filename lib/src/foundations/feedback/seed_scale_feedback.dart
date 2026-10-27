@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 
 import '../motion/seed_motion.dart';
 import '../colors/seed_color_scheme.dart';
@@ -28,6 +29,58 @@ class SeedScaleCalculator {
   }
 }
 
+/// Actual press and hover are separate so hover changes colors without scaling.
+class SeedInteractionState extends InheritedWidget {
+  const SeedInteractionState({
+    super.key,
+    required this.pressed,
+    required this.hovered,
+    required this.focused,
+    required super.child,
+  });
+  final bool pressed, hovered, focused;
+  static SeedInteractionState? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<SeedInteractionState>();
+  @override
+  bool updateShouldNotify(SeedInteractionState oldWidget) =>
+      pressed != oldWidget.pressed ||
+      hovered != oldWidget.hovered ||
+      focused != oldWidget.focused;
+}
+
+/// Scales just the content of a SeedPressable, leaving its surface fixed.
+class SeedContentScale extends StatefulWidget {
+  const SeedContentScale({super.key, required this.child, this.pressed});
+  final Widget child;
+  final bool? pressed;
+  @override
+  State<SeedContentScale> createState() => _SeedContentScaleState();
+}
+
+class _SeedContentScaleState extends State<SeedContentScale> {
+  Size _size = Size.zero;
+  @override
+  Widget build(BuildContext context) => _SizeReporter(
+    onSizeChanged: (size) {
+      if (mounted && _size != size) setState(() => _size = size);
+    },
+    child: AnimatedScale(
+      scale:
+          (widget.pressed ?? SeedInteractionState.maybeOf(context)?.pressed) ==
+              true
+          ? SeedScaleCalculator.calculateScale(
+              width: _size.width,
+              height: _size.height,
+              disableAnimations: MediaQuery.disableAnimationsOf(context),
+            )
+          : 1,
+      duration: SeedDuration.pressedScale,
+      curve: SeedCurves.pressedScale,
+      child: widget.child,
+    ),
+  );
+}
+
 /// A widget that applies SEED Design System physical scale feedback when pressed.
 ///
 /// Automatically measures the child dimensions and applies the standard SEED formula:
@@ -44,6 +97,8 @@ class SeedPressable extends StatefulWidget {
   final bool autofocus;
   final String? semanticsLabel;
   final String? semanticsValue;
+  final SemanticsRole? semanticsRole;
+  final int? headingLevel;
   final bool semanticButton;
   final bool? checked;
   final bool? mixed;
@@ -66,6 +121,8 @@ class SeedPressable extends StatefulWidget {
     this.autofocus = false,
     this.semanticsLabel,
     this.semanticsValue,
+    this.semanticsRole,
+    this.headingLevel,
     this.semanticButton = true,
     this.checked,
     this.mixed,
@@ -88,6 +145,7 @@ class _SeedPressableState extends State<SeedPressable>
   late final AnimationController _controller;
   Size _childSize = Size.zero;
   bool _isPressed = false;
+  bool _isHovered = false;
   bool _hasFocus = false;
   bool _showFocus = false;
   bool _focusFromPointer = false;
@@ -128,11 +186,22 @@ class _SeedPressableState extends State<SeedPressable>
         (event is KeyDownEvent || event is KeyRepeatEvent)) {
       setState(() => _focusFromPointer = false);
     }
+    if (_interactive &&
+        _focusNode.hasPrimaryFocus &&
+        (event.logicalKey == LogicalKeyboardKey.enter ||
+            event.logicalKey == LogicalKeyboardKey.space)) {
+      if (event is KeyDownEvent) {
+        setState(() => _isPressed = true);
+        _controller.animateTo(1, curve: SeedCurves.pressedScale);
+      }
+      if (event is KeyUpEvent) _release();
+    }
     return false;
   }
 
   void _handleFocusChange(bool value) {
     if (!mounted) return;
+    if (!value) _release();
     // Listen while focused so keyboard use restores the ring after a click,
     // even when a shortcut handles the key before it reaches the focus node.
     if (value) {
@@ -179,12 +248,25 @@ class _SeedPressableState extends State<SeedPressable>
   Widget build(BuildContext context) {
     final disableAnimations =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-    final content = widget.builder != null
-        ? widget.builder!(context, _isPressed)
-        : widget.child!;
+    final content = SeedInteractionState(
+      pressed: _isPressed,
+      hovered: _interactive && _isHovered,
+      focused: _hasFocus,
+      child: Builder(
+        builder: (context) => widget.builder != null
+            ? widget.builder!(
+                context,
+                _isPressed || (_interactive && _isHovered),
+              )
+            : widget.child!,
+      ),
+    );
 
     return Semantics(
       container: true,
+      role: widget.semanticsRole ?? SemanticsRole.none,
+      header: widget.headingLevel != null,
+      headingLevel: widget.headingLevel,
       button: widget.semanticButton,
       enabled: _interactive,
       focusable: _interactive,
@@ -200,86 +282,99 @@ class _SeedPressableState extends State<SeedPressable>
       inMutuallyExclusiveGroup: widget.inMutuallyExclusiveGroup,
       onTap: _interactive && widget.onTap != null ? _activate : null,
       onLongPress: _interactive ? widget.onLongPress : null,
-      child: FocusableActionDetector(
-        enabled: _interactive,
-        focusNode: _focusNode,
-        autofocus: widget.autofocus,
-        includeFocusSemantics: false,
-        mouseCursor: _interactive
-            ? SystemMouseCursors.click
-            : SystemMouseCursors.basic,
-        onFocusChange: _handleFocusChange,
-        onShowFocusHighlight: (value) {
-          if (mounted) setState(() => _showFocus = value);
+      child: MouseRegion(
+        onEnter: (event) {
+          if (_interactive &&
+              event.kind != PointerDeviceKind.touch &&
+              event.kind != PointerDeviceKind.unknown) {
+            setState(() => _isHovered = true);
+          }
         },
-        shortcuts: const {
-          SingleActivator(LogicalKeyboardKey.enter, includeRepeats: false):
-              ActivateIntent(),
-          SingleActivator(LogicalKeyboardKey.space, includeRepeats: false):
-              ActivateIntent(),
+        onExit: (_) {
+          if (_isHovered) setState(() => _isHovered = false);
         },
-        actions: {
-          ActivateIntent: CallbackAction<ActivateIntent>(
-            onInvoke: (_) {
-              _activate();
-              return null;
-            },
-          ),
-        },
-        child: DecoratedBox(
-          position: DecorationPosition.foreground,
-          decoration: BoxDecoration(
-            borderRadius: widget.focusBorderRadius,
-            border: _showFocus && !_focusFromPointer && _interactive
-                ? Border.all(
-                    color:
-                        Theme.of(context)
-                            .extension<SeedColorScheme>()
-                            ?.stroke
-                            .focusRing ??
-                        Theme.of(context).colorScheme.primary,
-                    width: 2,
-                  )
-                : null,
-          ),
-          child: GestureDetector(
-            excludeFromSemantics: true,
-            behavior: widget.behavior,
-            onTapDown: _interactive ? _handleTapDown : null,
-            onTapUp: _interactive ? _handleTapUp : null,
-            onTapCancel: _handleTapCancel,
-            onTap: _interactive && widget.onTap != null
-                ? () {
-                    _focusNode.requestFocus();
-                    _activate();
-                  }
-                : null,
-            onLongPress: _interactive ? widget.onLongPress : null,
-            child: _SizeReporter(
-              onSizeChanged: (newSize) {
-                if (mounted && _childSize != newSize) {
-                  setState(() => _childSize = newSize);
-                }
+        child: FocusableActionDetector(
+          enabled: _interactive,
+          focusNode: _focusNode,
+          autofocus: widget.autofocus,
+          includeFocusSemantics: false,
+          mouseCursor: _interactive
+              ? SystemMouseCursors.click
+              : SystemMouseCursors.basic,
+          onFocusChange: _handleFocusChange,
+
+          onShowFocusHighlight: (value) {
+            if (mounted) setState(() => _showFocus = value);
+          },
+          shortcuts: const {
+            SingleActivator(LogicalKeyboardKey.enter, includeRepeats: false):
+                ActivateIntent(),
+            SingleActivator(LogicalKeyboardKey.space, includeRepeats: false):
+                ActivateIntent(),
+          },
+          actions: {
+            ActivateIntent: CallbackAction<ActivateIntent>(
+              onInvoke: (_) {
+                _activate();
+                return null;
               },
-              child: AnimatedBuilder(
-                animation: _controller,
-                builder: (context, child) {
-                  if (!widget.enableScale ||
-                      disableAnimations ||
-                      _childSize == Size.zero) {
-                    return child!;
+            ),
+          },
+          child: DecoratedBox(
+            position: DecorationPosition.foreground,
+            decoration: BoxDecoration(
+              borderRadius: widget.focusBorderRadius,
+              border: _showFocus && !_focusFromPointer && _interactive
+                  ? Border.all(
+                      color:
+                          Theme.of(context)
+                              .extension<SeedColorScheme>()
+                              ?.stroke
+                              .focusRing ??
+                          Theme.of(context).colorScheme.primary,
+                      width: 2,
+                    )
+                  : null,
+            ),
+            child: GestureDetector(
+              excludeFromSemantics: true,
+              behavior: widget.behavior,
+              onTapDown: _interactive ? _handleTapDown : null,
+              onTapUp: _interactive ? _handleTapUp : null,
+              onTapCancel: _interactive ? _handleTapCancel : null,
+              onTap: _interactive && widget.onTap != null
+                  ? () {
+                      _focusNode.requestFocus();
+                      _activate();
+                    }
+                  : null,
+              onLongPress: _interactive ? widget.onLongPress : null,
+              child: _SizeReporter(
+                onSizeChanged: (newSize) {
+                  if (mounted && _childSize != newSize) {
+                    setState(() => _childSize = newSize);
                   }
-                  final targetScale = SeedScaleCalculator.calculateScale(
-                    width: _childSize.width,
-                    height: _childSize.height,
-                  );
-                  return Transform.scale(
-                    scale: 1 - (1 - targetScale) * _controller.value,
-                    alignment: Alignment.center,
-                    child: child,
-                  );
                 },
-                child: content,
+                child: AnimatedBuilder(
+                  animation: _controller,
+                  builder: (context, child) {
+                    if (!widget.enableScale ||
+                        disableAnimations ||
+                        _childSize == Size.zero) {
+                      return child!;
+                    }
+                    final targetScale = SeedScaleCalculator.calculateScale(
+                      width: _childSize.width,
+                      height: _childSize.height,
+                    );
+                    return Transform.scale(
+                      scale: 1 - (1 - targetScale) * _controller.value,
+                      alignment: Alignment.center,
+                      child: child,
+                    );
+                  },
+                  child: content,
+                ),
               ),
             ),
           ),
