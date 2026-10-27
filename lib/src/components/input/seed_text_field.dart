@@ -7,10 +7,14 @@ import 'seed_input_button.dart';
 import '../chip/seed_chip.dart';
 
 /// Controlled/uncontrolled Form integration reusable with every SEED input.
+///
+/// [value] is authoritative when non-null or [controlled] is true. [FormFieldState.didChange]
+/// proposals notify [onValueChanged] without committing parent-owned values.
 class SeedFormField<T> extends FormField<T> {
   const SeedFormField({
     super.key,
     this.value,
+    this.controlled = false,
     T? initialValue,
     this.onValueChanged,
     required super.builder,
@@ -19,7 +23,10 @@ class SeedFormField<T> extends FormField<T> {
     super.onReset,
     super.enabled,
     super.autovalidateMode,
-  }) : super(initialValue: value ?? initialValue);
+  }) : super(initialValue: controlled ? value : value ?? initialValue);
+
+  /// Includes a null [value] in parent-controlled state.
+  final bool controlled;
   final T? value;
   final ValueChanged<T?>? onValueChanged;
   @override
@@ -32,13 +39,21 @@ class _SeedFormFieldState<T> extends FormFieldState<T> {
   @override
   void didUpdateWidget(SeedFormField<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.value != oldWidget.value) setValue(widget.value);
+    if (widget.controlled || widget.value != null) setValue(widget.value);
   }
 
   @override
   void didChange(T? value) {
-    super.didChange(value);
+    super.didChange(
+      widget.controlled || widget.value != null ? widget.value : value,
+    );
     widget.onValueChanged?.call(value);
+  }
+
+  @override
+  void reset() {
+    super.reset();
+    if (widget.controlled || widget.value != null) setValue(widget.value);
   }
 }
 
@@ -80,7 +95,10 @@ class SeedTextField extends StatefulWidget {
     this.obscureText = false,
     this.keyboardType,
     this.autovalidateMode = AutovalidateMode.disabled,
-  });
+  }) : assert(
+         controller == null || (value == null && defaultValue == null),
+         'A controller cannot be combined with value or defaultValue.',
+       );
 
   /// Creates a multiline textarea field that auto-resizes by default,
   /// matching React's `<TextFieldTextarea>`.
@@ -120,7 +138,10 @@ class SeedTextField extends StatefulWidget {
     this.obscureText = false,
     this.keyboardType = TextInputType.multiline,
     this.autovalidateMode = AutovalidateMode.disabled,
-  });
+  }) : assert(
+         controller == null || (value == null && defaultValue == null),
+         'A controller cannot be combined with value or defaultValue.',
+       );
 
   final TextEditingController? controller;
   final String? value,
@@ -158,6 +179,7 @@ class SeedTextField extends StatefulWidget {
 
 class _SeedTextFieldState extends State<SeedTextField> {
   late TextEditingController _controller;
+  late String _controllerInitialText;
   final FocusNode _focusNode = FocusNode();
   final GlobalKey<FormFieldState<String>> _field = GlobalKey();
   @override
@@ -170,11 +192,24 @@ class _SeedTextFieldState extends State<SeedTextField> {
     _controller =
         widget.controller ??
         TextEditingController(text: widget.value ?? widget.defaultValue);
+    _controllerInitialText = _controller.text;
     _controller.addListener(_changed);
   }
 
   void _changed() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    setState(() {});
+    _syncFormValue(_controller.text);
+  }
+
+  void _syncFormValue(String value) {
+    // Controller listeners may run during build. Updating the enclosing Form
+    // must wait until that frame completes, and superseded values are ignored.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _controller.text != value) return;
+      final field = _field.currentState;
+      if (field != null && field.value != value) field.didChange(value);
+    });
   }
 
   void _syncControlledValue(String value) {
@@ -182,13 +217,6 @@ class _SeedTextFieldState extends State<SeedTextField> {
       text: value,
       selection: TextSelection.collapsed(offset: value.length),
     );
-    // didUpdateWidget runs during build. didChange also rebuilds the enclosing
-    // Form, so defer that notification and discard superseded values.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _controller.text != value) return;
-      final field = _field.currentState;
-      if (field != null && field.value != value) field.didChange(value);
-    });
   }
 
   @override
@@ -224,7 +252,8 @@ class _SeedTextFieldState extends State<SeedTextField> {
     enabled: widget.enabled,
     validator: widget.validator,
     onSaved: (_) => widget.onSaved?.call(_controller.text),
-    onReset: () => _controller.text = widget.value ?? widget.defaultValue ?? '',
+    onReset: () => _controller.text =
+        widget.value ?? widget.defaultValue ?? _controllerInitialText,
     autovalidateMode: widget.autovalidateMode,
     builder: (field) {
       final count = _controller.text.characters.length;

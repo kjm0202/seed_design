@@ -22,6 +22,12 @@ enum SeedOverlayDismissReason {
   drag,
 }
 
+/// A user request to change overlay visibility, including its cause.
+typedef SeedOverlayOpenChanged = void Function(
+  bool open,
+  SeedOverlayDismissReason reason,
+);
+
 class SeedOverlayController extends ChangeNotifier {
   SeedOverlayController({this._open = false});
   bool _open;
@@ -113,7 +119,7 @@ class SeedAnchoredOverlay extends StatefulWidget {
   final SeedOverlayController? controller;
   final bool? open;
   final bool defaultOpen;
-  final void Function(bool, SeedOverlayDismissReason)? onOpenChanged;
+  final SeedOverlayOpenChanged? onOpenChanged;
   final bool Function(SeedOverlayDismissReason)? canClose;
   final SeedOverlaySide side;
   final SeedOverlayAlign align;

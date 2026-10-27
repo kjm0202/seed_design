@@ -137,7 +137,8 @@ class SeedSelectBoxFocusCoordinator {
 /// Container that groups multiple [SeedSelectBox] items with official SEED Design spacing.
 ///
 /// Features `gapX: 12px` and `gapY: 12px` (`componentDefault`).
-/// When [value], [defaultValue], or [onValueChanged] is provided, manages
+/// When [controlled] is true or [value], [defaultValue], or [onValueChanged] is
+/// provided, manages
 /// mutually exclusive radio selection for child [SeedSelectBox] items that
 /// specify a [SeedSelectBox.value].
 class SeedSelectBoxGroup extends StatefulWidget {
@@ -147,6 +148,9 @@ class SeedSelectBoxGroup extends StatefulWidget {
   final WrapCrossAlignment crossAxisAlignment;
   final Object? value;
   final Object? defaultValue;
+
+  /// Keeps [value], including null (no selection), under parent control.
+  final bool controlled;
   final ValueChanged<Object?>? onValueChanged;
   final bool enabled;
   final bool readOnly;
@@ -159,6 +163,7 @@ class SeedSelectBoxGroup extends StatefulWidget {
     this.crossAxisAlignment = WrapCrossAlignment.start,
     this.value,
     this.defaultValue,
+    this.controlled = false,
     this.onValueChanged,
     this.enabled = true,
     this.readOnly = false,
@@ -179,16 +184,19 @@ class _SeedSelectBoxGroupState extends State<SeedSelectBoxGroup> {
   }
 
   bool get _isRadioGroup =>
+      widget.controlled ||
       widget.value != null ||
       widget.defaultValue != null ||
       widget.onValueChanged != null;
 
-  Object? get _effectiveValue => widget.value ?? _uncontrolledValue;
+  bool get _isControlled => widget.controlled || widget.value != null;
+  Object? get _effectiveValue =>
+      _isControlled ? widget.value : _uncontrolledValue;
 
   void _handleSelect(Object? next) {
     if (!widget.enabled || widget.readOnly) return;
     final prev = _effectiveValue;
-    if (widget.value == null && _uncontrolledValue != next) {
+    if (!_isControlled && _uncontrolledValue != next) {
       setState(() => _uncontrolledValue = next);
     }
     if (prev != next) {

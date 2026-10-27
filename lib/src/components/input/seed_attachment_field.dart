@@ -87,7 +87,8 @@ class SeedAttachmentDisplayField extends StatefulWidget {
     super.key,
     this.controller,
     this.entries,
-    this.initialEntries = const [],
+    List<SeedAttachmentItem>? defaultEntries,
+    List<SeedAttachmentItem>? initialEntries,
     this.onEntriesChanged,
     this.onTrigger,
     this.onRetry,
@@ -103,10 +104,21 @@ class SeedAttachmentDisplayField extends StatefulWidget {
     this.showDropzone = false,
     this.isDraggingOver = false,
     this.itemSize = 80,
-  });
+  }) : initialEntries = defaultEntries ?? initialEntries ?? const [],
+       assert(defaultEntries == null || initialEntries == null),
+       assert(
+         controller == null ||
+             (entries == null &&
+                 defaultEntries == null &&
+                 initialEntries == null),
+         'A controller cannot be combined with entries or an initial seed.',
+       );
   final SeedAttachmentController? controller;
   final List<SeedAttachmentItem>? entries;
   final List<SeedAttachmentItem> initialEntries;
+
+  /// One-time seed; [initialEntries] is a compatibility alias.
+  List<SeedAttachmentItem> get defaultEntries => initialEntries;
   final ValueChanged<List<SeedAttachmentItem>>? onEntriesChanged;
   final ValueChanged<SeedAttachmentController>? onTrigger;
   final void Function(SeedAttachmentItem, SeedAttachmentController)? onRetry;
@@ -134,7 +146,7 @@ class _SeedAttachmentDisplayFieldState
     _controller =
         widget.controller ??
         SeedAttachmentController(
-          items: widget.entries ?? widget.initialEntries,
+          items: widget.entries ?? widget.defaultEntries,
         );
     _configure();
     _controller.addListener(_changed);
@@ -220,7 +232,8 @@ class SeedAttachmentField extends SeedAttachmentDisplayField {
     super.key,
     super.controller,
     List<SeedAttachmentItem>? items,
-    List<SeedAttachmentItem> initialItems = const [],
+    List<SeedAttachmentItem>? defaultItems,
+    List<SeedAttachmentItem>? initialItems,
     ValueChanged<List<SeedAttachmentItem>>? onItemsChanged,
     VoidCallback? onAdd,
     super.onRetry,
@@ -238,6 +251,7 @@ class SeedAttachmentField extends SeedAttachmentDisplayField {
     super.itemSize,
   }) : super(
          entries: items,
+         defaultEntries: defaultItems,
          initialEntries: initialItems,
          onEntriesChanged: onItemsChanged,
          maxEntries: maxCount,

@@ -120,6 +120,8 @@ SeedField(
 
 아이콘만 있는 버튼에는 화면 읽기 프로그램이 용도를 안내할 수 있도록 `semanticsLabel`을 넣어주세요. 입력창에 직접 전달한 `TextEditingController`와 `FocusNode`는 사용한 쪽에서 해제해야 합니다.
 
+안정적으로 유지할 이름, null의 의미, 상태 관리 규칙과 마이그레이션은 [공개 API 계약](PUBLIC_API_CONTRACT.md)을 참고하세요. non-null 값은 부모가 관리하며, 빈 선택도 부모가 관리하려면 `controlled: true`를 지정합니다. default 값은 내부 상태를 한 번 초기화합니다. 텍스트·첨부 입력에는 컨트롤러 또는 값과 초깃값 중 한 방식만 전달합니다.
+
 다른 컴포넌트의 사용법은 [예제 코드](example/lib/tabs)에서 확인할 수 있습니다.
 
 ## 상태·콘텐츠를 포함한 UI

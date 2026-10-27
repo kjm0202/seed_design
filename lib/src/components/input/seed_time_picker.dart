@@ -24,7 +24,8 @@ enum SeedTimePeriod {
 class SeedTimePicker extends StatefulWidget {
   const SeedTimePicker({
     super.key,
-    this.initialTime = const TimeOfDay(hour: 9, minute: 0),
+    TimeOfDay? defaultValue,
+    TimeOfDay? initialTime,
     this.minuteStep = 1,
     this.onChanged,
     this.height = 220.0,
@@ -36,10 +37,15 @@ class SeedTimePicker extends StatefulWidget {
     this.periodSemanticsLabel,
     this.hourSemanticsLabel,
     this.minuteSemanticsLabel,
-  });
+  }) : initialTime =
+           defaultValue ?? initialTime ?? const TimeOfDay(hour: 9, minute: 0),
+       assert(defaultValue == null || initialTime == null);
 
   /// The initially selected time.
   final TimeOfDay initialTime;
+
+  /// One-time uncontrolled seed; [initialTime] is a compatibility alias.
+  TimeOfDay get defaultValue => initialTime;
 
   /// Interval between selectable minute values (e.g. 1, 5, 10, 15).
   final int minuteStep;
@@ -78,16 +84,16 @@ class _SeedTimePickerState extends State<SeedTimePicker> {
   @override
   void didUpdateWidget(SeedTimePicker oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.initialTime != widget.initialTime ||
-        oldWidget.minuteStep != widget.minuteStep ||
-        oldWidget.value != widget.value ||
-        oldWidget.locale != widget.locale) {
+    if (oldWidget.locale != widget.locale) {
       initializeDateFormatting(widget.locale.toString());
-      _initValues();
+    }
+    if (oldWidget.minuteStep != widget.minuteStep ||
+        (widget.value != null && oldWidget.value != widget.value)) {
+      _initValues(widget.value ?? _currentTime);
     }
   }
 
-  void _initValues() {
+  void _initValues([TimeOfDay? seed]) {
     if (widget.minuteStep <= 0 || widget.minuteStep > 60) {
       throw ArgumentError.value(
         widget.minuteStep,
@@ -100,7 +106,7 @@ class _SeedTimePickerState extends State<SeedTimePicker> {
       _minutes.add(i);
     }
 
-    final source = widget.value ?? widget.initialTime;
+    final source = seed ?? widget.value ?? widget.defaultValue;
     var h = source.hour;
     final initialMin = source.minute;
     int closestMin = _minutes.first;
@@ -121,14 +127,18 @@ class _SeedTimePickerState extends State<SeedTimePicker> {
     _minute = closestMin;
   }
 
-  void _notifyChange() {
+  TimeOfDay get _currentTime {
     int hour24;
     if (_period == SeedTimePeriod.am) {
       hour24 = _hour == 12 ? 0 : _hour;
     } else {
       hour24 = _hour == 12 ? 12 : _hour + 12;
     }
-    widget.onChanged?.call(TimeOfDay(hour: hour24, minute: _minute));
+    return TimeOfDay(hour: hour24, minute: _minute);
+  }
+
+  void _notifyChange() {
+    widget.onChanged?.call(_currentTime);
   }
 
   bool _periodFollowsMinute(String locale) {

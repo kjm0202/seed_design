@@ -47,6 +47,11 @@ class SeedSelectGroup<T> {
 ///
 /// Combines an input-styled trigger button with an anchored popup menu of options
 /// organized into items and groups.
+///
+/// Non-null [value]/[values] controls selection. [controlled] also treats null as
+/// an authoritative empty selection. Defaults seed local state once. [open] is
+/// independent of selection ownership; [onOpenChanged] proposes visibility with
+/// a reason, without overriding a supplied [open].
 class SeedSelect<T> extends StatefulWidget {
   const SeedSelect({
     super.key,
@@ -69,13 +74,16 @@ class SeedSelect<T> extends StatefulWidget {
     this.shift = true,
     this.multiple = false,
     this.values,
-    this.initialValues = const {},
+    Set<T>? defaultValues,
+    Set<T>? initialValues,
     this.defaultValue,
     this.onValuesChanged,
     this.open,
     this.defaultOpen = false,
-    this.onOpenChanged,
-    this.onOpenChange,
+    SeedOverlayOpenChanged? onOpenChanged,
+    @Deprecated('Use onOpenChanged instead.')
+    SeedOverlayOpenChanged? onOpenChange,
+    this.onOpenStateChanged,
     this.onValueChanged,
     this.maxMenuHeight = 480,
     this.valueBuilder,
@@ -85,7 +93,10 @@ class SeedSelect<T> extends StatefulWidget {
     this.errorMessage,
     this.showClear = false,
     this.onClear,
-  });
+  }) : onOpenChanged = onOpenChanged ?? onOpenChange,
+       initialValues = defaultValues ?? initialValues ?? const {},
+       assert(onOpenChanged == null || onOpenChange == null),
+       assert(defaultValues == null || initialValues == null);
 
   /// The groups and options available for selection.
   final List<SeedSelectGroup<T>> groups;
@@ -120,12 +131,19 @@ class SeedSelect<T> extends StatefulWidget {
   final bool multiple;
   final Set<T>? values;
   final Set<T> initialValues;
+
+  /// One-time multiple-selection seed; [initialValues] is an alias.
+  Set<T> get defaultValues => initialValues;
   final T? defaultValue;
   final ValueChanged<Set<T>>? onValuesChanged;
   final bool? open;
   final bool defaultOpen;
-  final ValueChanged<bool>? onOpenChanged;
-  final void Function(bool, SeedOverlayDismissReason)? onOpenChange;
+  final SeedOverlayOpenChanged? onOpenChanged;
+
+  /// Optional visibility-only observer, alongside [onOpenChanged].
+  final ValueChanged<bool>? onOpenStateChanged;
+  @Deprecated('Use onOpenChanged instead.')
+  SeedOverlayOpenChanged? get onOpenChange => onOpenChanged;
   final ValueChanged<T?>? onValueChanged;
   final double maxMenuHeight;
   final Widget Function(BuildContext, List<SeedSelectItem<T>>)? valueBuilder;
@@ -146,16 +164,16 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
 
   bool _reportedOpen = false;
   void _emitOpen(bool open, SeedOverlayDismissReason reason) {
-    if (_reportedOpen == open) return;
+    if (_reportedOpen == open && widget.open == null) return;
     _reportedOpen = open;
-    widget.onOpenChanged?.call(open);
-    widget.onOpenChange?.call(open, reason);
+    widget.onOpenStateChanged?.call(open);
+    widget.onOpenChanged?.call(open, reason);
   }
 
-  late Set<T> _values = Set.of(widget.initialValues);
+  late Set<T> _values = Set.of(widget.defaultValues);
   late T? _value = widget.defaultValue;
   Set<T> get _selectedValues => widget.multiple
-      ? (widget.values ?? _values)
+      ? (widget.controlled ? widget.values ?? <T>{} : widget.values ?? _values)
       : {?widget.controlled ? widget.value : widget.value ?? _value};
 
   SeedSelectItem<T>? _findItem(T value) {
@@ -170,14 +188,15 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
   List<SeedSelectItem<T>> get _selectedItems => [
     for (final value in _selectedValues) ?_findItem(value),
   ];
-  void _requestOpen(bool value) {
+  void _requestOpen(
+    bool value, {
+    SeedOverlayDismissReason reason = SeedOverlayDismissReason.trigger,
+  }) {
     if (widget.readOnly || !widget.enabled) return;
-    _emitOpen(value, SeedOverlayDismissReason.trigger);
+    _emitOpen(value, reason);
     if (widget.open == null) {
       if (widget.side != null) {
-        value
-            ? _anchored.open()
-            : _anchored.close(SeedOverlayDismissReason.action);
+        value ? _anchored.open() : _anchored.close(reason);
       } else {
         value ? _menuController.open() : _menuController.close();
       }
@@ -189,7 +208,9 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
     if (widget.multiple) {
       final next = Set<T>.of(_selectedValues);
       next.contains(value) ? next.remove(value) : next.add(value);
-      if (widget.values == null) setState(() => _values = next);
+      if (!widget.controlled && widget.values == null) {
+        setState(() => _values = next);
+      }
       widget.onValuesChanged?.call(Set.unmodifiable(next));
     } else {
       final alreadySelected = _selectedValues.contains(value);
@@ -200,11 +221,7 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
         widget.onChanged?.call(value);
         widget.onValueChanged?.call(value);
       }
-      if (widget.side != null) {
-        _requestOpen(false);
-      } else {
-        _emitOpen(false, SeedOverlayDismissReason.action);
-      }
+      _requestOpen(false, reason: SeedOverlayDismissReason.action);
     }
   }
 
@@ -226,6 +243,7 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
   @override
   void didUpdateWidget(SeedSelect<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.open != null) _reportedOpen = widget.open!;
     if (widget.side != null) return;
     if ((!widget.enabled || widget.readOnly) && _menuController.isOpen) {
       _menuController.close();
@@ -262,7 +280,7 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
               alignmentOffset: widget.menuOffset,
               crossAxisUnconstrained: false,
               onClose: () {
-                if (widget.open == null) {
+                if (widget.open != false) {
                   _emitOpen(
                     false,
                     HardwareKeyboard.instance.logicalKeysPressed.contains(
@@ -271,6 +289,16 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
                         ? SeedOverlayDismissReason.escapeKey
                         : SeedOverlayDismissReason.outside,
                   );
+                  if (widget.open == true) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted &&
+                          widget.open == true &&
+                          widget.enabled &&
+                          !widget.readOnly) {
+                        _menuController.open();
+                      }
+                    });
+                  }
                 }
               },
               controller: _menuController,
@@ -348,17 +376,17 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
                         const SingleActivator(LogicalKeyboardKey.arrowUp): () =>
                             FocusScope.of(context).previousFocus(),
                         const SingleActivator(LogicalKeyboardKey.home): () {
-                          final descendants = FocusScope.of(
-                            context,
-                          ).traversalDescendants.toList();
+                          final descendants = FocusScope.of(context)
+                              .traversalDescendants
+                              .toList();
                           if (descendants.isNotEmpty) {
                             descendants.first.requestFocus();
                           }
                         },
                         const SingleActivator(LogicalKeyboardKey.end): () {
-                          final descendants = FocusScope.of(
-                            context,
-                          ).traversalDescendants.toList();
+                          final descendants = FocusScope.of(context)
+                              .traversalDescendants
+                              .toList();
                           if (descendants.isNotEmpty) {
                             descendants.last.requestFocus();
                           }
@@ -436,8 +464,10 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
       showClear: widget.showClear,
       onClear: () {
         if (widget.multiple) {
-          if (widget.values == null) setState(() => _values = {});
-          widget.onValuesChanged?.call({});
+          if (!widget.controlled && widget.values == null) {
+            setState(() => _values = {});
+          }
+          widget.onValuesChanged?.call(Set<T>.unmodifiable({}));
         } else {
           if (widget.value == null && !widget.controlled) {
             setState(() => _value = null);
@@ -507,7 +537,7 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
           Semantics(
             selected: isSelected,
             child: MenuItemButton(
-              closeOnActivate: !widget.multiple && widget.open == null,
+              closeOnActivate: false,
               style: ButtonStyle(
                 padding: WidgetStatePropertyAll(
                   EdgeInsets.symmetric(

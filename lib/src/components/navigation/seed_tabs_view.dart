@@ -142,7 +142,7 @@ class _SeedTabsViewState extends State<SeedTabsView> {
   }
 
   void _controllerChanged() {
-    if (_syncingController || !mounted) return;
+    if (_syncingController || !mounted || widget.selectedIndex != null) return;
     final next = widget.controller!.index.clamp(0, widget.items.length - 1);
     if (next != _index) {
       setState(() {

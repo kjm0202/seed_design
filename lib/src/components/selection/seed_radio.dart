@@ -245,6 +245,7 @@ class SeedRadioGroup<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SeedFormField<T>(
     value: groupValue,
+    controlled: controlled || groupValue != null,
     initialValue: defaultValue,
     builder: (field) => SeedFieldset(
       label: label,

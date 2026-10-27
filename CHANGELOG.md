@@ -1,5 +1,19 @@
 ## Unreleased
 
+- Define the 1.0 public API contract in `PUBLIC_API_CONTRACT.md`.
+- Add canonical default-value names for text, date/time, select and attachment
+  inputs while retaining their initial-value aliases. Defaults seed local state
+  once and no longer overwrite calendar/time edits on rebuild.
+- Honor controlled empty selections in calendars, selects, card groups, segmented
+  controls and form fields; keep parent-owned values through rejected edits/reset.
+- **Breaking:** standardize Select and Tooltip `onOpenChanged` callbacks to
+  `(open, reason)`. Select provides `onOpenStateChanged` for bool-only observers;
+  its `onOpenChange` alias is deprecated.
+- **Breaking:** reject simultaneous text/attachment controller and value/seed
+  inputs. Keep externally controlled text synchronized with form validation and
+  reset, and give explicit tab indices precedence over controllers.
+- Preserve controlled Select visibility when dismissal requests are rejected.
+
 - Use fill layout and a single notification in the first Tabs example; keep
   enlarged tab labels within their targets and allow scrolling when needed.
 - Apply the first measured carousel height immediately, retain the previous height

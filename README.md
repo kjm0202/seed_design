@@ -120,6 +120,8 @@ Buttons default to `brandSolid`; badges default to `solid`. Use an explicit vari
 
 Give icon-only buttons a `semanticsLabel` so screen readers can describe their action. If you pass a `TextEditingController` or `FocusNode` to an input, you are responsible for disposing of it.
 
+See the [public API contract](PUBLIC_API_CONTRACT.md) for stable names, null semantics, state ownership and migration guidance. Non-null values are parent-controlled; use `controlled: true` to control an empty selection. Default values initialize local state once. Supply either a text/attachment controller or values and defaults.
+
 See the [example code](example/lib/tabs) for other components.
 
 ## Stateful UI and React feature counterparts

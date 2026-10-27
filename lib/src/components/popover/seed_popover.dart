@@ -318,7 +318,7 @@ class SeedPopoverTrigger extends StatelessWidget {
       autoFocus,
       closeOnInteractOutside,
       closeOnFocusOut;
-  final void Function(bool, SeedOverlayDismissReason)? onOpenChanged;
+  final SeedOverlayOpenChanged? onOpenChanged;
   final SeedOverlaySide side;
   final SeedOverlayAlign align;
   final double maxWidth, maxHeight;

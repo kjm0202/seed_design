@@ -19,19 +19,27 @@ enum SeedDatePickerMode { single, range, multiple }
 enum SeedDatePickerLayout { month, twoMonths, week, continuous }
 
 /// Calendar dates without time-zone conversion. View changes never select a day.
+///
+/// A non-null value controls the corresponding selection mode. Set [controlled]
+/// to true to control an empty (null) selection as well. Change callbacks propose
+/// values; the displayed selection changes only when the parent accepts them.
+/// The default* inputs initialize local state once; initial* inputs are aliases.
 class SeedDatePicker extends StatefulWidget {
   const SeedDatePicker({
     super.key,
     this.mode = SeedDatePickerMode.single,
     this.layout = SeedDatePickerLayout.month,
-    this.initialDate,
+    DateTime? defaultValue,
+    DateTime? initialDate,
     this.today,
+    SeedDateRange? defaultRangeValue,
     this.initialStartDate,
     this.initialEndDate,
     this.value,
     this.rangeValue,
     this.values,
-    this.initialDates = const [],
+    List<DateTime>? defaultValues,
+    List<DateTime>? initialDates,
     this.firstDate,
     this.lastDate,
     this.onDateSelected,
@@ -62,7 +70,16 @@ class SeedDatePicker extends StatefulWidget {
     this.semanticsLabel,
     this.showReset = false,
     this.onReset,
-  }) : assert(weekStartsOn == null || (weekStartsOn >= 1 && weekStartsOn <= 7)),
+  }) : initialDate = defaultValue ?? initialDate,
+       _defaultRangeValue = defaultRangeValue,
+       initialDates = defaultValues ?? initialDates ?? const [],
+       assert(defaultValue == null || initialDate == null),
+       assert(
+         defaultRangeValue == null ||
+             (initialStartDate == null && initialEndDate == null),
+       ),
+       assert(defaultValues == null || initialDates == null),
+       assert(weekStartsOn == null || (weekStartsOn >= 1 && weekStartsOn <= 7)),
        assert(dateCellSupplement == null || dateCellContent == null),
        assert(cellHeight > 0),
        assert(
@@ -77,6 +94,20 @@ class SeedDatePicker extends StatefulWidget {
   final SeedDateRange? rangeValue;
   final List<DateTime>? values;
   final List<DateTime> initialDates;
+
+  /// One-time uncontrolled seed. [initialDate] is a compatibility alias.
+  DateTime? get defaultValue => initialDate;
+  final SeedDateRange? _defaultRangeValue;
+
+  /// One-time uncontrolled range seed. The initial*Date names are aliases.
+  SeedDateRange? get defaultRangeValue =>
+      _defaultRangeValue ??
+      (initialStartDate == null
+          ? null
+          : SeedDateRange(start: initialStartDate!, end: initialEndDate));
+
+  /// One-time uncontrolled seed. [initialDates] is a compatibility alias.
+  List<DateTime> get defaultValues => initialDates;
   final DateTime? firstDate, lastDate;
   final ValueChanged<DateTime>? onDateSelected;
   final ValueChanged<DateTime?>? onValueChanged;
@@ -123,6 +154,9 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
   StateSetter? _updateMonthOverlay;
   bool _weekOverlayOpen = false;
   bool get _isDisabled => !widget.enabled || widget.disabled;
+  bool get _singleControlled => widget.controlled || widget.value != null;
+  bool get _rangeControlled => widget.controlled || widget.rangeValue != null;
+  bool get _multipleControlled => widget.controlled || widget.values != null;
   String get _locale => widget.locale.toString();
   bool get _korean => widget.locale.languageCode == 'ko';
   int get _weekStartsOn =>
@@ -165,16 +199,19 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
   void initState() {
     super.initState();
     initializeDateFormatting(_locale);
-    _selectedDate = (widget.value ?? widget.initialDate) == null
-        ? null
-        : seedDateOnly((widget.value ?? widget.initialDate)!);
-    _startDate = (widget.rangeValue?.start ?? widget.initialStartDate) == null
-        ? null
-        : seedDateOnly((widget.rangeValue?.start ?? widget.initialStartDate)!);
-    _endDate = (widget.rangeValue?.end ?? widget.initialEndDate) == null
-        ? null
-        : seedDateOnly((widget.rangeValue?.end ?? widget.initialEndDate)!);
-    _dates = (widget.values ?? widget.initialDates).map(seedDateOnly).toSet();
+    final single = _singleControlled ? widget.value : widget.defaultValue;
+    final start = _rangeControlled
+        ? widget.rangeValue?.start
+        : widget.defaultRangeValue?.start;
+    final end = _rangeControlled
+        ? widget.rangeValue?.end
+        : widget.defaultRangeValue?.end;
+    _selectedDate = single == null ? null : seedDateOnly(single);
+    _startDate = start == null ? null : seedDateOnly(start);
+    _endDate = end == null ? null : seedDateOnly(end);
+    _dates = (_multipleControlled ? widget.values ?? [] : widget.defaultValues)
+        .map(seedDateOnly)
+        .toSet();
     final initial =
         widget.viewDate ??
         widget.defaultViewDate ??
@@ -200,21 +237,17 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
       oldWidget.controller?.removeListener(_controllerChanged);
       widget.controller?.addListener(_controllerChanged);
     }
-    if (widget.value != oldWidget.value ||
-        (widget.value == null && widget.initialDate != oldWidget.initialDate)) {
-      final d = widget.value ?? widget.initialDate;
+    if (_singleControlled) {
+      final d = widget.value;
       _selectedDate = d == null ? null : seedDateOnly(d);
     }
-    if (widget.rangeValue != oldWidget.rangeValue ||
-        (widget.rangeValue == null &&
-            (widget.initialStartDate != oldWidget.initialStartDate ||
-                widget.initialEndDate != oldWidget.initialEndDate))) {
-      final s = widget.rangeValue?.start ?? widget.initialStartDate;
-      final e = widget.rangeValue?.end ?? widget.initialEndDate;
+    if (_rangeControlled) {
+      final s = widget.rangeValue?.start;
+      final e = widget.rangeValue?.end;
       _startDate = s == null ? null : seedDateOnly(s);
       _endDate = e == null ? null : seedDateOnly(e);
     }
-    if (widget.values != oldWidget.values) {
+    if (_multipleControlled) {
       _dates = (widget.values ?? []).map(seedDateOnly).toSet();
     }
     if (widget.viewDate != null && oldWidget.viewDate != widget.viewDate) {
@@ -468,16 +501,14 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
     final proposal = _proposal(day);
     setState(() {
       _focusedDate = day;
-      if (widget.mode == SeedDatePickerMode.single && widget.value == null) {
+      if (widget.mode == SeedDatePickerMode.single && !_singleControlled) {
         _selectedDate = day;
       }
-      if (widget.mode == SeedDatePickerMode.range &&
-          widget.rangeValue == null &&
-          !widget.controlled) {
+      if (widget.mode == SeedDatePickerMode.range && !_rangeControlled) {
         _startDate = proposal.start;
         _endDate = proposal.end;
       }
-      if (widget.mode == SeedDatePickerMode.multiple && widget.values == null) {
+      if (widget.mode == SeedDatePickerMode.multiple && !_multipleControlled) {
         _dates = proposal.dates.toSet();
       }
     });
@@ -647,8 +678,9 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
       } else if (widget.layout == SeedDatePickerLayout.week) {
         next = DateTime(day.year, day.month, day.day + direction * 7);
       } else {
-        final monthStep =
-            widget.layout == SeedDatePickerLayout.twoMonths ? 2 : 1;
+        final monthStep = widget.layout == SeedDatePickerLayout.twoMonths
+            ? 2
+            : 1;
         final target = DateTime(day.year, day.month + direction * monthStep);
         next = DateTime(
           target.year,
@@ -696,9 +728,7 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
         _startDate != null &&
         _endDate != null;
     final inRange =
-        rangeComplete &&
-        date.isAfter(_startDate!) &&
-        date.isBefore(_endDate!);
+        rangeComplete && date.isAfter(_startDate!) && date.isBefore(_endDate!);
     final selected = endpointSelected || inRange;
     final today = date == seedDateOnly((widget.today ?? DateTime.now()));
     final unavailable = !_selectable(date) && !(multi && !widget.readOnly);
@@ -758,9 +788,7 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
                 ],
               ));
     final showRangeSpan =
-        rangeComplete &&
-        _startDate != _endDate &&
-        (inRange || start || end);
+        rangeComplete && _startDate != _endDate && (inRange || start || end);
     return Focus(
       focusNode: node,
       skipTraversal: date != tabDate,
@@ -1113,17 +1141,16 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
                         ? null
                         : () {
                             setState(() {
-                              if (!widget.controlled && widget.value == null) {
+                              if (!_singleControlled) {
                                 _selectedDate = null;
                               }
-                              if (!widget.controlled &&
-                                  widget.rangeValue == null) {
+                              if (!_rangeControlled) {
                                 if (!widget.rangeStartReadOnly) {
                                   _startDate = null;
                                 }
                                 _endDate = null;
                               }
-                              if (!widget.controlled && widget.values == null) {
+                              if (!_multipleControlled) {
                                 _dates = {};
                               }
                             });
@@ -1136,7 +1163,9 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
                                   null,
                                 );
                               case SeedDatePickerMode.multiple:
-                                widget.onDatesSelected?.call([]);
+                                widget.onDatesSelected?.call(
+                                  List<DateTime>.unmodifiable([]),
+                                );
                             }
                             widget.onReset?.call();
                           },

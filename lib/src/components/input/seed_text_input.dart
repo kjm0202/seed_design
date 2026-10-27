@@ -41,7 +41,10 @@ class SeedTextInput extends StatefulWidget {
   final TextEditingController? controller;
   final String? value;
   final String? hintText;
+
+  /// One-time seed; prefer [defaultValue] in new code.
   final String? initialValue;
+  String? get defaultValue => initialValue;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
   final FocusNode? focusNode;
@@ -78,7 +81,8 @@ class SeedTextInput extends StatefulWidget {
     this.controller,
     this.value,
     this.hintText,
-    this.initialValue,
+    String? initialValue,
+    String? defaultValue,
     this.onChanged,
     this.onSubmitted,
     this.focusNode,
@@ -108,7 +112,13 @@ class SeedTextInput extends StatefulWidget {
     this.autoResize = false,
     this.maxHeight,
     this.semanticsLabel,
-  });
+  }) : initialValue = defaultValue ?? initialValue,
+       assert(defaultValue == null || initialValue == null),
+       assert(
+         controller == null ||
+             (value == null && defaultValue == null && initialValue == null),
+         'A controller cannot be combined with value or an initial seed.',
+       );
 
   /// Creates a multiline textarea input that auto-resizes by default,
   /// matching React's `<TextFieldTextarea>`.
@@ -117,7 +127,8 @@ class SeedTextInput extends StatefulWidget {
     this.controller,
     this.value,
     this.hintText,
-    this.initialValue,
+    String? initialValue,
+    String? defaultValue,
     this.onChanged,
     this.onSubmitted,
     this.focusNode,
@@ -147,7 +158,13 @@ class SeedTextInput extends StatefulWidget {
     this.autoResize = true,
     this.maxHeight,
     this.semanticsLabel,
-  });
+  }) : initialValue = defaultValue ?? initialValue,
+       assert(defaultValue == null || initialValue == null),
+       assert(
+         controller == null ||
+             (value == null && defaultValue == null && initialValue == null),
+         'A controller cannot be combined with value or an initial seed.',
+       );
 
   @override
   State<SeedTextInput> createState() => _SeedTextInputState();

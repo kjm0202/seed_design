@@ -166,10 +166,10 @@ void main() {
     },
   );
 
-  testWidgets('updating initialTime resynchronizes all three wheel positions', (
+  testWidgets('updating value resynchronizes all three wheel positions', (
     tester,
   ) async {
-    var initialTime = const TimeOfDay(hour: 9, minute: 5);
+    var value = const TimeOfDay(hour: 9, minute: 5);
     late StateSetter updateParent;
     final notifications = <TimeOfDay>[];
     await tester.pumpWidget(
@@ -180,7 +180,7 @@ void main() {
             builder: (context, setState) {
               updateParent = setState;
               return SeedTimePicker(
-                initialTime: initialTime,
+                value: value,
                 minuteStep: 10,
                 onChanged: notifications.add,
               );
@@ -201,7 +201,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(positions(), [0, 9, 0]); // 오전 9시 00분, 5분은 0분으로 반올림.
 
-    updateParent(() => initialTime = const TimeOfDay(hour: 15, minute: 54));
+    updateParent(() => value = const TimeOfDay(hour: 15, minute: 54));
     await tester.pumpAndSettle();
     expect(positions(), [1, 3, 5]); // 오후 3시 50분.
     expect(

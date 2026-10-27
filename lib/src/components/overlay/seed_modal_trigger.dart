@@ -49,7 +49,7 @@ class SeedModalTrigger extends StatefulWidget {
       fromRight,
       skipAnimation,
       handleOnly;
-  final void Function(bool, SeedOverlayDismissReason)? onOpenChanged;
+  final SeedOverlayOpenChanged? onOpenChanged;
   final bool Function(SeedOverlayDismissReason)? canClose;
   final bool? closeOnInteractOutside, closeOnEscape;
   final List<SeedSheetSnapPoint>? snapPoints;
