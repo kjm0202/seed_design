@@ -172,7 +172,7 @@ void main() {
         );
         expect(fogs, findsNWidgets(2));
         for (final fog in tester.widgetList<SeedScrollFog>(fogs)) {
-          expect(fog.color, colors.bg.layerBasement);
+          expect(fog.color, colors.bg.layerDefault);
         }
         await _snapshot(tester, 'scroll-fog-start-${dark ? 'dark' : 'light'}');
         final scroll = tester.state<ScrollableState>(
@@ -204,10 +204,11 @@ void main() {
     expect(find.text('Action Button'), findsOneWidget);
     expect(find.text('Text Button'), findsOneWidget);
     expect(find.text('Toggle Button'), findsOneWidget);
+    expect(find.text('SeedPressable'), findsOneWidget);
     await _snapshot(tester, 'components-action-buttons-360-light');
     await _show(tester, find.text('Toggle Button'));
     expect(find.byType(SeedTextButton), findsOneWidget);
-    expect(find.byType(SeedToggleButton), findsNWidgets(3));
+    expect(find.byType(SeedToggleButton), findsNWidgets(2));
     await _snapshot(tester, 'components-buttons-360-light');
     await _show(tester, find.text('이용 안내'));
     await _snapshot(tester, 'components-text-button-360-light');
@@ -225,11 +226,11 @@ void main() {
     await tester.tap(find.text('키워드 알림 켜짐'));
     await tester.pumpAndSettle();
     expect(find.text('키워드 알림 꺼짐'), findsOneWidget);
-    expect(find.text('동네 소식 꺼짐'), findsOneWidget);
-    await _show(tester, find.text('동네 소식 꺼짐'));
-    await tester.tap(find.text('동네 소식 꺼짐'));
+    expect(find.text('관심 목록에 저장'), findsOneWidget);
+    await _show(tester, find.text('관심 목록에 저장'));
+    await tester.tap(find.text('관심 목록에 저장'));
     await tester.pumpAndSettle();
-    expect(find.text('동네 소식 켜짐'), findsOneWidget);
+    expect(find.text('관심 목록에 저장됨'), findsOneWidget);
     expect(find.text('키워드 알림 꺼짐'), findsOneWidget);
 
     await _show(tester, find.text('직거래 희망'));
@@ -265,7 +266,7 @@ void main() {
     await _mount(tester);
     await tester.tap(find.text('탐색 & 레이아웃'));
     await tester.pumpAndSettle();
-    await _show(tester, find.text('상단 내비게이션'));
+    await _show(tester, find.text('Top Navigation'));
     final demoHeader = find.descendant(
       of: find.byType(NavigationTab),
       matching: find.byType(SeedTopNavigation),
@@ -288,17 +289,21 @@ void main() {
     await _snapshot(tester, 'navigation-header-360-light');
     final share = find.bySemanticsLabel('모임 공유하기');
     await tester.tap(share);
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.text('모임 링크를 공유할 수 있어요'), findsOneWidget);
     await tester.tap(find.text('완료'));
-    await tester.pump();
+    await tester.pumpAndSettle();
+    expect(find.text('모임 링크를 공유할 수 있어요'), findsOneWidget);
+    expect(find.text('모임 설정을 저장했어요'), findsNothing);
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
     expect(find.text('모임 설정을 저장했어요'), findsOneWidget);
 
     await _show(tester, find.text('주말 러닝 모임'));
     expect(find.byType(SeedAvatarStack), findsOneWidget);
     expect(find.text('참여 이웃 5명'), findsOneWidget);
     expect(find.text('+2'), findsOneWidget);
-    await _show(tester, find.text('아바타와 참여자'));
+    await _show(tester, find.text('Avatar & Avatar Stack'));
     await _snapshot(tester, 'navigation-avatars-360-light');
     expect(tester.takeException(), isNull);
   });
@@ -351,7 +356,7 @@ void main() {
       await _show(tester, find.text('모임 설정'));
       await _show(tester, find.text('주말 러닝 모임'));
       expect(tester.takeException(), isNull, reason: 'navigation width=$width');
-      await _show(tester, find.text('아바타와 참여자'));
+      await _show(tester, find.text('Avatar & Avatar Stack'));
       if (width == 320) {
         await _snapshot(tester, 'navigation-avatars-320-light');
       }

@@ -34,7 +34,9 @@ class _SeedDesignCatalogAppState extends State<SeedDesignCatalogApp> {
       theme: SeedThemeData.light().toThemeData(),
       darkTheme: SeedThemeData.dark().toThemeData(),
       themeMode: _isDark ? ThemeMode.dark : ThemeMode.light,
-      home: CatalogHomePage(isDark: _isDark, onToggleTheme: _toggleTheme),
+      home: SeedSnackbarProvider(
+        child: CatalogHomePage(isDark: _isDark, onToggleTheme: _toggleTheme),
+      ),
     );
   }
 }
@@ -87,7 +89,7 @@ class _CatalogHomePageState extends State<CatalogHomePage> {
     final colors = context.seedColor;
 
     return Scaffold(
-      backgroundColor: colors.bg.layerBasement,
+      backgroundColor: colors.bg.layerDefault,
       appBar: SeedTopNavigation(
         titleText: 'SEED Design System',
         actions: [
@@ -102,40 +104,42 @@ class _CatalogHomePageState extends State<CatalogHomePage> {
           ),
         ],
       ),
-      bottomNavigationBar: SeedBottomNavigation(
-        currentIndex: _selectedTabIndex,
-        onTap: (index) {
-          setState(() => _selectedTabIndex = index);
-          _scrollToTop();
-        },
-        items: const [
-          SeedBottomNavigationItem(
-            label: '컴포넌트',
-            icon: Icon(Icons.widgets_outlined),
-            activeIcon: Icon(Icons.widgets),
-          ),
-          SeedBottomNavigationItem(
-            label: '피드백 & 상태',
-            icon: Icon(Icons.insights_outlined),
-            activeIcon: Icon(Icons.insights),
-            showNotificationDot: true,
-          ),
-          SeedBottomNavigationItem(
-            label: '입력 & 피커',
-            icon: Icon(Icons.edit_note_outlined),
-            activeIcon: Icon(Icons.edit_note),
-          ),
-          SeedBottomNavigationItem(
-            label: '탐색 & 레이아웃',
-            icon: Icon(Icons.view_quilt_outlined),
-            activeIcon: Icon(Icons.view_quilt),
-          ),
-          SeedBottomNavigationItem(
-            label: '오버레이',
-            icon: Icon(Icons.layers_outlined),
-            activeIcon: Icon(Icons.layers),
-          ),
-        ],
+      bottomNavigationBar: SeedSnackbarAvoidOverlap(
+        child: SeedBottomNavigation(
+          currentIndex: _selectedTabIndex,
+          onTap: (index) {
+            setState(() => _selectedTabIndex = index);
+            _scrollToTop();
+          },
+          items: const [
+            SeedBottomNavigationItem(
+              label: '컴포넌트',
+              icon: Icon(Icons.widgets_outlined),
+              activeIcon: Icon(Icons.widgets),
+            ),
+            SeedBottomNavigationItem(
+              label: '피드백 & 상태',
+              icon: Icon(Icons.insights_outlined),
+              activeIcon: Icon(Icons.insights),
+              showNotificationDot: true,
+            ),
+            SeedBottomNavigationItem(
+              label: '입력 & 피커',
+              icon: Icon(Icons.edit_note_outlined),
+              activeIcon: Icon(Icons.edit_note),
+            ),
+            SeedBottomNavigationItem(
+              label: '탐색 & 레이아웃',
+              icon: Icon(Icons.view_quilt_outlined),
+              activeIcon: Icon(Icons.view_quilt),
+            ),
+            SeedBottomNavigationItem(
+              label: '오버레이',
+              icon: Icon(Icons.layers_outlined),
+              activeIcon: Icon(Icons.layers),
+            ),
+          ],
+        ),
       ),
       floatingActionButton: SeedContextualFloatingButton(
         icon: const Icon(Icons.vertical_align_top_rounded),

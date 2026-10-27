@@ -12,41 +12,125 @@ class FeedbackTab extends StatefulWidget {
 }
 
 class _FeedbackTabState extends State<FeedbackTab> {
+  static const _mannerTemperatures = [
+    12.5,
+    30.0,
+    36.0,
+    36.5,
+    37.0,
+    40.0,
+    45.0,
+    55.0,
+    65.0,
+    80.0,
+  ];
   double _mannerTemp = 36.5;
   bool _isLiked = false;
   int _reactionCount = 12;
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.seedColor;
+    final typography = context.seedTypography;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SectionHeader(
           title: 'Manner Temperature',
-          subtitle: '당근 매너온도: 10단계 레벨 색상 및 이모지 반응형 게이지',
+          subtitle: '슬라이더로 온도를 바꾸며 색상과 표정의 변화를 확인해 보세요.',
         ),
-        SeedMannerTemp(temperature: _mannerTemp),
-        const SizedBox(height: SeedDimension.x4),
-        Row(
-          children: [
-            const Text('온도 조절: '),
-            Expanded(
-              child: SeedSlider(
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(SeedDimension.x4),
+          decoration: BoxDecoration(
+            color: colors.bg.layerDefault,
+            borderRadius: SeedBorderRadius.r3,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '매너온도',
+                style: typography.t2Regular.copyWith(
+                  color: colors.fg.neutralMuted,
+                ),
+              ),
+              const SizedBox(height: SeedDimension.x3),
+              Wrap(
+                spacing: SeedDimension.x4,
+                runSpacing: SeedDimension.x3,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  SeedMannerTemp(temperature: _mannerTemp, showEmoji: true),
+                  SeedMannerTempBadge(temperature: _mannerTemp),
+                ],
+              ),
+              const SizedBox(height: SeedDimension.x4),
+              SeedSlider(
                 value: _mannerTemp,
                 min: 0,
                 max: 99.9,
-                onChanged: (v) => setState(() => _mannerTemp = v),
+                step: 0.1,
+                fieldLabel: '온도 조절',
+                semanticsLabel: '매너온도 조절',
+                valueFormatter: (value) => '${value.toStringAsFixed(1)}°C',
+                onChanged: (value) =>
+                    setState(() => _mannerTemp = (value * 10).round() / 10),
               ),
-            ),
-          ],
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('0°C', style: typography.t1Regular),
+                  Text('99.9°C', style: typography.t1Regular),
+                ],
+              ),
+            ],
+          ),
         ),
-        const SizedBox(height: SeedDimension.x4),
+        const SizedBox(height: SeedDimension.x2),
+        Text(
+          '표정은 시스템 이모지로 표시합니다.',
+          style: typography.t1Regular.copyWith(color: colors.fg.neutralMuted),
+        ),
+        const SizedBox(height: SeedDimension.x6),
+        const SectionHeader(
+          title: 'Manner Temp Badge',
+          subtitle: '10단계 대표 온도를 누르면 미리보기에 바로 적용됩니다.',
+        ),
         Wrap(
           spacing: SeedDimension.x2,
           runSpacing: SeedDimension.x2,
-          children: [20.0, 36.5, 42.0, 55.0, 75.0, 99.0].map((t) {
-            return SeedMannerTempBadge(temperature: t);
-          }).toList(),
+          children: [
+            for (final temperature in _mannerTemperatures)
+              SeedPressable(
+                selected: _mannerTemp == temperature,
+                semanticsLabel: '매너온도 ${temperature.toStringAsFixed(1)}도로 설정',
+                focusBorderRadius: SeedBorderRadius.full,
+                onTap: () => setState(() => _mannerTemp = temperature),
+                builder: (context, isPressed) => Container(
+                  constraints: const BoxConstraints(minHeight: 44),
+                  padding: const EdgeInsets.all(SeedDimension.x1),
+                  decoration: BoxDecoration(
+                    color: isPressed
+                        ? colors.bg.neutralWeakPressed
+                        : colors.bg.layerDefault,
+                    borderRadius: SeedBorderRadius.full,
+                    border: Border.all(
+                      color: _mannerTemp == temperature
+                          ? colors.stroke.neutralSolid
+                          : colors.stroke.neutralWeak,
+                      width: 2,
+                    ),
+                  ),
+                  child: Center(
+                    widthFactor: 1,
+                    heightFactor: 1,
+                    child: SeedMannerTempBadge(temperature: temperature),
+                  ),
+                ),
+              ),
+          ],
         ),
         const SizedBox(height: SeedDimension.x6),
 
@@ -98,6 +182,81 @@ class _FeedbackTabState extends State<FeedbackTab> {
         const SizedBox(height: SeedDimension.x6),
 
         const SectionHeader(
+          title: 'Help Bubble Trigger',
+          subtitle: '버튼을 눌러 안내를 열고 닫습니다. 모바일에서도 사용할 수 있어요.',
+        ),
+        SeedHelpBubbleTrigger(
+          title: '버튼을 눌러 여는 도움말이에요',
+          description: '닫은 뒤에도 버튼을 누르면 다시 확인할 수 있어요.',
+          triggerBuilder: (_, open, toggle) => SeedButton(
+            label: '도움말 확인',
+            variant: SeedButtonVariant.ghost,
+            prefixIcon: const Icon(Icons.help_outline),
+            onPressed: toggle,
+          ),
+        ),
+        const SizedBox(height: SeedDimension.x6),
+
+        const SectionHeader(
+          title: 'Help Bubble Tooltip',
+          subtitle: '마우스를 올리거나 키보드로 포커스하면 안내가 열립니다.',
+        ),
+        SeedHelpBubbleTooltip(
+          title: '마우스와 키보드 포커스로 열려요',
+          child: SeedButton(
+            label: '툴팁 확인',
+            variant: SeedButtonVariant.ghost,
+            prefixIcon: const Icon(Icons.help_outline),
+            onPressed: () {},
+          ),
+        ),
+        const SizedBox(height: SeedDimension.x6),
+        const SectionHeader(
+          title: 'Snackbar',
+          subtitle: '안내·성공·오류 메시지입니다. 마우스를 올리거나 누르는 동안 표시 시간이 멈춥니다.',
+        ),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            SeedButton(
+              label: '스낵바 메시지',
+              variant: SeedButtonVariant.neutralWeak,
+              onPressed: () {
+                final controller = SeedSnackbarProvider.of(context);
+                controller.show(
+                  child: SeedSnackbar(
+                    message: '키워드 알림이 설정되었습니다.',
+                    actionLabel: '설정확인',
+                    onAction: controller.close,
+                  ),
+                );
+              },
+            ),
+            SeedButton(
+              label: '성공 안내',
+              onPressed: () => SeedSnackbarProvider.of(context).show(
+                child: const SeedSnackbar(
+                  message: '저장했어요.',
+                  variant: SeedSnackbarVariant.positive,
+                ),
+              ),
+            ),
+            SeedButton(
+              label: '오류 안내',
+              variant: SeedButtonVariant.criticalSolid,
+              onPressed: () => SeedSnackbarProvider.of(context).show(
+                child: const SeedSnackbar(
+                  message: '다시 시도해 주세요.',
+                  variant: SeedSnackbarVariant.critical,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: SeedDimension.x6),
+
+        const SectionHeader(
           title: 'Result Section',
           subtitle: '데이터 조회 결과 없음 또는 완료 상태 안내',
         ),
@@ -117,7 +276,7 @@ class _SkeletonPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const skeleton = Row(
+    return const Row(
       children: [
         SeedSkeleton.circle(size: 48),
         SizedBox(width: SeedDimension.x3),
@@ -132,19 +291,6 @@ class _SkeletonPreview extends StatelessWidget {
           ),
         ),
       ],
-    );
-
-    if (Theme.of(context).brightness == Brightness.dark) return skeleton;
-
-    // The light catalog background and skeleton share the neutralWeak color.
-    // A content surface keeps the placeholder visible throughout its shimmer.
-    return Container(
-      padding: const EdgeInsets.all(SeedDimension.x4),
-      decoration: BoxDecoration(
-        color: context.seedColor.bg.layerDefault,
-        borderRadius: SeedBorderRadius.r3,
-      ),
-      child: skeleton,
     );
   }
 }

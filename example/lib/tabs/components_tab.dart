@@ -15,7 +15,6 @@ class _ComponentsTabState extends State<ComponentsTab> {
   bool _loadingButton = false;
   bool _toggleBrandVal = true;
   bool _toggleNeutralVal = false;
-  bool _toggleSmallVal = false;
   int _selectedChipIndex = 0;
   bool _checkboxVal = true;
   bool _switchVal = true;
@@ -155,16 +154,6 @@ class _ComponentsTabState extends State<ComponentsTab> {
                     setState(() => _toggleNeutralVal = val),
               ),
             ),
-            _ButtonExample(
-              description: 'brandSolid · xsmall\n더 작은 크기로 표시한 알림 상태',
-              child: SeedToggleButton(
-                label: _toggleSmallVal ? '동네 소식 켜짐' : '동네 소식 꺼짐',
-                size: SeedToggleButtonSize.xsmall,
-                selected: _toggleSmallVal,
-                onSelectedChanged: (val) =>
-                    setState(() => _toggleSmallVal = val),
-              ),
-            ),
           ],
         ),
         const SizedBox(height: SeedDimension.x6),
@@ -200,7 +189,11 @@ class _ComponentsTabState extends State<ComponentsTab> {
             ),
           ],
         ),
-        const SizedBox(height: SeedDimension.x4),
+        const SizedBox(height: SeedDimension.x6),
+        const SectionHeader(
+          title: 'SeedPressable',
+          subtitle: '커스텀 콘텐츠에 누름·포커스·스케일 피드백을 적용합니다.',
+        ),
         SeedPressable(
           onTap: () {},
           child: Container(
@@ -217,9 +210,7 @@ class _ComponentsTabState extends State<ComponentsTab> {
               children: const [
                 Icon(Icons.touch_app_outlined),
                 SizedBox(width: SeedDimension.x2),
-                Expanded(
-                  child: Text('SeedPressable: 임의의 커스텀 카드에 당근 물리 스케일 피드백 부여'),
-                ),
+                Expanded(child: Text('카드를 눌러 스케일 피드백을 확인하세요.')),
               ],
             ),
           ),

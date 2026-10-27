@@ -25,20 +25,36 @@ class _NavigationTabState extends State<NavigationTab> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionHeader(title: 'Tabs', subtitle: 'Line 및 Chip 스타일 탭 바'),
-        SeedTabs(
+        const SectionHeader(
+          title: 'Tabs',
+          subtitle: '탭 선택·가로 스와이프로 콘텐츠를 전환합니다.',
+        ),
+        SeedTabsView(
+          key: const ValueKey('line-tabs-content'),
+          fill: true,
+          carousel: true,
+          dynamicHeight: true,
+          height: 80,
           selectedIndex: _selectedTopTab,
           variant: SeedTabsVariant.line,
           items: const [
             SeedTabItem(label: '홈'),
-            SeedTabItem(label: '동네생활', notificationCount: 3),
-            SeedTabItem(label: '내 근처', showNotificationDot: true),
-            SeedTabItem(label: '채팅', notificationCount: 12),
+            SeedTabItem(label: '동네생활', showNotificationDot: true),
+            SeedTabItem(label: '내 근처'),
+            SeedTabItem(label: '채팅'),
           ],
           onTabSelected: (index) => setState(() => _selectedTopTab = index),
+          children: const [
+            SizedBox(height: 80, child: Center(child: Text('홈 콘텐츠'))),
+            SizedBox(height: 160, child: Center(child: Text('동네생활 콘텐츠'))),
+            SizedBox(height: 100, child: Center(child: Text('내 근처 콘텐츠'))),
+            SizedBox(height: 80, child: Center(child: Text('채팅 콘텐츠'))),
+          ],
         ),
         const SizedBox(height: SeedDimension.x3),
-        SeedTabs(
+        SeedChipTabsView(
+          carousel: true,
+          height: 80,
           selectedIndex: _selectedChipTab,
           variant: SeedTabsVariant.chipSolid,
           items: const [
@@ -48,6 +64,12 @@ class _NavigationTabState extends State<NavigationTab> {
             SeedTabItem(label: '가격낮은순'),
           ],
           onTabSelected: (index) => setState(() => _selectedChipTab = index),
+          children: const [
+            Center(child: Text('추천 상품')),
+            Center(child: Text('최신 등록 상품')),
+            Center(child: Text('인기 상품')),
+            Center(child: Text('낮은 가격 상품')),
+          ],
         ),
         const SizedBox(height: SeedDimension.x6),
 
@@ -112,7 +134,7 @@ class _NavigationTabState extends State<NavigationTab> {
         const SizedBox(height: SeedDimension.x6),
 
         const SectionHeader(
-          title: '상단 내비게이션',
+          title: 'Top Navigation',
           subtitle: '모임 설정 화면의 뒤로 가기, 공유, 완료 동작',
         ),
         ClipRRect(
@@ -145,7 +167,7 @@ class _NavigationTabState extends State<NavigationTab> {
         const SizedBox(height: SeedDimension.x6),
 
         const SectionHeader(
-          title: '아바타와 참여자',
+          title: 'Avatar & Avatar Stack',
           subtitle: '개인·가게 프로필과 모임에 함께하는 이웃',
         ),
         Row(
@@ -257,7 +279,7 @@ class _NavigationTabState extends State<NavigationTab> {
         ),
         const SizedBox(height: SeedDimension.x3),
         Text(
-          '공식 도메인 프리셋 (Rootage 12종):',
+          '공식 도메인 프리셋 (Rootage ${SeedContentPlaceholderType.values.length}종):',
           style: context.seedTypography.t3Medium.copyWith(
             color: context.seedColor.fg.neutralSubtle,
           ),
@@ -266,42 +288,38 @@ class _NavigationTabState extends State<NavigationTab> {
         Wrap(
           spacing: SeedDimension.x2,
           runSpacing: SeedDimension.x2,
-          children: const [
-            SizedBox(
-              width: 72,
-              height: 72,
-              child: SeedContentPlaceholder(
-                type: SeedContentPlaceholderType.car,
+          children: [
+            for (final type in SeedContentPlaceholderType.values)
+              SizedBox(
+                width: 72,
+                child: Column(
+                  children: [
+                    SizedBox(
+                      height: 72,
+                      child: SeedContentPlaceholder(type: type),
+                    ),
+                    const SizedBox(height: SeedDimension.x1),
+                    Text(
+                      switch (type) {
+                        SeedContentPlaceholderType.defaultType => '기본',
+                        SeedContentPlaceholderType.buySell => '중고거래',
+                        SeedContentPlaceholderType.car => '자동차',
+                        SeedContentPlaceholderType.commerce => '커머스',
+                        SeedContentPlaceholderType.coupon => '쿠폰',
+                        SeedContentPlaceholderType.food => '음식',
+                        SeedContentPlaceholderType.group => '모임',
+                        SeedContentPlaceholderType.image => '이미지',
+                        SeedContentPlaceholderType.jobs => '구인구직',
+                        SeedContentPlaceholderType.business => '비즈니스',
+                        SeedContentPlaceholderType.post => '게시글',
+                        SeedContentPlaceholderType.realty => '부동산',
+                      },
+                      style: context.seedTypography.t2Regular,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
-            ),
-            SizedBox(
-              width: 72,
-              height: 72,
-              child: SeedContentPlaceholder(
-                type: SeedContentPlaceholderType.food,
-              ),
-            ),
-            SizedBox(
-              width: 72,
-              height: 72,
-              child: SeedContentPlaceholder(
-                type: SeedContentPlaceholderType.commerce,
-              ),
-            ),
-            SizedBox(
-              width: 72,
-              height: 72,
-              child: SeedContentPlaceholder(
-                type: SeedContentPlaceholderType.jobs,
-              ),
-            ),
-            SizedBox(
-              width: 72,
-              height: 72,
-              child: SeedContentPlaceholder(
-                type: SeedContentPlaceholderType.realty,
-              ),
-            ),
           ],
         ),
         const SizedBox(height: SeedDimension.x6),
@@ -342,6 +360,7 @@ class _NavigationTabState extends State<NavigationTab> {
         const SeedFooter(
           brandName: 'SEED',
           companyInfo: 'Flutter UI 라이브러리 · Apache-2.0',
+          copyright: '© ven0m.kr',
           policyLinks: [
             SeedFooterLink(label: '서비스 이용약관'),
             SeedFooterLink(label: '개인정보 처리방침'),

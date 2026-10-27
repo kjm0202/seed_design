@@ -80,7 +80,9 @@ void main() {
         expect(tester.takeException(), isNull);
 
         await tester.tap(
-          find.descendant(of: table, matching: find.byType(SeedInputButton)),
+          find
+              .descendant(of: table, matching: find.byType(SeedInputButton))
+              .first,
         );
         await tester.pumpAndSettle();
         await tester.tap(find.text('50개').last);
