@@ -114,22 +114,24 @@ SeedField(
 
 Buttons fit their content by default. Set `isFullWidth: true` to fill the parent’s width. Use `onPressed: null` or `enabled: false` to disable a button. Setting `loading: true` shows a loading indicator and prevents activation.
 
+Buttons default to `brandSolid`; badges default to `solid`. Use an explicit variant to retain another appearance. Set `disableOnLoading: false` when a loading button must remain actionable. `SeedBadgeAction` adds keyboard activation and button semantics to a badge’s `action` slot; provide its `semanticsLabel` and `onPressed`.
+
+`showSeedAlertDialog` requires an explicit action by default. Set `barrierDismissible: true` to allow dismissal by tapping the backdrop. Its default actions are stacked vertically and long content scrolls.
+
 Give icon-only buttons a `semanticsLabel` so screen readers can describe their action. If you pass a `TextEditingController` or `FocusNode` to an input, you are responsible for disposing of it.
 
 See the [example code](example/lib/tabs) for other components.
 
-## Manner temperature
+## Stateful UI and React feature counterparts
 
-```dart
-const SeedMannerTempBadge(temperature: 36.5);
+Use `SeedDatePicker` for single/range/multiple selection and month/two-month/week/continuous layouts; continuous calendars require `height`, `minHeight` or `maxHeight`. `SeedDatePickerController` navigates and focuses dates without selecting them.
 
-SeedMannerTemp(
-  temperature: 36.5,
-  emoteBuilder: (context, level) => Image.asset('assets/manner-$level.png'),
-);
-```
+`SeedSelect(multiple: true)`, `SeedSlider.range`, `SeedTextField`, `SeedFieldButton`, `SeedAccordion`, `SeedTabsView` and `SeedChipTabsView` provide their corresponding state and content behavior. Overlay trigger widgets provide controlled opening, placement, focus and dismissal policies. The catalog integrates these examples into its existing input, navigation, feedback and overlay tabs. See the [feature mapping](REACT_PARITY_2026-10-25.md).
 
-The badge shows only the temperature by default. Emote images are not included; supply your own through `emoteBuilder`. Set `showEmoji: true` to use system emoji, or `showProgress: true` to show the gauge.
+Attachments are UI-only. Supply entries and update progress/status through `SeedAttachmentDisplayField` or `SeedAttachmentController`; handle actual selection and uploading in your app. This package does not select, receive, validate or upload files.
+
+Attachment previews default to a limit of 10 entries. `enabled: false` blocks adding, retrying and reordering, while allowing removal of existing entries. Use `readOnly: true` to prevent removal as well; per-entry restrictions still apply.
+
 
 ## Run the example
 
@@ -146,6 +148,8 @@ flutter analyze
 flutter test
 cd example
 flutter test
+# Run against a booted iOS Simulator or Android Emulator:
+flutter test integration_test/continuous_calendar_test.dart -d <device-id>
 ```
 
 ## License

@@ -114,22 +114,24 @@ SeedField(
 
 버튼은 내용에 맞춰 너비가 정해집니다. 부모의 너비를 채우려면 `isFullWidth: true`를 지정하세요. `onPressed: null`이나 `enabled: false`로 비활성화할 수 있고, `loading: true`이면 로딩 표시와 함께 클릭이 막힙니다.
 
+버튼의 기본 variant는 `brandSolid`, 배지는 `solid`입니다. 다른 외형을 유지하려면 variant를 명시하세요. 로딩 중에도 동작해야 하는 버튼에는 `disableOnLoading: false`를 지정하세요. 배지의 `action`에 `SeedBadgeAction`을 넣고 `semanticsLabel`과 `onPressed`를 지정하면 키보드 조작과 버튼 의미론을 제공합니다.
+
+`showSeedAlertDialog`는 기본적으로 명시적인 액션으로 닫습니다. 배경 탭으로 닫으려면 `barrierDismissible: true`를 지정하세요. 기본 액션은 세로로 배치되며 긴 내용은 스크롤됩니다.
+
 아이콘만 있는 버튼에는 화면 읽기 프로그램이 용도를 안내할 수 있도록 `semanticsLabel`을 넣어주세요. 입력창에 직접 전달한 `TextEditingController`와 `FocusNode`는 사용한 쪽에서 해제해야 합니다.
 
 다른 컴포넌트의 사용법은 [예제 코드](example/lib/tabs)에서 확인할 수 있습니다.
 
-## 매너온도
+## 상태·콘텐츠를 포함한 UI
 
-```dart
-const SeedMannerTempBadge(temperature: 36.5);
+`SeedDatePicker`는 단일·범위·다중 선택과 월·두 달·주·연속 보기를 지원합니다. 연속 보기에는 `height`, `minHeight`, `maxHeight` 중 하나가 필요합니다. `SeedDatePickerController`로 선택을 바꾸지 않고 날짜 이동·포커스를 제어할 수 있습니다.
 
-SeedMannerTemp(
-  temperature: 36.5,
-  emoteBuilder: (context, level) => Image.asset('assets/manner-$level.png'),
-);
-```
+`SeedSelect(multiple: true)`, `SeedSlider.range`, `SeedTextField`, `SeedFieldButton`, `SeedAccordion`, `SeedTabsView`, `SeedChipTabsView`로 상태와 콘텐츠를 함께 구성할 수 있습니다. 오버레이 trigger는 개폐 상태·배치·포커스·닫기 정책을 제공합니다. 예제는 기존 입력·탐색·피드백·오버레이 탭에 통합되어 있습니다. [기능 대응표](REACT_PARITY_2026-10-25.md)를 참고하세요.
 
-기본 배지는 온도만 표시합니다. 표정 이미지는 포함되어 있지 않으므로 `emoteBuilder`로 직접 넣어주세요. 시스템 이모지는 `showEmoji: true`, 게이지는 `showProgress: true`로 켤 수 있습니다.
+첨부는 UI만 제공합니다. `SeedAttachmentDisplayField`/`SeedAttachmentController`에 외부 항목과 진행률·상태를 전달하세요. 실제 파일 선택·OS drop·파일 검사·업로드는 앱이 담당하며 이 패키지는 수행하지 않습니다.
+
+첨부 미리보기의 기본 한도는 10개입니다. `enabled: false`는 추가·재시도·재정렬을 막되 기존 항목의 삭제는 허용합니다. 삭제도 막으려면 `readOnly: true`를 지정하세요. 개별 항목의 제한은 계속 적용됩니다.
+
 
 ## 예제 실행
 
@@ -146,6 +148,8 @@ flutter analyze
 flutter test
 cd example
 flutter test
+# 실행 중인 iOS/Android 시뮬레이터에서 검증:
+flutter test integration_test/continuous_calendar_test.dart -d <device-id>
 ```
 
 ## 라이선스
