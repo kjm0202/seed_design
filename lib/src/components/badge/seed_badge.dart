@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../foundations/colors/seed_color_scheme.dart';
 import '../../foundations/colors/seed_palette.dart';
+import '../../foundations/feedback/seed_scale_feedback.dart';
 import '../../foundations/radius/seed_radius.dart';
 import '../../theme/seed_theme.dart';
 
@@ -72,7 +73,7 @@ class SeedBadge extends StatelessWidget {
     this.prefix,
     this.action,
     this.tone = SeedBadgeTone.neutral,
-    this.variant = SeedBadgeVariant.weak,
+    this.variant = SeedBadgeVariant.solid,
     this.size = SeedBadgeSize.medium,
     this.maxWidth,
   });
@@ -100,11 +101,8 @@ class SeedBadge extends StatelessWidget {
         children: [
           if (prefix != null) ...[
             IconTheme(
-              data: IconThemeData(
-                color: fgColor,
-                size: size.iconSize,
-              ),
-              child: prefix!,
+              data: IconThemeData(color: fgColor, size: size.iconSize),
+              child: SizedBox.square(dimension: size.iconSize, child: prefix!),
             ),
             const SizedBox(width: 2.0),
           ],
@@ -119,11 +117,8 @@ class SeedBadge extends StatelessWidget {
           if (action != null) ...[
             const SizedBox(width: 2.0),
             IconTheme(
-              data: IconThemeData(
-                color: fgColor,
-                size: size.iconSize,
-              ),
-              child: action!,
+              data: IconThemeData(color: fgColor, size: size.iconSize),
+              child: SizedBox.square(dimension: size.iconSize, child: action!),
             ),
           ],
         ],
@@ -249,4 +244,33 @@ class SeedBadge extends StatelessWidget {
         }
     }
   }
+}
+
+/// Keyboard-accessible action for [SeedBadge.action].
+///
+/// Supply a label describing the action, such as 'Remove category'. The badge
+/// supplies the icon dimensions and colors.
+class SeedBadgeAction extends StatelessWidget {
+  const SeedBadgeAction({
+    super.key,
+    required this.child,
+    required this.onPressed,
+    required this.semanticsLabel,
+    this.focusNode,
+  });
+
+  final Widget child;
+  final VoidCallback? onPressed;
+  final String semanticsLabel;
+  final FocusNode? focusNode;
+
+  @override
+  Widget build(BuildContext context) => SeedPressable(
+    onTap: onPressed,
+    enabled: onPressed != null,
+    semanticsLabel: semanticsLabel,
+    focusNode: focusNode,
+    focusBorderRadius: SeedBorderRadius.r1,
+    child: child,
+  );
 }

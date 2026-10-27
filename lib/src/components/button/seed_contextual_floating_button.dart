@@ -30,22 +30,27 @@ class SeedContextualFloatingButton extends StatelessWidget {
     this.icon,
     this.label,
     required this.onPressed,
-    this.tone = SeedContextualFloatingButtonTone.layer,
+    this.tone = SeedContextualFloatingButtonTone.solid,
     this.isBrand = false,
     this.loading = false,
     this.enabled = true,
-  }) : assert(icon != null || label != null, 'Must provide icon or label.');
+  }) : assert(icon != null || label != null, 'Must provide icon or label.'),
+       assert(
+         label != null || (semanticsLabel != null && semanticsLabel != ''),
+         'Icon-only buttons require a semanticsLabel.',
+       );
 
   const SeedContextualFloatingButton.iconOnly({
     super.key,
-    this.semanticsLabel,
+    required String this.semanticsLabel,
     required Widget this.icon,
     required this.onPressed,
-    this.tone = SeedContextualFloatingButtonTone.layer,
+    this.tone = SeedContextualFloatingButtonTone.solid,
     this.isBrand = false,
     this.loading = false,
     this.enabled = true,
-  }) : label = null;
+  }) : assert(semanticsLabel != ''),
+       label = null;
 
   @override
   Widget build(BuildContext context) {
@@ -107,11 +112,11 @@ class SeedContextualFloatingButton extends StatelessWidget {
                 color: fgColor,
                 trackColor: tone == SeedContextualFloatingButtonTone.solid
                     ? (colors.isDark
-                        ? SeedPalette.gray700Dark
-                        : SeedPalette.gray700Light)
+                          ? SeedPalette.gray700Dark
+                          : SeedPalette.gray700Light)
                     : (colors.isDark
-                        ? SeedPalette.gray500Dark
-                        : SeedPalette.gray500Light),
+                          ? SeedPalette.gray500Dark
+                          : SeedPalette.gray500Light),
               ),
             ] else if (icon != null) ...[
               IconTheme(

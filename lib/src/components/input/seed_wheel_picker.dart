@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../foundations/dimensions/seed_dimension.dart';
 import '../../foundations/radius/seed_radius.dart';
+import '../../foundations/motion/seed_motion.dart';
 import '../../theme/seed_theme.dart';
 import '../layout/seed_scroll_fog.dart';
 
@@ -24,69 +25,207 @@ abstract class SeedWheelColumn {
   static SeedWheelColumn typed<T>({
     required List<T> items,
     int initialIndex = 0,
+    int? index,
     ValueChanged<int>? onChanged,
+    void Function(int index, int stepDelta)? onStepChanged,
     Widget Function(BuildContext context, T item, bool isSelected)? itemBuilder,
-    double itemExtent = 44.0,
+    double? itemExtent,
+    double? width,
+    AlignmentGeometry alignment = Alignment.center,
     int flex = 1,
+    bool looping = false,
+    bool enabled = true,
+    bool readOnly = false,
+    String? semanticsLabel,
+    String Function(T)? semanticsValueFormatter,
+    ValueChanged<int>? onIndexChanged,
   }) {
     return _SeedWheelColumnImpl<T>(
       items: items,
       initialIndex: initialIndex,
+      index: index,
       onChanged: onChanged,
+      onStepChanged: onStepChanged,
       itemBuilder: itemBuilder,
-      itemExtent: itemExtent,
+      rowExtent: itemExtent,
+      width: width,
+      alignment: alignment,
       flex: flex,
+      looping: looping,
+      enabled: enabled,
+      readOnly: readOnly,
+      semanticsLabel: semanticsLabel,
+      semanticsValueFormatter: semanticsValueFormatter,
+      onIndexChanged: onIndexChanged,
+    );
+  }
+
+  static SeedWheelColumn value<T>({
+    required List<T> items,
+    required T value,
+    ValueChanged<T>? onValueChanged,
+    void Function(T value, int stepDelta)? onValueStepChanged,
+    Widget Function(BuildContext, T, bool)? itemBuilder,
+    double? width,
+    AlignmentGeometry alignment = Alignment.center,
+    int flex = 1,
+    bool looping = false,
+    bool enabled = true,
+    bool readOnly = false,
+    String? semanticsLabel,
+    String Function(T)? semanticsValueFormatter,
+  }) {
+    assert(items.contains(value));
+    return typed<T>(
+      items: items,
+      index: items.indexOf(value),
+      onChanged: (index) => onValueChanged?.call(items[index]),
+      onStepChanged: onValueStepChanged == null
+          ? null
+          : (index, stepDelta) =>
+                onValueStepChanged(items[index], stepDelta),
+      itemBuilder: itemBuilder,
+      width: width,
+      alignment: alignment,
+      flex: flex,
+      looping: looping,
+      enabled: enabled,
+      readOnly: readOnly,
+      semanticsLabel: semanticsLabel,
+      semanticsValueFormatter: semanticsValueFormatter,
     );
   }
 
   int get itemCount;
   int get initialIndex;
+  int? get index => null;
+
+  /// Called once when scrolling settles on a different value.
   ValueChanged<int>? get onChanged;
+
+  /// Called once when scrolling settles, providing both the resolved index and
+  /// the signed step delta traversed on the wheel.
+  void Function(int index, int stepDelta)? get onStepChanged => null;
   double get itemExtent;
+  double? get width => null;
+  AlignmentGeometry get alignment => Alignment.center;
   int get flex;
 
+  /// Whether the column repeats across its first/last item boundary.
+  /// Change callbacks still report indices in `0 .. itemCount - 1`.
+  bool get looping => false;
+  bool get enabled => true;
+  bool get readOnly => false;
+  String? get semanticsLabel => null;
+  ValueChanged<int>? get onIndexChanged => null;
+  String semanticValue(int index) => '$index';
+
   Widget buildItem(BuildContext context, int index, bool isSelected);
+
+  /// Resolves the row height, preserving custom column implementations.
+  double effectiveItemExtent(SeedWheelPickerSize size) => itemExtent;
+
+  Widget buildItemForSize(
+    BuildContext context,
+    int index,
+    bool isSelected,
+    SeedWheelPickerSize size,
+  ) => buildItem(context, index, isSelected);
 }
 
 class _SeedWheelColumnImpl<T> extends SeedWheelColumn {
   const _SeedWheelColumnImpl({
     required this.items,
     this.initialIndex = 0,
+    this.index,
     this.onChanged,
+    this.onStepChanged,
     this.itemBuilder,
-    this.itemExtent = 44.0,
+    this.rowExtent,
+    this.width,
+    this.alignment = Alignment.center,
     this.flex = 1,
+    this.looping = false,
+    this.enabled = true,
+    this.readOnly = false,
+    this.semanticsLabel,
+    this.semanticsValueFormatter,
+    this.onIndexChanged,
   });
 
   final List<T> items;
   @override
   final int initialIndex;
   @override
+  final int? index;
+  @override
   final ValueChanged<int>? onChanged;
+  @override
+  final void Function(int index, int stepDelta)? onStepChanged;
   final Widget Function(BuildContext context, T item, bool isSelected)?
   itemBuilder;
   @override
-  final double itemExtent;
+  double get itemExtent => rowExtent ?? SeedWheelPickerSize.medium.itemExtent;
+  final double? rowExtent;
+  @override
+  final double? width;
+  @override
+  final AlignmentGeometry alignment;
+
+  @override
+  double effectiveItemExtent(SeedWheelPickerSize size) =>
+      rowExtent ?? size.itemExtent;
   @override
   final int flex;
+  @override
+  final bool looping;
+  @override
+  final bool enabled;
+  @override
+  final bool readOnly;
+  @override
+  final String? semanticsLabel;
+  final String Function(T)? semanticsValueFormatter;
+  @override
+  final ValueChanged<int>? onIndexChanged;
+  @override
+  String semanticValue(int index) =>
+      semanticsValueFormatter?.call(items[index]) ?? items[index].toString();
 
   @override
   int get itemCount => items.length;
 
   @override
-  Widget buildItem(BuildContext context, int index, bool isSelected) {
+  Widget buildItem(BuildContext context, int index, bool isSelected) =>
+      buildItemForSize(context, index, isSelected, SeedWheelPickerSize.medium);
+
+  @override
+  Widget buildItemForSize(
+    BuildContext context,
+    int index,
+    bool isSelected,
+    SeedWheelPickerSize size,
+  ) {
     final item = items[index];
     if (itemBuilder != null) {
       return itemBuilder!(context, item, isSelected);
     }
     final colors = context.seedColor;
     final typography = context.seedTypography;
-    return Center(
-      child: Text(
-        item.toString(),
-        style: isSelected
-            ? typography.t10Medium.copyWith(color: colors.fg.neutral)
-            : typography.t10Medium.copyWith(color: colors.fg.disabled),
+    final style = size == SeedWheelPickerSize.small
+        ? typography.t7Medium
+        : typography.t10Medium;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: SeedDimension.x4),
+      child: Align(
+        alignment: alignment,
+        child: Text(
+          item.toString(),
+          textScaler: TextScaler.noScaling,
+          style: isSelected
+              ? style.copyWith(color: colors.fg.neutral)
+              : style.copyWith(color: colors.fg.disabled),
+        ),
       ),
     );
   }
@@ -107,6 +246,9 @@ class SeedWheelPicker extends StatefulWidget {
     this.height,
     this.showFog = true,
     this.showIndicator = true,
+    this.enabled = true,
+    this.readOnly = false,
+    this.semanticsLabel,
   });
 
   /// The columns of data to display in the wheel picker.
@@ -124,6 +266,11 @@ class SeedWheelPicker extends StatefulWidget {
   /// Whether to display the centered selection indicator.
   final bool showIndicator;
 
+  /// Whether scrolling, item selection and focus are allowed.
+  final bool enabled;
+  final bool readOnly;
+  final String? semanticsLabel;
+
   double get effectiveHeight => height ?? size.height;
 
   @override
@@ -133,6 +280,10 @@ class SeedWheelPicker extends StatefulWidget {
 class _SeedWheelPickerState extends State<SeedWheelPicker> {
   late List<FixedExtentScrollController> _controllers;
   late List<int> _selectedIndices;
+  late List<int> _committedIndices;
+  late List<int> _selectedScrollIndices;
+  late List<int> _committedScrollIndices;
+  final Map<FixedExtentScrollController, FocusNode> _focusNodes = {};
 
   @override
   void initState() {
@@ -141,10 +292,14 @@ class _SeedWheelPickerState extends State<SeedWheelPicker> {
       return FixedExtentScrollController(initialItem: _validIndex(col));
     }).toList();
     _selectedIndices = widget.columns.map(_validIndex).toList();
+    _committedIndices = List.of(_selectedIndices);
+    _selectedScrollIndices = List.of(_selectedIndices);
+    _committedScrollIndices = List.of(_selectedIndices);
   }
 
-  int _validIndex(SeedWheelColumn col) =>
-      col.itemCount == 0 ? 0 : col.initialIndex.clamp(0, col.itemCount - 1);
+  int _validIndex(SeedWheelColumn col) => col.itemCount == 0
+      ? 0
+      : (col.index ?? col.initialIndex).clamp(0, col.itemCount - 1);
 
   @override
   void didUpdateWidget(SeedWheelPicker oldWidget) {
@@ -152,42 +307,81 @@ class _SeedWheelPickerState extends State<SeedWheelPicker> {
     final oldControllers = _controllers;
     final updatedControllers = <FixedExtentScrollController>[];
     final updatedSelections = <int>[];
+    final updatedCommits = <int>[];
+    final updatedScrollSelections = <int>[];
+    final updatedScrollCommits = <int>[];
     for (var i = 0; i < widget.columns.length; i++) {
       final column = widget.columns[i];
+      final targetIndex = _validIndex(column);
       final keepSelection =
           i < oldWidget.columns.length &&
           column.itemCount == oldWidget.columns[i].itemCount &&
-          column.itemExtent == oldWidget.columns[i].itemExtent &&
-          _validIndex(column) == _validIndex(oldWidget.columns[i]);
+          column.looping == oldWidget.columns[i].looping &&
+          column.effectiveItemExtent(widget.size) ==
+              oldWidget.columns[i].effectiveItemExtent(oldWidget.size) &&
+          ((_selectedIndices[i] == targetIndex &&
+                  (column.index != null ||
+                      targetIndex == _validIndex(oldWidget.columns[i]) ||
+                      _committedIndices[i] == targetIndex)) ||
+              (targetIndex == _validIndex(oldWidget.columns[i]) &&
+                  column.index == null) ||
+              (oldControllers[i].hasClients &&
+                  oldControllers[i].position.isScrollingNotifier.value));
 
       if (keepSelection) {
         // Parent rebuilds must not reset another column's user selection.
         updatedControllers.add(oldControllers[i]);
         updatedSelections.add(_selectedIndices[i]);
+        updatedCommits.add(_committedIndices[i]);
+        updatedScrollSelections.add(_selectedScrollIndices[i]);
+        updatedScrollCommits.add(_committedScrollIndices[i]);
       } else {
         updatedControllers.add(
-          FixedExtentScrollController(initialItem: _validIndex(column)),
+          FixedExtentScrollController(initialItem: targetIndex),
         );
-        updatedSelections.add(_validIndex(column));
+        updatedSelections.add(targetIndex);
+        updatedCommits.add(targetIndex);
+        updatedScrollSelections.add(targetIndex);
+        updatedScrollCommits.add(targetIndex);
       }
     }
 
     // The previous ListWheelScrollView remains attached for this frame.
     for (final controller in oldControllers) {
       if (!updatedControllers.contains(controller)) {
-        WidgetsBinding.instance.addPostFrameCallback(
-          (_) => controller.dispose(),
-        );
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _focusNodes.remove(controller)?.dispose();
+          controller.dispose();
+        });
       }
     }
     _controllers = updatedControllers;
     _selectedIndices = updatedSelections;
+    _committedIndices = updatedCommits;
+    _selectedScrollIndices = updatedScrollSelections;
+    _committedScrollIndices = updatedScrollCommits;
+    if (oldWidget.enabled && !widget.enabled) {
+      // Cancel any in-flight activity and restore the last confirmed value.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || widget.enabled) return;
+        for (var i = 0; i < _controllers.length; i++) {
+          if (_controllers[i].hasClients) {
+            _controllers[i].jumpToItem(_committedScrollIndices[i]);
+          }
+        }
+      });
+      _selectedIndices = List.of(_committedIndices);
+      _selectedScrollIndices = List.of(_committedScrollIndices);
+    }
   }
 
   @override
   void dispose() {
     for (final c in _controllers) {
       c.dispose();
+    }
+    for (final node in _focusNodes.values) {
+      node.dispose();
     }
     super.dispose();
   }
@@ -196,10 +390,10 @@ class _SeedWheelPickerState extends State<SeedWheelPicker> {
   Widget build(BuildContext context) {
     final colors = context.seedColor;
     final itemHeight = widget.columns.isNotEmpty
-        ? widget.columns.first.itemExtent
+        ? widget.columns.first.effectiveItemExtent(widget.size)
         : widget.size.itemExtent;
     final pickerHeight = widget.effectiveHeight;
-    final fogHeight = (pickerHeight * 0.4).clamp(0.0, 132.0);
+    final fogHeight = (pickerHeight * 0.4).clamp(0.0, itemHeight * 3);
 
     return Container(
       color: colors.bg.layerFloating,
@@ -222,49 +416,239 @@ class _SeedWheelPickerState extends State<SeedWheelPicker> {
             ),
 
           // Columns
-          Row(
-            children: List.generate(widget.columns.length, (colIdx) {
-              final col = widget.columns[colIdx];
-              return Expanded(
-                flex: col.flex,
-                child: NotificationListener<ScrollNotification>(
-                  onNotification: (notification) {
-                    if (notification is ScrollEndNotification) {
-                      HapticFeedback.selectionClick();
+          Semantics(
+            label: widget.semanticsLabel,
+            enabled: widget.enabled,
+            child: ExcludeFocus(
+              excluding: !widget.enabled,
+              child: IgnorePointer(
+                ignoring: !widget.enabled,
+                child: Row(
+                  children: List.generate(widget.columns.length, (colIdx) {
+                    final col = widget.columns[colIdx];
+                    final enabled = widget.enabled && col.enabled;
+                    final editable =
+                        enabled && !widget.readOnly && !col.readOnly;
+                    final controller = _controllers[colIdx];
+                    final selected = _selectedIndices[colIdx];
+                    final canIncrease =
+                        editable &&
+                        col.itemCount > 0 &&
+                        (col.looping || selected < col.itemCount - 1);
+                    final canDecrease =
+                        editable &&
+                        col.itemCount > 0 &&
+                        (col.looping || selected > 0);
+                    final focusNode = _focusNodes.putIfAbsent(
+                      controller,
+                      FocusNode.new,
+                    );
+                    void move(int target) {
+                      if (!editable || col.itemCount == 0) return;
+                      controller.animateToItem(
+                        col.looping
+                            ? target
+                            : target.clamp(0, col.itemCount - 1),
+                        duration: SeedDuration.d3,
+                        curve: SeedCurves.easing,
+                      );
                     }
-                    return false;
-                  },
-                  child: ListWheelScrollView.useDelegate(
-                    // A new controller means an externally supplied selection
-                    // or item count changed. Reset the wheel's Scrollable state
-                    // so its old scroll offset cannot override initialItem.
-                    key: ObjectKey(_controllers[colIdx]),
-                    controller: _controllers[colIdx],
-                    itemExtent: col.itemExtent,
-                    perspective: 0.003,
-                    diameterRatio: 1.8,
-                    physics: const FixedExtentScrollPhysics(),
-                    onSelectedItemChanged: (index) {
-                      setState(() {
-                        _selectedIndices[colIdx] = index;
-                      });
-                      col.onChanged?.call(index);
-                    },
-                    childDelegate: ListWheelChildBuilderDelegate(
-                      childCount: col.itemCount,
-                      builder: (context, index) {
-                        final isSelected = _selectedIndices[colIdx] == index;
-                        // Wheel slots have a tight itemExtent height. Center
-                        // custom content within the slot, just like defaults.
-                        return Center(
-                          child: col.buildItem(context, index, isSelected),
-                        );
-                      },
-                    ),
-                  ),
+
+                    final columnChild = Semantics(
+                      label: col.semanticsLabel,
+                      value: col.itemCount == 0
+                          ? null
+                          : col.semanticValue(_selectedIndices[colIdx]),
+                      enabled: enabled,
+                      readOnly: widget.readOnly || col.readOnly,
+                      increasedValue: canIncrease
+                          ? col.semanticValue((selected + 1) % col.itemCount)
+                          : null,
+                      decreasedValue: canDecrease
+                          ? col.semanticValue((selected - 1) % col.itemCount)
+                          : null,
+                      onIncrease: canIncrease
+                          ? () => move(controller.selectedItem + 1)
+                          : null,
+                      onDecrease: canDecrease
+                          ? () => move(controller.selectedItem - 1)
+                          : null,
+                      child: Focus(
+                        focusNode: focusNode,
+                        canRequestFocus: enabled,
+                        onKeyEvent: (_, event) {
+                          if (!editable || event is! KeyDownEvent) {
+                            return KeyEventResult.ignored;
+                          }
+                          final key = event.logicalKey;
+                          if (key == LogicalKeyboardKey.arrowDown) {
+                            move(controller.selectedItem + 1);
+                          } else if (key == LogicalKeyboardKey.arrowUp) {
+                            move(controller.selectedItem - 1);
+                          } else if (key == LogicalKeyboardKey.home) {
+                            move(0);
+                          } else if (key == LogicalKeyboardKey.end) {
+                            move(col.itemCount - 1);
+                          } else {
+                            return KeyEventResult.ignored;
+                          }
+                          return KeyEventResult.handled;
+                        },
+                        child: IgnorePointer(
+                          ignoring: !editable,
+                          child: NotificationListener<ScrollNotification>(
+                            onNotification: (notification) {
+                              final scrollMoved =
+                                  _committedScrollIndices[colIdx] !=
+                                  _selectedScrollIndices[colIdx];
+                              final indexChanged =
+                                  _committedIndices[colIdx] !=
+                                  _selectedIndices[colIdx];
+                              if (notification is ScrollEndNotification &&
+                                  notification.depth == 0 &&
+                                  editable &&
+                                  (indexChanged ||
+                                      (col.looping &&
+                                          scrollMoved &&
+                                          col.onStepChanged != null))) {
+                                final index = _selectedIndices[colIdx];
+                                final stepDelta =
+                                    _selectedScrollIndices[colIdx] -
+                                    _committedScrollIndices[colIdx];
+                                _committedIndices[colIdx] = index;
+                                _committedScrollIndices[colIdx] =
+                                    _selectedScrollIndices[colIdx];
+                                HapticFeedback.selectionClick();
+                                col.onStepChanged?.call(index, stepDelta);
+                                if (indexChanged || col.onStepChanged == null) {
+                                  col.onChanged?.call(index);
+                                }
+                                if (col.index != null) {
+                                  WidgetsBinding.instance.addPostFrameCallback((
+                                    _,
+                                  ) {
+                                    if (!mounted ||
+                                        colIdx >= widget.columns.length) {
+                                      return;
+                                    }
+                                    final current = widget.columns[colIdx];
+                                    final target = _validIndex(current);
+                                    if (current.index != null &&
+                                        _selectedIndices[colIdx] != target) {
+                                      setState(() {
+                                        _selectedIndices[colIdx] = target;
+                                        _committedIndices[colIdx] = target;
+                                        _selectedScrollIndices[colIdx] = target;
+                                        _committedScrollIndices[colIdx] =
+                                            target;
+                                      });
+                                      if (_controllers[colIdx].hasClients) {
+                                        _controllers[colIdx].jumpToItem(target);
+                                      }
+                                    }
+                                  });
+                                }
+                              }
+                              return false;
+                            },
+                            child: ListWheelScrollView.useDelegate(
+                              // A new controller means an externally supplied selection
+                              // or item count changed. Reset the wheel's Scrollable state
+                              // so its old scroll offset cannot override initialItem.
+                              key: ObjectKey(_controllers[colIdx]),
+                              controller: _controllers[colIdx],
+                              itemExtent: col.effectiveItemExtent(widget.size),
+                              perspective: 0.003,
+                              diameterRatio: 1.8,
+                              physics: editable
+                                  ? const FixedExtentScrollPhysics()
+                                  : const NeverScrollableScrollPhysics(),
+                              onSelectedItemChanged: (scrollIndex) {
+                                if (!editable) return;
+                                final prevScrollIndex =
+                                    _selectedScrollIndices[colIdx];
+                                final nextIndex =
+                                    col.looping && col.itemCount > 0
+                                    ? scrollIndex % col.itemCount
+                                    : scrollIndex;
+                                setState(() {
+                                  _selectedScrollIndices[colIdx] = scrollIndex;
+                                  _selectedIndices[colIdx] = nextIndex;
+                                });
+                                if (col.onIndexChanged != null &&
+                                    col.itemCount > 0) {
+                                  final step = scrollIndex >= prevScrollIndex
+                                      ? 1
+                                      : -1;
+                                  for (
+                                    var s = prevScrollIndex + step;
+                                    step > 0
+                                        ? s <= scrollIndex
+                                        : s >= scrollIndex;
+                                    s += step
+                                  ) {
+                                    col.onIndexChanged!(
+                                      col.looping ? s % col.itemCount : s,
+                                    );
+                                  }
+                                }
+                              },
+                              childDelegate: ListWheelChildBuilderDelegate(
+                                childCount: col.looping && col.itemCount > 0
+                                    ? null
+                                    : col.itemCount,
+                                builder: (context, scrollIndex) {
+                                  final index = col.looping
+                                      ? scrollIndex % col.itemCount
+                                      : scrollIndex;
+                                  final isSelected =
+                                      _selectedIndices[colIdx] == index;
+                                  // Wheel slots have a tight itemExtent height. Center
+                                  // custom content within the slot, just like defaults.
+                                  return GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTap: editable
+                                        ? () {
+                                            final controller =
+                                                _controllers[colIdx];
+                                            if (controller
+                                                .position
+                                                .isScrollingNotifier
+                                                .value) {
+                                              return;
+                                            }
+                                            focusNode.requestFocus();
+                                            controller.animateToItem(
+                                              scrollIndex,
+                                              duration: SeedDuration.d4,
+                                              curve: SeedCurves.easing,
+                                            );
+                                          }
+                                        : null,
+                                    child: Center(
+                                      child: col.buildItemForSize(
+                                        context,
+                                        index,
+                                        enabled && isSelected,
+                                        widget.size,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                    if (col.width != null) {
+                      return SizedBox(width: col.width, child: columnChild);
+                    }
+                    return Expanded(flex: col.flex, child: columnChild);
+                  }),
                 ),
-              );
-            }),
+              ),
+            ),
           ),
 
           // Top scroll fog

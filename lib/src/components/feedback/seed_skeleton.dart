@@ -6,28 +6,52 @@ import '../../foundations/motion/seed_motion.dart';
 import '../../foundations/colors/seed_palette.dart';
 import '../../theme/seed_theme.dart';
 
+enum SeedSkeletonTone { neutral, magic }
+
+enum SeedSkeletonRadius {
+  r0,
+  r8,
+  r16,
+  full;
+
+  BorderRadius get borderRadius => switch (this) {
+    SeedSkeletonRadius.r0 => BorderRadius.zero,
+    SeedSkeletonRadius.r8 => SeedBorderRadius.r2,
+    SeedSkeletonRadius.r16 => SeedBorderRadius.r4,
+    SeedSkeletonRadius.full => SeedBorderRadius.full,
+  };
+}
+
 /// Skeleton component of SEED Design System.
 ///
 /// Provides animated shimmer placeholders while content is loading.
 class SeedSkeleton extends StatefulWidget {
   final double? width;
   final double? height;
+  final SeedSkeletonRadius radius;
   final BorderRadius? borderRadius;
   final BoxShape shape;
+  final SeedSkeletonTone tone;
 
   const SeedSkeleton({
     super.key,
     this.width,
     this.height,
+    this.radius = SeedSkeletonRadius.r8,
     this.borderRadius,
     this.shape = BoxShape.rectangle,
+    this.tone = SeedSkeletonTone.neutral,
   });
 
-  const SeedSkeleton.circle({super.key, required double size})
-    : width = size,
-      height = size,
-      borderRadius = null,
-      shape = BoxShape.circle;
+  const SeedSkeleton.circle({
+    super.key,
+    required double size,
+    this.tone = SeedSkeletonTone.neutral,
+  }) : width = size,
+       height = size,
+       radius = SeedSkeletonRadius.full,
+       borderRadius = null,
+       shape = BoxShape.circle;
 
   @override
   State<SeedSkeleton> createState() => _SeedSkeletonState();
@@ -66,10 +90,18 @@ class _SeedSkeletonState extends State<SeedSkeleton>
   Widget build(BuildContext context) {
     final colors = context.seedColor;
 
-    final Color baseColor = colors.isDark
+    final Color baseColor = widget.tone == SeedSkeletonTone.magic
+        ? colors.bg.magicWeak
+        : colors.isDark
         ? SeedPalette.gray200Dark
         : SeedPalette.gray200Light;
-    final shimmer = SeedGradients.shimmerNeutral(isDark: colors.isDark);
+    final shimmer = widget.tone == SeedSkeletonTone.magic
+        ? SeedGradients.shimmerMagic(isDark: colors.isDark)
+        : SeedGradients.shimmerNeutral(isDark: colors.isDark);
+
+    final resolvedRadius = widget.shape == BoxShape.rectangle
+        ? (widget.borderRadius ?? widget.radius.borderRadius)
+        : null;
 
     return AnimatedBuilder(
       animation: _controller,
@@ -79,16 +111,12 @@ class _SeedSkeletonState extends State<SeedSkeleton>
           height: widget.height,
           decoration: BoxDecoration(
             shape: widget.shape,
-            borderRadius: widget.shape == BoxShape.rectangle
-                ? (widget.borderRadius ?? SeedBorderRadius.r2)
-                : null,
+            borderRadius: resolvedRadius,
             color: baseColor,
           ),
           foregroundDecoration: BoxDecoration(
             shape: widget.shape,
-            borderRadius: widget.shape == BoxShape.rectangle
-                ? (widget.borderRadius ?? SeedBorderRadius.r2)
-                : null,
+            borderRadius: resolvedRadius,
             gradient: LinearGradient(
               colors: shimmer.colors,
               stops: shimmer.stops,

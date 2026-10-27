@@ -15,10 +15,11 @@ environment:
   flutter: ">=3.47.0"
 
 dependencies:
+  characters: ^1.4.1
   flutter:
     sdk: flutter
+  intl: ^0.20.3
   material_ui: ^1.7.0
-
 dev_dependencies:
   flutter_test:
     sdk: flutter

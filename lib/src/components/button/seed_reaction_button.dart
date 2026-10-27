@@ -19,8 +19,14 @@ enum SeedReactionButtonSize {
 /// Reaction button component of SEED Design System.
 ///
 /// Used for expressing emotional feedback (like, interest) with count and active state.
-class SeedReactionButton extends StatelessWidget {
-  final bool isReacted;
+class SeedReactionButton extends StatefulWidget {
+  final bool? _isReacted;
+
+  /// Initial state when [isReacted] is omitted.
+  final bool defaultIsReacted;
+
+  /// The supplied controlled value, or the initial uncontrolled value.
+  bool get isReacted => _isReacted ?? defaultIsReacted;
   final int count;
   final String? label;
   final ValueChanged<bool>? onReactedChanged;
@@ -32,7 +38,8 @@ class SeedReactionButton extends StatelessWidget {
 
   const SeedReactionButton({
     super.key,
-    this.isReacted = false,
+    bool? isReacted,
+    this.defaultIsReacted = false,
     this.count = 0,
     this.label,
     this.onReactedChanged,
@@ -41,10 +48,14 @@ class SeedReactionButton extends StatelessWidget {
     this.loading = false,
     this.enabled = true,
     this.semanticsLabel = '관심',
-  });
+    // Keep the public constructor parameter and non-nullable getter compatible.
+    // ignore: prefer_initializing_formals
+  }) : _isReacted = isReacted;
 
   @override
-  Widget build(BuildContext context) {
+  State<SeedReactionButton> createState() => _SeedReactionButtonState();
+
+  Widget _build(BuildContext context, bool isReacted, VoidCallback toggle) {
     final colors = context.seedColor;
     final typography = context.seedTypography;
 
@@ -64,11 +75,14 @@ class SeedReactionButton extends StatelessWidget {
     final TextStyle countStyle = typography.t3Bold.copyWith(color: fgColor);
 
     return SeedPressable(
-      enabled: enabled && !loading && onReactedChanged != null,
+      enabled:
+          enabled &&
+          !loading &&
+          (_isReacted == null || onReactedChanged != null),
       toggled: isReacted,
       semanticsLabel: semanticsLabel,
       semanticsValue: '$count',
-      onTap: () => onReactedChanged?.call(!isReacted),
+      onTap: toggle,
       builder: (context, isPressed) => Container(
         constraints: BoxConstraints(minHeight: size.height),
         padding: EdgeInsets.symmetric(
@@ -90,47 +104,76 @@ class SeedReactionButton extends StatelessWidget {
                 )
               : null,
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
+        child: Stack(
+          alignment: Alignment.center,
           children: [
-            if (loading)
-              SeedProgressCircle(
-                size: 14,
-                strokeWidth: 2,
-                color: fgColor,
-                trackColor: isReacted
-                    ? (colors.isDark
-                        ? SeedPalette.carrot200Dark
-                        : SeedPalette.carrot200Light)
-                    : (colors.isDark
-                        ? SeedPalette.gray500Dark
-                        : SeedPalette.gray500Light),
-              )
-            else
-              IconTheme(
-                data: IconThemeData(size: size.iconSize, color: fgColor),
-                child:
-                    prefixIcon ??
-                    Icon(
-                      isReacted
-                          ? Icons.favorite_rounded
-                          : Icons.favorite_border_rounded,
-                      size: size.iconSize,
-                      color: fgColor,
-                    ),
+            Visibility(
+              visible: !loading,
+              maintainSize: true,
+              maintainState: true,
+              maintainAnimation: true,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  IconTheme(
+                    data: IconThemeData(size: size.iconSize, color: fgColor),
+                    child:
+                        prefixIcon ??
+                        Icon(
+                          isReacted
+                              ? Icons.favorite_rounded
+                              : Icons.favorite_border_rounded,
+                          size: size.iconSize,
+                          color: fgColor,
+                        ),
+                  ),
+                  if (label != null) ...[
+                    const SizedBox(width: SeedDimension.x1),
+                    Text(label!, style: labelStyle),
+                  ],
+                  if (count > 0) ...[
+                    const SizedBox(width: SeedDimension.x1),
+                    Text('$count', style: countStyle),
+                  ],
+                ],
               ),
-            if (label != null) ...[
-              const SizedBox(width: SeedDimension.x1),
-              Text(label!, style: labelStyle),
-            ],
-            if (count > 0) ...[
-              const SizedBox(width: SeedDimension.x1),
-              Text('$count', style: countStyle),
-            ],
+            ),
+            if (loading)
+              Positioned.fill(
+                child: Center(
+                  child: SeedProgressCircle(
+                    size: 14,
+                    strokeWidth: 2,
+                    color: fgColor,
+                    trackColor: isReacted
+                        ? (colors.isDark
+                              ? SeedPalette.carrot200Dark
+                              : SeedPalette.carrot200Light)
+                        : (colors.isDark
+                              ? SeedPalette.gray500Dark
+                              : SeedPalette.gray500Light),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
     );
   }
+}
+
+class _SeedReactionButtonState extends State<SeedReactionButton> {
+  late bool _isReacted = widget.defaultIsReacted;
+
+  void _toggle() {
+    if (!widget.enabled || widget.loading) return;
+    final next = !(widget._isReacted ?? _isReacted);
+    if (widget._isReacted == null) setState(() => _isReacted = next);
+    widget.onReactedChanged?.call(next);
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      widget._build(context, widget._isReacted ?? _isReacted, _toggle);
 }

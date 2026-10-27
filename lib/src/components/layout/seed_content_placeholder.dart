@@ -1,8 +1,9 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../foundations/colors/seed_palette.dart';
-import '../../foundations/radius/seed_radius.dart';
 import '../../theme/seed_theme.dart';
+
+part 'seed_content_placeholder_presets.dart';
 
 /// Predefined domain types for [SeedContentPlaceholder] as specified by SEED Design.
 enum SeedContentPlaceholderType {
@@ -44,73 +45,93 @@ class SeedContentPlaceholder extends StatelessWidget {
   /// Optional height. If null, expands to fill parent.
   final double? height;
 
-  /// Custom icon widget. If null, uses the default icon for [type].
+  /// Custom asset. Inherits the preset color and fits the same asset bounds.
   final Widget? icon;
 
-  /// Size of the fallback icon. If null, defaults to 50% of parent height (clamped 16..160).
+  /// Square asset size override. Otherwise height is 50% of the parent and
+  /// width is constrained to 16..160, with the drawing fitted inside.
   final double? iconSize;
 
-  /// Border radius of the placeholder box. Defaults to [SeedBorderRadius.r2].
+  /// Border radius of the clipped placeholder box. Defaults to square corners.
   final BorderRadius? borderRadius;
-
-  IconData _iconForType(SeedContentPlaceholderType type) {
-    switch (type) {
-      case SeedContentPlaceholderType.buySell:
-        return Icons.shopping_bag_outlined;
-      case SeedContentPlaceholderType.car:
-        return Icons.directions_car_outlined;
-      case SeedContentPlaceholderType.commerce:
-        return Icons.shopping_cart_outlined;
-      case SeedContentPlaceholderType.coupon:
-        return Icons.confirmation_number_outlined;
-      case SeedContentPlaceholderType.food:
-        return Icons.restaurant_outlined;
-      case SeedContentPlaceholderType.group:
-        return Icons.group_outlined;
-      case SeedContentPlaceholderType.jobs:
-        return Icons.work_outline;
-      case SeedContentPlaceholderType.business:
-        return Icons.business_outlined;
-      case SeedContentPlaceholderType.post:
-        return Icons.article_outlined;
-      case SeedContentPlaceholderType.realty:
-        return Icons.home_work_outlined;
-      case SeedContentPlaceholderType.image:
-      case SeedContentPlaceholderType.defaultType:
-        return Icons.image_outlined;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.seedColor;
-    final bgColor = colors.isDark ? SeedPalette.gray200Dark : SeedPalette.gray200Light;
-    final fgColor = colors.isDark ? SeedPalette.gray400Dark : SeedPalette.gray400Light;
+    final bgColor = colors.isDark
+        ? SeedPalette.gray200Dark
+        : SeedPalette.gray200Light;
+    final fgColor = colors.isDark
+        ? SeedPalette.gray400Dark
+        : SeedPalette.gray400Light;
 
     return Container(
       width: width,
       height: height,
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: borderRadius ?? SeedBorderRadius.r2,
+        borderRadius: borderRadius ?? BorderRadius.zero,
       ),
+      clipBehavior: Clip.antiAlias,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final computedSize = (constraints.maxHeight.isFinite
+          final assetHeight =
+              iconSize ??
+              (constraints.maxHeight.isFinite
                   ? constraints.maxHeight * 0.5
-                  : 32.0)
-              .clamp(16.0, 160.0);
-
+                  : 32.0);
+          final assetWidth = iconSize ?? assetHeight.clamp(16.0, 160.0);
           return Center(
-            child: icon ??
-                Icon(
-                  _iconForType(type),
-                  size: iconSize ?? computedSize,
-                  color: fgColor,
+            child: SizedBox(
+              width: assetWidth,
+              height: assetHeight,
+              child: FittedBox(
+                fit: BoxFit.contain,
+                child: SizedBox.square(
+                  dimension: 64,
+                  child: IconTheme(
+                    data: IconThemeData(color: fgColor, size: 64),
+                    child:
+                        icon ??
+                        CustomPaint(
+                          painter: _SeedContentPlaceholderPainter(
+                            type,
+                            fgColor,
+                          ),
+                        ),
+                  ),
                 ),
+              ),
+            ),
           );
         },
       ),
     );
   }
+}
+
+class _SeedContentPlaceholderPainter extends CustomPainter {
+  const _SeedContentPlaceholderPainter(this.type, this.color);
+  final SeedContentPlaceholderType type;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.save();
+    canvas.scale(size.width / 64, size.height / 64);
+    final paint = Paint()..color = color;
+    final stroke = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke;
+    for (final path in _contentPlaceholderPaths[type]!) {
+      canvas.drawPath(path, paint);
+      // The React asset recipe applies both fill and the default 1px stroke.
+      canvas.drawPath(path, stroke);
+    }
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(_SeedContentPlaceholderPainter oldDelegate) =>
+      type != oldDelegate.type || color != oldDelegate.color;
 }

@@ -28,6 +28,7 @@ export 'src/foundations/elevation/seed_shadow.dart';
 
 // Foundations - Feedback
 export 'src/foundations/feedback/seed_scale_feedback.dart';
+export 'src/foundations/feedback/seed_control.dart';
 
 // Theme
 export 'src/theme/seed_theme_data.dart';
@@ -72,6 +73,7 @@ export 'src/components/selection/seed_select_box_group.dart';
 
 // Components - Input
 export 'src/components/input/seed_text_input.dart';
+export 'src/components/input/seed_text_field.dart';
 export 'src/components/input/seed_field.dart';
 export 'src/components/input/seed_quantity_picker.dart';
 export 'src/components/input/seed_slider.dart';
@@ -80,10 +82,12 @@ export 'src/components/input/seed_wheel_picker.dart';
 export 'src/components/input/seed_time_picker.dart';
 export 'src/components/input/seed_date_picker.dart';
 export 'src/components/input/seed_attachment_input.dart';
+export 'src/components/input/seed_attachment_field.dart';
 export 'src/components/input/seed_select.dart';
 
 // Components - Navigation
 export 'src/components/navigation/seed_tabs.dart';
+export 'src/components/navigation/seed_tabs_view.dart';
 export 'src/components/navigation/seed_top_navigation.dart';
 export 'src/components/navigation/seed_top_navigation_button.dart';
 export 'src/components/navigation/seed_bottom_navigation.dart';
@@ -98,6 +102,7 @@ export 'src/components/layout/seed_avatar.dart';
 export 'src/components/avatar/seed_avatar_stack.dart';
 export 'src/components/layout/seed_result_section.dart';
 export 'src/components/layout/seed_scroll_fog.dart';
+export 'src/components/layout/seed_scroll_area.dart';
 export 'src/components/layout/seed_tag_group.dart';
 export 'src/components/layout/seed_image_frame.dart';
 export 'src/components/layout/seed_content_placeholder.dart';
@@ -108,6 +113,8 @@ export 'src/components/layout/seed_footer.dart';
 export 'src/components/list/seed_list.dart';
 
 // Components - Overlay
+export 'src/components/overlay/seed_anchored_overlay.dart';
+export 'src/components/overlay/seed_modal_trigger.dart';
 export 'src/components/overlay/seed_dialog.dart';
 export 'src/components/overlay/seed_bottom_sheet.dart';
 export 'src/components/overlay/seed_menu.dart';
@@ -120,3 +127,8 @@ export 'src/components/feedback/seed_progress_circle.dart';
 export 'src/components/feedback/seed_skeleton.dart';
 export 'src/components/feedback/seed_snackbar.dart';
 export 'src/components/feedback/seed_help_bubble.dart';
+
+export 'src/components/feedback/seed_pull_to_refresh.dart';
+export 'src/components/layout/seed_layout.dart';
+
+export 'src/components/layout/seed_grid.dart';

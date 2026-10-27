@@ -128,7 +128,7 @@ class SeedButton extends StatelessWidget {
     this.prefixIcon,
     this.suffixIcon,
     required this.onPressed,
-    this.variant = SeedButtonVariant.neutralSolid,
+    this.variant = SeedButtonVariant.brandSolid,
     this.size = SeedButtonSize.medium,
     this.isFullWidth = false,
     this.loading = false,
@@ -150,7 +150,7 @@ class SeedButton extends StatelessWidget {
     super.key,
     required Widget this.icon,
     required this.onPressed,
-    this.variant = SeedButtonVariant.neutralWeak,
+    this.variant = SeedButtonVariant.brandSolid,
     this.size = SeedButtonSize.medium,
     this.loading = false,
     this.enabled = true,
@@ -310,10 +310,7 @@ class SeedButton extends StatelessWidget {
       children: [
         if (prefixIcon != null) ...[
           IconTheme(
-            data: IconThemeData(
-              color: fgColor,
-              size: iconSize,
-            ),
+            data: IconThemeData(color: fgColor, size: iconSize),
             child: prefixIcon!,
           ),
           SizedBox(
@@ -342,10 +339,7 @@ class SeedButton extends StatelessWidget {
                 : SeedDimension.x1,
           ),
           IconTheme(
-            data: IconThemeData(
-              color: fgColor,
-              size: iconSize,
-            ),
+            data: IconThemeData(color: fgColor, size: iconSize),
             child: suffixIcon!,
           ),
         ],

@@ -1,3 +1,5 @@
+import '../../foundations/feedback/seed_control.dart';
+
 import 'package:material_ui/material_ui.dart';
 
 import '../../foundations/colors/seed_palette.dart';
@@ -50,87 +52,130 @@ enum SeedSwitchSize {
 }
 
 /// Standalone interactive switch with a separate visual and touch target.
-class SeedSwitchMark extends StatelessWidget {
-  final bool value;
+class SeedSwitchMark extends StatefulWidget {
+  final bool? value;
+  final bool defaultValue;
   final ValueChanged<bool>? onChanged;
   final SeedSwitchSize size;
   final bool enabled;
+  final SeedControlTone tone;
   final String? semanticsLabel;
   final FocusNode? focusNode;
 
+  /// False when a containing row owns interaction and accessibility.
+  final bool interactive;
+
   const SeedSwitchMark({
     super.key,
-    required this.value,
-    required this.onChanged,
+    this.value,
+    this.defaultValue = false,
+    this.onChanged,
     this.size = SeedSwitchSize.size32,
     this.enabled = true,
+    this.tone = SeedControlTone.brand,
     this.semanticsLabel,
     this.focusNode,
+    this.interactive = true,
   });
 
   @override
-  Widget build(BuildContext context) => SeedPressable(
-    enabled: enabled && onChanged != null,
-    semanticButton: false,
-    toggled: value,
-    semanticsLabel: semanticsLabel,
-    focusNode: focusNode,
-    enableScale: false,
-    onTap: () => onChanged?.call(!value),
-    builder: (context, pressed) => SizedBox(
-      width: size.trackWidth < 44 ? 44 : size.trackWidth,
-      height: 44,
-      child: Center(
-        child: _SeedSwitchGraphic(
-          value: value,
-          pressed: pressed,
-          size: size,
-          enabled: enabled && onChanged != null,
+  State<SeedSwitchMark> createState() => _SeedSwitchMarkState();
+}
+
+class _SeedSwitchMarkState extends State<SeedSwitchMark> {
+  late bool _value = widget.defaultValue;
+  bool get _checked => widget.value ?? _value;
+
+  void _toggle() {
+    final next = !_checked;
+    if (widget.value == null) setState(() => _value = next);
+    widget.onChanged?.call(next);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.interactive) {
+      return _SeedSwitchGraphic(
+        value: _checked,
+        tone: widget.tone,
+        pressed: SeedInteractionState.maybeOf(context)?.pressed ?? false,
+        size: widget.size,
+        enabled: widget.enabled && SeedControlScope.enabledOf(context),
+      );
+    }
+    final interactive =
+        widget.enabled &&
+        (widget.value == null || widget.onChanged != null) &&
+        SeedControlScope.enabledOf(context);
+    return SeedPressable(
+      enabled: interactive,
+      semanticButton: false,
+      toggled: _checked,
+      semanticsLabel: widget.semanticsLabel,
+      focusNode: widget.focusNode,
+      enableScale: false,
+      onTap: _toggle,
+      builder: (context, pressed) => SizedBox(
+        width: widget.size.trackWidth < 44 ? 44 : widget.size.trackWidth,
+        height: 44,
+        child: Center(
+          child: _SeedSwitchGraphic(
+            value: _checked,
+            tone: widget.tone,
+            pressed: pressed,
+            size: widget.size,
+            enabled: interactive,
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _SeedSwitchGraphic extends StatelessWidget {
   final bool value;
   final SeedSwitchSize size;
   final bool enabled;
+  final SeedControlTone tone;
   final bool pressed;
   const _SeedSwitchGraphic({
     required this.value,
     required this.size,
     required this.enabled,
+    this.tone = SeedControlTone.brand,
     this.pressed = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.seedColor;
-    final duration = MediaQuery.disableAnimationsOf(context)
-        ? Duration.zero
-        : SeedDuration.d3;
+    final reduce = MediaQuery.disableAnimationsOf(context);
+    final duration = reduce ? Duration.zero : SeedDuration.d3;
+    final colorDuration = reduce ? Duration.zero : SeedDuration.d1;
+    final scaleDuration = reduce ? Duration.zero : SeedDuration.pressedScale;
     return AnimatedScale(
-      duration: duration,
+      duration: scaleDuration,
       curve: SeedCurves.pressedScale,
-      scale: pressed
+      scale: (SeedInteractionState.maybeOf(context)?.pressed ?? false)
           ? SeedScaleCalculator.calculateScale(
               width: size.trackWidth,
               height: size.trackHeight,
-              disableAnimations: MediaQuery.disableAnimationsOf(context),
+              disableAnimations: reduce,
             )
           : 1,
       child: Opacity(
         opacity: enabled ? 1 : 0.38,
         child: AnimatedContainer(
-          duration: duration,
+          duration: colorDuration,
           curve: SeedCurves.easing,
           width: size.trackWidth,
           height: size.trackHeight,
           padding: EdgeInsets.all((size.trackHeight - size.thumbSize) / 2),
           decoration: BoxDecoration(
             color: value && enabled
-                ? colors.bg.neutralSolid
+                ? (tone == SeedControlTone.brand
+                      ? colors.bg.brandSolid
+                      : colors.bg.neutralSolid)
                 : (colors.isDark
                       ? SeedPalette.gray600Dark
                       : SeedPalette.gray600Light),
@@ -150,9 +195,13 @@ class _SeedSwitchGraphic extends StatelessWidget {
                 width: size.thumbSize,
                 height: size.thumbSize,
                 decoration: BoxDecoration(
-                  color: enabled
-                      ? colors.fg.onNeutralSolid
-                      : SeedPalette.staticBlackAlpha700,
+                  color: tone == SeedControlTone.brand
+                      ? (enabled && value
+                            ? colors.fg.onBrandSolid
+                            : SeedPalette.staticWhite)
+                      : (enabled
+                            ? colors.fg.onNeutralSolid
+                            : SeedPalette.staticBlackAlpha700),
                   shape: BoxShape.circle,
                 ),
               ),
@@ -165,66 +214,90 @@ class _SeedSwitchGraphic extends StatelessWidget {
 }
 
 /// Switch whose label and mark form one focusable, accessible toggle.
-class SeedSwitch extends StatelessWidget {
-  final bool value;
+class SeedSwitch extends StatefulWidget {
+  final bool? value;
+  final bool defaultValue;
   final ValueChanged<bool>? onChanged;
   final String? label;
   final SeedSwitchSize size;
   final bool enabled;
+  final SeedControlTone tone;
   final String? semanticsLabel;
   final FocusNode? focusNode;
 
   const SeedSwitch({
     super.key,
-    required this.value,
-    required this.onChanged,
+    this.value,
+    this.defaultValue = false,
+    this.onChanged,
     this.label,
     this.size = SeedSwitchSize.size32,
     this.enabled = true,
+    this.tone = SeedControlTone.brand,
     this.semanticsLabel,
     this.focusNode,
   });
 
   @override
+  State<SeedSwitch> createState() => _SeedSwitchState();
+}
+
+class _SeedSwitchState extends State<SeedSwitch> {
+  late bool _value = widget.defaultValue;
+  bool get _checked => widget.value ?? _value;
+
+  void _toggle() {
+    final next = !_checked;
+    if (widget.value == null) setState(() => _value = next);
+    widget.onChanged?.call(next);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (label == null) {
+    if (widget.label == null) {
       return SeedSwitchMark(
-        value: value,
-        onChanged: onChanged,
-        size: size,
-        enabled: enabled,
-        semanticsLabel: semanticsLabel,
-        focusNode: focusNode,
+        value: widget.value,
+        defaultValue: widget.defaultValue,
+        tone: widget.tone,
+        onChanged: widget.onChanged,
+        size: widget.size,
+        enabled: widget.enabled,
+        semanticsLabel: widget.semanticsLabel,
+        focusNode: widget.focusNode,
       );
     }
     final typography = context.seedTypography;
-    final style = switch (size) {
+    final style = switch (widget.size) {
       SeedSwitchSize.size16 => typography.t3Medium,
       SeedSwitchSize.size24 => typography.t4Medium,
       SeedSwitchSize.size32 => typography.t5Medium,
     };
-    final interactive = enabled && onChanged != null;
+    final interactive =
+        widget.enabled &&
+        (widget.value == null || widget.onChanged != null) &&
+        SeedControlScope.enabledOf(context);
     return SeedPressable(
       enabled: interactive,
       semanticButton: false,
-      toggled: value,
-      semanticsLabel: semanticsLabel,
-      focusNode: focusNode,
+      toggled: _checked,
+      semanticsLabel: widget.semanticsLabel,
+      focusNode: widget.focusNode,
       enableScale: false,
-      onTap: () => onChanged?.call(!value),
+      onTap: _toggle,
       builder: (context, pressed) => ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 44),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             _SeedSwitchGraphic(
-              value: value,
-              size: size,
+              value: _checked,
+              tone: widget.tone,
+              size: widget.size,
               enabled: interactive,
               pressed: pressed,
             ),
             SizedBox(
-              width: switch (size) {
+              width: switch (widget.size) {
                 SeedSwitchSize.size16 => 6,
                 SeedSwitchSize.size24 => 8,
                 SeedSwitchSize.size32 => 10,
@@ -232,7 +305,7 @@ class SeedSwitch extends StatelessWidget {
             ),
             Flexible(
               child: Text(
-                label!,
+                widget.label!,
                 style: style.copyWith(
                   color: interactive
                       ? context.seedColor.fg.neutral

@@ -11,6 +11,9 @@ import '../../foundations/dimensions/seed_dimension.dart';
 import '../../foundations/radius/seed_radius.dart';
 import '../../theme/seed_theme.dart';
 
+String _formatTemperature(double value) =>
+    '${value == value.truncateToDouble() ? value.toStringAsFixed(0) : value}°C';
+
 /// Helper class to resolve temperature to SEED 10-level scale.
 class SeedMannerTempLevel {
   const SeedMannerTempLevel._();
@@ -87,14 +90,16 @@ class SeedMannerTempBadge extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
-            '${temperature.toStringAsFixed(1)}°C',
+            _formatTemperature(temperature),
             style: typography.t1Bold.copyWith(color: mannerColor.text),
           ),
           if (showEmoji) ...[
             const SizedBox(width: SeedDimension.x0_5),
-            Text(
-              SeedMannerTempLevel.getEmoji(level),
-              style: const TextStyle(fontSize: 11.0, height: 1.0),
+            ExcludeSemantics(
+              child: Text(
+                SeedMannerTempLevel.getEmoji(level),
+                style: const TextStyle(fontSize: 11.0, height: 1.0),
+              ),
             ),
           ],
         ],
@@ -149,7 +154,7 @@ class SeedMannerTemp extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  '${temperature.toStringAsFixed(1)}°C',
+                  _formatTemperature(temperature),
                   style: typography.t5Bold.copyWith(color: mannerColor.text),
                 ),
                 if (subtitle != null)
@@ -165,16 +170,23 @@ class SeedMannerTemp extends StatelessWidget {
               const SizedBox(width: SeedDimension.x1),
               ExcludeSemantics(
                 child: SizedBox(
-                  width: 32,
-                  height: 32,
-                  child:
-                      emoteBuilder?.call(context, level) ??
-                      Center(
-                        child: Text(
-                          SeedMannerTempLevel.getEmoji(level),
-                          style: const TextStyle(fontSize: 18),
+                  // The official 32px emote bleeds 4px outside its layout box.
+                  width: 24,
+                  height: 24,
+                  child: OverflowBox(
+                    minWidth: 32,
+                    maxWidth: 32,
+                    minHeight: 32,
+                    maxHeight: 32,
+                    child:
+                        emoteBuilder?.call(context, level) ??
+                        Center(
+                          child: Text(
+                            SeedMannerTempLevel.getEmoji(level),
+                            style: const TextStyle(fontSize: 28, height: 1),
+                          ),
                         ),
-                      ),
+                  ),
                 ),
               ),
             ],

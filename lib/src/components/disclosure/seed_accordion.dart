@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/services.dart';
 
 import '../../foundations/dimensions/seed_dimension.dart';
 import '../../foundations/motion/seed_motion.dart';
@@ -13,7 +14,8 @@ enum SeedAccordionVariant { inline, separated }
 /// Size of [SeedAccordionItem].
 enum SeedAccordionSize {
   medium,
-  large;
+  large,
+  responsive;
 
   double get iconSize => this == SeedAccordionSize.medium ? 20.0 : 24.0;
   EdgeInsets get padding => this == SeedAccordionSize.medium
@@ -41,6 +43,11 @@ class SeedAccordionItem extends StatefulWidget {
   final SeedAccordionVariant variant;
   final SeedAccordionSize size;
   final bool enabled;
+  final String? value;
+  final bool? expanded;
+  final FocusNode? focusNode;
+  final bool showDivider;
+  final int headingLevel;
 
   const SeedAccordionItem({
     super.key,
@@ -53,7 +60,12 @@ class SeedAccordionItem extends StatefulWidget {
     this.variant = SeedAccordionVariant.inline,
     this.size = SeedAccordionSize.medium,
     this.enabled = true,
-  });
+    this.value,
+    this.expanded,
+    this.focusNode,
+    this.showDivider = true,
+    this.headingLevel = 3,
+  }) : assert(headingLevel >= 1 && headingLevel <= 6);
 
   @override
   State<SeedAccordionItem> createState() => _SeedAccordionItemState();
@@ -69,7 +81,7 @@ class _SeedAccordionItemState extends State<SeedAccordionItem>
   @override
   void initState() {
     super.initState();
-    _isExpanded = widget.initiallyExpanded;
+    _isExpanded = widget.expanded ?? widget.initiallyExpanded;
     _controller = AnimationController(
       duration: SeedDuration.d6,
       vsync: this,
@@ -85,6 +97,15 @@ class _SeedAccordionItemState extends State<SeedAccordionItem>
   }
 
   @override
+  void didUpdateWidget(SeedAccordionItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.expanded != null && widget.expanded != _isExpanded) {
+      _isExpanded = widget.expanded!;
+      _isExpanded ? _controller.forward() : _controller.reverse();
+    }
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     super.dispose();
@@ -92,6 +113,10 @@ class _SeedAccordionItemState extends State<SeedAccordionItem>
 
   void _handleTap() {
     if (!widget.enabled) return;
+    if (widget.expanded != null) {
+      widget.onExpansionChanged?.call(!_isExpanded);
+      return;
+    }
     setState(() {
       _isExpanded = !_isExpanded;
       if (_isExpanded) {
@@ -105,11 +130,16 @@ class _SeedAccordionItemState extends State<SeedAccordionItem>
 
   @override
   Widget build(BuildContext context) {
+    final size = widget.size == SeedAccordionSize.responsive
+        ? (MediaQuery.sizeOf(context).width < 768
+              ? SeedAccordionSize.medium
+              : SeedAccordionSize.large)
+        : widget.size;
     final colors = context.seedColor;
     final typography = context.seedTypography;
 
     final TextStyle titleStyle =
-        (widget.size == SeedAccordionSize.medium
+        (size == SeedAccordionSize.medium
                 ? typography.t5Medium
                 : typography.t7Medium)
             .copyWith(
@@ -117,7 +147,7 @@ class _SeedAccordionItemState extends State<SeedAccordionItem>
             );
 
     final TextStyle descStyle =
-        (widget.size == SeedAccordionSize.medium
+        (size == SeedAccordionSize.medium
                 ? typography.t3Medium
                 : typography.t5Medium)
             .copyWith(
@@ -126,48 +156,74 @@ class _SeedAccordionItemState extends State<SeedAccordionItem>
                   : colors.fg.disabled,
             );
 
-    Widget trigger = SeedPressable(
+    final trigger = SeedPressable(
+      focusNode: widget.focusNode,
+      headingLevel: widget.headingLevel,
       enabled: widget.enabled,
       expanded: _isExpanded,
       enableScale: false,
       onTap: _handleTap,
-      builder: (context, isPressed) {
-        return Container(
-          padding: widget.size.padding,
-          color: isPressed
-              ? colors.bg.layerDefaultPressed
-              : colors.bg.layerDefault,
-          child: Row(
-            children: [
-              if (widget.prefix != null) ...[
-                widget.prefix!,
-                const SizedBox(width: SeedDimension.x3),
-              ],
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(widget.title, style: titleStyle),
-                    if (widget.description != null) ...[
-                      const SizedBox(height: SeedDimension.x0_5),
-                      Text(widget.description!, style: descStyle),
+      builder: (context, _) {
+        final isPressed =
+            SeedInteractionState.maybeOf(context)?.pressed ?? false;
+        final insetPressed =
+            isPressed && widget.variant == SeedAccordionVariant.inline;
+        return AnimatedContainer(
+          duration: SeedDuration.colorTransition,
+          curve: SeedCurves.easing,
+          margin: EdgeInsets.symmetric(
+            horizontal: insetPressed ? SeedDimension.x1_5 : 0,
+          ),
+          padding: size.padding,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(
+              insetPressed ? SeedDimension.x2_5 : 0,
+            ),
+            color: isPressed
+                ? colors.bg.transparentPressed
+                : colors.bg.layerDefault,
+          ),
+          child: SeedContentScale(
+            child: Row(
+              children: [
+                if (widget.prefix != null) ...[
+                  IconTheme.merge(
+                    data: IconThemeData(
+                      size: 22,
+                      color: widget.enabled
+                          ? colors.fg.neutral
+                          : colors.fg.disabled,
+                    ),
+                    child: widget.prefix!,
+                  ),
+                  const SizedBox(width: SeedDimension.x3),
+                ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(widget.title, style: titleStyle),
+                      if (widget.description != null) ...[
+                        const SizedBox(height: SeedDimension.x0_5),
+                        Text(widget.description!, style: descStyle),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: SeedDimension.x3),
-              RotationTransition(
-                turns: _iconTurns,
-                child: Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  size: widget.size.iconSize,
-                  color: widget.enabled
-                      ? colors.fg.neutralSubtle
-                      : colors.fg.disabled,
+                const SizedBox(width: SeedDimension.x3),
+                RotationTransition(
+                  turns: _iconTurns,
+                  child: Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    size: size.iconSize,
+                    color: widget.enabled
+                        ? colors.fg.neutralSubtle
+                        : colors.fg.disabled,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -177,31 +233,46 @@ class _SeedAccordionItemState extends State<SeedAccordionItem>
       child: AnimatedBuilder(
         animation: _controller.view,
         builder: (context, child) {
-          return Align(
-            alignment: Alignment.centerLeft,
-            heightFactor: _heightFactor.value,
-            child: child,
+          final hidden = _controller.isDismissed && !_isExpanded;
+          return ExcludeFocus(
+            excluding: hidden,
+            child: ExcludeSemantics(
+              excluding: hidden,
+              child: IgnorePointer(
+                ignoring: hidden,
+                child: Opacity(
+                  opacity: _heightFactor.value,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    heightFactor: _heightFactor.value,
+                    child: child,
+                  ),
+                ),
+              ),
+            ),
           );
         },
-        child: Container(
-          width: double.infinity,
-          color: colors.bg.layerDefault,
-          padding: EdgeInsets.fromLTRB(
-            widget.size.padding.horizontal / 2,
-            0,
-            widget.size.padding.horizontal / 2,
-            widget.size.padding.vertical / 2,
+        child: Semantics(
+          container: true,
+          explicitChildNodes: true,
+          label: widget.title,
+          child: Container(
+            width: double.infinity,
+            color: colors.bg.layerDefault,
+            padding: EdgeInsets.fromLTRB(
+              size.padding.horizontal / 2,
+              0,
+              size.padding.horizontal / 2,
+              size.padding.vertical / 2,
+            ),
+            child: widget.content,
           ),
-          child: widget.content,
         ),
       ),
     );
 
     if (widget.variant == SeedAccordionVariant.separated) {
       return Container(
-        margin: EdgeInsets.only(
-          bottom: widget.size == SeedAccordionSize.medium ? 12 : 16,
-        ),
         decoration: BoxDecoration(
           color: colors.bg.layerDefault,
           borderRadius: SeedBorderRadius.r3,
@@ -217,7 +288,143 @@ class _SeedAccordionItemState extends State<SeedAccordionItem>
 
     return Column(
       mainAxisSize: MainAxisSize.min,
-      children: [trigger, contentBody, const SeedDivider()],
+      children: [
+        trigger,
+        contentBody,
+        if (widget.showDivider)
+          SeedDivider(
+            color: colors.stroke.neutralSubtle,
+            indent: SeedDimension.x3,
+            endIndent: SeedDimension.x3,
+          ),
+      ],
+    );
+  }
+}
+
+/// Controlled or uncontrolled single/multiple accordion group.
+class SeedAccordion extends StatefulWidget {
+  const SeedAccordion({
+    super.key,
+    required this.items,
+    this.values,
+    this.defaultValues = const {},
+    this.onValuesChanged,
+    this.multiple = false,
+    this.collapsible = true,
+    this.enabled = true,
+    this.variant = SeedAccordionVariant.inline,
+    this.size = SeedAccordionSize.medium,
+  });
+  final List<SeedAccordionItem> items;
+  final Set<String>? values;
+  final Set<String> defaultValues;
+  final ValueChanged<Set<String>>? onValuesChanged;
+  final bool multiple;
+  final bool collapsible;
+  final bool enabled;
+  final SeedAccordionVariant variant;
+  final SeedAccordionSize size;
+  @override
+  State<SeedAccordion> createState() => _SeedAccordionState();
+}
+
+class _SeedAccordionState extends State<SeedAccordion> {
+  late Set<String> _values = Set.of(widget.defaultValues);
+  final Map<String, FocusNode> _nodes = {};
+  @override
+  void dispose() {
+    for (final node in _nodes.values) {
+      node.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final rawValues = widget.values ?? _values;
+    final values = widget.multiple ? rawValues : rawValues.take(1).toSet();
+    final size = widget.size == SeedAccordionSize.responsive
+        ? (MediaQuery.sizeOf(context).width < 768
+              ? SeedAccordionSize.medium
+              : SeedAccordionSize.large)
+        : widget.size;
+    final ids = [
+      for (var i = 0; i < widget.items.length; i++)
+        widget.items[i].value ?? '$i',
+    ];
+    assert(ids.toSet().length == ids.length, 'Accordion values must be unique');
+    return Focus(
+      canRequestFocus: false,
+      onKeyEvent: (node, event) {
+        if (event is! KeyDownEvent) return KeyEventResult.ignored;
+        final available = [
+          for (var i = 0; i < ids.length; i++)
+            if (widget.enabled && widget.items[i].enabled) ids[i],
+        ];
+        final current = available.indexWhere(
+          (id) => _nodes[id]?.hasFocus ?? false,
+        );
+        if (current < 0) return KeyEventResult.ignored;
+        final key = event.logicalKey;
+        final next = key == LogicalKeyboardKey.home
+            ? 0
+            : key == LogicalKeyboardKey.end
+            ? available.length - 1
+            : key == LogicalKeyboardKey.arrowDown
+            ? (current + 1) % available.length
+            : key == LogicalKeyboardKey.arrowUp
+            ? (current - 1) % available.length
+            : -1;
+        if (next < 0) return KeyEventResult.ignored;
+        _nodes[available[next]]?.requestFocus();
+        return KeyEventResult.handled;
+      },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 0; i < widget.items.length; i++) ...[
+            if (widget.variant == SeedAccordionVariant.separated && i > 0)
+              SizedBox(
+                height: size == SeedAccordionSize.medium
+                    ? SeedDimension.x3
+                    : SeedDimension.x4,
+              ),
+            SeedAccordionItem(
+              key: ValueKey(ids[i]),
+              value: ids[i],
+              title: widget.items[i].title,
+              description: widget.items[i].description,
+              prefix: widget.items[i].prefix,
+              headingLevel: widget.items[i].headingLevel,
+              content: widget.items[i].content,
+              variant: widget.variant,
+              size: size,
+              enabled: widget.enabled && widget.items[i].enabled,
+              showDivider:
+                  widget.items[i].showDivider &&
+                  (widget.variant != SeedAccordionVariant.inline ||
+                      i < widget.items.length - 1),
+              expanded: values.contains(ids[i]),
+              focusNode: _nodes.putIfAbsent(ids[i], FocusNode.new),
+              onExpansionChanged: (expanded) {
+                final next = widget.multiple
+                    ? Set<String>.of(values)
+                    : <String>{};
+                if (expanded) {
+                  next.add(ids[i]);
+                } else {
+                  next.remove(ids[i]);
+                }
+                if (!widget.collapsible && next.isEmpty) return;
+                if (widget.values == null) setState(() => _values = next);
+                widget.onValuesChanged?.call(Set.unmodifiable(next));
+                widget.items[i].onExpansionChanged?.call(expanded);
+              },
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

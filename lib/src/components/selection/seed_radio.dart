@@ -1,3 +1,6 @@
+import '../../foundations/feedback/seed_control.dart';
+import '../input/seed_text_field.dart';
+
 import 'package:material_ui/material_ui.dart';
 
 import '../../foundations/dimensions/seed_dimension.dart';
@@ -22,7 +25,10 @@ class SeedRadio<T> extends StatefulWidget {
   final ValueChanged<T?>? onChanged;
   final String? label;
   final SeedRadioSize size;
+  final SeedLabelWeight weight;
+  final Widget? customLabel;
   final bool enabled;
+  final SeedControlTone tone;
   final String? semanticsLabel;
   final FocusNode? focusNode;
 
@@ -33,7 +39,10 @@ class SeedRadio<T> extends StatefulWidget {
     this.onChanged,
     this.label,
     this.size = SeedRadioSize.medium,
+    this.weight = SeedLabelWeight.regular,
+    this.customLabel,
     this.enabled = true,
+    this.tone = SeedControlTone.brand,
     this.semanticsLabel,
     this.focusNode,
   });
@@ -50,13 +59,17 @@ class _SeedRadioState<T> extends State<SeedRadio<T>> with RadioClient<T> {
   T get radioValue => widget.value;
   @override
   bool get tristate => false;
+  bool _scopeEnabled = true;
   @override
   bool get enabled =>
-      widget.enabled && (registry != null || widget.onChanged != null);
+      widget.enabled &&
+      _scopeEnabled &&
+      (registry != null || widget.onChanged != null);
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _scopeEnabled = SeedControlScope.enabledOf(context);
     registry = RadioGroup.maybeOf<T>(context);
   }
 
@@ -89,10 +102,14 @@ class _SeedRadioState<T> extends State<SeedRadio<T>> with RadioClient<T> {
               ? colors.stroke.neutralContrast
               : colors.stroke.neutralWeak);
 
-    final Color innerColor = !enabled ? gray300 : colors.fg.onNeutralSolid;
+    final Color innerColor = !enabled
+        ? gray300
+        : (widget.tone == SeedControlTone.brand
+              ? colors.fg.onBrandSolid
+              : colors.fg.onNeutralSolid);
 
-    Widget mark(bool pressed) => AnimatedScale(
-      scale: pressed
+    Widget mark(bool pressed, bool scalePressed) => AnimatedScale(
+      scale: scalePressed
           ? SeedScaleCalculator.calculateScale(
               width: widget.size.diameter,
               height: widget.size.diameter,
@@ -108,8 +125,12 @@ class _SeedRadioState<T> extends State<SeedRadio<T>> with RadioClient<T> {
           shape: BoxShape.circle,
           color: enabled && _isSelected
               ? (pressed
-                    ? colors.bg.neutralSolidPressed
-                    : colors.bg.neutralSolid)
+                    ? (widget.tone == SeedControlTone.brand
+                          ? colors.bg.brandSolidPressed
+                          : colors.bg.neutralSolidPressed)
+                    : (widget.tone == SeedControlTone.brand
+                          ? colors.bg.brandSolid
+                          : colors.bg.neutralSolid))
               : pressed
               ? colors.bg.transparentPressed
               : !enabled && !_isSelected
@@ -133,7 +154,7 @@ class _SeedRadioState<T> extends State<SeedRadio<T>> with RadioClient<T> {
       ),
     );
 
-    if (widget.label == null) {
+    if (widget.label == null && widget.customLabel == null) {
       return SeedPressable(
         enabled: enabled,
         enableScale: false,
@@ -146,7 +167,12 @@ class _SeedRadioState<T> extends State<SeedRadio<T>> with RadioClient<T> {
         builder: (context, pressed) => SizedBox(
           width: 44,
           height: 44,
-          child: Center(child: mark(pressed)),
+          child: Center(
+            child: mark(
+              pressed,
+              SeedInteractionState.maybeOf(context)?.pressed ?? false,
+            ),
+          ),
         ),
       );
     }
@@ -155,7 +181,12 @@ class _SeedRadioState<T> extends State<SeedRadio<T>> with RadioClient<T> {
         (widget.size == SeedRadioSize.medium
                 ? typography.t4Regular
                 : typography.t5Regular)
-            .copyWith(color: enabled ? colors.fg.neutral : colors.fg.disabled);
+            .copyWith(
+              color: enabled ? colors.fg.neutral : colors.fg.disabled,
+              fontWeight: widget.weight == SeedLabelWeight.bold
+                  ? FontWeight.bold
+                  : FontWeight.normal,
+            );
 
     return SeedPressable(
       enabled: enabled,
@@ -172,9 +203,15 @@ class _SeedRadioState<T> extends State<SeedRadio<T>> with RadioClient<T> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            mark(pressed),
+            mark(
+              pressed,
+              SeedInteractionState.maybeOf(context)?.pressed ?? false,
+            ),
             const SizedBox(width: SeedDimension.x2),
-            Flexible(child: Text(widget.label!, style: textStyle)),
+            Flexible(
+              child:
+                  widget.customLabel ?? Text(widget.label!, style: textStyle),
+            ),
           ],
         ),
       ),
@@ -186,15 +223,42 @@ class _SeedRadioState<T> extends State<SeedRadio<T>> with RadioClient<T> {
 /// Existing SeedRadio(groupValue:, onChanged:) usage remains supported.
 class SeedRadioGroup<T> extends StatelessWidget {
   final T? groupValue;
-  final ValueChanged<T?> onChanged;
+  final ValueChanged<T?>? onChanged;
   final Widget child;
   const SeedRadioGroup({
     super.key,
-    required this.groupValue,
-    required this.onChanged,
+    this.groupValue,
+    this.defaultValue,
+    this.controlled = false,
+    this.onChanged,
     required this.child,
+    this.label,
+    this.description,
+    this.indicator,
+    this.enabled = true,
   });
+  final String? label, description;
+  final Widget? indicator;
+  final bool enabled;
+  final T? defaultValue;
+  final bool controlled;
   @override
-  Widget build(BuildContext context) =>
-      RadioGroup<T>(groupValue: groupValue, onChanged: onChanged, child: child);
+  Widget build(BuildContext context) => SeedFormField<T>(
+    value: groupValue,
+    initialValue: defaultValue,
+    builder: (field) => SeedFieldset(
+      label: label,
+      description: description,
+      indicator: indicator,
+      enabled: enabled,
+      child: RadioGroup<T>(
+        groupValue: controlled ? groupValue : groupValue ?? field.value,
+        onChanged: (value) {
+          if (!controlled && groupValue == null) field.didChange(value);
+          onChanged?.call(value);
+        },
+        child: child,
+      ),
+    ),
+  );
 }

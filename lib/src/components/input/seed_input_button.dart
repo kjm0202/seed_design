@@ -1,5 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'seed_field.dart';
+
 import '../../foundations/dimensions/seed_dimension.dart';
 import '../../foundations/feedback/seed_scale_feedback.dart';
 import '../../foundations/radius/seed_radius.dart';
@@ -11,7 +13,10 @@ enum SeedInputButtonSize {
   medium(height: 52.0, paddingX: 16.0),
 
   /// Official `medium` (40px), intended for desktop use.
-  small(height: 40.0, paddingX: 14.0);
+  small(height: 40.0, paddingX: 14.0),
+
+  /// Large below the official 1280px breakpoint, medium at and above it.
+  responsive(height: 52.0, paddingX: 16.0);
 
   const SeedInputButtonSize({required this.height, required this.paddingX});
   final double height;
@@ -35,6 +40,12 @@ class SeedInputButton extends StatelessWidget {
     this.size = SeedInputButtonSize.medium,
     this.isError = false,
     this.enabled = true,
+    this.readOnly = false,
+    this.expanded,
+    this.prefixText,
+    this.suffixText,
+    this.valueChild,
+    this.focusNode,
   });
 
   /// Currently selected or displayed value.
@@ -66,13 +77,28 @@ class SeedInputButton extends StatelessWidget {
 
   /// Whether the button is enabled for interaction.
   final bool enabled;
+  final bool readOnly;
+  final bool? expanded;
+  final String? prefixText;
+  final String? suffixText;
+  final Widget? valueChild;
+  final FocusNode? focusNode;
 
   @override
   Widget build(BuildContext context) {
+    final field = SeedFieldScope.maybeOf(context);
+    final enabled = this.enabled && !(field?.disabled ?? false);
+    final readOnly = this.readOnly || (field?.readOnly ?? false);
+    final isError = this.isError || (field?.isInvalid ?? false);
+    final size = this.size == SeedInputButtonSize.responsive
+        ? (MediaQuery.sizeOf(context).width >= 1280
+              ? SeedInputButtonSize.small
+              : SeedInputButtonSize.medium)
+        : this.size;
     final colors = context.seedColor;
     final typography = context.seedTypography;
 
-    final hasValue = value != null && value!.isNotEmpty;
+    final hasValue = valueChild != null || (value != null && value!.isNotEmpty);
 
     Color borderColor;
     if (!enabled) {
@@ -83,29 +109,97 @@ class SeedInputButton extends StatelessWidget {
       borderColor = colors.stroke.neutralWeak;
     }
 
-    final effectiveBg = enabled ? colors.bg.transparent : colors.bg.disabled;
+    final effectiveBg = enabled && !readOnly
+        ? colors.bg.transparent
+        : colors.bg.disabled;
 
     final effectiveTextColor = !enabled
         ? colors.fg.disabled
         : (hasValue ? colors.fg.neutral : colors.fg.placeholder);
 
-    return SeedPressable(
-      enabled: enabled,
-      onTap: enabled ? onPressed : null,
-      builder: (context, isPressed) {
-        return Container(
-          height: size.height,
-          padding: EdgeInsets.symmetric(horizontal: size.paddingX),
-          decoration: BoxDecoration(
-            color: isPressed ? colors.bg.transparentPressed : effectiveBg,
-            borderRadius: size == SeedInputButtonSize.medium
-                ? SeedBorderRadius.r3
-                : SeedBorderRadius.r2,
-            border: Border.all(color: borderColor, width: isError ? 2 : 1),
-          ),
-          child: Row(
-            children: [
-              if (prefixIcon != null) ...[
+    return Semantics(
+      readOnly: readOnly ? true : null,
+      child: SeedPressable(
+        focusNode: focusNode ?? field?.focusNode,
+        enabled: enabled && !readOnly,
+        expanded: expanded,
+        onTap: enabled && !readOnly ? onPressed : null,
+        builder: (context, isPressed) {
+          return Container(
+            constraints: BoxConstraints(minHeight: size.height),
+            padding: EdgeInsets.symmetric(horizontal: size.paddingX),
+            decoration: BoxDecoration(
+              color: isPressed ? colors.bg.transparentPressed : effectiveBg,
+              borderRadius: size == SeedInputButtonSize.medium
+                  ? SeedBorderRadius.r3
+                  : SeedBorderRadius.r2,
+              border: Border.all(color: borderColor, width: isError ? 2 : 1),
+            ),
+            child: Row(
+              children: [
+                if (prefixText != null) ...[
+                  Text(prefixText!, style: typography.t5Regular),
+                  const SizedBox(width: 8),
+                ],
+                if (prefixIcon != null) ...[
+                  IconTheme(
+                    data: IconThemeData(
+                      size: size == SeedInputButtonSize.medium ? 20 : 16,
+                      color: enabled
+                          ? colors.fg.neutralMuted
+                          : colors.fg.disabled,
+                    ),
+                    child: prefixIcon!,
+                  ),
+                  SizedBox(width: size == SeedInputButtonSize.medium ? 10 : 8),
+                ],
+                Expanded(
+                  child:
+                      valueChild ??
+                      Text(
+                        hasValue ? value! : (placeholder ?? ''),
+                        style:
+                            (size == SeedInputButtonSize.medium
+                                    ? typography.t5Regular
+                                    : typography.t4Regular)
+                                .copyWith(color: effectiveTextColor),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                ),
+                if (showClear &&
+                    hasValue &&
+                    enabled &&
+                    !readOnly &&
+                    onClear != null) ...[
+                  SeedPressable(
+                    semanticsLabel: '선택 내용 지우기',
+                    enableScale: false,
+                    onTap: onClear,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        minWidth: 24,
+                        minHeight: 24,
+                      ),
+                      child: Center(
+                        widthFactor: 1,
+                        heightFactor: 1,
+                        child: Icon(
+                          Icons.cancel,
+                          size: size == SeedInputButtonSize.medium
+                              ? 22.0
+                              : 18.0,
+                          color: colors.fg.neutralSubtle,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: SeedDimension.x1),
+                ],
+                if (suffixText != null) ...[
+                  const SizedBox(width: 8),
+                  Text(suffixText!, style: typography.t5Regular),
+                ],
                 IconTheme(
                   data: IconThemeData(
                     size: size == SeedInputButtonSize.medium ? 20 : 16,
@@ -113,56 +207,13 @@ class SeedInputButton extends StatelessWidget {
                         ? colors.fg.neutralMuted
                         : colors.fg.disabled,
                   ),
-                  child: prefixIcon!,
+                  child: suffixIcon ?? const Icon(Icons.keyboard_arrow_down),
                 ),
-                SizedBox(width: size == SeedInputButtonSize.medium ? 10 : 8),
               ],
-              Expanded(
-                child: Text(
-                  hasValue ? value! : (placeholder ?? ''),
-                  style:
-                      (size == SeedInputButtonSize.medium
-                              ? typography.t5Regular
-                              : typography.t4Regular)
-                          .copyWith(color: effectiveTextColor),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              if (showClear && hasValue && enabled) ...[
-                SeedPressable(
-                  semanticsLabel: '선택 내용 지우기',
-                  enableScale: false,
-                  onTap: onClear,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      minWidth: 24,
-                      minHeight: 24,
-                    ),
-                    child: Center(
-                      widthFactor: 1,
-                      heightFactor: 1,
-                      child: Icon(
-                        Icons.cancel,
-                        size: size == SeedInputButtonSize.medium ? 22.0 : 18.0,
-                        color: colors.fg.neutralSubtle,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: SeedDimension.x1),
-              ],
-              IconTheme(
-                data: IconThemeData(
-                  size: size == SeedInputButtonSize.medium ? 20 : 16,
-                  color: enabled ? colors.fg.neutralMuted : colors.fg.disabled,
-                ),
-                child: suffixIcon ?? const Icon(Icons.keyboard_arrow_down),
-              ),
-            ],
-          ),
-        );
-      },
+            ),
+          );
+        },
+      ),
     );
   }
 }

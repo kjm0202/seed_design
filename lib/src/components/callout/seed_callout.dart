@@ -21,7 +21,7 @@ enum SeedCalloutTone {
 /// Callout component of SEED Design System.
 ///
 /// Delivers important announcements, tips, guidance, warnings, or magic AI alerts.
-class SeedCallout extends StatelessWidget {
+class SeedCallout extends StatefulWidget {
   final String? title;
   final String description;
   final String? linkText;
@@ -31,6 +31,13 @@ class SeedCallout extends StatelessWidget {
   final Widget? prefixIcon;
   final SeedCalloutTone tone;
   final bool underlineLink;
+  final bool showIcon;
+
+  /// Controls visibility externally when non-null.
+  final bool? open;
+
+  /// Initial visibility when [open] is not supplied.
+  final bool defaultOpen;
 
   const SeedCallout({
     super.key,
@@ -42,21 +49,48 @@ class SeedCallout extends StatelessWidget {
     this.onDismiss,
     this.prefixIcon,
     this.tone = SeedCalloutTone.neutral,
-    this.underlineLink = false,
+    this.underlineLink = true,
+    this.showIcon = false,
+    this.open,
+    this.defaultOpen = true,
   });
 
-  bool get _isActionable => onTap != null;
+  @override
+  State<SeedCallout> createState() => _SeedCalloutState();
+}
+
+class _SeedCalloutState extends State<SeedCallout> {
+  late bool _open = widget.defaultOpen;
+
+  void _dismiss() {
+    if (widget.open == null) setState(() => _open = false);
+    widget.onDismiss?.call();
+  }
+
+  bool get _isActionable => widget.onTap != null;
 
   @override
   Widget build(BuildContext context) {
+    if (!(widget.open ?? _open)) return const SizedBox.shrink();
+    final SeedCallout(
+      :title,
+      :description,
+      :linkText,
+      :onLinkTap,
+      :onTap,
+      :onDismiss,
+      :prefixIcon,
+      :tone,
+      :underlineLink,
+      :showIcon,
+    ) = widget;
     final colors = context.seedColor;
     final typography = context.seedTypography;
 
-    final (bgColor, fgColor, iconColor) = _resolveColors(colors);
+    final (bgColor, fgColor, iconColor) = _resolveColors(colors, tone);
 
     Widget content(bool isPressed) => Container(
       constraints: const BoxConstraints(minHeight: 50),
-      padding: const EdgeInsets.all(SeedDimension.x3_5),
       decoration: BoxDecoration(
         color: isPressed
             ? switch (tone) {
@@ -75,79 +109,98 @@ class SeedCallout extends StatelessWidget {
             : null,
         borderRadius: SeedBorderRadius.r2_5,
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          IconTheme(
-            data: IconThemeData(color: iconColor, size: 16.0),
-            child: prefixIcon ?? _defaultIcon(tone, iconColor),
-          ),
-          const SizedBox(width: SeedDimension.x3),
-          Expanded(
-            child: Text.rich(
-              TextSpan(
-                children: [
-                  if (title != null)
-                    TextSpan(
-                      text: '$title  ',
-                      style: typography.t4Bold.copyWith(color: fgColor),
-                    ),
-                  TextSpan(text: description),
-                  if (linkText != null && !_isActionable) ...[
-                    const TextSpan(text: '  '),
-                    WidgetSpan(
-                      alignment: PlaceholderAlignment.middle,
-                      child: SeedPressable(
-                        semanticsLabel: linkText,
-                        onTap: onLinkTap,
-                        child: Text(
-                          linkText!,
-                          style: typography.t4Regular.copyWith(
-                            color: fgColor,
-                            decoration: underlineLink
-                                ? TextDecoration.underline
-                                : TextDecoration.none,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+          Padding(
+            padding: const EdgeInsets.all(SeedDimension.x3_5),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                if (showIcon || prefixIcon != null) ...[
+                  IconTheme(
+                    data: IconThemeData(color: iconColor, size: 16.0),
+                    child: prefixIcon ?? _defaultIcon(tone, iconColor),
+                  ),
+                  const SizedBox(width: SeedDimension.x3),
                 ],
-              ),
-              style: typography.t4Regular.copyWith(color: fgColor),
+                Expanded(
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        if (title != null)
+                          TextSpan(
+                            text: '$title  ',
+                            style: typography.t4Bold.copyWith(color: fgColor),
+                          ),
+                        TextSpan(text: description),
+                        if (linkText != null && !_isActionable) ...[
+                          const TextSpan(text: '  '),
+                          WidgetSpan(
+                            alignment: PlaceholderAlignment.middle,
+                            child: SeedPressable(
+                              semanticsLabel: linkText,
+                              onTap: onLinkTap,
+                              child: Text(
+                                linkText,
+                                style: typography.t4Regular.copyWith(
+                                  color: fgColor,
+                                  decoration: underlineLink
+                                      ? TextDecoration.underline
+                                      : TextDecoration.none,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    style: typography.t4Regular.copyWith(color: fgColor),
+                  ),
+                ),
+                if (onDismiss != null)
+                  // The 40px target occupies 16px plus the 12px root gap.
+                  const SizedBox(width: 28)
+                else if (_isActionable) ...[
+                  const SizedBox(width: SeedDimension.x3),
+                  Icon(Icons.chevron_right_rounded, size: 16.0, color: fgColor),
+                ],
+              ],
             ),
           ),
-          if (onDismiss != null) ...[
-            const SizedBox(width: SeedDimension.x2),
-            SeedPressable(
-              semanticsLabel: '닫기',
-              behavior: HitTestBehavior.opaque,
-              focusBorderRadius: SeedBorderRadius.r2,
-              onTap: onDismiss,
-              builder: (context, isClosePressed) => AnimatedContainer(
-                duration: SeedDuration.colorTransition,
-                curve: SeedCurves.easing,
-                width: SeedDimension.x10,
-                height: SeedDimension.x10,
-                decoration: BoxDecoration(
-                  color: isClosePressed
-                      ? colors.bg.transparentPressed
-                      : colors.bg.transparent,
-                  borderRadius: SeedBorderRadius.r2,
-                ),
-                child: Center(
-                  child: Icon(
-                    Icons.close_rounded,
-                    size: SeedDimension.x4,
-                    color: fgColor,
+          if (onDismiss != null)
+            PositionedDirectional(
+              end: 2,
+              top: 0,
+              bottom: 0,
+              child: Center(
+                child: SeedPressable(
+                  semanticsLabel: '닫기',
+                  behavior: HitTestBehavior.opaque,
+                  focusBorderRadius: SeedBorderRadius.r2,
+                  onTap: _dismiss,
+                  builder: (context, isClosePressed) => AnimatedContainer(
+                    duration: SeedDuration.colorTransition,
+                    curve: SeedCurves.easing,
+                    width: SeedDimension.x10,
+                    height: SeedDimension.x10,
+                    decoration: BoxDecoration(
+                      color: isClosePressed
+                          ? colors.bg.transparentPressed
+                          : colors.bg.transparent,
+                      borderRadius: SeedBorderRadius.r2,
+                    ),
+                    child: Center(
+                      child: Icon(
+                        Icons.close_rounded,
+                        size: SeedDimension.x4,
+                        color: fgColor,
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
-          ] else if (_isActionable) ...[
-            const SizedBox(width: SeedDimension.x2),
-            Icon(Icons.chevron_right_rounded, size: 16.0, color: fgColor),
-          ],
         ],
       ),
     );
@@ -187,7 +240,10 @@ class SeedCallout extends StatelessWidget {
     return Icon(iconData, color: color, size: 16.0);
   }
 
-  (Color bg, Color fg, Color icon) _resolveColors(SeedColorScheme colors) {
+  (Color bg, Color fg, Color icon) _resolveColors(
+    SeedColorScheme colors,
+    SeedCalloutTone tone,
+  ) {
     switch (tone) {
       case SeedCalloutTone.neutral:
         return (colors.bg.neutralWeak, colors.fg.neutral, colors.fg.neutral);
@@ -216,7 +272,7 @@ class SeedCallout extends StatelessWidget {
           colors.fg.positiveContrast,
         );
       case SeedCalloutTone.magic:
-        return (colors.bg.magicWeak, colors.fg.neutral, colors.fg.brand);
+        return (colors.bg.magicWeak, colors.fg.neutral, colors.fg.neutral);
     }
   }
 }

@@ -10,6 +10,7 @@ import '../../theme/seed_theme.dart';
 import '../badge/seed_badge.dart';
 import 'seed_bottom_sheet.dart';
 import 'seed_menu.dart';
+import 'seed_anchored_overlay.dart';
 
 /// Shows a SEED Menu Sheet centered within the available safe area.
 Future<T?> showSeedMenuSheet<T>({
@@ -19,14 +20,24 @@ Future<T?> showSeedMenuSheet<T>({
   required List<SeedMenuGroupData> groups,
   String cancelLabel = '닫기',
   bool showCancelButton = true,
+  bool closeOnSelect = true,
+  TextAlign labelAlign = TextAlign.start,
+  bool isDismissible = true,
+  bool enableDrag = true,
+  bool showHandle = true,
 }) => showSeedBottomSheet<T>(
   context: context,
+  isDismissible: isDismissible,
+  enableDrag: enableDrag,
   child: SeedMenuSheet(
     title: title,
     description: description,
     groups: groups,
     cancelLabel: cancelLabel,
     showCancelButton: showCancelButton,
+    closeOnSelect: closeOnSelect,
+    labelAlign: labelAlign,
+    showHandle: showHandle,
   ),
 );
 
@@ -39,6 +50,9 @@ class SeedMenuSheet extends StatelessWidget {
     required this.groups,
     this.cancelLabel = '닫기',
     this.showCancelButton = true,
+    this.closeOnSelect = true,
+    this.labelAlign = TextAlign.start,
+    this.showHandle = true,
   });
 
   final String? title;
@@ -46,6 +60,11 @@ class SeedMenuSheet extends StatelessWidget {
   final List<SeedMenuGroupData> groups;
   final String cancelLabel;
   final bool showCancelButton;
+
+  /// Keep the sheet open for multi-selection or asynchronous confirmation.
+  final bool closeOnSelect;
+  final TextAlign labelAlign;
+  final bool showHandle;
 
   @override
   Widget build(BuildContext context) {
@@ -96,12 +115,15 @@ class SeedMenuSheet extends StatelessWidget {
                               child: Column(
                                 children: [
                                   if (title != null)
-                                    Text(
-                                      title!,
-                                      style: typography.t6Bold.copyWith(
-                                        color: colors.fg.neutral,
+                                    Semantics(
+                                      header: true,
+                                      child: Text(
+                                        title!,
+                                        style: typography.t6Bold.copyWith(
+                                          color: colors.fg.neutral,
+                                        ),
+                                        textAlign: TextAlign.center,
                                       ),
-                                      textAlign: TextAlign.center,
                                     ),
                                   if (description != null) ...[
                                     if (title != null)
@@ -184,7 +206,10 @@ class SeedMenuSheet extends StatelessWidget {
                                 borderRadius: SeedBorderRadius.r3,
                                 clipBehavior: Clip.antiAlias,
                                 child: InkWell(
-                                  onTap: () => Navigator.of(context).pop(),
+                                  onTap: () => _close(
+                                    context,
+                                    SeedOverlayDismissReason.closeButton,
+                                  ),
                                   child: Container(
                                     constraints: const BoxConstraints(
                                       minHeight: 52,
@@ -207,21 +232,22 @@ class SeedMenuSheet extends StatelessWidget {
                         ],
                       ),
                     ),
-                    Positioned(
-                      top: 6,
-                      left: 0,
-                      right: 0,
-                      child: Center(
-                        child: Container(
-                          width: 36,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: colors.stroke.neutralWeak,
-                            borderRadius: SeedBorderRadius.full,
+                    if (showHandle)
+                      Positioned(
+                        top: 6,
+                        left: 0,
+                        right: 0,
+                        child: Center(
+                          child: Container(
+                            width: 36,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: colors.stroke.neutralWeak,
+                              borderRadius: SeedBorderRadius.full,
+                            ),
                           ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -248,9 +274,12 @@ class SeedMenuSheet extends StatelessWidget {
     }
 
     return InkWell(
+      overlayColor: WidgetStatePropertyAll(colors.bg.neutralWeakPressed),
       onTap: item.enabled
           ? () {
-              Navigator.of(context).pop();
+              if (closeOnSelect) {
+                _close(context, SeedOverlayDismissReason.action);
+              }
               item.onTap?.call();
             }
           : null,
@@ -277,16 +306,14 @@ class SeedMenuSheet extends StatelessWidget {
             ],
             Expanded(
               child: Column(
-                crossAxisAlignment: item.prefixIcon == null
+                crossAxisAlignment: labelAlign == TextAlign.center
                     ? CrossAxisAlignment.center
                     : CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     item.label,
-                    textAlign: item.prefixIcon == null
-                        ? TextAlign.center
-                        : TextAlign.start,
+                    textAlign: labelAlign,
                     style: typography.t5Regular.copyWith(
                       color: labelColor,
                       fontWeight: FontWeight.w400,
@@ -296,9 +323,7 @@ class SeedMenuSheet extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       item.description!,
-                      textAlign: item.prefixIcon == null
-                          ? TextAlign.center
-                          : TextAlign.start,
+                      textAlign: labelAlign,
                       style: typography.t3Medium.copyWith(
                         color: item.enabled
                             ? colors.fg.neutralSubtle
@@ -320,5 +345,14 @@ class SeedMenuSheet extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+void _close(BuildContext context, SeedOverlayDismissReason reason) {
+  final scope = SeedOverlayScope.maybeOf(context);
+  if (scope != null) {
+    scope.close(reason);
+  } else {
+    Navigator.of(context).pop();
   }
 }

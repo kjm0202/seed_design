@@ -1,5 +1,8 @@
+import '../../foundations/feedback/seed_control.dart';
+
 import 'package:material_ui/material_ui.dart';
 
+import '../../foundations/colors/seed_palette.dart';
 import '../../foundations/dimensions/seed_dimension.dart';
 import '../../foundations/motion/seed_motion.dart';
 import '../../foundations/radius/seed_radius.dart';
@@ -23,6 +26,7 @@ class SeedCheckmark extends StatelessWidget {
   final SeedCheckboxShape shape;
   final SeedCheckboxSize size;
   final bool enabled;
+  final SeedControlTone tone;
   final bool pressed;
 
   const SeedCheckmark({
@@ -31,11 +35,13 @@ class SeedCheckmark extends StatelessWidget {
     this.shape = SeedCheckboxShape.square,
     this.size = SeedCheckboxSize.medium,
     this.enabled = true,
+    this.tone = SeedControlTone.brand,
     this.pressed = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final enabled = this.enabled && SeedControlScope.enabledOf(context);
     final colors = context.seedColor;
     final bool isChecked = value == true;
     final bool isIndeterminate = value == null;
@@ -46,14 +52,24 @@ class SeedCheckmark extends StatelessWidget {
     Color iconColor;
 
     if (shape == SeedCheckboxShape.ghost) {
-      bgColor = pressed
-          ? (isActive ? colors.bg.neutralWeak : colors.bg.transparentPressed)
+      bgColor = enabled && pressed
+          ? (isActive
+                ? (tone == SeedControlTone.brand
+                      ? (colors.isDark
+                            ? SeedPalette.carrot200Dark
+                            : SeedPalette.carrot200Light)
+                      : (colors.isDark
+                            ? SeedPalette.gray200Dark
+                            : SeedPalette.gray200Light))
+                : colors.bg.transparentPressed)
           : colors.bg.transparent;
       strokeColor = colors.bg.transparent;
       iconColor = !enabled
           ? colors.fg.disabled
           : isActive
-          ? colors.fg.neutral
+          ? (tone == SeedControlTone.brand
+                ? colors.fg.brand
+                : colors.fg.neutral)
           : colors.fg.placeholder;
     } else if (!enabled) {
       bgColor = colors.bg.disabled;
@@ -61,14 +77,22 @@ class SeedCheckmark extends StatelessWidget {
       iconColor = colors.fg.disabled;
     } else {
       bgColor = isActive
-          ? (pressed ? colors.bg.neutralSolidPressed : colors.bg.neutralSolid)
+          ? (pressed
+                ? (tone == SeedControlTone.brand
+                      ? colors.bg.brandSolidPressed
+                      : colors.bg.neutralSolidPressed)
+                : (tone == SeedControlTone.brand
+                      ? colors.bg.brandSolid
+                      : colors.bg.neutralSolid))
           : pressed
           ? colors.bg.transparentPressed
           : colors.bg.transparent;
       strokeColor = isActive
           ? colors.bg.transparent
           : colors.stroke.neutralWeak;
-      iconColor = colors.fg.onNeutralSolid;
+      iconColor = tone == SeedControlTone.brand
+          ? colors.fg.onBrandSolid
+          : colors.fg.onNeutralSolid;
     }
 
     return Container(
@@ -118,9 +142,11 @@ class SeedCheckbox extends StatelessWidget {
   final SeedCheckboxShape shape;
   final SeedCheckboxSize size;
   final bool enabled;
+  final SeedControlTone tone;
   final String? semanticsLabel;
   final FocusNode? focusNode;
   final bool tristate;
+  final SeedLabelWeight weight;
 
   const SeedCheckbox({
     super.key,
@@ -131,9 +157,11 @@ class SeedCheckbox extends StatelessWidget {
     this.shape = SeedCheckboxShape.square,
     this.size = SeedCheckboxSize.medium,
     this.enabled = true,
+    this.tone = SeedControlTone.brand,
     this.semanticsLabel,
     this.focusNode,
     this.tristate = false,
+    this.weight = SeedLabelWeight.regular,
   });
 
   void _handleTap() {
@@ -153,6 +181,7 @@ class SeedCheckbox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final enabled = this.enabled && SeedControlScope.enabledOf(context);
     final colors = context.seedColor;
     final typography = context.seedTypography;
 
@@ -161,13 +190,16 @@ class SeedCheckbox extends StatelessWidget {
                 ? typography.t4Regular
                 : typography.t5Regular)
             .copyWith(
+              fontWeight: weight == SeedLabelWeight.bold
+                  ? FontWeight.bold
+                  : FontWeight.normal,
               color: enabled && onChanged != null
                   ? colors.fg.neutral
                   : colors.fg.disabled,
             );
 
-    Widget mark(bool pressed) => AnimatedScale(
-      scale: pressed
+    Widget mark(bool pressed, bool scalePressed) => AnimatedScale(
+      scale: scalePressed
           ? SeedScaleCalculator.calculateScale(
               width: size.markSize,
               height: size.markSize,
@@ -179,15 +211,18 @@ class SeedCheckbox extends StatelessWidget {
       child: SeedCheckmark(
         value: value,
         shape: shape,
+        tone: tone,
         size: size,
-        enabled: enabled && onChanged != null,
+        enabled:
+            enabled && onChanged != null && SeedControlScope.enabledOf(context),
         pressed: pressed,
       ),
     );
 
     if (label == null && customLabel == null) {
       return SeedPressable(
-        enabled: enabled && onChanged != null,
+        enabled:
+            enabled && onChanged != null && SeedControlScope.enabledOf(context),
         enableScale: false,
         semanticButton: false,
         semanticsLabel: semanticsLabel,
@@ -198,13 +233,19 @@ class SeedCheckbox extends StatelessWidget {
         builder: (context, pressed) => SizedBox(
           width: 44,
           height: 44,
-          child: Center(child: mark(pressed)),
+          child: Center(
+            child: mark(
+              pressed,
+              SeedInteractionState.maybeOf(context)?.pressed ?? false,
+            ),
+          ),
         ),
       );
     }
 
     return SeedPressable(
-      enabled: enabled && onChanged != null,
+      enabled:
+          enabled && onChanged != null && SeedControlScope.enabledOf(context),
       enableScale: false,
       semanticButton: false,
       semanticsLabel: semanticsLabel,
@@ -218,7 +259,10 @@ class SeedCheckbox extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            mark(pressed),
+            mark(
+              pressed,
+              SeedInteractionState.maybeOf(context)?.pressed ?? false,
+            ),
             const SizedBox(width: SeedDimension.x2),
             if (customLabel != null)
               customLabel!

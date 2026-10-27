@@ -13,7 +13,8 @@ enum SeedResultSectionSize { medium, large }
 /// with an asset graphic, title, description, and primary/secondary actions.
 class SeedResultSection extends StatelessWidget {
   final Widget? asset;
-  final String title;
+  final String? title;
+  final Widget? actions;
   final String? description;
   final String? primaryActionLabel;
   final VoidCallback? onPrimaryAction;
@@ -28,7 +29,8 @@ class SeedResultSection extends StatelessWidget {
   const SeedResultSection({
     super.key,
     this.asset,
-    required this.title,
+    this.title,
+    this.actions,
     this.description,
     this.primaryActionLabel,
     this.onPrimaryAction,
@@ -62,17 +64,18 @@ class SeedResultSection extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            if (asset != null) ...[
-              asset!,
-              const SizedBox(height: SeedDimension.x5),
-            ],
-            Text(title, style: titleStyle, textAlign: TextAlign.center),
-            if (description != null) ...[
+            ?asset,
+            if (title != null)
+              Text(title!, style: titleStyle, textAlign: TextAlign.center),
+            if (title != null && description != null)
               SizedBox(height: size == SeedResultSectionSize.large ? 12 : 8),
+            if (description != null)
               Text(description!, style: descStyle, textAlign: TextAlign.center),
-            ],
-            if (primaryActionLabel != null || secondaryActionLabel != null) ...[
-              SizedBox(height: size == SeedResultSectionSize.large ? 28 : 24),
+            SizedBox(height: size == SeedResultSectionSize.large ? 28 : 24),
+            if (actions != null) ...[
+              actions!,
+            ] else if (primaryActionLabel != null ||
+                secondaryActionLabel != null) ...[
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -90,6 +93,9 @@ class SeedResultSection extends StatelessWidget {
                       label: secondaryActionLabel!,
                       variant: SeedButtonVariant.ghost,
                       size: SeedButtonSize.small,
+                      textColor: colors.fg.neutral,
+                      fontWeight: FontWeight.bold,
+                      bleed: true,
                       onPressed: onSecondaryAction,
                     ),
                 ],

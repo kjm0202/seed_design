@@ -14,6 +14,10 @@ class SeedBottomNavigationItem {
   final String label;
   final int? notificationCount;
   final bool showNotificationDot;
+  final bool enabled;
+
+  /// Override for localized notification information read by screen readers.
+  final String? notificationSemanticsLabel;
 
   const SeedBottomNavigationItem({
     required this.icon,
@@ -21,7 +25,20 @@ class SeedBottomNavigationItem {
     required this.label,
     this.notificationCount,
     this.showNotificationDot = false,
+    this.enabled = true,
+    this.notificationSemanticsLabel,
   });
+
+  String? get _notificationValue {
+    if ((notificationCount ?? 0) > 0) {
+      return notificationSemanticsLabel ?? '읽지 않은 알림 $notificationCount개';
+    }
+    if (showNotificationDot &&
+        (notificationCount == null || notificationCount == 0)) {
+      return notificationSemanticsLabel ?? '새 알림 있음';
+    }
+    return null;
+  }
 }
 
 /// Bottom Navigation Bar component of SEED Design System.
@@ -52,7 +69,7 @@ class SeedBottomNavigation extends StatelessWidget {
 
     return SeedChoiceGroup(
       selectedIndex: currentIndex,
-      enabled: List.filled(items.length, true),
+      enabled: items.map((item) => item.enabled).toList(),
       onSelected: onTap,
       builder: (context, nodes) => Container(
         color: backgroundColor ?? colors.bg.layerDefault,
@@ -80,7 +97,9 @@ class SeedBottomNavigation extends StatelessWidget {
                         final item = items[index];
                         final bool isSelected = index == currentIndex;
 
-                        final Color fgColor = isSelected
+                        final Color fgColor = !item.enabled
+                            ? colors.fg.disabled
+                            : isSelected
                             ? colors.fg.neutral
                             : colors.fg.neutralMuted;
                         final TextStyle textStyle =
@@ -95,36 +114,28 @@ class SeedBottomNavigation extends StatelessWidget {
 
                         return Expanded(
                           child: SeedPressable(
+                            enabled: item.enabled,
                             selected: isSelected,
                             focusNode: nodes[index],
                             semanticsLabel: item.label,
+                            semanticsValue: item._notificationValue,
                             enableScale: false,
                             onTap: () => onTap(index),
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Stack(
-                                  clipBehavior: Clip.none,
-                                  children: [
-                                    IconTheme(
-                                      data: IconThemeData(
-                                        color: fgColor,
-                                        size: 24.0,
-                                      ),
-                                      child: effectiveIcon,
+                                SeedNotificationBadgePositioner(
+                                  badge: SeedNotificationBadge(
+                                    count: item.notificationCount,
+                                    showDot: item.showNotificationDot,
+                                  ),
+                                  child: IconTheme(
+                                    data: IconThemeData(
+                                      color: fgColor,
+                                      size: 24,
                                     ),
-                                    if (item.notificationCount != null ||
-                                        item.showNotificationDot) ...[
-                                      Positioned(
-                                        top: -2.0,
-                                        right: -6.0,
-                                        child: SeedNotificationBadge(
-                                          count: item.notificationCount,
-                                          showDot: item.showNotificationDot,
-                                        ),
-                                      ),
-                                    ],
-                                  ],
+                                    child: effectiveIcon,
+                                  ),
                                 ),
                                 const SizedBox(height: SeedDimension.x0_5),
                                 Text(

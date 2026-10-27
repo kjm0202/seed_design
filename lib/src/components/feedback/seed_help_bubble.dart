@@ -1,3 +1,8 @@
+import 'dart:async';
+
+import '../overlay/seed_anchored_overlay.dart';
+import '../../foundations/motion/seed_motion.dart';
+
 import 'package:material_ui/material_ui.dart';
 
 import '../../foundations/dimensions/seed_dimension.dart';
@@ -6,7 +11,7 @@ import '../../theme/seed_theme.dart';
 import '../../foundations/feedback/seed_scale_feedback.dart';
 
 /// Arrow orientation for [SeedHelpBubble].
-enum SeedHelpBubbleArrowPlacement { top, bottom, none }
+enum SeedHelpBubbleArrowPlacement { top, bottom, left, right, none }
 
 /// Help Bubble (Tooltip speech bubble) component of SEED Design System.
 ///
@@ -19,6 +24,7 @@ class SeedHelpBubble extends StatelessWidget {
   final SeedHelpBubbleArrowPlacement arrowPlacement;
   final double arrowOffset;
   final bool isBrand;
+  final double maxWidth;
 
   const SeedHelpBubble({
     super.key,
@@ -28,6 +34,7 @@ class SeedHelpBubble extends StatelessWidget {
     this.arrowPlacement = SeedHelpBubbleArrowPlacement.top,
     this.arrowOffset = 24.0,
     this.isBrand = false,
+    this.maxWidth = 280,
   });
 
   @override
@@ -51,59 +58,64 @@ class SeedHelpBubble extends StatelessWidget {
     );
 
     Widget bubbleBody = Container(
-      constraints: const BoxConstraints(maxWidth: 280),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      constraints: BoxConstraints(maxWidth: maxWidth),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: SeedBorderRadius.r3,
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
+        clipBehavior: Clip.none,
         children: [
-          Flexible(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(title, style: typography.t3Bold.copyWith(color: fgColor)),
-                if (description != null) ...[
-                  const SizedBox(height: SeedDimension.x0_5),
+          Padding(
+            padding: EdgeInsetsDirectional.fromSTEB(
+              12,
+              10,
+              onClose != null ? 30 : 12,
+              10,
+            ),
+            child: Semantics(
+              label: title,
+              hint: description,
+              excludeSemantics: true,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
                   Text(
-                    description!,
-                    style: typography.t3Regular.copyWith(color: fgColor),
+                    title,
+                    style: typography.t3Bold.copyWith(color: fgColor),
                   ),
+                  if (description != null) ...[
+                    const SizedBox(height: SeedDimension.x0_5),
+                    Text(
+                      description!,
+                      style: typography.t3Regular.copyWith(color: fgColor),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
-          if (onClose != null) ...[
-            const SizedBox(width: SeedDimension.x1),
-            SeedPressable(
-              semanticsLabel: '닫기',
-              enableScale: false,
-              behavior: HitTestBehavior.opaque,
-              onTap: onClose,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-                child: Center(
-                  widthFactor: 1,
-                  heightFactor: 1,
-                  child: SizedBox(
-                    width: 38.0,
-                    height: 38.0,
-                    child: Center(
-                      child: Icon(
-                        Icons.close_rounded,
-                        size: 14.0,
-                        color: fgColor,
-                      ),
+          if (onClose != null)
+            PositionedDirectional(
+              top: 0,
+              end: 0,
+              child: SeedPressable(
+                semanticsLabel: '닫기',
+                behavior: HitTestBehavior.opaque,
+                onTap: onClose,
+                child: SizedBox.square(
+                  dimension: 38,
+                  child: Center(
+                    child: Icon(
+                      Icons.close_rounded,
+                      size: 14.0,
+                      color: fgColor,
                     ),
                   ),
                 ),
               ),
             ),
-          ],
         ],
       ),
     );
@@ -112,6 +124,32 @@ class SeedHelpBubble extends StatelessWidget {
       return bubbleBody;
     }
 
+    if (arrowPlacement == SeedHelpBubbleArrowPlacement.left ||
+        arrowPlacement == SeedHelpBubbleArrowPlacement.right) {
+      final horizontalArrow = Padding(
+        padding: EdgeInsets.only(top: arrowOffset),
+        child: RotatedBox(
+          quarterTurns: arrowPlacement == SeedHelpBubbleArrowPlacement.left
+              ? 3
+              : 1,
+          child: CustomPaint(
+            size: const Size(12, 8),
+            painter: _TrianglePainter(color: bgColor, isPointingUp: true),
+          ),
+        ),
+      );
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (arrowPlacement == SeedHelpBubbleArrowPlacement.left)
+            horizontalArrow,
+          Flexible(child: bubbleBody),
+          if (arrowPlacement == SeedHelpBubbleArrowPlacement.right)
+            horizontalArrow,
+        ],
+      );
+    }
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -143,18 +181,26 @@ class _TrianglePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..color = color;
-    final path = Path();
+    // Same rounded 12 x 8 tip geometry as getHelpBubbleArrowTipPath.
+    canvas.save();
     if (isPointingUp) {
-      path.moveTo(0, size.height);
-      path.lineTo(size.width / 2, 0);
-      path.lineTo(size.width, size.height);
-    } else {
-      path.moveTo(0, 0);
-      path.lineTo(size.width / 2, size.height);
-      path.lineTo(size.width, 0);
+      canvas.translate(0, size.height);
+      canvas.scale(1, -1);
     }
-    path.close();
+    const radius = 2.0;
+    final path = Path()
+      ..moveTo(0, 0)
+      ..lineTo(size.width, 0)
+      ..lineTo(size.width / 2 + radius, size.height - radius)
+      ..quadraticBezierTo(
+        size.width / 2,
+        size.height,
+        size.width / 2 - radius,
+        size.height - radius,
+      )
+      ..close();
     canvas.drawPath(path, paint);
+    canvas.restore();
   }
 
   @override
@@ -162,4 +208,260 @@ class _TrianglePainter extends CustomPainter {
     return oldDelegate.color != color ||
         oldDelegate.isPointingUp != isPointingUp;
   }
+}
+
+SeedHelpBubbleArrowPlacement _bubbleArrow(SeedOverlaySide side) =>
+    switch (side) {
+      SeedOverlaySide.top => SeedHelpBubbleArrowPlacement.bottom,
+      SeedOverlaySide.bottom => SeedHelpBubbleArrowPlacement.top,
+      SeedOverlaySide.left => SeedHelpBubbleArrowPlacement.right,
+      SeedOverlaySide.right => SeedHelpBubbleArrowPlacement.left,
+    };
+
+double _bubbleArrowOffset(BuildContext context) {
+  final scope = SeedOverlayScope.maybeOf(context)!;
+  return (scope.side == SeedOverlaySide.top ||
+              scope.side == SeedOverlaySide.bottom
+          ? scope.anchorPoint?.dx
+          : scope.anchorPoint?.dy) ??
+      24;
+}
+
+class SeedHelpBubbleTrigger extends StatelessWidget {
+  const SeedHelpBubbleTrigger({
+    super.key,
+    required this.triggerBuilder,
+    required this.title,
+    this.description,
+    this.anchor,
+    this.controller,
+    this.open,
+    this.defaultOpen = false,
+    this.onOpenChanged,
+    this.side = SeedOverlaySide.top,
+    this.align = SeedOverlayAlign.center,
+    this.flip = true,
+    this.maxWidth = 280,
+    this.showCloseButton = true,
+    this.closeOnInteractOutside = true,
+    this.autoFocus = false,
+    this.isBrand = false,
+    this.skipAnimation = false,
+  });
+  final Widget Function(BuildContext, bool, VoidCallback) triggerBuilder;
+  final String title;
+  final String? description;
+  final Widget? anchor;
+  final SeedOverlayController? controller;
+  final bool? open;
+  final bool defaultOpen,
+      flip,
+      showCloseButton,
+      closeOnInteractOutside,
+      autoFocus,
+      isBrand,
+      skipAnimation;
+  final double maxWidth;
+  final void Function(bool, SeedOverlayDismissReason)? onOpenChanged;
+  final SeedOverlaySide side;
+  final SeedOverlayAlign align;
+  @override
+  Widget build(BuildContext context) => SeedAnchoredOverlay(
+    triggerBuilder: triggerBuilder,
+    anchor: anchor,
+    controller: controller,
+    open: open,
+    defaultOpen: defaultOpen,
+    onOpenChanged: onOpenChanged,
+    side: side,
+    gap: 4,
+    arrowPadding: 14,
+    align: align,
+    flip: flip,
+    maxWidth: maxWidth,
+    autoFocus: autoFocus,
+    closeOnInteractOutside: closeOnInteractOutside,
+    enterScale: 0.9,
+    exitScale: 1,
+    enterCurve: SeedCurves.enter,
+    exitCurve: SeedCurves.easing,
+    scaleFromAnchor: true,
+    enterDuration: SeedDuration.d4,
+    exitDuration: SeedDuration.d4,
+    skipAnimation: skipAnimation,
+    overlayBuilder: (context) => SeedHelpBubble(
+      title: title,
+      description: description,
+      isBrand: isBrand,
+      maxWidth: maxWidth,
+      arrowOffset: _bubbleArrowOffset(context),
+      arrowPlacement: _bubbleArrow(SeedOverlayScope.maybeOf(context)!.side),
+      onClose: showCloseButton
+          ? () =>
+                SeedOverlayScope.maybeOf(context)!
+                    .close(SeedOverlayDismissReason.closeButton)
+          : null,
+    ),
+  );
+}
+
+class SeedTooltipDelayGroup extends StatefulWidget {
+  const SeedTooltipDelayGroup({
+    super.key,
+    required this.child,
+    this.openDelay = const Duration(milliseconds: 500),
+    this.closeDelay = const Duration(milliseconds: 100),
+    this.skipDelay = const Duration(milliseconds: 800),
+  });
+  final Widget child;
+  final Duration openDelay, closeDelay, skipDelay;
+  @override
+  State<SeedTooltipDelayGroup> createState() => _SeedTooltipDelayGroupState();
+}
+
+class _SeedTooltipDelayGroupState extends State<SeedTooltipDelayGroup> {
+  DateTime? lastClose;
+  SeedOverlayController? active;
+  @override
+  Widget build(BuildContext context) =>
+      _SeedTooltipGroupScope(state: this, child: widget.child);
+}
+
+class _SeedTooltipGroupScope extends InheritedWidget {
+  const _SeedTooltipGroupScope({required this.state, required super.child});
+  final _SeedTooltipDelayGroupState state;
+  @override
+  bool updateShouldNotify(_SeedTooltipGroupScope oldWidget) =>
+      state != oldWidget.state;
+}
+
+class SeedHelpBubbleTooltip extends StatefulWidget {
+  const SeedHelpBubbleTooltip({
+    super.key,
+    required this.child,
+    required this.title,
+    this.description,
+    this.open,
+    this.onOpenChanged,
+    this.openDelay,
+    this.closeDelay,
+    this.side = SeedOverlaySide.top,
+    this.align = SeedOverlayAlign.center,
+    this.flip = true,
+    this.keepOpenOnContentHover = true,
+    this.maxWidth = 280,
+    this.isBrand = false,
+  });
+  final Widget child;
+  final String title;
+  final String? description;
+  final bool? open;
+  final ValueChanged<bool>? onOpenChanged;
+  final Duration? openDelay, closeDelay;
+  final SeedOverlaySide side;
+  final SeedOverlayAlign align;
+  final bool flip, keepOpenOnContentHover, isBrand;
+  final double maxWidth;
+  @override
+  State<SeedHelpBubbleTooltip> createState() => _SeedHelpBubbleTooltipState();
+}
+
+class _SeedHelpBubbleTooltipState extends State<SeedHelpBubbleTooltip> {
+  final SeedOverlayController _controller = SeedOverlayController();
+  Timer? _timer;
+  _SeedTooltipDelayGroupState? group;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    group = context
+        .dependOnInheritedWidgetOfExactType<_SeedTooltipGroupScope>()
+        ?.state;
+  }
+
+  void _request(bool open) {
+    _timer?.cancel();
+    final g = group;
+    final skip =
+        g?.lastClose != null &&
+        DateTime.now().difference(g!.lastClose!) < g.widget.skipDelay;
+    final delay = open
+        ? (skip
+              ? Duration.zero
+              : widget.openDelay ??
+                    g?.widget.openDelay ??
+                    const Duration(milliseconds: 500))
+        : widget.closeDelay ??
+              g?.widget.closeDelay ??
+              const Duration(milliseconds: 100);
+    _timer = Timer(delay, () {
+      if (!mounted) return;
+      if (open) {
+        g?.active?.close();
+        if (g != null) g.active = _controller;
+      } else if (g != null) {
+        g.lastClose = DateTime.now();
+      }
+      widget.onOpenChanged?.call(open);
+      if (widget.open == null) open ? _controller.open() : _controller.close();
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    if (group?.active == _controller) {
+      group!.active = null;
+      group!.lastClose = DateTime.now();
+    }
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => SeedAnchoredOverlay(
+    controller: _controller,
+    open: widget.open,
+    side: widget.side,
+    gap: 4,
+    arrowPadding: 14,
+    enterScale: 0.9,
+    exitScale: 1,
+    enterCurve: SeedCurves.enter,
+    exitCurve: SeedCurves.easing,
+    scaleFromAnchor: true,
+    enterDuration: SeedDuration.d4,
+    exitDuration: SeedDuration.d4,
+    align: widget.align,
+    flip: widget.flip,
+    maxWidth: widget.maxWidth,
+    autoFocus: false,
+    restoreFocus: false,
+    onOpenChanged: (open, reason) => widget.onOpenChanged?.call(open),
+    triggerBuilder: (context, open, toggle) => MouseRegion(
+      onEnter: (_) => _request(true),
+      onExit: (_) => _request(false),
+      child: Focus(
+        canRequestFocus: false,
+        onFocusChange: _request,
+        child: widget.child,
+      ),
+    ),
+    overlayBuilder: (context) => MouseRegion(
+      onEnter: widget.keepOpenOnContentHover ? (_) => _timer?.cancel() : null,
+      onExit: widget.keepOpenOnContentHover ? (_) => _request(false) : null,
+      child: Semantics(
+        tooltip: widget.description == null
+            ? widget.title
+            : '${widget.title}. ${widget.description}',
+        child: SeedHelpBubble(
+          title: widget.title,
+          description: widget.description,
+          maxWidth: widget.maxWidth,
+          isBrand: widget.isBrand,
+          arrowOffset: _bubbleArrowOffset(context),
+          arrowPlacement: _bubbleArrow(SeedOverlayScope.maybeOf(context)!.side),
+        ),
+      ),
+    ),
+  );
 }

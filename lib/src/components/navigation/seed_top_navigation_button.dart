@@ -7,8 +7,26 @@ import '../../foundations/motion/seed_motion.dart';
 import '../../foundations/radius/seed_radius.dart';
 import '../../theme/seed_theme.dart';
 
-/// Tone options for top navigation buttons.
+/// Tone options for top navigation bars and buttons.
 enum SeedTopNavigationButtonTone { layer, transparent }
+
+/// Inherited scope that shares [SeedTopNavigation]'s [tone] with child buttons.
+class SeedTopNavigationScope extends InheritedWidget {
+  const SeedTopNavigationScope({
+    super.key,
+    required this.tone,
+    required super.child,
+  });
+
+  final SeedTopNavigationButtonTone tone;
+
+  static SeedTopNavigationScope? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<SeedTopNavigationScope>();
+
+  @override
+  bool updateShouldNotify(SeedTopNavigationScope oldWidget) =>
+      tone != oldWidget.tone;
+}
 
 /// Dedicated icon button for top navigation bars adhering to SEED Design.
 ///
@@ -17,7 +35,7 @@ enum SeedTopNavigationButtonTone { layer, transparent }
 class SeedTopNavigationIconButton extends StatelessWidget {
   final Widget icon;
   final VoidCallback? onPressed;
-  final SeedTopNavigationButtonTone tone;
+  final SeedTopNavigationButtonTone? tone;
   final bool enabled;
   final String? semanticsLabel;
 
@@ -25,7 +43,7 @@ class SeedTopNavigationIconButton extends StatelessWidget {
     super.key,
     required this.icon,
     required this.onPressed,
-    this.tone = SeedTopNavigationButtonTone.layer,
+    this.tone,
     this.enabled = true,
     this.semanticsLabel,
   });
@@ -34,10 +52,14 @@ class SeedTopNavigationIconButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.seedColor;
     final interactive = enabled && onPressed != null;
+    final effectiveTone =
+        tone ??
+        SeedTopNavigationScope.maybeOf(context)?.tone ??
+        SeedTopNavigationButtonTone.layer;
 
     final Color iconColor = !interactive
         ? colors.fg.disabled
-        : (tone == SeedTopNavigationButtonTone.layer
+        : (effectiveTone == SeedTopNavigationButtonTone.layer
               ? colors.fg.neutral
               : SeedPalette.staticWhite);
 
@@ -75,7 +97,7 @@ class SeedTopNavigationIconButton extends StatelessWidget {
 class SeedTopNavigationTextButton extends StatelessWidget {
   final String text;
   final VoidCallback? onPressed;
-  final SeedTopNavigationButtonTone tone;
+  final SeedTopNavigationButtonTone? tone;
   final bool enabled;
   final double? maxWidth;
 
@@ -83,7 +105,7 @@ class SeedTopNavigationTextButton extends StatelessWidget {
     super.key,
     required this.text,
     required this.onPressed,
-    this.tone = SeedTopNavigationButtonTone.layer,
+    this.tone,
     this.enabled = true,
     this.maxWidth,
   });
@@ -93,10 +115,14 @@ class SeedTopNavigationTextButton extends StatelessWidget {
     final colors = context.seedColor;
     final typography = context.seedTypography;
     final interactive = enabled && onPressed != null;
+    final effectiveTone =
+        tone ??
+        SeedTopNavigationScope.maybeOf(context)?.tone ??
+        SeedTopNavigationButtonTone.layer;
 
     final Color labelColor = !interactive
         ? colors.fg.disabled
-        : (tone == SeedTopNavigationButtonTone.layer
+        : (effectiveTone == SeedTopNavigationButtonTone.layer
               ? colors.fg.neutral
               : SeedPalette.staticWhite);
 

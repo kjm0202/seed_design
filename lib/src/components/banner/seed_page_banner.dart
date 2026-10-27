@@ -24,34 +24,53 @@ enum SeedPageBannerVariant { weak, solid }
 ///
 /// Prominently communicates high-level notifications, system alerts,
 /// and promotions at the top of a page.
-class SeedPageBanner extends StatelessWidget {
-  final String title;
+class SeedPageBanner extends StatefulWidget {
+  final String? title;
   final String? description;
   final String? linkText;
   final VoidCallback? onLinkTap;
   final VoidCallback? onTap;
   final VoidCallback? onDismiss;
+
+  /// When supplied, visibility is owned by the parent.
+  final bool? open;
+  final bool defaultOpen;
+
+  /// Shows a close button even when [onDismiss] is omitted.
+  final bool dismissible;
   final Widget? prefixIcon;
   final SeedPageBannerTone tone;
   final SeedPageBannerVariant variant;
 
   const SeedPageBanner({
     super.key,
-    required this.title,
+    this.title,
     this.description,
     this.linkText,
     this.onLinkTap,
     this.onTap,
     this.onDismiss,
+    this.open,
+    this.defaultOpen = true,
+    this.dismissible = false,
     this.prefixIcon,
     this.tone = SeedPageBannerTone.neutral,
     this.variant = SeedPageBannerVariant.weak,
-  });
+  }) : assert(
+         tone != SeedPageBannerTone.magic ||
+             variant != SeedPageBannerVariant.solid,
+         'The magic tone only supports the weak variant.',
+       );
+
+  @override
+  State<SeedPageBanner> createState() => _SeedPageBannerState();
 
   bool get _isActionable => onTap != null;
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _scaleContent(Widget child) =>
+      _isActionable ? SeedContentScale(child: child) : child;
+
+  Widget _build(BuildContext context, VoidCallback dismiss) {
     final colors = context.seedColor;
     final typography = context.seedTypography;
 
@@ -95,86 +114,95 @@ class SeedPageBanner extends StatelessWidget {
                   : SeedGradients.glowMagic(isDark: colors.isDark))
             : null,
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          if (prefixIcon != null) ...[
-            IconTheme(
-              data: IconThemeData(color: iconColor, size: 16.0),
-              child: prefixIcon!,
-            ),
-            const SizedBox(width: SeedDimension.x2),
-          ],
-          Expanded(
-            child: Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                Text.rich(
-                  TextSpan(
-                    children: [
-                      TextSpan(
-                        text: title,
-                        style: typography.t4Bold.copyWith(color: fgColor),
-                      ),
-                      if (description != null)
-                        TextSpan(
-                          text: '  $description',
-                          style: typography.t4Medium.copyWith(color: fgColor),
-                        ),
-                    ],
+      child: _scaleContent(
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            if (prefixIcon != null) ...[
+              IconTheme(
+                data: IconThemeData(color: iconColor, size: 16.0),
+                child: prefixIcon!,
+              ),
+              const SizedBox(width: SeedDimension.x2),
+            ],
+            Expanded(
+              child: Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                spacing: 6,
+                runSpacing: 6,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        if (title != null)
+                          TextSpan(
+                            text: title,
+                            style: typography.t4Bold.copyWith(color: fgColor),
+                          ),
+                        if (description != null)
+                          TextSpan(
+                            text: title == null
+                                ? description
+                                : '  $description',
+                            style: typography.t4Medium.copyWith(color: fgColor),
+                          ),
+                      ],
+                    ),
+                    style: typography.t4Medium.copyWith(color: fgColor),
                   ),
-                  style: typography.t4Medium.copyWith(color: fgColor),
-                ),
-                if (linkText != null)
-                  SeedPressable(
-                    semanticsLabel: linkText,
-                    onTap: onLinkTap,
-                    builder: (context, linkPressed) => Container(
-                      constraints: const BoxConstraints(minHeight: 40),
-                      alignment: Alignment.center,
-                      child: Text(
-                        linkText!,
-                        style: typography.t3Bold.copyWith(color: fgColor),
+                  if (linkText != null)
+                    SeedPressable(
+                      semanticsLabel: linkText,
+                      onTap: onLinkTap,
+                      builder: (context, linkPressed) => ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 40),
+                        child: Center(
+                          widthFactor: 1,
+                          heightFactor: 1,
+                          child: Text(
+                            linkText!,
+                            style: typography.t3Bold.copyWith(color: fgColor),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
-          ),
-          if (onDismiss != null) ...[
-            const SizedBox(width: SeedDimension.x2),
-            SeedPressable(
-              semanticsLabel: '닫기',
-              behavior: HitTestBehavior.opaque,
-              focusBorderRadius: SeedBorderRadius.r2,
-              onTap: onDismiss,
-              builder: (context, isClosePressed) => AnimatedContainer(
-                duration: SeedDuration.colorTransition,
-                curve: SeedCurves.easing,
-                width: SeedDimension.x10,
-                height: SeedDimension.x10,
-                decoration: BoxDecoration(
-                  color: isClosePressed
-                      ? colors.bg.transparentPressed
-                      : colors.bg.transparent,
-                  borderRadius: SeedBorderRadius.r2,
-                ),
-                child: Center(
-                  child: Icon(
-                    Icons.close_rounded,
-                    size: SeedDimension.x4,
-                    color: iconColor,
+            if (dismissible || onDismiss != null) ...[
+              const SizedBox(width: SeedDimension.x2),
+              SeedPressable(
+                semanticsLabel: '닫기',
+                behavior: HitTestBehavior.opaque,
+                focusBorderRadius: SeedBorderRadius.r2,
+                onTap: dismiss,
+                builder: (context, isClosePressed) => AnimatedContainer(
+                  duration: SeedDuration.colorTransition,
+                  curve: SeedCurves.easing,
+                  width: SeedDimension.x10,
+                  height: SeedDimension.x10,
+                  decoration: BoxDecoration(
+                    color: isClosePressed
+                        ? colors.bg.transparentPressed
+                        : colors.bg.transparent,
+                    borderRadius: SeedBorderRadius.r2,
+                  ),
+                  child: Center(
+                    child: Icon(
+                      Icons.close_rounded,
+                      size: SeedDimension.x4,
+                      color: iconColor,
+                    ),
                   ),
                 ),
               ),
-            ),
-          ] else if (_isActionable) ...[
-            const SizedBox(width: SeedDimension.x2),
-            Icon(Icons.chevron_right_rounded, size: 16.0, color: iconColor),
+            ] else if (_isActionable) ...[
+              const SizedBox(width: SeedDimension.x2),
+              Icon(Icons.chevron_right_rounded, size: 16.0, color: iconColor),
+            ],
           ],
-        ],
+        ),
       ),
     );
 
@@ -258,8 +286,23 @@ class SeedPageBanner extends StatelessWidget {
             colors.fg.criticalContrast,
           );
         case SeedPageBannerTone.magic:
-          return (colors.bg.magicWeak, colors.fg.neutral, colors.fg.brand);
+          return (colors.bg.magicWeak, colors.fg.neutral, colors.fg.neutral);
       }
     }
   }
+}
+
+class _SeedPageBannerState extends State<SeedPageBanner> {
+  late bool _open = widget.defaultOpen;
+
+  void _dismiss() {
+    if (!(widget.open ?? _open)) return;
+    if (widget.open == null) setState(() => _open = false);
+    widget.onDismiss?.call();
+  }
+
+  @override
+  Widget build(BuildContext context) => (widget.open ?? _open)
+      ? widget._build(context, _dismiss)
+      : const SizedBox.shrink();
 }

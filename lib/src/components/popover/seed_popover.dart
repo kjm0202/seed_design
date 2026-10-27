@@ -1,3 +1,7 @@
+import '../layout/seed_scroll_fog.dart';
+import '../overlay/seed_anchored_overlay.dart';
+import '../layout/seed_scroll_area.dart';
+
 import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
@@ -23,6 +27,9 @@ class SeedPopover extends StatelessWidget {
   final double minWidth;
   final double maxWidth;
   final double maxHeight;
+  final bool scrollBody;
+  final bool showScrollFog;
+  final bool showCloseButton;
 
   const SeedPopover({
     super.key,
@@ -36,6 +43,9 @@ class SeedPopover extends StatelessWidget {
     this.minWidth = 320.0,
     this.maxWidth = 480.0,
     this.maxHeight = 600.0,
+    this.scrollBody = true,
+    this.showScrollFog = true,
+    this.showCloseButton = false,
   });
 
   @override
@@ -43,6 +53,12 @@ class SeedPopover extends StatelessWidget {
     final colors = context.seedColor;
     final typography = context.seedTypography;
     final shadows = context.seedShadows;
+    final scope = SeedOverlayScope.maybeOf(context);
+    final onClose =
+        this.onClose ??
+        (showCloseButton && scope != null
+            ? () => scope.close(SeedOverlayDismissReason.closeButton)
+            : null);
 
     final Widget? titleWidget =
         title ??
@@ -146,7 +162,15 @@ class SeedPopover extends StatelessWidget {
                   SeedDimension.x6,
                   footer != null ? 0 : SeedDimension.x12,
                 ),
-                child: body!,
+                child: scrollBody
+                    ? SeedScrollArea(
+                        placements: showScrollFog
+                            ? const {SeedScrollFogPlacement.bottom}
+                            : const {},
+                        showScrolledDivider: true,
+                        child: body!,
+                      )
+                    : body!,
               ),
             ),
           if (footer != null)
@@ -262,4 +286,58 @@ class _SeedPopoverPositionDelegate extends SingleChildLayoutDelegate {
   @override
   bool shouldRelayout(_SeedPopoverPositionDelegate oldDelegate) =>
       anchor != oldDelegate.anchor || insets != oldDelegate.insets;
+}
+
+/// Lifecycle-managed anchored popover. The card remains independently composable.
+class SeedPopoverTrigger extends StatelessWidget {
+  const SeedPopoverTrigger({
+    super.key,
+    required this.triggerBuilder,
+    required this.builder,
+    this.anchor,
+    this.controller,
+    this.open,
+    this.defaultOpen = false,
+    this.onOpenChanged,
+    this.side = SeedOverlaySide.bottom,
+    this.align = SeedOverlayAlign.center,
+    this.flip = true,
+    this.autoFocus = true,
+    this.closeOnInteractOutside = true,
+    this.closeOnFocusOut = true,
+    this.maxWidth = 480,
+    this.maxHeight = 600,
+  });
+  final Widget Function(BuildContext, bool, VoidCallback) triggerBuilder;
+  final WidgetBuilder builder;
+  final Widget? anchor;
+  final SeedOverlayController? controller;
+  final bool? open;
+  final bool defaultOpen,
+      flip,
+      autoFocus,
+      closeOnInteractOutside,
+      closeOnFocusOut;
+  final void Function(bool, SeedOverlayDismissReason)? onOpenChanged;
+  final SeedOverlaySide side;
+  final SeedOverlayAlign align;
+  final double maxWidth, maxHeight;
+  @override
+  Widget build(BuildContext context) => SeedAnchoredOverlay(
+    triggerBuilder: triggerBuilder,
+    overlayBuilder: builder,
+    anchor: anchor,
+    controller: controller,
+    open: open,
+    defaultOpen: defaultOpen,
+    onOpenChanged: onOpenChanged,
+    side: side,
+    align: align,
+    flip: flip,
+    maxWidth: maxWidth,
+    maxHeight: maxHeight,
+    autoFocus: autoFocus,
+    closeOnInteractOutside: closeOnInteractOutside,
+    closeOnFocusOut: closeOnFocusOut,
+  );
 }
