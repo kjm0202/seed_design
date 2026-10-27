@@ -61,7 +61,7 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        expect(tester.widget<SeedPagination>(pagination).currentPage, 2);
+        expect(tester.widget<SeedPagination>(pagination).page, 2);
 
         final table = find.byType(SeedTablePagination);
         await tester.ensureVisible(table);
@@ -76,7 +76,7 @@ void main() {
           await tester.pumpAndSettle();
         }
         expect(tester.widget<SeedTablePagination>(table).currentPage, 11);
-        expect(tester.widget<SeedPagination>(pagination).currentPage, 2);
+        expect(tester.widget<SeedPagination>(pagination).page, 2);
         expect(tester.takeException(), isNull);
 
         await tester.tap(

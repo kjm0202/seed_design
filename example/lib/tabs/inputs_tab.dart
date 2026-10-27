@@ -69,7 +69,7 @@ class _InputsTabState extends State<InputsTab> {
                         max: 20,
                         removable: true,
                         onRemove: () => setState(() => _quantityRemoved = true),
-                        onChanged: (q) => setState(() => _quantity = q),
+                        onValueChange: (q) => setState(() => _quantity = q),
                       ),
               ),
             ),
@@ -78,10 +78,10 @@ class _InputsTabState extends State<InputsTab> {
               child: SeedField(
                 label: '희망 할인율 (${_sliderVal.toInt()}%)',
                 child: SeedSlider(
-                  value: _sliderVal,
+                  values: [_sliderVal],
                   min: 0,
                   max: 100,
-                  onChanged: (v) => setState(() => _sliderVal = v),
+                  onValuesChange: (v) => setState(() => _sliderVal = v.single),
                 ),
               ),
             ),
@@ -94,7 +94,8 @@ class _InputsTabState extends State<InputsTab> {
           values: _range,
           step: 10,
           minStepsBetweenThumbs: 1,
-          onChanged: (value) => setState(() => _range = value),
+          onValuesChange: (values) =>
+              setState(() => _range = RangeValues(values[0], values[1])),
           markers: const [
             SeedSliderMarker(0, '0'),
             SeedSliderMarker(50, '50'),

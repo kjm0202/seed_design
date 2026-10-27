@@ -100,7 +100,7 @@ class _CalendarExampleState extends State<CalendarExample> {
                   ? null
                   : SeedDateRange(start: start, end: end);
             }),
-            onDatesSelected: (value) => setState(() => _dates = value),
+            onDatesChange: (value) => setState(() => _dates = value),
             showReset: true,
           ),
         ),

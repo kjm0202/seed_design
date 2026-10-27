@@ -68,15 +68,16 @@ class _FeedbackTabState extends State<FeedbackTab> {
               ),
               const SizedBox(height: SeedDimension.x4),
               SeedSlider(
-                value: _mannerTemp,
+                values: [_mannerTemp],
                 min: 0,
                 max: 99.9,
                 step: 0.1,
                 fieldLabel: '온도 조절',
                 semanticsLabel: '매너온도 조절',
                 valueFormatter: (value) => '${value.toStringAsFixed(1)}°C',
-                onChanged: (value) =>
-                    setState(() => _mannerTemp = (value * 10).round() / 10),
+                onValuesChange: (values) => setState(
+                  () => _mannerTemp = (values.single * 10).round() / 10,
+                ),
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -162,8 +163,8 @@ class _FeedbackTabState extends State<FeedbackTab> {
                 _isLiked ? Icons.favorite : Icons.favorite_border,
               ),
               count: _reactionCount,
-              isReacted: _isLiked,
-              onReactedChanged: (val) {
+              pressed: _isLiked,
+              onPressedChange: (val) {
                 setState(() {
                   _isLiked = val;
                   _reactionCount += val ? 1 : -1;

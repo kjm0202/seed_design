@@ -170,7 +170,7 @@ void main() {
     await tester.tap(find.text('한 주'));
     await tester.pumpAndSettle();
     expect(
-      tester.widget<SeedDatePicker>(find.byType(SeedDatePicker)).layout,
+      tester.widget<SeedDatePicker>(find.byType(SeedDatePicker)).visibleRange,
       SeedDatePickerLayout.week,
     );
     final original = tester
@@ -190,7 +190,7 @@ void main() {
     await tester.tap(find.text('다중 선택'));
     await tester.pumpAndSettle();
     expect(
-      tester.widget<SeedDatePicker>(find.byType(SeedDatePicker)).mode,
+      tester.widget<SeedDatePicker>(find.byType(SeedDatePicker)).selectionMode,
       SeedDatePickerMode.multiple,
     );
     expect(find.text('다중 선택: 미선택'), findsOneWidget);

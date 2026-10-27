@@ -69,7 +69,7 @@ void main() {
     for (final page in [4, 5, 6, 7, 8, 10, 8, 7, 6, 5]) {
       await tester.tap(pageNumber(page));
       await tester.pumpAndSettle();
-      expect(tester.widget<SeedPagination>(pagination).currentPage, page);
+      expect(tester.widget<SeedPagination>(pagination).page, page);
       if (page == 8) expect(pageNumber(7), findsOneWidget);
       expect(tester.takeException(), isNull);
     }

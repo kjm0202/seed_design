@@ -25,7 +25,7 @@ void main() {
         await tester.pumpAndSettle();
         final picker = find.byType(SeedDatePicker);
         expect(
-          tester.widget<SeedDatePicker>(picker).layout,
+          tester.widget<SeedDatePicker>(picker).visibleRange,
           SeedDatePickerLayout.continuous,
         );
         expect(

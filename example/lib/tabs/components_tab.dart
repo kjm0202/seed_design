@@ -247,8 +247,9 @@ class _ComponentsTabState extends State<ComponentsTab> {
             final labels = ['전체', '디지털기기', '생활가전', '가구/인테리어'];
             return SeedChip(
               label: labels[index],
-              selected: _selectedChipIndex == index,
-              onSelected: (_) => setState(() => _selectedChipIndex = index),
+              checked: _selectedChipIndex == index,
+              onCheckedChange: (_) =>
+                  setState(() => _selectedChipIndex = index),
             );
           }),
         ),
@@ -282,14 +283,14 @@ class _ComponentsTabState extends State<ComponentsTab> {
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             SeedCheckbox(
-              value: _checkboxVal,
+              checked: _checkboxVal,
               label: '알림 동의',
-              onChanged: (v) => setState(() => _checkboxVal = v ?? false),
+              onCheckedChange: (v) => setState(() => _checkboxVal = v),
             ),
             SeedSwitch(
-              value: _switchVal,
+              checked: _switchVal,
               label: '채팅 알림',
-              onChanged: (v) => setState(() => _switchVal = v),
+              onCheckedChange: (v) => setState(() => _switchVal = v),
             ),
           ],
         ),
@@ -317,18 +318,18 @@ class _ComponentsTabState extends State<ComponentsTab> {
         SeedSelectBoxGroup(
           children: [
             SeedSelectBox(
-              selected: _selectBoxVal,
+              checked: _selectBoxVal,
               title: '택배거래 지원',
               description: '택배로 물품을 안전하게 발송해요',
               control: SeedSelectBoxControl.checkmark,
-              onSelected: (val) => setState(() => _selectBoxVal = val),
+              onCheckedChange: (val) => setState(() => _selectBoxVal = val),
             ),
             SeedSelectBox(
-              selected: _selectBoxVal2,
+              checked: _selectBoxVal2,
               title: '직거래 희망',
               description: '만나서 직접 물건을 확인하고 거래해요',
               control: SeedSelectBoxControl.checkmark,
-              onSelected: (val) => setState(() => _selectBoxVal2 = val),
+              onCheckedChange: (val) => setState(() => _selectBoxVal2 = val),
             ),
           ],
         ),

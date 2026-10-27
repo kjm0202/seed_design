@@ -78,13 +78,13 @@ class _NavigationTabState extends State<NavigationTab> {
           subtitle: '플로팅 알약 인디케이터와 그림자 효과가 적용된 상호 배타적 선택 제어기',
         ),
         SeedSegmentedControl<String>(
-          selectedValue: _selectedSegment,
+          value: _selectedSegment,
           segments: const [
             SeedSegment(value: 'all', label: '전체보기'),
             SeedSegment(value: 'selling', label: '판매중', notificationCount: 4),
             SeedSegment(value: 'completed', label: '거래완료'),
           ],
-          onValueChanged: (val) => setState(() => _selectedSegment = val),
+          onValueChange: (val) => setState(() => _selectedSegment = val),
         ),
         const SizedBox(height: SeedDimension.x6),
 
@@ -94,7 +94,7 @@ class _NavigationTabState extends State<NavigationTab> {
         ),
         Center(
           child: SeedPagination(
-            currentPage: _currentPage,
+            page: _currentPage,
             totalPages: 10,
             onPageChanged: (p) => setState(() => _currentPage = p),
           ),
@@ -112,9 +112,9 @@ class _NavigationTabState extends State<NavigationTab> {
               ),
             ),
             SeedSwitch(
-              value: _unknownTotal,
+              checked: _unknownTotal,
               label: '전체 건수 숨기기',
-              onChanged: (v) => setState(() => _unknownTotal = v),
+              onCheckedChange: (v) => setState(() => _unknownTotal = v),
             ),
           ],
         ),

@@ -239,10 +239,10 @@ void main() {
     final choice = find
         .descendant(of: group, matching: find.byType(SeedSelectBox))
         .last;
-    expect(tester.widget<SeedSelectBox>(choice).selected, isFalse);
+    expect(tester.widget<SeedSelectBox>(choice).checked, isFalse);
     await tester.tap(find.text('직거래 희망'));
     await tester.pumpAndSettle();
-    expect(tester.widget<SeedSelectBox>(choice).selected, isTrue);
+    expect(tester.widget<SeedSelectBox>(choice).checked, isTrue);
     await Scrollable.ensureVisible(
       tester.element(group),
       alignment: 0.2,
