@@ -365,6 +365,7 @@ class SeedMenuTrigger extends SeedAnchoredOverlay {
     super.controller,
     super.open,
     super.defaultOpen,
+    super.onOpenChange,
     super.onOpenChanged,
     super.side,
     super.align,

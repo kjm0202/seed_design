@@ -309,17 +309,20 @@ class SeedAccordion extends StatefulWidget {
     required this.items,
     this.values,
     this.defaultValues = const {},
-    this.onValuesChanged,
+    ValueChanged<Set<String>>? onValuesChange,
+    ValueChanged<Set<String>>? onValuesChanged,
     this.multiple = false,
     this.collapsible = true,
     this.enabled = true,
     this.variant = SeedAccordionVariant.inline,
     this.size = SeedAccordionSize.medium,
-  });
+  }) : onValuesChanged = onValuesChange ?? onValuesChanged,
+       assert(onValuesChange == null || onValuesChanged == null);
   final List<SeedAccordionItem> items;
   final Set<String>? values;
   final Set<String> defaultValues;
   final ValueChanged<Set<String>>? onValuesChanged;
+  ValueChanged<Set<String>>? get onValuesChange => onValuesChanged;
   final bool multiple;
   final bool collapsible;
   final bool enabled;

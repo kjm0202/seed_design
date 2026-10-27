@@ -30,6 +30,9 @@ class SeedReactionButton extends StatefulWidget {
   final int count;
   final String? label;
   final ValueChanged<bool>? onReactedChanged;
+  bool? get pressed => _isReacted;
+  bool get defaultPressed => defaultIsReacted;
+  ValueChanged<bool>? get onPressedChange => onReactedChanged;
   final Widget? prefixIcon;
   final SeedReactionButtonSize size;
   final bool loading;
@@ -38,11 +41,14 @@ class SeedReactionButton extends StatefulWidget {
 
   const SeedReactionButton({
     super.key,
+    bool? pressed,
     bool? isReacted,
-    this.defaultIsReacted = false,
+    bool? defaultPressed,
+    bool? defaultIsReacted,
     this.count = 0,
     this.label,
-    this.onReactedChanged,
+    ValueChanged<bool>? onPressedChange,
+    ValueChanged<bool>? onReactedChanged,
     this.prefixIcon,
     this.size = SeedReactionButtonSize.small,
     this.loading = false,
@@ -50,7 +56,12 @@ class SeedReactionButton extends StatefulWidget {
     this.semanticsLabel = '관심',
     // Keep the public constructor parameter and non-nullable getter compatible.
     // ignore: prefer_initializing_formals
-  }) : _isReacted = isReacted;
+  }) : _isReacted = pressed ?? isReacted,
+       defaultIsReacted = defaultPressed ?? defaultIsReacted ?? false,
+       onReactedChanged = onPressedChange ?? onReactedChanged,
+       assert(pressed == null || isReacted == null),
+       assert(defaultPressed == null || defaultIsReacted == null),
+       assert(onPressedChange == null || onReactedChanged == null);
 
   @override
   State<SeedReactionButton> createState() => _SeedReactionButtonState();

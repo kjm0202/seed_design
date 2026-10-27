@@ -118,7 +118,7 @@ class _InputsTabState extends State<InputsTab> {
           subtitle: '옵션 목록 선택 및 입력형 트리거 버튼',
         ),
         SeedSelect<String>(
-          value: _selectedValue,
+          value: [?_selectedValue],
           groups: const [
             SeedSelectGroup<String>(
               label: '카테고리 선택',
@@ -129,7 +129,7 @@ class _InputsTabState extends State<InputsTab> {
               ],
             ),
           ],
-          onChanged: (v) => setState(() => _selectedValue = v),
+          onValueChange: (v) => setState(() => _selectedValue = v.firstOrNull),
         ),
         const SizedBox(height: SeedDimension.x4),
         SeedSelect<String>(

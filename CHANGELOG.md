@@ -1,17 +1,24 @@
 ## Unreleased
 
-- Define the 1.0 public API contract in `PUBLIC_API_CONTRACT.md`.
-- Add canonical default-value names for text, date/time, select and attachment
-  inputs while retaining their initial-value aliases. Defaults seed local state
-  once and no longer overwrite calendar/time edits on rebuild.
-- Honor controlled empty selections in calendars, selects, card groups, segmented
-  controls and form fields; keep parent-owned values through rejected edits/reset.
-- **Breaking:** standardize Select and Tooltip `onOpenChanged` callbacks to
-  `(open, reason)`. Select provides `onOpenStateChanged` for bool-only observers;
-  its `onOpenChange` alias is deprecated.
+- Define the 1.0 public API contract from the official SEED React props, with
+  source links and Dart adaptations in `REACT_API_REFERENCE.md`.
+- **Breaking:** Select now uses list-valued `value`, `defaultValue` and
+  `onValueChange` for both single and multiple selection, matching React.
+- Add official `onValueChange`, `onValuesChange`, `onEntriesChange` and
+  `onOpenChange` names while retaining Flutter callback aliases. Tooltip keeps
+  its bool-only `onOpenChange`; reason-bearing callbacks are separate adapters.
+- Add Switch `checked/defaultChecked/onCheckedChange`, Reaction Button
+  `pressed/defaultPressed/onPressedChange`, tab string values and combined
+  table-pagination values/defaults.
+- Add typed `DatePicker.range` and `.multiple` constructors using
+  `value/defaultValue/onValueChange`, plus `selectionMode/visibleRange` names.
+- **Breaking:** match Time Picker defaults (00:00, five-minute steps; supported
+  steps 1/5/10/15/30) and Attachment Display's default limit of one entry.
+  A single-entry batch uses its first incoming item.
+- Defaults seed local state once. Honor controlled empty selections and rejected
+  edits/reset; synchronize external text controllers with form validation.
 - **Breaking:** reject simultaneous text/attachment controller and value/seed
-  inputs. Keep externally controlled text synchronized with form validation and
-  reset, and give explicit tab indices precedence over controllers.
+  inputs. Explicit tab values or indices take precedence over controllers.
 - Preserve controlled Select visibility when dismissal requests are rejected.
 
 - Use fill layout and a single notification in the first Tabs example; keep

@@ -89,7 +89,8 @@ class SeedAnchoredOverlay extends StatefulWidget {
     this.controller,
     this.open,
     this.defaultOpen = false,
-    this.onOpenChanged,
+    SeedOverlayOpenChanged? onOpenChange,
+    SeedOverlayOpenChanged? onOpenChanged,
     this.canClose,
     this.side = SeedOverlaySide.bottom,
     this.align = SeedOverlayAlign.center,
@@ -112,7 +113,8 @@ class SeedAnchoredOverlay extends StatefulWidget {
     this.scaleFromAnchor = false,
     this.enterDuration = SeedDuration.d3,
     this.exitDuration = SeedDuration.d2,
-  });
+  }) : onOpenChanged = onOpenChange ?? onOpenChanged,
+       assert(onOpenChange == null || onOpenChanged == null);
   final Widget Function(BuildContext, bool, VoidCallback) triggerBuilder;
   final WidgetBuilder overlayBuilder;
   final Widget? anchor;
@@ -120,6 +122,7 @@ class SeedAnchoredOverlay extends StatefulWidget {
   final bool? open;
   final bool defaultOpen;
   final SeedOverlayOpenChanged? onOpenChanged;
+  SeedOverlayOpenChanged? get onOpenChange => onOpenChanged;
   final bool Function(SeedOverlayDismissReason)? canClose;
   final SeedOverlaySide side;
   final SeedOverlayAlign align;

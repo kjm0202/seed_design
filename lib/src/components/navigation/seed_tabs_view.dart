@@ -23,6 +23,9 @@ class SeedTabsView extends StatefulWidget {
     required this.items,
     required this.children,
     this.selectedIndex,
+    this.value,
+    this.defaultValue,
+    this.onValueChange,
     this.initialIndex = 0,
     this.onTabSelected,
     this.controller,
@@ -42,10 +45,23 @@ class SeedTabsView extends StatefulWidget {
     this.onSettle,
     this.scrollToTopOnChange = false,
     this.contentScrollControllers = const [],
-  }) : keepAlive = (keepAlive ?? true) && !unmountOnExit;
+  }) : keepAlive = (keepAlive ?? true) && !unmountOnExit,
+       assert(value == null || selectedIndex == null);
   final List<SeedTabItem> items;
   final List<Widget> children;
   final int? selectedIndex;
+  final String? value, defaultValue;
+  final ValueChanged<String>? onValueChange;
+  String _valueAt(int index) => items[index].value ?? '$index';
+  int _indexOf(String value) {
+    final index = List.generate(items.length, _valueAt).indexOf(value);
+    if (index < 0) {
+      throw ArgumentError.value(value, 'value', 'Unknown tab value');
+    }
+    return index;
+  }
+
+  int? get _controlledIndex => value == null ? selectedIndex : _indexOf(value!);
   final int initialIndex;
   final ValueChanged<int>? onTabSelected;
   final SeedTabsController? controller;
@@ -76,6 +92,9 @@ class SeedChipTabsView extends SeedTabsView {
     required super.items,
     required super.children,
     super.selectedIndex,
+    super.value,
+    super.defaultValue,
+    super.onValueChange,
     super.initialIndex,
     super.onTabSelected,
     super.controller,
@@ -100,7 +119,11 @@ class SeedChipTabsView extends SeedTabsView {
 
 class _SeedTabsViewState extends State<SeedTabsView> {
   late int _index =
-      (widget.selectedIndex ?? widget.controller?.index ?? widget.initialIndex)
+      (widget._controlledIndex ??
+              widget.controller?.index ??
+              (widget.defaultValue == null
+                  ? widget.initialIndex
+                  : widget._indexOf(widget.defaultValue!)))
           .clamp(0, widget.items.length - 1);
   late final PageController _pages = PageController(initialPage: _index);
   late final Set<int> _visited = {_index};
@@ -118,6 +141,11 @@ class _SeedTabsViewState extends State<SeedTabsView> {
     assert(
       widget.items.length == widget.children.length && widget.items.isNotEmpty,
     );
+    assert(
+      List.generate(widget.items.length, widget._valueAt).toSet().length ==
+          widget.items.length,
+      'Tab values must be unique',
+    );
     widget.controller?.addListener(_controllerChanged);
   }
 
@@ -128,7 +156,7 @@ class _SeedTabsViewState extends State<SeedTabsView> {
       oldWidget.controller?.removeListener(_controllerChanged);
       widget.controller?.addListener(_controllerChanged);
     }
-    final next = (widget.selectedIndex ?? widget.controller?.index ?? _index)
+    final next = (widget._controlledIndex ?? widget.controller?.index ?? _index)
         .clamp(0, widget.items.length - 1);
     if (next != _index) {
       _index = next;
@@ -142,7 +170,9 @@ class _SeedTabsViewState extends State<SeedTabsView> {
   }
 
   void _controllerChanged() {
-    if (_syncingController || !mounted || widget.selectedIndex != null) return;
+    if (_syncingController || !mounted || widget._controlledIndex != null) {
+      return;
+    }
     final next = widget.controller!.index.clamp(0, widget.items.length - 1);
     if (next != _index) {
       setState(() {
@@ -192,11 +222,12 @@ class _SeedTabsViewState extends State<SeedTabsView> {
       return;
     }
     widget.onTabSelected?.call(index);
-    if (widget.selectedIndex != null) {
+    widget.onValueChange?.call(widget._valueAt(index));
+    if (widget._controlledIndex != null) {
       if (fromPage) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && widget.selectedIndex != index) {
-            _animate(widget.selectedIndex!);
+          if (mounted && widget._controlledIndex != index) {
+            _animate(widget._controlledIndex!);
           }
         });
       }

@@ -78,7 +78,8 @@ class SeedTextField extends StatefulWidget {
     this.maxGraphemeCount,
     this.enforceMaxLength = false,
     this.onChanged,
-    this.onValueChanged,
+    ValueChanged<SeedTextValueChange>? onValueChange,
+    ValueChanged<SeedTextValueChange>? onValueChanged,
     this.onSaved,
     this.validator,
     this.inputFormatters,
@@ -95,7 +96,9 @@ class SeedTextField extends StatefulWidget {
     this.obscureText = false,
     this.keyboardType,
     this.autovalidateMode = AutovalidateMode.disabled,
-  }) : assert(
+  }) : onValueChanged = onValueChange ?? onValueChanged,
+       assert(onValueChange == null || onValueChanged == null),
+       assert(
          controller == null || (value == null && defaultValue == null),
          'A controller cannot be combined with value or defaultValue.',
        );
@@ -121,7 +124,8 @@ class SeedTextField extends StatefulWidget {
     this.maxGraphemeCount,
     this.enforceMaxLength = false,
     this.onChanged,
-    this.onValueChanged,
+    ValueChanged<SeedTextValueChange>? onValueChange,
+    ValueChanged<SeedTextValueChange>? onValueChanged,
     this.onSaved,
     this.validator,
     this.inputFormatters,
@@ -138,7 +142,9 @@ class SeedTextField extends StatefulWidget {
     this.obscureText = false,
     this.keyboardType = TextInputType.multiline,
     this.autovalidateMode = AutovalidateMode.disabled,
-  }) : assert(
+  }) : onValueChanged = onValueChange ?? onValueChanged,
+       assert(onValueChange == null || onValueChanged == null),
+       assert(
          controller == null || (value == null && defaultValue == null),
          'A controller cannot be combined with value or defaultValue.',
        );
@@ -163,6 +169,7 @@ class SeedTextField extends StatefulWidget {
   final int? maxGraphemeCount, maxLines, minLines;
   final ValueChanged<String>? onChanged, onSaved;
   final ValueChanged<SeedTextValueChange>? onValueChanged;
+  ValueChanged<SeedTextValueChange>? get onValueChange => onValueChanged;
   final FormFieldValidator<String>? validator;
   final List<TextInputFormatter>? inputFormatters;
   final Widget Function(BuildContext, TextEditingController, FocusNode)?
@@ -325,7 +332,8 @@ class SeedFieldButton extends StatefulWidget {
     super.key,
     this.values,
     this.defaultValues = const [],
-    this.onValuesChanged,
+    ValueChanged<List<String>>? onValuesChange,
+    ValueChanged<List<String>>? onValuesChanged,
     this.onPressed,
     this.label,
     this.description,
@@ -340,10 +348,12 @@ class SeedFieldButton extends StatefulWidget {
     this.showClear = false,
     this.size = SeedInputButtonSize.medium,
     this.required = false,
-  });
+  }) : onValuesChanged = onValuesChange ?? onValuesChanged,
+       assert(onValuesChange == null || onValuesChanged == null);
   final List<String>? values;
   final List<String> defaultValues;
   final ValueChanged<List<String>>? onValuesChanged;
+  ValueChanged<List<String>>? get onValuesChange => onValuesChanged;
   final VoidCallback? onPressed;
   final String? label,
       description,

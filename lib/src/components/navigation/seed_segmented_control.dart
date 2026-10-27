@@ -40,8 +40,10 @@ class SeedSegment<T> {
 class SeedSegmentedControl<T> extends StatefulWidget {
   final List<SeedSegment<T>> segments;
   final T? selectedValue;
+  T? get value => selectedValue;
   final T? defaultValue;
   final ValueChanged<T>? onValueChanged;
+  ValueChanged<T>? get onValueChange => onValueChanged;
   final bool enabled;
 
   /// Keeps [selectedValue], including null, under parent control.
@@ -50,12 +52,18 @@ class SeedSegmentedControl<T> extends StatefulWidget {
   const SeedSegmentedControl({
     super.key,
     required this.segments,
-    this.selectedValue,
+    T? value,
+    T? selectedValue,
     this.defaultValue,
-    this.onValueChanged,
+    ValueChanged<T>? onValueChange,
+    ValueChanged<T>? onValueChanged,
     this.enabled = true,
     this.controlled = false,
-  }) : assert(
+  }) : selectedValue = value ?? selectedValue,
+       assert(value == null || selectedValue == null),
+       onValueChanged = onValueChange ?? onValueChanged,
+       assert(onValueChange == null || onValueChanged == null),
+       assert(
          segments.length >= 2 && segments.length <= 4,
          'Segmented control must have between 2 and 4 segments.',
        );

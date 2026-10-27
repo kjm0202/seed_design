@@ -17,7 +17,9 @@ enum SeedTablePageChangeReason {
 }
 
 class SeedTablePaginationValue {
-  const SeedTablePaginationValue({required this.page, required this.pageSize});
+  const SeedTablePaginationValue({required this.page, required this.pageSize})
+    : assert(page >= 1),
+      assert(pageSize >= 1);
   final int page;
   final int pageSize;
 
@@ -54,6 +56,9 @@ class SeedTablePagination extends StatefulWidget {
 
   const SeedTablePagination({
     super.key,
+    this.value,
+    this.defaultValue,
+    this.onValueChange,
     this.currentPage,
     this.defaultPage = 1,
     this.totalItems,
@@ -70,7 +75,8 @@ class SeedTablePagination extends StatefulWidget {
     this.showRangeSelect = true,
     this.disabled = false,
     this.semanticsLabel = '표 페이지 탐색',
-  }) : assert(currentPage == null || currentPage >= 1),
+  }) : assert(value == null || (currentPage == null && rowsPerPage == null)),
+       assert(currentPage == null || currentPage >= 1),
        assert(defaultPage >= 1),
        assert(totalItems == null || totalItems >= 0),
        assert(rowsPerPage == null || rowsPerPage >= 1),
@@ -79,6 +85,12 @@ class SeedTablePagination extends StatefulWidget {
 
   /// 1-indexed current page. If null, operates in uncontrolled mode starting at [defaultPage].
   final int? currentPage;
+  final SeedTablePaginationValue? value, defaultValue;
+  final void Function(
+    SeedTablePaginationValue value,
+    SeedTablePaginationChange details,
+  )?
+  onValueChange;
 
   /// Initial 1-indexed page when [currentPage] is null.
   final int defaultPage;
@@ -125,17 +137,19 @@ class SeedTablePagination extends StatefulWidget {
 }
 
 class _SeedTablePaginationState extends State<SeedTablePagination> {
-  late int _page = widget.defaultPage;
-  late int _rowsPerPage = widget.defaultRowsPerPage;
+  late int _page = widget.defaultValue?.page ?? widget.defaultPage;
+  late int _rowsPerPage =
+      widget.defaultValue?.pageSize ?? widget.defaultRowsPerPage;
   String? _lastConstraintKey;
 
-  int get _effectiveRowsPerPage => widget.rowsPerPage ?? _rowsPerPage;
+  int get _effectiveRowsPerPage =>
+      widget.value?.pageSize ?? widget.rowsPerPage ?? _rowsPerPage;
 
   int? get _totalPages => widget.totalItems == null
       ? null
       : (widget.totalItems! / _effectiveRowsPerPage).ceil();
 
-  int get _rawPage => widget.currentPage ?? _page;
+  int get _rawPage => widget.value?.page ?? widget.currentPage ?? _page;
 
   int get _effectivePage {
     final total = _totalPages;
@@ -147,8 +161,14 @@ class _SeedTablePaginationState extends State<SeedTablePagination> {
   void _validateOptions(List<int> options, String name) {
     final seen = <int>{};
     for (final opt in options) {
-      assert(opt >= 1, 'SeedTablePagination: $name must contain positive integers.');
-      assert(seen.add(opt), 'SeedTablePagination: $name cannot contain duplicates.');
+      assert(
+        opt >= 1,
+        'SeedTablePagination: $name must contain positive integers.',
+      );
+      assert(
+        seen.add(opt),
+        'SeedTablePagination: $name cannot contain duplicates.',
+      );
     }
   }
 
@@ -169,11 +189,17 @@ class _SeedTablePaginationState extends State<SeedTablePagination> {
     if (widget.pageOptions != null) {
       _validateOptions(widget.pageOptions!, 'pageOptions');
     }
-    if (oldWidget.currentPage != widget.currentPage ||
+    if (oldWidget.value != widget.value ||
+        oldWidget.currentPage != widget.currentPage ||
         oldWidget.totalItems != widget.totalItems ||
         oldWidget.rowsPerPage != widget.rowsPerPage) {
       _constrain();
     }
+  }
+
+  void _notifyValue(SeedTablePaginationChange change) {
+    widget.onValueChange?.call(change.value, change);
+    widget.onValueChanged?.call(change);
   }
 
   void _constrain() {
@@ -186,12 +212,12 @@ class _SeedTablePaginationState extends State<SeedTablePagination> {
     final key = '$raw:$_effectiveRowsPerPage:$clamped';
     if (_lastConstraintKey == key) return;
     _lastConstraintKey = key;
-    if (widget.currentPage == null) _page = clamped;
+    if ((widget.value == null && widget.currentPage == null)) _page = clamped;
     final rows = _effectiveRowsPerPage;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       widget.onPageChanged?.call(clamped);
-      widget.onValueChanged?.call(
+      _notifyValue(
         SeedTablePaginationChange(
           value: SeedTablePaginationValue(page: clamped, pageSize: rows),
           previousValue: SeedTablePaginationValue(page: raw, pageSize: rows),
@@ -226,8 +252,7 @@ class _SeedTablePaginationState extends State<SeedTablePagination> {
       return const <int>[];
     }
     final page = _effectivePage;
-    final candidates =
-        widget.pageOptions ?? _buildAutoPageOptions(page, total);
+    final candidates = widget.pageOptions ?? _buildAutoPageOptions(page, total);
     final pages = <int>{
       ...candidates.where((opt) => opt >= 1 && opt <= total),
       page,
@@ -244,11 +269,11 @@ class _SeedTablePaginationState extends State<SeedTablePagination> {
     final current = _effectivePage;
     if (clamped == current) return;
     final rows = _effectiveRowsPerPage;
-    if (widget.currentPage == null) {
+    if ((widget.value == null && widget.currentPage == null)) {
       setState(() => _page = clamped);
     }
     widget.onPageChanged?.call(clamped);
-    widget.onValueChanged?.call(
+    _notifyValue(
       SeedTablePaginationChange(
         value: SeedTablePaginationValue(page: clamped, pageSize: rows),
         previousValue: SeedTablePaginationValue(page: current, pageSize: rows),
@@ -262,17 +287,20 @@ class _SeedTablePaginationState extends State<SeedTablePagination> {
     final currentRows = _effectiveRowsPerPage;
     if (nextRowsPerPage == currentRows) return;
     final current = _effectivePage;
-    if (widget.rowsPerPage == null || widget.currentPage == null) {
+    if ((widget.value == null && widget.rowsPerPage == null) ||
+        (widget.value == null && widget.currentPage == null)) {
       setState(() {
-        if (widget.rowsPerPage == null) _rowsPerPage = nextRowsPerPage;
-        if (widget.currentPage == null) _page = 1;
+        if (widget.value == null && widget.rowsPerPage == null) {
+          _rowsPerPage = nextRowsPerPage;
+        }
+        if (widget.value == null && widget.currentPage == null) _page = 1;
       });
     }
     if (current != 1) {
       widget.onPageChanged?.call(1);
     }
     widget.onRowsPerPageChanged?.call(nextRowsPerPage);
-    widget.onValueChanged?.call(
+    _notifyValue(
       SeedTablePaginationChange(
         value: SeedTablePaginationValue(page: 1, pageSize: nextRowsPerPage),
         previousValue: SeedTablePaginationValue(
@@ -362,7 +390,7 @@ class _SeedTablePaginationState extends State<SeedTablePagination> {
                       child: SeedSelect<int>(
                         size: SeedInputButtonSize.small,
                         enabled: !widget.disabled,
-                        value: rows,
+                        value: [rows],
                         groups: [
                           SeedSelectGroup<int>(
                             items: _resolvedRowsPerPageOptions.map((opt) {
@@ -403,7 +431,7 @@ class _SeedTablePaginationState extends State<SeedTablePagination> {
                         child: SeedSelect<int>(
                           size: SeedInputButtonSize.small,
                           enabled: !widget.disabled && pageOptions.length > 1,
-                          value: page,
+                          value: [page],
                           groups: [
                             SeedSelectGroup(
                               items: [

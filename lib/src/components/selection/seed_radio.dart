@@ -223,20 +223,27 @@ class _SeedRadioState<T> extends State<SeedRadio<T>> with RadioClient<T> {
 /// Existing SeedRadio(groupValue:, onChanged:) usage remains supported.
 class SeedRadioGroup<T> extends StatelessWidget {
   final T? groupValue;
+  T? get value => groupValue;
   final ValueChanged<T?>? onChanged;
+  ValueChanged<T?>? get onValueChange => onChanged;
   final Widget child;
   const SeedRadioGroup({
     super.key,
-    this.groupValue,
+    T? value,
+    T? groupValue,
     this.defaultValue,
     this.controlled = false,
-    this.onChanged,
+    ValueChanged<T?>? onValueChange,
+    ValueChanged<T?>? onChanged,
     required this.child,
     this.label,
     this.description,
     this.indicator,
     this.enabled = true,
-  });
+  }) : groupValue = value ?? groupValue,
+       assert(value == null || groupValue == null),
+       onChanged = onValueChange ?? onChanged,
+       assert(onValueChange == null || onChanged == null);
   final String? label, description;
   final Widget? indicator;
   final bool enabled;

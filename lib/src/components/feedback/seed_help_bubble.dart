@@ -237,7 +237,8 @@ class SeedHelpBubbleTrigger extends StatelessWidget {
     this.controller,
     this.open,
     this.defaultOpen = false,
-    this.onOpenChanged,
+    SeedOverlayOpenChanged? onOpenChange,
+    SeedOverlayOpenChanged? onOpenChanged,
     this.side = SeedOverlaySide.top,
     this.align = SeedOverlayAlign.center,
     this.flip = true,
@@ -247,7 +248,8 @@ class SeedHelpBubbleTrigger extends StatelessWidget {
     this.autoFocus = false,
     this.isBrand = false,
     this.skipAnimation = false,
-  });
+  }) : onOpenChanged = onOpenChange ?? onOpenChanged,
+       assert(onOpenChange == null || onOpenChanged == null);
   final Widget Function(BuildContext, bool, VoidCallback) triggerBuilder;
   final String title;
   final String? description;
@@ -263,6 +265,7 @@ class SeedHelpBubbleTrigger extends StatelessWidget {
       skipAnimation;
   final double maxWidth;
   final SeedOverlayOpenChanged? onOpenChanged;
+  SeedOverlayOpenChanged? get onOpenChange => onOpenChanged;
   final SeedOverlaySide side;
   final SeedOverlayAlign align;
   @override
@@ -342,6 +345,7 @@ class SeedHelpBubbleTooltip extends StatefulWidget {
     required this.title,
     this.description,
     this.open,
+    this.onOpenChange,
     this.onOpenChanged,
     this.openDelay,
     this.closeDelay,
@@ -356,6 +360,7 @@ class SeedHelpBubbleTooltip extends StatefulWidget {
   final String title;
   final String? description;
   final bool? open;
+  final ValueChanged<bool>? onOpenChange;
   final SeedOverlayOpenChanged? onOpenChanged;
   final Duration? openDelay, closeDelay;
   final SeedOverlaySide side;
@@ -401,6 +406,7 @@ class _SeedHelpBubbleTooltipState extends State<SeedHelpBubbleTooltip> {
       } else if (g != null) {
         g.lastClose = DateTime.now();
       }
+      widget.onOpenChange?.call(open);
       widget.onOpenChanged?.call(open, SeedOverlayDismissReason.trigger);
       if (widget.open == null) open ? _controller.open() : _controller.close();
     });
@@ -436,7 +442,10 @@ class _SeedHelpBubbleTooltipState extends State<SeedHelpBubbleTooltip> {
     maxWidth: widget.maxWidth,
     autoFocus: false,
     restoreFocus: false,
-    onOpenChanged: widget.onOpenChanged,
+    onOpenChange: (open, reason) {
+      widget.onOpenChange?.call(open);
+      widget.onOpenChanged?.call(open, reason);
+    },
     triggerBuilder: (context, open, toggle) => MouseRegion(
       onEnter: (_) => _request(true),
       onExit: (_) => _request(false),

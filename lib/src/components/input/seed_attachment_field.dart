@@ -7,7 +7,7 @@ import 'seed_field.dart';
 class SeedAttachmentController extends ChangeNotifier {
   SeedAttachmentController({
     List<SeedAttachmentItem> items = const [],
-    this.maxCount = 10,
+    this.maxCount = 1,
     this.enabled = true,
     this.readOnly = false,
   }) : _items = List.of(items),
@@ -34,7 +34,7 @@ class SeedAttachmentController extends ChangeNotifier {
   void addEntries(List<SeedAttachmentItem> entries) {
     if (!canEdit || entries.isEmpty) return;
     if (maxCount == 1) {
-      replaceItems([entries.last]);
+      replaceItems([entries.first]);
       return;
     }
     final ids = _items.map((entry) => entry.id).toSet();
@@ -89,10 +89,11 @@ class SeedAttachmentDisplayField extends StatefulWidget {
     this.entries,
     List<SeedAttachmentItem>? defaultEntries,
     List<SeedAttachmentItem>? initialEntries,
-    this.onEntriesChanged,
+    ValueChanged<List<SeedAttachmentItem>>? onEntriesChange,
+    ValueChanged<List<SeedAttachmentItem>>? onEntriesChanged,
     this.onTrigger,
     this.onRetry,
-    this.maxEntries = 10,
+    this.maxEntries = 1,
     this.enabled = true,
     this.readOnly = false,
     this.reorderable = false,
@@ -104,7 +105,9 @@ class SeedAttachmentDisplayField extends StatefulWidget {
     this.showDropzone = false,
     this.isDraggingOver = false,
     this.itemSize = 80,
-  }) : initialEntries = defaultEntries ?? initialEntries ?? const [],
+  }) : onEntriesChanged = onEntriesChange ?? onEntriesChanged,
+       assert(onEntriesChange == null || onEntriesChanged == null),
+       initialEntries = defaultEntries ?? initialEntries ?? const [],
        assert(defaultEntries == null || initialEntries == null),
        assert(
          controller == null ||
@@ -120,6 +123,8 @@ class SeedAttachmentDisplayField extends StatefulWidget {
   /// One-time seed; [initialEntries] is a compatibility alias.
   List<SeedAttachmentItem> get defaultEntries => initialEntries;
   final ValueChanged<List<SeedAttachmentItem>>? onEntriesChanged;
+  ValueChanged<List<SeedAttachmentItem>>? get onEntriesChange =>
+      onEntriesChanged;
   final ValueChanged<SeedAttachmentController>? onTrigger;
   final void Function(SeedAttachmentItem, SeedAttachmentController)? onRetry;
   final int maxEntries;
@@ -237,7 +242,7 @@ class SeedAttachmentField extends SeedAttachmentDisplayField {
     ValueChanged<List<SeedAttachmentItem>>? onItemsChanged,
     VoidCallback? onAdd,
     super.onRetry,
-    int maxCount = 10,
+    int maxCount = 1,
     super.enabled,
     super.readOnly,
     super.reorderable,

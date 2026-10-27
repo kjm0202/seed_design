@@ -298,7 +298,8 @@ class SeedPopoverTrigger extends StatelessWidget {
     this.controller,
     this.open,
     this.defaultOpen = false,
-    this.onOpenChanged,
+    SeedOverlayOpenChanged? onOpenChange,
+    SeedOverlayOpenChanged? onOpenChanged,
     this.side = SeedOverlaySide.bottom,
     this.align = SeedOverlayAlign.center,
     this.flip = true,
@@ -307,7 +308,8 @@ class SeedPopoverTrigger extends StatelessWidget {
     this.closeOnFocusOut = true,
     this.maxWidth = 480,
     this.maxHeight = 600,
-  });
+  }) : onOpenChanged = onOpenChange ?? onOpenChanged,
+       assert(onOpenChange == null || onOpenChanged == null);
   final Widget Function(BuildContext, bool, VoidCallback) triggerBuilder;
   final WidgetBuilder builder;
   final Widget? anchor;
@@ -319,6 +321,7 @@ class SeedPopoverTrigger extends StatelessWidget {
       closeOnInteractOutside,
       closeOnFocusOut;
   final SeedOverlayOpenChanged? onOpenChanged;
+  SeedOverlayOpenChanged? get onOpenChange => onOpenChanged;
   final SeedOverlaySide side;
   final SeedOverlayAlign align;
   final double maxWidth, maxHeight;

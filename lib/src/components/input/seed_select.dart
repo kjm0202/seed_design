@@ -48,7 +48,7 @@ class SeedSelectGroup<T> {
 /// Combines an input-styled trigger button with an anchored popup menu of options
 /// organized into items and groups.
 ///
-/// Non-null [value]/[values] controls selection. [controlled] also treats null as
+/// A non-null list [value] controls selection, including an empty list. [controlled] also treats null as
 /// an authoritative empty selection. Defaults seed local state once. [open] is
 /// independent of selection ownership; [onOpenChanged] proposes visibility with
 /// a reason, without overriding a supplied [open].
@@ -77,11 +77,11 @@ class SeedSelect<T> extends StatefulWidget {
     Set<T>? defaultValues,
     Set<T>? initialValues,
     this.defaultValue,
+    this.onValueChange,
     this.onValuesChanged,
     this.open,
     this.defaultOpen = false,
     SeedOverlayOpenChanged? onOpenChanged,
-    @Deprecated('Use onOpenChanged instead.')
     SeedOverlayOpenChanged? onOpenChange,
     this.onOpenStateChanged,
     this.onValueChanged,
@@ -96,13 +96,19 @@ class SeedSelect<T> extends StatefulWidget {
   }) : onOpenChanged = onOpenChanged ?? onOpenChange,
        initialValues = defaultValues ?? initialValues ?? const {},
        assert(onOpenChanged == null || onOpenChange == null),
-       assert(defaultValues == null || initialValues == null);
+       assert(defaultValues == null || initialValues == null),
+       assert(
+         defaultValue == null ||
+             (defaultValues == null && initialValues == null),
+       ),
+       assert(value == null || values == null);
 
   /// The groups and options available for selection.
   final List<SeedSelectGroup<T>> groups;
 
-  /// Currently selected value.
-  final T? value;
+  /// Selected option values, matching React for both single and multiple mode.
+  /// An empty list is a controlled empty selection.
+  final List<T>? value;
 
   /// Placeholder text when [value] is null.
   final String placeholder;
@@ -132,9 +138,10 @@ class SeedSelect<T> extends StatefulWidget {
   final Set<T>? values;
   final Set<T> initialValues;
 
-  /// One-time multiple-selection seed; [initialValues] is an alias.
+  /// Legacy set-valued seed; prefer the React-compatible list [defaultValue].
   Set<T> get defaultValues => initialValues;
-  final T? defaultValue;
+  final List<T>? defaultValue;
+  final ValueChanged<List<T>>? onValueChange;
   final ValueChanged<Set<T>>? onValuesChanged;
   final bool? open;
   final bool defaultOpen;
@@ -142,7 +149,6 @@ class SeedSelect<T> extends StatefulWidget {
 
   /// Optional visibility-only observer, alongside [onOpenChanged].
   final ValueChanged<bool>? onOpenStateChanged;
-  @Deprecated('Use onOpenChanged instead.')
   SeedOverlayOpenChanged? get onOpenChange => onOpenChanged;
   final ValueChanged<T?>? onValueChanged;
   final double maxMenuHeight;
@@ -170,11 +176,25 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
     widget.onOpenChanged?.call(open, reason);
   }
 
-  late Set<T> _values = Set.of(widget.defaultValues);
-  late T? _value = widget.defaultValue;
-  Set<T> get _selectedValues => widget.multiple
-      ? (widget.controlled ? widget.values ?? <T>{} : widget.values ?? _values)
-      : {?widget.controlled ? widget.value : widget.value ?? _value};
+  late Set<T> _values = Set.of(widget.defaultValue ?? widget.defaultValues);
+  bool get _selectionControlled =>
+      widget.controlled || widget.value != null || widget.values != null;
+  Set<T> get _selectedValues {
+    final Iterable<T> selected =
+        widget.value ?? widget.values ?? (widget.controlled ? <T>[] : _values);
+    return (widget.multiple ? selected : selected.take(1)).toSet();
+  }
+
+  void _changeValues(Set<T> next) {
+    if (!_selectionControlled) setState(() => _values = next);
+    widget.onValueChange?.call(List<T>.unmodifiable(next));
+    if (widget.multiple) {
+      widget.onValuesChanged?.call(Set<T>.unmodifiable(next));
+    } else {
+      widget.onValueChanged?.call(next.firstOrNull);
+      if (next.isNotEmpty) widget.onChanged?.call(next.first);
+    }
+  }
 
   SeedSelectItem<T>? _findItem(T value) {
     for (final group in widget.groups) {
@@ -208,18 +228,11 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
     if (widget.multiple) {
       final next = Set<T>.of(_selectedValues);
       next.contains(value) ? next.remove(value) : next.add(value);
-      if (!widget.controlled && widget.values == null) {
-        setState(() => _values = next);
-      }
-      widget.onValuesChanged?.call(Set.unmodifiable(next));
+      _changeValues(next);
     } else {
       final alreadySelected = _selectedValues.contains(value);
       if (!alreadySelected) {
-        if (widget.value == null && !widget.controlled) {
-          setState(() => _value = value);
-        }
-        widget.onChanged?.call(value);
-        widget.onValueChanged?.call(value);
+        _changeValues({value});
       }
       _requestOpen(false, reason: SeedOverlayDismissReason.action);
     }
@@ -463,17 +476,7 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
       readOnly: widget.readOnly,
       showClear: widget.showClear,
       onClear: () {
-        if (widget.multiple) {
-          if (!widget.controlled && widget.values == null) {
-            setState(() => _values = {});
-          }
-          widget.onValuesChanged?.call(Set<T>.unmodifiable({}));
-        } else {
-          if (widget.value == null && !widget.controlled) {
-            setState(() => _value = null);
-          }
-          widget.onValueChanged?.call(null);
-        }
+        _changeValues({});
         widget.onClear?.call();
       },
       placeholder: widget.placeholder,

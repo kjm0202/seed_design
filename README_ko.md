@@ -120,7 +120,7 @@ SeedField(
 
 아이콘만 있는 버튼에는 화면 읽기 프로그램이 용도를 안내할 수 있도록 `semanticsLabel`을 넣어주세요. 입력창에 직접 전달한 `TextEditingController`와 `FocusNode`는 사용한 쪽에서 해제해야 합니다.
 
-안정적으로 유지할 이름, null의 의미, 상태 관리 규칙과 마이그레이션은 [공개 API 계약](PUBLIC_API_CONTRACT.md)을 참고하세요. non-null 값은 부모가 관리하며, 빈 선택도 부모가 관리하려면 `controlled: true`를 지정합니다. default 값은 내부 상태를 한 번 초기화합니다. 텍스트·첨부 입력에는 컨트롤러 또는 값과 초깃값 중 한 방식만 전달합니다.
+API 이름은 [공식 React 소스 대조표](REACT_API_REFERENCE.md)를 기준으로 합니다. null의 의미, 상태 관리 규칙과 마이그레이션은 [공개 API 계약](PUBLIC_API_CONTRACT.md)을 참고하세요. Select는 단일·다중 선택 모두 리스트형 `value/defaultValue/onValueChange`를 사용합니다. non-null 값은 부모가 관리하며, 빈 선택도 부모가 관리하려면 `controlled: true`를 지정합니다. default 값은 내부 상태를 한 번 초기화합니다. 텍스트·첨부 입력에는 컨트롤러 또는 값과 초깃값 중 한 방식만 전달합니다.
 
 다른 컴포넌트의 사용법은 [예제 코드](example/lib/tabs)에서 확인할 수 있습니다.
 
@@ -132,7 +132,7 @@ SeedField(
 
 첨부는 UI만 제공합니다. `SeedAttachmentDisplayField`/`SeedAttachmentController`에 외부 항목과 진행률·상태를 전달하세요. 실제 파일 선택·OS drop·파일 검사·업로드는 앱이 담당하며 이 패키지는 수행하지 않습니다.
 
-첨부 미리보기의 기본 한도는 10개입니다. `enabled: false`는 추가·재시도·재정렬을 막되 기존 항목의 삭제는 허용합니다. 삭제도 막으려면 `readOnly: true`를 지정하세요. 개별 항목의 제한은 계속 적용됩니다.
+`SeedAttachmentDisplayField`는 공식처럼 기본 최대 1개이며, 여러 항목이 필요하면 `maxEntries: 10`을 지정합니다. `enabled: false`는 추가·재시도·재정렬을 막되 기존 항목의 삭제는 허용합니다. 삭제도 막으려면 `readOnly: true`를 지정하세요. 개별 항목의 제한은 계속 적용됩니다.
 
 
 ## 예제 실행

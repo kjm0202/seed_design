@@ -353,17 +353,20 @@ class SeedChipRadioGroup<T> extends StatefulWidget {
     required this.options,
     this.value,
     this.defaultValue,
-    this.onChanged,
+    ValueChanged<T>? onValueChange,
+    ValueChanged<T>? onChanged,
     this.enabled = true,
     this.controlled = false,
     this.label,
     this.description,
     this.variant = SeedChipVariant.solid,
     this.size = SeedChipSize.medium,
-  });
+  }) : onChanged = onValueChange ?? onChanged,
+       assert(onValueChange == null || onChanged == null);
   final List<SeedChipOption<T>> options;
   final T? value, defaultValue;
   final ValueChanged<T>? onChanged;
+  ValueChanged<T>? get onValueChange => onChanged;
   final bool enabled, controlled;
   final String? label, description;
   final SeedChipVariant variant;

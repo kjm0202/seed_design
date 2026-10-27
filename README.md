@@ -120,7 +120,7 @@ Buttons default to `brandSolid`; badges default to `solid`. Use an explicit vari
 
 Give icon-only buttons a `semanticsLabel` so screen readers can describe their action. If you pass a `TextEditingController` or `FocusNode` to an input, you are responsible for disposing of it.
 
-See the [public API contract](PUBLIC_API_CONTRACT.md) for stable names, null semantics, state ownership and migration guidance. Non-null values are parent-controlled; use `controlled: true` to control an empty selection. Default values initialize local state once. Supply either a text/attachment controller or values and defaults.
+Use the official React prop names listed in the [source mapping](REACT_API_REFERENCE.md). See the [public API contract](PUBLIC_API_CONTRACT.md) for null semantics, state ownership and migration guidance. Select uses list-valued `value/defaultValue/onValueChange` for single and multiple selection. Non-null values are parent-controlled; use `controlled: true` to control an empty selection. Default values initialize local state once. Supply either a text/attachment controller or values and defaults.
 
 See the [example code](example/lib/tabs) for other components.
 
@@ -132,7 +132,7 @@ Use `SeedDatePicker` for single/range/multiple selection and month/two-month/wee
 
 Attachments are UI-only. Supply entries and update progress/status through `SeedAttachmentDisplayField` or `SeedAttachmentController`; handle actual selection and uploading in your app. This package does not select, receive, validate or upload files.
 
-Attachment previews default to a limit of 10 entries. `enabled: false` blocks adding, retrying and reordering, while allowing removal of existing entries. Use `readOnly: true` to prevent removal as well; per-entry restrictions still apply.
+`SeedAttachmentDisplayField` defaults to one entry, matching React; set `maxEntries: 10` for multiple attachments. `enabled: false` blocks adding, retrying and reordering, while allowing removal of existing entries. Use `readOnly: true` to prevent removal as well; per-entry restrictions still apply.
 
 
 ## Run the example

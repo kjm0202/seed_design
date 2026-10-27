@@ -56,6 +56,9 @@ class SeedSwitchMark extends StatefulWidget {
   final bool? value;
   final bool defaultValue;
   final ValueChanged<bool>? onChanged;
+  bool? get checked => value;
+  bool get defaultChecked => defaultValue;
+  ValueChanged<bool>? get onCheckedChange => onChanged;
   final SeedSwitchSize size;
   final bool enabled;
   final SeedControlTone tone;
@@ -67,16 +70,24 @@ class SeedSwitchMark extends StatefulWidget {
 
   const SeedSwitchMark({
     super.key,
-    this.value,
-    this.defaultValue = false,
-    this.onChanged,
+    bool? checked,
+    bool? value,
+    bool? defaultChecked,
+    bool? defaultValue,
+    ValueChanged<bool>? onCheckedChange,
+    ValueChanged<bool>? onChanged,
     this.size = SeedSwitchSize.size32,
     this.enabled = true,
     this.tone = SeedControlTone.brand,
     this.semanticsLabel,
     this.focusNode,
     this.interactive = true,
-  });
+  }) : value = checked ?? value,
+       defaultValue = defaultChecked ?? defaultValue ?? false,
+       onChanged = onCheckedChange ?? onChanged,
+       assert(checked == null || value == null),
+       assert(defaultChecked == null || defaultValue == null),
+       assert(onCheckedChange == null || onChanged == null);
 
   @override
   State<SeedSwitchMark> createState() => _SeedSwitchMarkState();
@@ -218,6 +229,9 @@ class SeedSwitch extends StatefulWidget {
   final bool? value;
   final bool defaultValue;
   final ValueChanged<bool>? onChanged;
+  bool? get checked => value;
+  bool get defaultChecked => defaultValue;
+  ValueChanged<bool>? get onCheckedChange => onChanged;
   final String? label;
   final SeedSwitchSize size;
   final bool enabled;
@@ -227,16 +241,24 @@ class SeedSwitch extends StatefulWidget {
 
   const SeedSwitch({
     super.key,
-    this.value,
-    this.defaultValue = false,
-    this.onChanged,
+    bool? checked,
+    bool? value,
+    bool? defaultChecked,
+    bool? defaultValue,
+    ValueChanged<bool>? onCheckedChange,
+    ValueChanged<bool>? onChanged,
     this.label,
     this.size = SeedSwitchSize.size32,
     this.enabled = true,
     this.tone = SeedControlTone.brand,
     this.semanticsLabel,
     this.focusNode,
-  });
+  }) : value = checked ?? value,
+       defaultValue = defaultChecked ?? defaultValue ?? false,
+       onChanged = onCheckedChange ?? onChanged,
+       assert(checked == null || value == null),
+       assert(defaultChecked == null || defaultValue == null),
+       assert(onCheckedChange == null || onChanged == null);
 
   @override
   State<SeedSwitch> createState() => _SeedSwitchState();

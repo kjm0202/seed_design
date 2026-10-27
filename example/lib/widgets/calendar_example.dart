@@ -31,7 +31,7 @@ class _CalendarExampleState extends State<CalendarExample> {
               child: SeedSelect<SeedDatePickerLayout>(
                 key: const ValueKey('calendar-layout'),
                 label: '달력 보기',
-                value: _layout,
+                value: [_layout],
                 groups: [
                   SeedSelectGroup(
                     items: [
@@ -48,7 +48,7 @@ class _CalendarExampleState extends State<CalendarExample> {
                     ],
                   ),
                 ],
-                onChanged: (value) => setState(() => _layout = value),
+                onValueChange: (value) => setState(() => _layout = value.first),
               ),
             ),
             const SizedBox(width: 12),
@@ -56,7 +56,7 @@ class _CalendarExampleState extends State<CalendarExample> {
               child: SeedSelect<SeedDatePickerMode>(
                 key: const ValueKey('calendar-mode'),
                 label: '날짜 선택 방식',
-                value: _mode,
+                value: [_mode],
                 groups: [
                   SeedSelectGroup(
                     items: [
@@ -72,7 +72,7 @@ class _CalendarExampleState extends State<CalendarExample> {
                     ],
                   ),
                 ],
-                onChanged: (value) => setState(() => _mode = value),
+                onValueChange: (value) => setState(() => _mode = value.first),
               ),
             ),
           ],
@@ -87,14 +87,14 @@ class _CalendarExampleState extends State<CalendarExample> {
           ),
           child: SeedDatePicker(
             key: ValueKey((_layout, _mode)),
-            layout: _layout,
-            mode: _mode,
+            visibleRange: _layout,
+            selectionMode: _mode,
             controlled: true,
             value: _date,
             rangeValue: _range,
             values: _dates,
             height: _layout == SeedDatePickerLayout.continuous ? 420 : null,
-            onValueChanged: (value) => setState(() => _date = value),
+            onValueChange: (value) => setState(() => _date = value),
             onRangeSelected: (start, end) => setState(() {
               _range = start == null
                   ? null

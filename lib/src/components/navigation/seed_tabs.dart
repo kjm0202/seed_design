@@ -34,12 +34,16 @@ enum SeedTabsSize {
 /// Represents an item in [SeedTabs].
 class SeedTabItem {
   final String label;
+
+  /// React tab value. When omitted, the tab view uses the index as a string.
+  final String? value;
   final int? notificationCount;
   final bool showNotificationDot;
   final bool enabled;
 
   const SeedTabItem({
     required this.label,
+    this.value,
     this.notificationCount,
     this.showNotificationDot = false,
     this.enabled = true,

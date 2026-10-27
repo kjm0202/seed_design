@@ -44,6 +44,7 @@ class SeedQuantityPicker extends StatelessWidget {
   final int? value;
   final int defaultValue;
   final ValueChanged<int>? onChanged;
+  ValueChanged<int>? get onValueChange => onChanged;
   final int min;
   final int max;
   final int step;
@@ -62,7 +63,8 @@ class SeedQuantityPicker extends StatelessWidget {
     super.key,
     this.value,
     this.defaultValue = 1,
-    this.onChanged,
+    ValueChanged<int>? onValueChange,
+    ValueChanged<int>? onChanged,
     this.min = 1,
     this.max = 99,
     this.step = 1,
@@ -79,7 +81,9 @@ class SeedQuantityPicker extends StatelessWidget {
     this.valueFormatter,
     this.valueChild,
     this.removeSemanticsLabel = '상품 삭제',
-  }) : assert(min <= max),
+  }) : onChanged = onValueChange ?? onChanged,
+       assert(onValueChange == null || onChanged == null),
+       assert(min <= max),
        assert(step > 0),
        assert(value == null || (value >= min && value <= max));
 

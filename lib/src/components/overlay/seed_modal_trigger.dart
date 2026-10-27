@@ -21,7 +21,8 @@ class SeedModalTrigger extends StatefulWidget {
     this.controller,
     this.open,
     this.defaultOpen = false,
-    this.onOpenChanged,
+    SeedOverlayOpenChanged? onOpenChange,
+    SeedOverlayOpenChanged? onOpenChanged,
     this.canClose,
     this.dismissible = true,
     this.closeOnInteractOutside,
@@ -36,7 +37,8 @@ class SeedModalTrigger extends StatefulWidget {
     this.onSnapChanged,
     this.handleOnly = false,
     this.fadeFromIndex,
-  });
+  }) : onOpenChanged = onOpenChange ?? onOpenChanged,
+       assert(onOpenChange == null || onOpenChanged == null);
   final Widget Function(BuildContext, bool, VoidCallback) triggerBuilder;
   final WidgetBuilder builder;
   final SeedModalType type;
@@ -50,6 +52,7 @@ class SeedModalTrigger extends StatefulWidget {
       skipAnimation,
       handleOnly;
   final SeedOverlayOpenChanged? onOpenChanged;
+  SeedOverlayOpenChanged? get onOpenChange => onOpenChanged;
   final bool Function(SeedOverlayDismissReason)? canClose;
   final bool? closeOnInteractOutside, closeOnEscape;
   final List<SeedSheetSnapPoint>? snapPoints;
@@ -69,6 +72,7 @@ class SeedDialogTrigger extends SeedModalTrigger {
     super.controller,
     super.open,
     super.defaultOpen,
+    super.onOpenChange,
     super.onOpenChanged,
     super.canClose,
     super.dismissible,
@@ -87,6 +91,7 @@ class SeedAlertDialogTrigger extends SeedModalTrigger {
     super.controller,
     super.open,
     super.defaultOpen,
+    super.onOpenChange,
     super.onOpenChanged,
     super.canClose,
     super.dismissible = false,
@@ -104,6 +109,7 @@ class SeedBottomSheetTrigger extends SeedModalTrigger {
     super.controller,
     super.open,
     super.defaultOpen,
+    super.onOpenChange,
     super.onOpenChanged,
     super.canClose,
     super.dismissible,
@@ -127,6 +133,7 @@ class SeedSidePanelTrigger extends SeedModalTrigger {
     super.controller,
     super.open,
     super.defaultOpen,
+    super.onOpenChange,
     super.onOpenChanged,
     super.canClose,
     super.dismissible,
@@ -145,6 +152,7 @@ class SeedMenuSheetTrigger extends SeedModalTrigger {
     super.controller,
     super.open,
     super.defaultOpen,
+    super.onOpenChange,
     super.onOpenChanged,
     super.canClose,
     super.dismissible,

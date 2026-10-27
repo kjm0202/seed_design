@@ -27,8 +27,10 @@ enum SeedDatePickerLayout { month, twoMonths, week, continuous }
 class SeedDatePicker extends StatefulWidget {
   const SeedDatePicker({
     super.key,
-    this.mode = SeedDatePickerMode.single,
-    this.layout = SeedDatePickerLayout.month,
+    SeedDatePickerMode? selectionMode,
+    SeedDatePickerMode? mode,
+    SeedDatePickerLayout? visibleRange,
+    SeedDatePickerLayout? layout,
     DateTime? defaultValue,
     DateTime? initialDate,
     this.today,
@@ -43,9 +45,12 @@ class SeedDatePicker extends StatefulWidget {
     this.firstDate,
     this.lastDate,
     this.onDateSelected,
-    this.onValueChanged,
+    ValueChanged<DateTime?>? onValueChange,
+    ValueChanged<DateTime?>? onValueChanged,
+    this.onRangeValueChange,
     this.onRangeSelected,
-    this.onDatesSelected,
+    ValueChanged<List<DateTime>>? onDatesChange,
+    ValueChanged<List<DateTime>>? onDatesSelected,
     this.selectableDayPredicate,
     this.constraints = const [],
     this.enabled = true,
@@ -57,7 +62,8 @@ class SeedDatePicker extends StatefulWidget {
     this.weekStartsOn,
     this.viewDate,
     this.defaultViewDate,
-    this.onViewDateChanged,
+    ValueChanged<DateTime>? onViewDateChange,
+    ValueChanged<DateTime>? onViewDateChanged,
     this.controller,
     this.yearRange,
     this.monthRange,
@@ -70,7 +76,17 @@ class SeedDatePicker extends StatefulWidget {
     this.semanticsLabel,
     this.showReset = false,
     this.onReset,
-  }) : initialDate = defaultValue ?? initialDate,
+  }) : mode = selectionMode ?? mode ?? SeedDatePickerMode.single,
+       layout = visibleRange ?? layout ?? SeedDatePickerLayout.month,
+       assert(selectionMode == null || mode == null),
+       assert(visibleRange == null || layout == null),
+       onDatesSelected = onDatesChange ?? onDatesSelected,
+       assert(onDatesChange == null || onDatesSelected == null),
+       onViewDateChanged = onViewDateChange ?? onViewDateChanged,
+       assert(onViewDateChange == null || onViewDateChanged == null),
+       onValueChanged = onValueChange ?? onValueChanged,
+       assert(onValueChange == null || onValueChanged == null),
+       initialDate = defaultValue ?? initialDate,
        _defaultRangeValue = defaultRangeValue,
        initialDates = defaultValues ?? initialDates ?? const [],
        assert(defaultValue == null || initialDate == null),
@@ -83,12 +99,153 @@ class SeedDatePicker extends StatefulWidget {
        assert(dateCellSupplement == null || dateCellContent == null),
        assert(cellHeight > 0),
        assert(
-         layout != SeedDatePickerLayout.continuous ||
+         (visibleRange ?? layout) != SeedDatePickerLayout.continuous ||
              (height != null || minHeight != null || maxHeight != null),
          'Continuous calendars require a bounded height',
        );
+
+  /// React-compatible range selection with a typed value/defaultValue.
+  const SeedDatePicker.range({
+    SeedDateRange? value,
+    SeedDateRange? defaultValue,
+    ValueChanged<SeedDateRange?>? onValueChange,
+    Key? key,
+    SeedDatePickerLayout visibleRange = SeedDatePickerLayout.month,
+    DateTime? today,
+    DateTime? firstDate,
+    DateTime? lastDate,
+    bool Function(DateTime)? selectableDayPredicate,
+    List<SeedDateConstraint> constraints = const [],
+    bool enabled = true,
+    bool disabled = false,
+    bool readOnly = false,
+    bool controlled = false,
+    Locale locale = const Locale('ko', 'KR'),
+    int? weekStartsOn,
+    DateTime? viewDate,
+    DateTime? defaultViewDate,
+    ValueChanged<DateTime>? onViewDateChange,
+    SeedDatePickerController? controller,
+    ({int start, int end})? yearRange,
+    DateTimeRange? monthRange,
+    double? height,
+    double? minHeight,
+    double? maxHeight,
+    double cellHeight = 48,
+    Widget Function(BuildContext, SeedDateCellInfo)? dateCellSupplement,
+    Widget Function(BuildContext, SeedDateCellInfo)? dateCellContent,
+    String? semanticsLabel,
+    bool showReset = false,
+    VoidCallback? onReset,
+    bool rangeStartReadOnly = false,
+  }) : this(
+         selectionMode: SeedDatePickerMode.range,
+         rangeValue: value,
+         defaultRangeValue: defaultValue,
+         onRangeValueChange: onValueChange,
+         key: key,
+         visibleRange: visibleRange,
+         today: today,
+         firstDate: firstDate,
+         lastDate: lastDate,
+         selectableDayPredicate: selectableDayPredicate,
+         constraints: constraints,
+         enabled: enabled,
+         disabled: disabled,
+         readOnly: readOnly,
+         controlled: controlled,
+         locale: locale,
+         weekStartsOn: weekStartsOn,
+         viewDate: viewDate,
+         defaultViewDate: defaultViewDate,
+         onViewDateChange: onViewDateChange,
+         controller: controller,
+         yearRange: yearRange,
+         monthRange: monthRange,
+         height: height,
+         minHeight: minHeight,
+         maxHeight: maxHeight,
+         cellHeight: cellHeight,
+         dateCellSupplement: dateCellSupplement,
+         dateCellContent: dateCellContent,
+         semanticsLabel: semanticsLabel,
+         showReset: showReset,
+         onReset: onReset,
+         rangeStartReadOnly: rangeStartReadOnly,
+       );
+
+  /// React-compatible multiple selection with a typed value/defaultValue.
+  const SeedDatePicker.multiple({
+    List<DateTime>? value,
+    List<DateTime>? defaultValue,
+    ValueChanged<List<DateTime>>? onValueChange,
+    Key? key,
+    SeedDatePickerLayout visibleRange = SeedDatePickerLayout.month,
+    DateTime? today,
+    DateTime? firstDate,
+    DateTime? lastDate,
+    bool Function(DateTime)? selectableDayPredicate,
+    List<SeedDateConstraint> constraints = const [],
+    bool enabled = true,
+    bool disabled = false,
+    bool readOnly = false,
+    bool controlled = false,
+    Locale locale = const Locale('ko', 'KR'),
+    int? weekStartsOn,
+    DateTime? viewDate,
+    DateTime? defaultViewDate,
+    ValueChanged<DateTime>? onViewDateChange,
+    SeedDatePickerController? controller,
+    ({int start, int end})? yearRange,
+    DateTimeRange? monthRange,
+    double? height,
+    double? minHeight,
+    double? maxHeight,
+    double cellHeight = 48,
+    Widget Function(BuildContext, SeedDateCellInfo)? dateCellSupplement,
+    Widget Function(BuildContext, SeedDateCellInfo)? dateCellContent,
+    String? semanticsLabel,
+    bool showReset = false,
+    VoidCallback? onReset,
+  }) : this(
+         selectionMode: SeedDatePickerMode.multiple,
+         values: value,
+         defaultValues: defaultValue,
+         onDatesChange: onValueChange,
+         key: key,
+         visibleRange: visibleRange,
+         today: today,
+         firstDate: firstDate,
+         lastDate: lastDate,
+         selectableDayPredicate: selectableDayPredicate,
+         constraints: constraints,
+         enabled: enabled,
+         disabled: disabled,
+         readOnly: readOnly,
+         controlled: controlled,
+         locale: locale,
+         weekStartsOn: weekStartsOn,
+         viewDate: viewDate,
+         defaultViewDate: defaultViewDate,
+         onViewDateChange: onViewDateChange,
+         controller: controller,
+         yearRange: yearRange,
+         monthRange: monthRange,
+         height: height,
+         minHeight: minHeight,
+         maxHeight: maxHeight,
+         cellHeight: cellHeight,
+         dateCellSupplement: dateCellSupplement,
+         dateCellContent: dateCellContent,
+         semanticsLabel: semanticsLabel,
+         showReset: showReset,
+         onReset: onReset,
+       );
+
   final SeedDatePickerMode mode;
   final SeedDatePickerLayout layout;
+  SeedDatePickerMode get selectionMode => mode;
+  SeedDatePickerLayout get visibleRange => layout;
   final DateTime? initialDate, initialStartDate, initialEndDate;
   final DateTime? value;
   final SeedDateRange? rangeValue;
@@ -111,8 +268,11 @@ class SeedDatePicker extends StatefulWidget {
   final DateTime? firstDate, lastDate;
   final ValueChanged<DateTime>? onDateSelected;
   final ValueChanged<DateTime?>? onValueChanged;
+  ValueChanged<DateTime?>? get onValueChange => onValueChanged;
   final void Function(DateTime? start, DateTime? end)? onRangeSelected;
+  final ValueChanged<SeedDateRange?>? onRangeValueChange;
   final ValueChanged<List<DateTime>>? onDatesSelected;
+  ValueChanged<List<DateTime>>? get onDatesChange => onDatesSelected;
   final bool Function(DateTime date)? selectableDayPredicate;
   final List<SeedDateConstraint> constraints;
   final bool enabled, disabled, readOnly, rangeStartReadOnly, controlled;
@@ -122,6 +282,7 @@ class SeedDatePicker extends StatefulWidget {
   final int? weekStartsOn;
   final DateTime? viewDate, defaultViewDate;
   final ValueChanged<DateTime>? onViewDateChanged;
+  ValueChanged<DateTime>? get onViewDateChange => onViewDateChanged;
   final SeedDatePickerController? controller;
   final ({int start, int end})? yearRange;
   final DateTimeRange? monthRange;
@@ -487,6 +648,13 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
     return widget.constraints.every((constraint) => constraint(day, proposal));
   }
 
+  void _notifyRange(DateTime? start, DateTime? end) {
+    widget.onRangeValueChange?.call(
+      start == null ? null : SeedDateRange(start: start, end: end),
+    );
+    widget.onRangeSelected?.call(start, end);
+  }
+
   void _select(DateTime date) {
     final day = seedDateOnly(date);
     if (_isDisabled || widget.readOnly) return;
@@ -517,7 +685,7 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
         widget.onDateSelected?.call(day);
         widget.onValueChanged?.call(day);
       case SeedDatePickerMode.range:
-        widget.onRangeSelected?.call(proposal.start, proposal.end);
+        _notifyRange(proposal.start, proposal.end);
       case SeedDatePickerMode.multiple:
         widget.onDatesSelected?.call(List.unmodifiable(proposal.dates));
     }
@@ -1158,7 +1326,7 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
                               case SeedDatePickerMode.single:
                                 widget.onValueChanged?.call(null);
                               case SeedDatePickerMode.range:
-                                widget.onRangeSelected?.call(
+                                _notifyRange(
                                   widget.rangeStartReadOnly ? _startDate : null,
                                   null,
                                 );

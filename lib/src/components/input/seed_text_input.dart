@@ -71,6 +71,7 @@ class SeedTextInput extends StatefulWidget {
   final Widget Function(BuildContext, TextEditingController, FocusNode)?
   inputBuilder;
   final ValueChanged<SeedTextValueChange>? onValueChanged;
+  ValueChanged<SeedTextValueChange>? get onValueChange => onValueChanged;
   final int? maxGraphemeCount;
   final bool autoResize;
   final double? maxHeight;
@@ -107,12 +108,15 @@ class SeedTextInput extends StatefulWidget {
     this.suffixText,
     this.inputFormatters,
     this.inputBuilder,
-    this.onValueChanged,
+    ValueChanged<SeedTextValueChange>? onValueChange,
+    ValueChanged<SeedTextValueChange>? onValueChanged,
     this.maxGraphemeCount,
     this.autoResize = false,
     this.maxHeight,
     this.semanticsLabel,
-  }) : initialValue = defaultValue ?? initialValue,
+  }) : onValueChanged = onValueChange ?? onValueChanged,
+       assert(onValueChange == null || onValueChanged == null),
+       initialValue = defaultValue ?? initialValue,
        assert(defaultValue == null || initialValue == null),
        assert(
          controller == null ||
@@ -153,12 +157,15 @@ class SeedTextInput extends StatefulWidget {
     this.suffixText,
     this.inputFormatters,
     this.inputBuilder,
-    this.onValueChanged,
+    ValueChanged<SeedTextValueChange>? onValueChange,
+    ValueChanged<SeedTextValueChange>? onValueChanged,
     this.maxGraphemeCount,
     this.autoResize = true,
     this.maxHeight,
     this.semanticsLabel,
-  }) : initialValue = defaultValue ?? initialValue,
+  }) : onValueChanged = onValueChange ?? onValueChanged,
+       assert(onValueChange == null || onValueChanged == null),
+       initialValue = defaultValue ?? initialValue,
        assert(defaultValue == null || initialValue == null),
        assert(
          controller == null ||

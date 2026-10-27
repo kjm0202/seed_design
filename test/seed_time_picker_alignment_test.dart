@@ -71,8 +71,8 @@ void main() {
             }
           }
 
-          expectCentered(['오전', '9', '00']);
-          for (final (column, index) in [(0, 1), (1, 10), (2, 15)]) {
+          expectCentered(['오전', '12', '00']);
+          for (final (column, index) in [(0, 1), (1, 10), (2, 3)]) {
             final wheel = tester.widget<ListWheelScrollView>(
               find.byType(ListWheelScrollView).at(column),
             );

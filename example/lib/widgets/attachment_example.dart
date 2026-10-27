@@ -11,6 +11,7 @@ class AttachmentExample extends StatefulWidget {
 
 class _AttachmentExampleState extends State<AttachmentExample> {
   final SeedAttachmentController _controller = SeedAttachmentController(
+    maxCount: 10,
     items: const [
       SeedAttachmentItem(id: 'ready', name: '이미지 예시', isRepresentative: true),
       SeedAttachmentItem(
@@ -75,6 +76,7 @@ class _AttachmentExampleState extends State<AttachmentExample> {
         const Text('Media Attachments'),
         const SizedBox(height: 8),
         SeedAttachmentDisplayField(
+          maxEntries: 10,
           controller: _controller,
           reorderable: true,
           onTrigger: (_) => _add(),

@@ -26,8 +26,9 @@ class SeedTimePicker extends StatefulWidget {
     super.key,
     TimeOfDay? defaultValue,
     TimeOfDay? initialTime,
-    this.minuteStep = 1,
-    this.onChanged,
+    this.minuteStep = 5,
+    ValueChanged<TimeOfDay>? onValueChange,
+    ValueChanged<TimeOfDay>? onChanged,
     this.height = 220.0,
     this.value,
     this.enabled = true,
@@ -37,8 +38,10 @@ class SeedTimePicker extends StatefulWidget {
     this.periodSemanticsLabel,
     this.hourSemanticsLabel,
     this.minuteSemanticsLabel,
-  }) : initialTime =
-           defaultValue ?? initialTime ?? const TimeOfDay(hour: 9, minute: 0),
+  }) : onChanged = onValueChange ?? onChanged,
+       assert(onValueChange == null || onChanged == null),
+       initialTime =
+           defaultValue ?? initialTime ?? const TimeOfDay(hour: 0, minute: 0),
        assert(defaultValue == null || initialTime == null);
 
   /// The initially selected time.
@@ -52,6 +55,7 @@ class SeedTimePicker extends StatefulWidget {
 
   /// Callback when the selected time changes.
   final ValueChanged<TimeOfDay>? onChanged;
+  ValueChanged<TimeOfDay>? get onValueChange => onChanged;
 
   /// Overall height of the picker.
   final double height;
@@ -94,11 +98,11 @@ class _SeedTimePickerState extends State<SeedTimePicker> {
   }
 
   void _initValues([TimeOfDay? seed]) {
-    if (widget.minuteStep <= 0 || widget.minuteStep > 60) {
+    if (!const {1, 5, 10, 15, 30}.contains(widget.minuteStep)) {
       throw ArgumentError.value(
         widget.minuteStep,
         'minuteStep',
-        'Must be between 1 and 60',
+        'Must be one of 1, 5, 10, 15, 30',
       );
     }
     _minutes = [];
