@@ -73,14 +73,15 @@ class SeedSelect<T> extends StatefulWidget {
     this.flip = true,
     this.shift = true,
     this.multiple = false,
-    this.values,
-    Set<T>? defaultValues,
-    Set<T>? initialValues,
+    @Deprecated('Use value instead.') this.values,
+    @Deprecated('Use defaultValue instead.') Set<T>? defaultValues,
+    @Deprecated('Use defaultValue instead.') Set<T>? initialValues,
     this.defaultValue,
     this.onValueChange,
     this.onValuesChanged,
     this.open,
     this.defaultOpen = false,
+    @Deprecated('Use onOpenChange instead.')
     SeedOverlayOpenChanged? onOpenChanged,
     SeedOverlayOpenChanged? onOpenChange,
     this.onOpenStateChanged,
@@ -135,16 +136,20 @@ class SeedSelect<T> extends StatefulWidget {
   final SeedOverlayAlign align;
   final bool flip, shift;
   final bool multiple;
+  @Deprecated('Use value instead.')
   final Set<T>? values;
+  @Deprecated('Use defaultValue instead.')
   final Set<T> initialValues;
 
   /// Legacy set-valued seed; prefer the React-compatible list [defaultValue].
+  @Deprecated('Use defaultValue instead.')
   Set<T> get defaultValues => initialValues;
   final List<T>? defaultValue;
   final ValueChanged<List<T>>? onValueChange;
   final ValueChanged<Set<T>>? onValuesChanged;
   final bool? open;
   final bool defaultOpen;
+  @Deprecated('Use onOpenChange instead.')
   final SeedOverlayOpenChanged? onOpenChanged;
 
   /// Optional visibility-only observer, alongside [onOpenChanged].

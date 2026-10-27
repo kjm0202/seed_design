@@ -79,6 +79,7 @@ class SeedTextField extends StatefulWidget {
     this.enforceMaxLength = false,
     this.onChanged,
     ValueChanged<SeedTextValueChange>? onValueChange,
+    @Deprecated('Use onValueChange instead.')
     ValueChanged<SeedTextValueChange>? onValueChanged,
     this.onSaved,
     this.validator,
@@ -125,6 +126,7 @@ class SeedTextField extends StatefulWidget {
     this.enforceMaxLength = false,
     this.onChanged,
     ValueChanged<SeedTextValueChange>? onValueChange,
+    @Deprecated('Use onValueChange instead.')
     ValueChanged<SeedTextValueChange>? onValueChanged,
     this.onSaved,
     this.validator,
@@ -168,6 +170,7 @@ class SeedTextField extends StatefulWidget {
   final String? prefixText, suffixText;
   final int? maxGraphemeCount, maxLines, minLines;
   final ValueChanged<String>? onChanged, onSaved;
+  @Deprecated('Use onValueChange instead.')
   final ValueChanged<SeedTextValueChange>? onValueChanged;
   ValueChanged<SeedTextValueChange>? get onValueChange => onValueChanged;
   final FormFieldValidator<String>? validator;
@@ -333,6 +336,7 @@ class SeedFieldButton extends StatefulWidget {
     this.values,
     this.defaultValues = const [],
     ValueChanged<List<String>>? onValuesChange,
+    @Deprecated('Use onValuesChange instead.')
     ValueChanged<List<String>>? onValuesChanged,
     this.onPressed,
     this.label,
@@ -352,6 +356,7 @@ class SeedFieldButton extends StatefulWidget {
        assert(onValuesChange == null || onValuesChanged == null);
   final List<String>? values;
   final List<String> defaultValues;
+  @Deprecated('Use onValuesChange instead.')
   final ValueChanged<List<String>>? onValuesChanged;
   ValueChanged<List<String>>? get onValuesChange => onValuesChanged;
   final VoidCallback? onPressed;

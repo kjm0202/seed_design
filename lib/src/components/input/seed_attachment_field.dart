@@ -88,8 +88,10 @@ class SeedAttachmentDisplayField extends StatefulWidget {
     this.controller,
     this.entries,
     List<SeedAttachmentItem>? defaultEntries,
+    @Deprecated('Use defaultEntries instead.')
     List<SeedAttachmentItem>? initialEntries,
     ValueChanged<List<SeedAttachmentItem>>? onEntriesChange,
+    @Deprecated('Use onEntriesChange instead.')
     ValueChanged<List<SeedAttachmentItem>>? onEntriesChanged,
     this.onTrigger,
     this.onRetry,
@@ -118,10 +120,12 @@ class SeedAttachmentDisplayField extends StatefulWidget {
        );
   final SeedAttachmentController? controller;
   final List<SeedAttachmentItem>? entries;
+  @Deprecated('Use defaultEntries instead.')
   final List<SeedAttachmentItem> initialEntries;
 
   /// One-time seed; [initialEntries] is a compatibility alias.
   List<SeedAttachmentItem> get defaultEntries => initialEntries;
+  @Deprecated('Use onEntriesChange instead.')
   final ValueChanged<List<SeedAttachmentItem>>? onEntriesChanged;
   ValueChanged<List<SeedAttachmentItem>>? get onEntriesChange =>
       onEntriesChanged;

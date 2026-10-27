@@ -366,7 +366,7 @@ class SeedMenuTrigger extends SeedAnchoredOverlay {
     super.open,
     super.defaultOpen,
     super.onOpenChange,
-    super.onOpenChanged,
+    @Deprecated('Use onOpenChange instead.') super.onOpenChanged,
     super.side,
     super.align,
     super.gap,

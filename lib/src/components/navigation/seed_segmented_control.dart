@@ -39,9 +39,11 @@ class SeedSegment<T> {
 /// with animated floating pill indicator and SEED elevation shadow.
 class SeedSegmentedControl<T> extends StatefulWidget {
   final List<SeedSegment<T>> segments;
+  @Deprecated('Use value instead.')
   final T? selectedValue;
   T? get value => selectedValue;
   final T? defaultValue;
+  @Deprecated('Use onValueChange instead.')
   final ValueChanged<T>? onValueChanged;
   ValueChanged<T>? get onValueChange => onValueChanged;
   final bool enabled;
@@ -53,10 +55,10 @@ class SeedSegmentedControl<T> extends StatefulWidget {
     super.key,
     required this.segments,
     T? value,
-    T? selectedValue,
+    @Deprecated('Use value instead.') T? selectedValue,
     this.defaultValue,
     ValueChanged<T>? onValueChange,
-    ValueChanged<T>? onValueChanged,
+    @Deprecated('Use onValueChange instead.') ValueChanged<T>? onValueChanged,
     this.enabled = true,
     this.controlled = false,
   }) : selectedValue = value ?? selectedValue,

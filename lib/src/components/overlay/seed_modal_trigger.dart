@@ -22,6 +22,7 @@ class SeedModalTrigger extends StatefulWidget {
     this.open,
     this.defaultOpen = false,
     SeedOverlayOpenChanged? onOpenChange,
+    @Deprecated('Use onOpenChange instead.')
     SeedOverlayOpenChanged? onOpenChanged,
     this.canClose,
     this.dismissible = true,
@@ -51,6 +52,7 @@ class SeedModalTrigger extends StatefulWidget {
       fromRight,
       skipAnimation,
       handleOnly;
+  @Deprecated('Use onOpenChange instead.')
   final SeedOverlayOpenChanged? onOpenChanged;
   SeedOverlayOpenChanged? get onOpenChange => onOpenChanged;
   final bool Function(SeedOverlayDismissReason)? canClose;
@@ -73,7 +75,7 @@ class SeedDialogTrigger extends SeedModalTrigger {
     super.open,
     super.defaultOpen,
     super.onOpenChange,
-    super.onOpenChanged,
+    @Deprecated('Use onOpenChange instead.') super.onOpenChanged,
     super.canClose,
     super.dismissible,
     super.closeOnInteractOutside,
@@ -92,7 +94,7 @@ class SeedAlertDialogTrigger extends SeedModalTrigger {
     super.open,
     super.defaultOpen,
     super.onOpenChange,
-    super.onOpenChanged,
+    @Deprecated('Use onOpenChange instead.') super.onOpenChanged,
     super.canClose,
     super.dismissible = false,
     super.closeOnInteractOutside,
@@ -110,7 +112,7 @@ class SeedBottomSheetTrigger extends SeedModalTrigger {
     super.open,
     super.defaultOpen,
     super.onOpenChange,
-    super.onOpenChanged,
+    @Deprecated('Use onOpenChange instead.') super.onOpenChanged,
     super.canClose,
     super.dismissible,
     super.closeOnInteractOutside,
@@ -134,7 +136,7 @@ class SeedSidePanelTrigger extends SeedModalTrigger {
     super.open,
     super.defaultOpen,
     super.onOpenChange,
-    super.onOpenChanged,
+    @Deprecated('Use onOpenChange instead.') super.onOpenChanged,
     super.canClose,
     super.dismissible,
     super.responsive = true,
@@ -153,7 +155,7 @@ class SeedMenuSheetTrigger extends SeedModalTrigger {
     super.open,
     super.defaultOpen,
     super.onOpenChange,
-    super.onOpenChanged,
+    @Deprecated('Use onOpenChange instead.') super.onOpenChanged,
     super.canClose,
     super.dismissible,
     super.skipAnimation,

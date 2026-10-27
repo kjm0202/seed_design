@@ -53,8 +53,11 @@ enum SeedSwitchSize {
 
 /// Standalone interactive switch with a separate visual and touch target.
 class SeedSwitchMark extends StatefulWidget {
+  @Deprecated('Use checked instead.')
   final bool? value;
+  @Deprecated('Use defaultChecked instead.')
   final bool defaultValue;
+  @Deprecated('Use onCheckedChange instead.')
   final ValueChanged<bool>? onChanged;
   bool? get checked => value;
   bool get defaultChecked => defaultValue;
@@ -71,11 +74,11 @@ class SeedSwitchMark extends StatefulWidget {
   const SeedSwitchMark({
     super.key,
     bool? checked,
-    bool? value,
+    @Deprecated('Use checked instead.') bool? value,
     bool? defaultChecked,
-    bool? defaultValue,
+    @Deprecated('Use defaultChecked instead.') bool? defaultValue,
     ValueChanged<bool>? onCheckedChange,
-    ValueChanged<bool>? onChanged,
+    @Deprecated('Use onCheckedChange instead.') ValueChanged<bool>? onChanged,
     this.size = SeedSwitchSize.size32,
     this.enabled = true,
     this.tone = SeedControlTone.brand,
@@ -226,8 +229,11 @@ class _SeedSwitchGraphic extends StatelessWidget {
 
 /// Switch whose label and mark form one focusable, accessible toggle.
 class SeedSwitch extends StatefulWidget {
+  @Deprecated('Use checked instead.')
   final bool? value;
+  @Deprecated('Use defaultChecked instead.')
   final bool defaultValue;
+  @Deprecated('Use onCheckedChange instead.')
   final ValueChanged<bool>? onChanged;
   bool? get checked => value;
   bool get defaultChecked => defaultValue;
@@ -242,11 +248,11 @@ class SeedSwitch extends StatefulWidget {
   const SeedSwitch({
     super.key,
     bool? checked,
-    bool? value,
+    @Deprecated('Use checked instead.') bool? value,
     bool? defaultChecked,
-    bool? defaultValue,
+    @Deprecated('Use defaultChecked instead.') bool? defaultValue,
     ValueChanged<bool>? onCheckedChange,
-    ValueChanged<bool>? onChanged,
+    @Deprecated('Use onCheckedChange instead.') ValueChanged<bool>? onChanged,
     this.label,
     this.size = SeedSwitchSize.size32,
     this.enabled = true,

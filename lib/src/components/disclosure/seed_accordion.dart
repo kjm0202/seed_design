@@ -310,6 +310,7 @@ class SeedAccordion extends StatefulWidget {
     this.values,
     this.defaultValues = const {},
     ValueChanged<Set<String>>? onValuesChange,
+    @Deprecated('Use onValuesChange instead.')
     ValueChanged<Set<String>>? onValuesChanged,
     this.multiple = false,
     this.collapsible = true,
@@ -321,6 +322,7 @@ class SeedAccordion extends StatefulWidget {
   final List<SeedAccordionItem> items;
   final Set<String>? values;
   final Set<String> defaultValues;
+  @Deprecated('Use onValuesChange instead.')
   final ValueChanged<Set<String>>? onValuesChanged;
   ValueChanged<Set<String>>? get onValuesChange => onValuesChanged;
   final bool multiple;

@@ -52,8 +52,10 @@ class SeedSideNavItem {
     this.disabled = false,
     this.open,
     this.defaultOpen = false,
-    this.onOpenChanged,
-  });
+    ValueChanged<bool>? onOpenChange,
+    @Deprecated('Use onOpenChange instead.') ValueChanged<bool>? onOpenChanged,
+  }) : onOpenChanged = onOpenChange ?? onOpenChanged,
+       assert(onOpenChange == null || onOpenChanged == null);
 
   final String id;
   final String label;
@@ -65,7 +67,9 @@ class SeedSideNavItem {
   final bool disabled;
   final bool? open;
   final bool defaultOpen;
+  @Deprecated('Use onOpenChange instead.')
   final ValueChanged<bool>? onOpenChanged;
+  ValueChanged<bool>? get onOpenChange => onOpenChanged;
 
   bool get isEnabled => enabled && !disabled;
 }
@@ -86,10 +90,13 @@ class SeedSideNavigation extends StatefulWidget {
     this.footer,
     required this.groups,
     this.selectedId,
-    bool? isCollapsed,
+    bool? collapsed,
+    @Deprecated('Use collapsed instead.') bool? isCollapsed,
     this.defaultCollapsed = false,
     this.onToggleCollapsed,
-    this.onCollapsedChanged,
+    ValueChanged<bool>? onCollapsedChange,
+    @Deprecated('Use onCollapsedChange instead.')
+    ValueChanged<bool>? onCollapsedChanged,
     this.showCollapseButton = false,
     this.width = 240.0,
     this.collapsedWidth = 56.0,
@@ -97,7 +104,10 @@ class SeedSideNavigation extends StatefulWidget {
     this.backgroundColor,
     this.collapseBelow,
     // ignore: prefer_initializing_formals
-  }) : _isCollapsed = isCollapsed;
+  }) : _isCollapsed = collapsed ?? isCollapsed,
+       onCollapsedChanged = onCollapsedChange ?? onCollapsedChanged,
+       assert(collapsed == null || isCollapsed == null),
+       assert(onCollapsedChange == null || onCollapsedChanged == null);
 
   /// Header widget (brand logo, user profile, workspace switcher).
   final Widget? header;
@@ -117,13 +127,17 @@ class SeedSideNavigation extends StatefulWidget {
   final bool defaultCollapsed;
 
   /// Whether the sidebar is collapsed to icon-only mode.
+  bool? get collapsed => _isCollapsed;
+  @Deprecated('Use collapsed or defaultCollapsed instead.')
   bool get isCollapsed => _isCollapsed ?? defaultCollapsed;
 
   /// Callback when collapse toggle is clicked.
   final VoidCallback? onToggleCollapsed;
 
   /// Callback with the next collapsed state when toggled.
+  @Deprecated('Use onCollapsedChange instead.')
   final ValueChanged<bool>? onCollapsedChanged;
+  ValueChanged<bool>? get onCollapsedChange => onCollapsedChanged;
 
   /// Whether to show the built-in collapse toggle button even without [onToggleCollapsed].
   final bool showCollapseButton;
@@ -176,8 +190,7 @@ class _SeedSideNavigationState extends State<SeedSideNavigation> {
   }
 
   void _updateScrolled() {
-    final next =
-        _scrollController.hasClients && _scrollController.offset > 0;
+    final next = _scrollController.hasClients && _scrollController.offset > 0;
     if (_scrolled != next && mounted) {
       setState(() => _scrolled = next);
     }
@@ -257,7 +270,8 @@ class _SeedSideNavigationState extends State<SeedSideNavigation> {
         width: currentWidth,
         decoration: BoxDecoration(
           color: effectiveBgColor,
-          border: widget.tone == SeedSideNavTone.transparent &&
+          border:
+              widget.tone == SeedSideNavTone.transparent &&
                   widget.backgroundColor == null
               ? null
               : Border(right: BorderSide(color: colors.stroke.neutralMuted)),
@@ -403,10 +417,7 @@ class _SeedSideNavigationState extends State<SeedSideNavigation> {
         enabled: isItemEnabled,
         child: Tooltip(
           message: item.label,
-          child: InkWell(
-            onTap: isItemEnabled ? item.onTap : null,
-            child: icon,
-          ),
+          child: InkWell(onTap: isItemEnabled ? item.onTap : null, child: icon),
         ),
       );
     }

@@ -28,11 +28,11 @@ class SeedDatePicker extends StatefulWidget {
   const SeedDatePicker({
     super.key,
     SeedDatePickerMode? selectionMode,
-    SeedDatePickerMode? mode,
+    @Deprecated('Use selectionMode instead.') SeedDatePickerMode? mode,
     SeedDatePickerLayout? visibleRange,
-    SeedDatePickerLayout? layout,
+    @Deprecated('Use visibleRange instead.') SeedDatePickerLayout? layout,
     DateTime? defaultValue,
-    DateTime? initialDate,
+    @Deprecated('Use defaultValue instead.') DateTime? initialDate,
     this.today,
     SeedDateRange? defaultRangeValue,
     this.initialStartDate,
@@ -41,15 +41,17 @@ class SeedDatePicker extends StatefulWidget {
     this.rangeValue,
     this.values,
     List<DateTime>? defaultValues,
-    List<DateTime>? initialDates,
+    @Deprecated('Use defaultValues instead.') List<DateTime>? initialDates,
     this.firstDate,
     this.lastDate,
     this.onDateSelected,
     ValueChanged<DateTime?>? onValueChange,
+    @Deprecated('Use onValueChange instead.')
     ValueChanged<DateTime?>? onValueChanged,
     this.onRangeValueChange,
     this.onRangeSelected,
     ValueChanged<List<DateTime>>? onDatesChange,
+    @Deprecated('Use onDatesChange instead.')
     ValueChanged<List<DateTime>>? onDatesSelected,
     this.selectableDayPredicate,
     this.constraints = const [],
@@ -63,6 +65,7 @@ class SeedDatePicker extends StatefulWidget {
     this.viewDate,
     this.defaultViewDate,
     ValueChanged<DateTime>? onViewDateChange,
+    @Deprecated('Use onViewDateChange instead.')
     ValueChanged<DateTime>? onViewDateChanged,
     this.controller,
     this.yearRange,
@@ -242,14 +245,19 @@ class SeedDatePicker extends StatefulWidget {
          onReset: onReset,
        );
 
+  @Deprecated('Use selectionMode instead.')
   final SeedDatePickerMode mode;
+  @Deprecated('Use visibleRange instead.')
   final SeedDatePickerLayout layout;
   SeedDatePickerMode get selectionMode => mode;
   SeedDatePickerLayout get visibleRange => layout;
-  final DateTime? initialDate, initialStartDate, initialEndDate;
+  @Deprecated('Use defaultValue instead.')
+  final DateTime? initialDate;
+  final DateTime? initialStartDate, initialEndDate;
   final DateTime? value;
   final SeedDateRange? rangeValue;
   final List<DateTime>? values;
+  @Deprecated('Use defaultValues instead.')
   final List<DateTime> initialDates;
 
   /// One-time uncontrolled seed. [initialDate] is a compatibility alias.
@@ -267,10 +275,12 @@ class SeedDatePicker extends StatefulWidget {
   List<DateTime> get defaultValues => initialDates;
   final DateTime? firstDate, lastDate;
   final ValueChanged<DateTime>? onDateSelected;
+  @Deprecated('Use onValueChange instead.')
   final ValueChanged<DateTime?>? onValueChanged;
   ValueChanged<DateTime?>? get onValueChange => onValueChanged;
   final void Function(DateTime? start, DateTime? end)? onRangeSelected;
   final ValueChanged<SeedDateRange?>? onRangeValueChange;
+  @Deprecated('Use onDatesChange instead.')
   final ValueChanged<List<DateTime>>? onDatesSelected;
   ValueChanged<List<DateTime>>? get onDatesChange => onDatesSelected;
   final bool Function(DateTime date)? selectableDayPredicate;
@@ -281,6 +291,7 @@ class SeedDatePicker extends StatefulWidget {
   /// Uses DateTime weekday numbering: Monday=1 through Sunday=7.
   final int? weekStartsOn;
   final DateTime? viewDate, defaultViewDate;
+  @Deprecated('Use onViewDateChange instead.')
   final ValueChanged<DateTime>? onViewDateChanged;
   ValueChanged<DateTime>? get onViewDateChange => onViewDateChanged;
   final SeedDatePickerController? controller;

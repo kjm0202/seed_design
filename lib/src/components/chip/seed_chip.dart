@@ -76,12 +76,154 @@ enum SeedChipSize {
   BorderRadius get borderRadius => SeedBorderRadius.full;
 }
 
+/// Button or checkbox-style toggle chip. Checked props opt into toggle mode.
+class SeedChip extends StatefulWidget {
+  final String label;
+  final bool? checked;
+  final bool? defaultChecked;
+  final ValueChanged<bool>? onCheckedChange;
+  final bool indeterminate;
+  final bool? _selected;
+  @Deprecated('Use checked instead.')
+  bool get selected => _selected ?? checked ?? defaultChecked ?? false;
+  @Deprecated('Use onCheckedChange instead.')
+  final ValueChanged<bool>? onSelected;
+  final VoidCallback? onPressed;
+  final VoidCallback? onDeleted;
+  final Widget? prefix, suffix, prefixAvatar, prefixImage;
+  final SeedChipVariant variant;
+  final SeedChipSize size;
+  final bool enabled;
+  final bool _iconOnly;
+  final String? semanticsLabel;
+  final FocusNode? focusNode;
+  bool get _toggle =>
+      checked != null ||
+      defaultChecked != null ||
+      onCheckedChange != null ||
+      indeterminate;
+  const SeedChip({
+    super.key,
+    required this.label,
+    this.checked,
+    this.defaultChecked,
+    this.onCheckedChange,
+    this.indeterminate = false,
+    @Deprecated('Use checked instead.') bool? selected,
+    @Deprecated('Use onCheckedChange instead.') this.onSelected,
+    this.onPressed,
+    this.onDeleted,
+    this.prefix,
+    this.suffix,
+    this.variant = SeedChipVariant.solid,
+    this.size = SeedChipSize.medium,
+    this.enabled = true,
+    this.semanticsLabel,
+    this.focusNode,
+    this.prefixAvatar,
+    this.prefixImage,
+  }) : _selected = selected,
+       _iconOnly = false,
+       assert(
+         selected == null ||
+             (checked == null && defaultChecked == null && !indeterminate),
+       ),
+       assert(onSelected == null || onCheckedChange == null);
+
+  const SeedChip.iconOnly({
+    super.key,
+    required Widget icon,
+    required String this.semanticsLabel,
+    this.focusNode,
+    this.checked,
+    this.defaultChecked,
+    this.onCheckedChange,
+    this.indeterminate = false,
+    @Deprecated('Use checked instead.') bool? selected,
+    @Deprecated('Use onCheckedChange instead.') this.onSelected,
+    this.onPressed,
+    this.variant = SeedChipVariant.solid,
+    this.size = SeedChipSize.medium,
+    this.enabled = true,
+  }) : _selected = selected,
+       assert(
+         selected == null ||
+             (checked == null && defaultChecked == null && !indeterminate),
+       ),
+       assert(onSelected == null || onCheckedChange == null),
+       prefix = icon,
+       label = '',
+       suffix = null,
+       onDeleted = null,
+       prefixAvatar = null,
+       prefixImage = null,
+       _iconOnly = true;
+
+  @override
+  State<SeedChip> createState() => _SeedChipState();
+}
+
+class _SeedChipState extends State<SeedChip> {
+  late bool _checked = widget.defaultChecked ?? false;
+  @override
+  Widget build(BuildContext context) {
+    final checked =
+        widget._selected ??
+        widget.checked ??
+        (widget._toggle ? _checked : false);
+    final onSelected = widget._toggle
+        ? (bool next) {
+            if (widget.checked == null && widget._selected == null) {
+              setState(() => _checked = next);
+            }
+            widget.onCheckedChange?.call(next);
+            widget.onSelected?.call(next);
+          }
+        : widget.onSelected;
+    if (widget._iconOnly) {
+      return _SeedChipControl.iconOnly(
+        icon: widget.prefix!,
+        semanticsLabel: widget.semanticsLabel!,
+        focusNode: widget.focusNode,
+        selected: checked,
+        indeterminate: widget.indeterminate,
+        checkboxSemantics: widget._toggle,
+        onSelected: onSelected,
+        onPressed: widget.onPressed,
+        variant: widget.variant,
+        size: widget.size,
+        enabled: widget.enabled,
+      );
+    }
+    return _SeedChipControl(
+      label: widget.label,
+      selected: checked,
+      indeterminate: widget.indeterminate,
+      checkboxSemantics: widget._toggle,
+      onSelected: onSelected,
+      onPressed: widget.onPressed,
+      onDeleted: widget.onDeleted,
+      prefix: widget.prefix,
+      suffix: widget.suffix,
+      prefixAvatar: widget.prefixAvatar,
+      prefixImage: widget.prefixImage,
+      variant: widget.variant,
+      size: widget.size,
+      enabled: widget.enabled,
+      semanticsLabel: widget.semanticsLabel,
+      focusNode: widget.focusNode,
+    );
+  }
+}
+
 /// Chip component of SEED Design System.
 ///
 /// Used for filtering, suggestions, selections, and user input tags.
-class SeedChip extends StatelessWidget {
+class _SeedChipControl extends StatelessWidget {
   final String label;
   final bool selected;
+  final bool indeterminate;
+  final bool checkboxSemantics;
   final ValueChanged<bool>? onSelected;
   final VoidCallback? onPressed;
   final VoidCallback? onDeleted;
@@ -95,10 +237,11 @@ class SeedChip extends StatelessWidget {
   final FocusNode? focusNode;
   final Widget? prefixAvatar, prefixImage;
 
-  const SeedChip({
-    super.key,
+  const _SeedChipControl({
     required this.label,
     this.selected = false,
+    this.indeterminate = false,
+    this.checkboxSemantics = false,
     this.onSelected,
     this.onPressed,
     this.onDeleted,
@@ -113,12 +256,13 @@ class SeedChip extends StatelessWidget {
     this.prefixImage,
   }) : _iconOnly = false;
 
-  const SeedChip.iconOnly({
-    super.key,
+  const _SeedChipControl.iconOnly({
     required Widget icon,
     required String this.semanticsLabel,
     this.focusNode,
     this.selected = false,
+    this.indeterminate = false,
+    this.checkboxSemantics = false,
     this.onSelected,
     this.onPressed,
     this.variant = SeedChipVariant.solid,
@@ -157,7 +301,9 @@ class SeedChip extends StatelessWidget {
       semanticsLabel: semanticsLabel,
       focusNode: focusNode,
       enabled: _isClickable,
-      selected: onSelected != null ? selected : null,
+      selected: !checkboxSemantics && onSelected != null ? selected : null,
+      checked: checkboxSemantics && onSelected != null ? selected : null,
+      mixed: checkboxSemantics && onSelected != null ? indeterminate : null,
       onTap: () {
         if (onSelected != null) {
           onSelected!(!selected);
@@ -354,7 +500,7 @@ class SeedChipRadioGroup<T> extends StatefulWidget {
     this.value,
     this.defaultValue,
     ValueChanged<T>? onValueChange,
-    ValueChanged<T>? onChanged,
+    @Deprecated('Use onValueChange instead.') ValueChanged<T>? onChanged,
     this.enabled = true,
     this.controlled = false,
     this.label,
@@ -365,6 +511,7 @@ class SeedChipRadioGroup<T> extends StatefulWidget {
        assert(onValueChange == null || onChanged == null);
   final List<SeedChipOption<T>> options;
   final T? value, defaultValue;
+  @Deprecated('Use onValueChange instead.')
   final ValueChanged<T>? onChanged;
   ValueChanged<T>? get onValueChange => onChanged;
   final bool enabled, controlled;

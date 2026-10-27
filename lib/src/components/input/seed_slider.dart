@@ -24,15 +24,21 @@ class SeedSliderMarker {
   final SeedSliderMarkerAlign align;
 }
 
-/// Single-thumb input. Values may be controlled or initialized with defaultValue.
+/// One or two thumbs using React values/defaultValues and list callbacks.
+/// Scalar inputs and callbacks are deprecated; RangeValues inputs remain adapters.
 class SeedSlider extends StatefulWidget {
   const SeedSlider({
     super.key,
-    this.value,
-    this.defaultValue,
-    this.onChanged,
+    List<double>? values,
+    List<double>? defaultValues,
+    this.onValuesChange,
+    this.onValuesCommit,
+    this.minStepsBetweenThumbs = 0,
+    @Deprecated('Use values: [value] instead.') this.value,
+    @Deprecated('Use defaultValues: [value] instead.') this.defaultValue,
+    @Deprecated('Use onValuesChange instead.') this.onChanged,
     this.onChangeStart,
-    this.onChangeEnd,
+    @Deprecated('Use onValuesCommit instead.') this.onChangeEnd,
     this.min = 0,
     this.max = 100,
     this.divisions,
@@ -55,7 +61,19 @@ class SeedSlider extends StatefulWidget {
     this.fieldLabel,
     this.description,
     this.errorMessage,
-  }) : assert(min < max),
+  }) : _values = values,
+       _defaultValues = defaultValues,
+       assert(minStepsBetweenThumbs >= 0),
+       assert(values == null || (values.length >= 1 && values.length <= 2)),
+       assert(
+         defaultValues == null ||
+             (defaultValues.length >= 1 && defaultValues.length <= 2),
+       ),
+       assert(values == null || value == null),
+       assert(defaultValues == null || defaultValue == null),
+       assert(onValuesChange == null || onChanged == null),
+       assert(onValuesCommit == null || onChangeEnd == null),
+       assert(min < max),
        assert(step == null || step > 0),
        assert(divisions == null || divisions > 0),
        rangeValues = null,
@@ -63,15 +81,18 @@ class SeedSlider extends StatefulWidget {
        onRangeChanged = null,
        onRangeChangeStart = null,
        onRangeChangeEnd = null,
-       minStepsBetweenThumbs = 0,
-       _range = false;
+       _rangeMode = false;
 
   const SeedSlider.range({
     super.key,
     RangeValues? values,
     RangeValues? defaultValues,
+    this.onValuesChange,
+    this.onValuesCommit,
+    @Deprecated('Use onValuesChange instead.')
     ValueChanged<RangeValues>? onChanged,
     ValueChanged<RangeValues>? onChangeStart,
+    @Deprecated('Use onValuesCommit instead.')
     ValueChanged<RangeValues>? onChangeEnd,
     this.min = 0,
     this.max = 100,
@@ -99,6 +120,10 @@ class SeedSlider extends StatefulWidget {
        assert(step == null || step > 0),
        assert(divisions == null || divisions > 0),
        assert(minStepsBetweenThumbs >= 0),
+       assert(onValuesChange == null || onChanged == null),
+       assert(onValuesCommit == null || onChangeEnd == null),
+       _values = null,
+       _defaultValues = null,
        rangeValues = values,
        defaultRangeValues = defaultValues,
        onRangeChanged = onChanged,
@@ -110,16 +135,41 @@ class SeedSlider extends StatefulWidget {
        onChangeStart = null,
        onChangeEnd = null,
        label = null,
-       _range = true;
+       _rangeMode = true;
 
+  final List<double>? _values, _defaultValues;
+  List<double>? get values =>
+      _values ??
+      (rangeValues == null
+          ? null
+          : List.unmodifiable([rangeValues!.start, rangeValues!.end]));
+  List<double>? get defaultValues =>
+      _defaultValues ??
+      (defaultRangeValues == null
+          ? null
+          : List.unmodifiable([
+              defaultRangeValues!.start,
+              defaultRangeValues!.end,
+            ]));
+  final ValueChanged<List<double>>? onValuesChange, onValuesCommit;
+  @Deprecated('Use values instead.')
   final double? value;
+  @Deprecated('Use defaultValues instead.')
   final double? defaultValue;
+  @Deprecated('Use values instead.')
   final RangeValues? rangeValues;
+  @Deprecated('Use defaultValues instead.')
   final RangeValues? defaultRangeValues;
-  final ValueChanged<double>? onChanged, onChangeStart, onChangeEnd;
-  final ValueChanged<RangeValues>? onRangeChanged,
-      onRangeChangeStart,
-      onRangeChangeEnd;
+  @Deprecated('Use onValuesChange instead.')
+  final ValueChanged<double>? onChanged;
+  final ValueChanged<double>? onChangeStart;
+  @Deprecated('Use onValuesCommit instead.')
+  final ValueChanged<double>? onChangeEnd;
+  @Deprecated('Use onValuesChange instead.')
+  final ValueChanged<RangeValues>? onRangeChanged;
+  final ValueChanged<RangeValues>? onRangeChangeStart;
+  @Deprecated('Use onValuesCommit instead.')
+  final ValueChanged<RangeValues>? onRangeChangeEnd;
   final double min, max;
   final int? divisions;
   final String? label;
@@ -139,7 +189,8 @@ class SeedSlider extends StatefulWidget {
   final String Function(double, int)? semanticsValueFormatter;
   final String? semanticsLabel, fieldLabel, description, errorMessage;
   final int minStepsBetweenThumbs;
-  final bool _range;
+  final bool _rangeMode;
+  bool get _range => _rangeMode || (values ?? defaultValues)?.length == 2;
   @override
   State<SeedSlider> createState() => _SeedSliderState();
 }
@@ -149,9 +200,11 @@ class SeedRangeSlider extends SeedSlider {
     super.key,
     super.values,
     super.defaultValues,
-    super.onChanged,
+    super.onValuesChange,
+    super.onValuesCommit,
+    @Deprecated('Use onValuesChange instead.') super.onChanged,
     super.onChangeStart,
-    super.onChangeEnd,
+    @Deprecated('Use onValuesCommit instead.') super.onChangeEnd,
     super.min,
     super.max,
     super.divisions,
@@ -179,15 +232,41 @@ class SeedRangeSlider extends SeedSlider {
 
 class _SeedSliderState extends State<SeedSlider> {
   late double _value = snap(
-    widget.defaultValue ?? (widget.min + widget.max) / 2,
+    widget.defaultValues?.first ??
+        widget.defaultValue ??
+        (widget.min + widget.max) / 2,
   );
-  late RangeValues _range =
-      widget.defaultRangeValues ?? RangeValues(widget.min, widget.max);
+  late RangeValues _range = widget.defaultValues?.length == 2
+      ? RangeValues(widget.defaultValues![0], widget.defaultValues![1])
+      : widget.defaultRangeValues ?? RangeValues(widget.min, widget.max);
   RangeValues? _lastRange;
   bool _active = false, _hover = false, _focus = false;
-  double get value => (widget.value ?? _value).clamp(widget.min, widget.max);
+  double get value => (widget.values?.first ?? widget.value ?? _value).clamp(
+    widget.min,
+    widget.max,
+  );
+  bool get _controlled =>
+      widget.values != null ||
+      widget.value != null ||
+      widget.rangeValues != null;
+  List<double> get _displayed =>
+      widget._range ? [range.start, range.end] : [value];
+  List<double>? _gestureStart;
+  void _start() => _gestureStart = _displayed;
+  void _commit(List<double> next) {
+    final start = _gestureStart;
+    _gestureStart = null;
+    if (start != null &&
+        (start.length != next.length ||
+            start.asMap().entries.any((e) => e.value != next[e.key]))) {
+      widget.onValuesCommit?.call(List.unmodifiable(next));
+    }
+  }
+
   RangeValues get range {
-    final r = widget.rangeValues ?? _range;
+    final r = widget.values?.length == 2
+        ? RangeValues(widget.values![0], widget.values![1])
+        : widget.rangeValues ?? _range;
     return RangeValues(
       r.start.clamp(widget.min, widget.max),
       r.end.clamp(widget.min, widget.max),
@@ -237,7 +316,8 @@ class _SeedSliderState extends State<SeedSlider> {
     if (widget.readOnly) return;
     final next = snap(v);
     if (next == value) return;
-    if (widget.value == null) setState(() => _value = next);
+    if (!_controlled) setState(() => _value = next);
+    widget.onValuesChange?.call(List.unmodifiable([next]));
     widget.onChanged?.call(next);
   }
 
@@ -284,7 +364,8 @@ class _SeedSliderState extends State<SeedSlider> {
     final next = RangeValues(math.min(start, end), math.max(start, end));
     _lastRange = next;
     if (next == range) return;
-    if (widget.rangeValues == null) setState(() => _range = next);
+    if (!_controlled) setState(() => _range = next);
+    widget.onValuesChange?.call(List.unmodifiable([next.start, next.end]));
     widget.onRangeChanged?.call(next);
   }
 
@@ -341,6 +422,7 @@ class _SeedSliderState extends State<SeedSlider> {
                     : null,
                 onChangeStart: widget.enabled && !widget.readOnly
                     ? (v) {
+                        _start();
                         setState(() => _active = true);
                         widget.onRangeChangeStart?.call(v);
                       }
@@ -348,7 +430,10 @@ class _SeedSliderState extends State<SeedSlider> {
                 onChangeEnd: widget.enabled && !widget.readOnly
                     ? (v) {
                         setState(() => _active = false);
-                        widget.onRangeChangeEnd?.call(_lastRange ?? range);
+                        final next = _lastRange ?? range;
+                        _commit([next.start, next.end]);
+                        _lastRange = null;
+                        widget.onRangeChangeEnd?.call(next);
                       }
                     : null,
               )
@@ -367,6 +452,7 @@ class _SeedSliderState extends State<SeedSlider> {
                     : null,
                 onChangeStart: widget.enabled && !widget.readOnly
                     ? (v) {
+                        _start();
                         setState(() => _active = true);
                         widget.onChangeStart?.call(snap(v));
                       }
@@ -374,7 +460,9 @@ class _SeedSliderState extends State<SeedSlider> {
                 onChangeEnd: widget.enabled && !widget.readOnly
                     ? (v) {
                         setState(() => _active = false);
-                        widget.onChangeEnd?.call(snap(v));
+                        final next = snap(v);
+                        _commit([next]);
+                        widget.onChangeEnd?.call(next);
                       }
                     : null,
               );

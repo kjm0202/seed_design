@@ -17,6 +17,12 @@ enum SeedWheelPickerSize {
   final double itemExtent;
 }
 
+/// React WheelPicker value-change details, independent of option type.
+class SeedWheelPickerValueChangeDetails {
+  const SeedWheelPickerValueChangeDetails({required this.stepDelta});
+  final int stepDelta;
+}
+
 /// Specification for a single column in [SeedWheelPicker].
 abstract class SeedWheelColumn {
   const SeedWheelColumn();
@@ -33,13 +39,15 @@ abstract class SeedWheelColumn {
     double? width,
     AlignmentGeometry alignment = Alignment.center,
     int flex = 1,
-    bool looping = false,
+    bool? loop,
+    @Deprecated('Use loop instead.') bool? looping,
     bool enabled = true,
     bool readOnly = false,
     String? semanticsLabel,
     String Function(T)? semanticsValueFormatter,
     ValueChanged<int>? onIndexChanged,
   }) {
+    assert(loop == null || looping == null);
     return _SeedWheelColumnImpl<T>(
       items: items,
       initialIndex: initialIndex,
@@ -51,7 +59,7 @@ abstract class SeedWheelColumn {
       width: width,
       alignment: alignment,
       flex: flex,
-      looping: looping,
+      looping: loop ?? looping ?? false,
       enabled: enabled,
       readOnly: readOnly,
       semanticsLabel: semanticsLabel,
@@ -62,33 +70,58 @@ abstract class SeedWheelColumn {
 
   static SeedWheelColumn value<T>({
     required List<T> items,
-    required T value,
-    ValueChanged<T>? onValueChanged,
+    T? value,
+    T? defaultValue,
+    void Function(T value, SeedWheelPickerValueChangeDetails details)?
+    onValueChange,
+    void Function(int index, T value)? onIndexChange,
+    @Deprecated('Use onValueChange instead.') ValueChanged<T>? onValueChanged,
+    @Deprecated('Use onValueChange(value, details) instead.')
     void Function(T value, int stepDelta)? onValueStepChanged,
     Widget Function(BuildContext, T, bool)? itemBuilder,
     double? width,
     AlignmentGeometry alignment = Alignment.center,
     int flex = 1,
-    bool looping = false,
+    bool? loop,
+    @Deprecated('Use loop instead.') bool? looping,
     bool enabled = true,
     bool readOnly = false,
     String? semanticsLabel,
     String Function(T)? semanticsValueFormatter,
   }) {
-    assert(items.contains(value));
-    return typed<T>(
+    assert(items.isNotEmpty);
+    assert(value == null || items.contains(value));
+    assert(defaultValue == null || items.contains(defaultValue));
+    assert(
+      onValueChange == null ||
+          (onValueChanged == null && onValueStepChanged == null),
+    );
+    assert(loop == null || looping == null);
+    return _SeedWheelColumnImpl<T>(
+      preserveInitialSelection: true,
       items: items,
-      index: items.indexOf(value),
+      index: value == null ? null : items.indexOf(value),
+      initialIndex: defaultValue == null ? 0 : items.indexOf(defaultValue),
       onChanged: (index) => onValueChanged?.call(items[index]),
-      onStepChanged: onValueStepChanged == null
+      onStepChanged: onValueChange == null && onValueStepChanged == null
           ? null
-          : (index, stepDelta) =>
-                onValueStepChanged(items[index], stepDelta),
+          : (index, stepDelta) {
+              if (stepDelta % items.length != 0) {
+                onValueChange?.call(
+                  items[index],
+                  SeedWheelPickerValueChangeDetails(stepDelta: stepDelta),
+                );
+              }
+              onValueStepChanged?.call(items[index], stepDelta);
+            },
+      onIndexChanged: onIndexChange == null
+          ? null
+          : (index) => onIndexChange(index, items[index]),
       itemBuilder: itemBuilder,
       width: width,
       alignment: alignment,
       flex: flex,
-      looping: looping,
+      looping: loop ?? looping ?? false,
       enabled: enabled,
       readOnly: readOnly,
       semanticsLabel: semanticsLabel,
@@ -113,7 +146,12 @@ abstract class SeedWheelColumn {
 
   /// Whether the column repeats across its first/last item boundary.
   /// Change callbacks still report indices in `0 .. itemCount - 1`.
+  bool get loop => looping;
+  @Deprecated('Use loop instead.')
   bool get looping => false;
+  bool get _preserveInitialSelection => false;
+  int? _indexPreservingValue(SeedWheelColumn previous, int previousIndex) =>
+      null;
   bool get enabled => true;
   bool get readOnly => false;
   String? get semanticsLabel => null;
@@ -151,7 +189,23 @@ class _SeedWheelColumnImpl<T> extends SeedWheelColumn {
     this.semanticsLabel,
     this.semanticsValueFormatter,
     this.onIndexChanged,
+    this.preserveInitialSelection = false,
   });
+
+  final bool preserveInitialSelection;
+  @override
+  bool get _preserveInitialSelection => preserveInitialSelection;
+  @override
+  int? _indexPreservingValue(SeedWheelColumn previous, int previousIndex) {
+    if (previous is! _SeedWheelColumnImpl ||
+        previousIndex >= previous.items.length) {
+      return null;
+    }
+    final index = items.indexWhere(
+      (item) => item == previous.items[previousIndex],
+    );
+    return index < 0 ? 0 : index;
+  }
 
   final List<T> items;
   @override
@@ -312,21 +366,34 @@ class _SeedWheelPickerState extends State<SeedWheelPicker> {
     final updatedScrollCommits = <int>[];
     for (var i = 0; i < widget.columns.length; i++) {
       final column = widget.columns[i];
-      final targetIndex = _validIndex(column);
+      final preserveValue =
+          column._preserveInitialSelection &&
+          column.index == null &&
+          i < oldWidget.columns.length &&
+          oldWidget.columns[i].index == null;
+      final targetIndex = preserveValue
+          ? column._indexPreservingValue(
+                  oldWidget.columns[i],
+                  _selectedIndices[i],
+                ) ??
+                _validIndex(column)
+          : _validIndex(column);
       final keepSelection =
           i < oldWidget.columns.length &&
           column.itemCount == oldWidget.columns[i].itemCount &&
           column.looping == oldWidget.columns[i].looping &&
           column.effectiveItemExtent(widget.size) ==
               oldWidget.columns[i].effectiveItemExtent(oldWidget.size) &&
-          ((_selectedIndices[i] == targetIndex &&
-                  (column.index != null ||
-                      targetIndex == _validIndex(oldWidget.columns[i]) ||
-                      _committedIndices[i] == targetIndex)) ||
-              (targetIndex == _validIndex(oldWidget.columns[i]) &&
-                  column.index == null) ||
-              (oldControllers[i].hasClients &&
-                  oldControllers[i].position.isScrollingNotifier.value));
+          (preserveValue
+              ? _selectedIndices[i] == targetIndex
+              : ((_selectedIndices[i] == targetIndex &&
+                        (column.index != null ||
+                            targetIndex == _validIndex(oldWidget.columns[i]) ||
+                            _committedIndices[i] == targetIndex)) ||
+                    (targetIndex == _validIndex(oldWidget.columns[i]) &&
+                        column.index == null) ||
+                    (oldControllers[i].hasClients &&
+                        oldControllers[i].position.isScrollingNotifier.value)));
 
       if (keepSelection) {
         // Parent rebuilds must not reset another column's user selection.

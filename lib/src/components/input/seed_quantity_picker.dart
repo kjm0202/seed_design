@@ -43,6 +43,7 @@ enum SeedQuantityPickerLayout { hug, fill }
 class SeedQuantityPicker extends StatelessWidget {
   final int? value;
   final int defaultValue;
+  @Deprecated('Use onValueChange instead.')
   final ValueChanged<int>? onChanged;
   ValueChanged<int>? get onValueChange => onChanged;
   final int min;
@@ -64,7 +65,7 @@ class SeedQuantityPicker extends StatelessWidget {
     this.value,
     this.defaultValue = 1,
     ValueChanged<int>? onValueChange,
-    ValueChanged<int>? onChanged,
+    @Deprecated('Use onValueChange instead.') ValueChanged<int>? onChanged,
     this.min = 1,
     this.max = 99,
     this.step = 1,

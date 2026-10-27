@@ -25,9 +25,10 @@ class SeedTimePicker extends StatefulWidget {
   const SeedTimePicker({
     super.key,
     TimeOfDay? defaultValue,
-    TimeOfDay? initialTime,
+    @Deprecated('Use defaultValue instead.') TimeOfDay? initialTime,
     this.minuteStep = 5,
     ValueChanged<TimeOfDay>? onValueChange,
+    @Deprecated('Use onValueChange instead.')
     ValueChanged<TimeOfDay>? onChanged,
     this.height = 220.0,
     this.value,
@@ -45,6 +46,7 @@ class SeedTimePicker extends StatefulWidget {
        assert(defaultValue == null || initialTime == null);
 
   /// The initially selected time.
+  @Deprecated('Use defaultValue instead.')
   final TimeOfDay initialTime;
 
   /// One-time uncontrolled seed; [initialTime] is a compatibility alias.
@@ -54,6 +56,7 @@ class SeedTimePicker extends StatefulWidget {
   final int minuteStep;
 
   /// Callback when the selected time changes.
+  @Deprecated('Use onValueChange instead.')
   final ValueChanged<TimeOfDay>? onChanged;
   ValueChanged<TimeOfDay>? get onValueChange => onChanged;
 

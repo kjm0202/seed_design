@@ -222,19 +222,21 @@ class _SeedRadioState<T> extends State<SeedRadio<T>> with RadioClient<T> {
 /// Provides native radio-group arrow navigation and a single Tab stop.
 /// Existing SeedRadio(groupValue:, onChanged:) usage remains supported.
 class SeedRadioGroup<T> extends StatelessWidget {
+  @Deprecated('Use value instead.')
   final T? groupValue;
   T? get value => groupValue;
+  @Deprecated('Use onValueChange instead.')
   final ValueChanged<T?>? onChanged;
   ValueChanged<T?>? get onValueChange => onChanged;
   final Widget child;
   const SeedRadioGroup({
     super.key,
     T? value,
-    T? groupValue,
+    @Deprecated('Use value instead.') T? groupValue,
     this.defaultValue,
     this.controlled = false,
     ValueChanged<T?>? onValueChange,
-    ValueChanged<T?>? onChanged,
+    @Deprecated('Use onValueChange instead.') ValueChanged<T?>? onChanged,
     required this.child,
     this.label,
     this.description,

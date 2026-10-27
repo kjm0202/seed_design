@@ -238,6 +238,7 @@ class SeedHelpBubbleTrigger extends StatelessWidget {
     this.open,
     this.defaultOpen = false,
     SeedOverlayOpenChanged? onOpenChange,
+    @Deprecated('Use onOpenChange instead.')
     SeedOverlayOpenChanged? onOpenChanged,
     this.side = SeedOverlaySide.top,
     this.align = SeedOverlayAlign.center,
@@ -264,6 +265,7 @@ class SeedHelpBubbleTrigger extends StatelessWidget {
       isBrand,
       skipAnimation;
   final double maxWidth;
+  @Deprecated('Use onOpenChange instead.')
   final SeedOverlayOpenChanged? onOpenChanged;
   SeedOverlayOpenChanged? get onOpenChange => onOpenChanged;
   final SeedOverlaySide side;

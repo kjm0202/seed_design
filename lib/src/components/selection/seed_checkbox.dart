@@ -133,8 +133,110 @@ class SeedCheckmark extends StatelessWidget {
   }
 }
 
+// Dart needs a sentinel to distinguish an omitted legacy value from explicit
+// value: null, which has always meant indeterminate.
+const _checkboxValueOmitted = Object();
+
+/// Checkbox with React checked/defaultChecked ownership and independent mixed state.
+/// The deprecated value API preserves nullable Flutter tristate behavior.
+class SeedCheckbox extends StatefulWidget {
+  const SeedCheckbox({
+    super.key,
+    this.checked,
+    this.defaultChecked = false,
+    this.onCheckedChange,
+    this.indeterminate = false,
+    @Deprecated('Use checked and indeterminate instead.')
+    Object? value = _checkboxValueOmitted,
+    @Deprecated('Use onCheckedChange instead.') this.onChanged,
+    this.label,
+    this.customLabel,
+    this.shape = SeedCheckboxShape.square,
+    this.size = SeedCheckboxSize.medium,
+    this.enabled = true,
+    this.tone = SeedControlTone.brand,
+    this.semanticsLabel,
+    this.focusNode,
+    this.tristate = false,
+    this.weight = SeedLabelWeight.regular,
+  }) : _legacyValue = value,
+       assert(
+         identical(value, _checkboxValueOmitted) ||
+             value == null ||
+             value is bool,
+       ),
+       assert(
+         identical(value, _checkboxValueOmitted) ||
+             (checked == null &&
+                 !defaultChecked &&
+                 !indeterminate &&
+                 onCheckedChange == null),
+       ),
+       assert(onChanged == null || onCheckedChange == null),
+       assert(!tristate || !identical(value, _checkboxValueOmitted));
+
+  final bool? checked;
+  final bool defaultChecked;
+  final ValueChanged<bool>? onCheckedChange;
+  final bool indeterminate;
+  final Object? _legacyValue;
+  bool get _legacy => !identical(_legacyValue, _checkboxValueOmitted);
+  @Deprecated('Use checked and indeterminate instead.')
+  bool? get value => _legacy
+      ? _legacyValue as bool?
+      : (indeterminate ? null : checked ?? defaultChecked);
+  @Deprecated('Use onCheckedChange instead.')
+  final ValueChanged<bool?>? onChanged;
+  final String? label;
+  final Widget? customLabel;
+  final SeedCheckboxShape shape;
+  final SeedCheckboxSize size;
+  final bool enabled;
+  final SeedControlTone tone;
+  final String? semanticsLabel;
+  final FocusNode? focusNode;
+
+  /// Flutter compatibility mode; use independent indeterminate in new code.
+  final bool tristate;
+  final SeedLabelWeight weight;
+
+  @override
+  State<SeedCheckbox> createState() => _SeedCheckboxState();
+}
+
+class _SeedCheckboxState extends State<SeedCheckbox> {
+  late bool _checked = widget.defaultChecked;
+  @override
+  Widget build(BuildContext context) {
+    final checked = widget.checked ?? _checked;
+    return _SeedCheckboxControl(
+      value: widget._legacy
+          ? widget._legacyValue as bool?
+          : (widget.indeterminate ? null : checked),
+      onChanged: widget._legacy
+          ? widget.onChanged
+          : (_) {
+              final next = !checked;
+              if (widget.checked == null) setState(() => _checked = next);
+              widget.onCheckedChange?.call(next);
+              widget.onChanged?.call(next);
+            },
+      label: widget.label,
+      customLabel: widget.customLabel,
+      shape: widget.shape,
+      size: widget.size,
+      enabled: widget.enabled,
+      tone: widget.tone,
+      semanticsLabel: widget.semanticsLabel,
+      focusNode: widget.focusNode,
+      tristate: widget._legacy && widget.tristate,
+      weight: widget.weight,
+    );
+  }
+}
+
 /// Checkbox with label component of SEED Design System.
-class SeedCheckbox extends StatelessWidget {
+class _SeedCheckboxControl extends StatelessWidget {
   final bool? value;
   final ValueChanged<bool?>? onChanged;
   final String? label;
@@ -148,8 +250,7 @@ class SeedCheckbox extends StatelessWidget {
   final bool tristate;
   final SeedLabelWeight weight;
 
-  const SeedCheckbox({
-    super.key,
+  const _SeedCheckboxControl({
     required this.value,
     required this.onChanged,
     this.label,

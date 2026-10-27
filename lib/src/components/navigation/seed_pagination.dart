@@ -20,7 +20,8 @@ class SeedPageChange {
 class SeedPagination extends StatefulWidget {
   const SeedPagination({
     super.key,
-    this.currentPage,
+    int? page,
+    @Deprecated('Use page instead.') int? currentPage,
     this.defaultPage = 1,
     required this.totalPages,
     this.onPageChanged,
@@ -30,9 +31,13 @@ class SeedPagination extends StatefulWidget {
     this.pageLabelBuilder,
     this.numberFormatter,
     this.disabled = false,
-  }) : assert(totalPages >= 0),
+  }) : currentPage = page ?? currentPage,
+       assert(page == null || currentPage == null),
+       assert(totalPages >= 0),
        assert(maxVisibleSlots == null || maxVisibleSlots > 0);
+  @Deprecated('Use page instead.')
   final int? currentPage;
+  int? get page => currentPage;
   final int defaultPage, totalPages;
   final ValueChanged<int>? onPageChanged;
   final ValueChanged<SeedPageChange>? onPageChange;

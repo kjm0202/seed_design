@@ -26,8 +26,13 @@ class SeedSelectBox extends StatefulWidget {
   final Widget? prefix;
   final Widget? customContent;
   final bool? _selected;
+  @Deprecated('Use defaultChecked instead.')
   final bool defaultSelected;
+  bool? get checked => _selected;
+  bool get defaultChecked => defaultSelected;
+  ValueChanged<bool>? get onCheckedChange => onSelected;
   final Object? value;
+  @Deprecated('Use onCheckedChange instead.')
   final ValueChanged<bool>? onSelected;
   final SeedSelectBoxControl? _control;
   final SeedSelectBoxLayout? _layout;
@@ -45,10 +50,13 @@ class SeedSelectBox extends StatefulWidget {
     this.description,
     this.prefix,
     this.customContent,
-    bool? selected,
-    this.defaultSelected = false,
+    bool? checked,
+    @Deprecated('Use checked instead.') bool? selected,
+    bool? defaultChecked,
+    @Deprecated('Use defaultChecked instead.') bool? defaultSelected,
     this.value,
-    this.onSelected,
+    ValueChanged<bool>? onCheckedChange,
+    @Deprecated('Use onCheckedChange instead.') ValueChanged<bool>? onSelected,
     SeedSelectBoxControl? control,
     SeedSelectBoxLayout? layout,
     this.enabled = true,
@@ -61,12 +69,18 @@ class SeedSelectBox extends StatefulWidget {
     this.collapseFooter = true,
     this.footerVisibility,
     // ignore: prefer_initializing_formals
-  }) : _selected = selected,
+  }) : _selected = checked ?? selected,
+       defaultSelected = defaultChecked ?? defaultSelected ?? false,
+       onSelected = onCheckedChange ?? onSelected,
+       assert(checked == null || selected == null),
+       assert(defaultChecked == null || defaultSelected == null),
+       assert(onCheckedChange == null || onSelected == null),
        // ignore: prefer_initializing_formals
        _control = control,
        // ignore: prefer_initializing_formals
        _layout = layout;
 
+  @Deprecated('Use checked or defaultChecked instead.')
   bool get selected => _selected ?? defaultSelected;
   SeedSelectBoxControl get control =>
       _control ?? SeedSelectBoxControl.checkmark;

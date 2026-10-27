@@ -299,6 +299,7 @@ class SeedPopoverTrigger extends StatelessWidget {
     this.open,
     this.defaultOpen = false,
     SeedOverlayOpenChanged? onOpenChange,
+    @Deprecated('Use onOpenChange instead.')
     SeedOverlayOpenChanged? onOpenChanged,
     this.side = SeedOverlaySide.bottom,
     this.align = SeedOverlayAlign.center,
@@ -320,6 +321,7 @@ class SeedPopoverTrigger extends StatelessWidget {
       autoFocus,
       closeOnInteractOutside,
       closeOnFocusOut;
+  @Deprecated('Use onOpenChange instead.')
   final SeedOverlayOpenChanged? onOpenChanged;
   SeedOverlayOpenChanged? get onOpenChange => onOpenChanged;
   final SeedOverlaySide side;

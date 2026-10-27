@@ -90,6 +90,7 @@ class SeedAnchoredOverlay extends StatefulWidget {
     this.open,
     this.defaultOpen = false,
     SeedOverlayOpenChanged? onOpenChange,
+    @Deprecated('Use onOpenChange instead.')
     SeedOverlayOpenChanged? onOpenChanged,
     this.canClose,
     this.side = SeedOverlaySide.bottom,
@@ -121,6 +122,7 @@ class SeedAnchoredOverlay extends StatefulWidget {
   final SeedOverlayController? controller;
   final bool? open;
   final bool defaultOpen;
+  @Deprecated('Use onOpenChange instead.')
   final SeedOverlayOpenChanged? onOpenChanged;
   SeedOverlayOpenChanged? get onOpenChange => onOpenChanged;
   final bool Function(SeedOverlayDismissReason)? canClose;

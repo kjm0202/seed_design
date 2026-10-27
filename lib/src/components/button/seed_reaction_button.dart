@@ -23,12 +23,15 @@ class SeedReactionButton extends StatefulWidget {
   final bool? _isReacted;
 
   /// Initial state when [isReacted] is omitted.
+  @Deprecated('Use defaultPressed instead.')
   final bool defaultIsReacted;
 
   /// The supplied controlled value, or the initial uncontrolled value.
+  @Deprecated('Use pressed instead.')
   bool get isReacted => _isReacted ?? defaultIsReacted;
   final int count;
   final String? label;
+  @Deprecated('Use onPressedChange instead.')
   final ValueChanged<bool>? onReactedChanged;
   bool? get pressed => _isReacted;
   bool get defaultPressed => defaultIsReacted;
@@ -42,12 +45,13 @@ class SeedReactionButton extends StatefulWidget {
   const SeedReactionButton({
     super.key,
     bool? pressed,
-    bool? isReacted,
+    @Deprecated('Use pressed instead.') bool? isReacted,
     bool? defaultPressed,
-    bool? defaultIsReacted,
+    @Deprecated('Use defaultPressed instead.') bool? defaultIsReacted,
     this.count = 0,
     this.label,
     ValueChanged<bool>? onPressedChange,
+    @Deprecated('Use onPressedChange instead.')
     ValueChanged<bool>? onReactedChanged,
     this.prefixIcon,
     this.size = SeedReactionButtonSize.small,

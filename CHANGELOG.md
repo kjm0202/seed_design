@@ -1,5 +1,13 @@
 ## Unreleased
 
+- Complete checked APIs for Checkbox, toggle Chip and Check SelectBox; preserve
+  legacy nullable checkbox/tristate behavior and add uncontrolled defaults.
+- Add Image Frame pressed APIs, Side Navigation collapsed/open callbacks,
+  Pagination page, radio Select Box onValueChange, Slider list change/commit APIs
+  and Wheel Column value defaults/change details/index callbacks/loop.
+- Deprecate superseded Flutter argument and getter aliases with migration hints;
+  retain separate observers with different payloads. Migrate the example app.
+
 - Define the 1.0 public API contract from the official SEED React props, with
   source links and Dart adaptations in `REACT_API_REFERENCE.md`.
 - **Breaking:** Select now uses list-valued `value`, `defaultValue` and

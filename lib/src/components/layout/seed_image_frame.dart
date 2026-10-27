@@ -301,15 +301,29 @@ class SeedImageFrameFloater extends StatelessWidget {
 class SeedImageFrameReactionButton extends StatefulWidget {
   const SeedImageFrameReactionButton({
     super.key,
-    this.selected,
-    this.defaultSelected = false,
-    this.onChanged,
+    bool? pressed,
+    @Deprecated('Use pressed instead.') bool? selected,
+    bool? defaultPressed,
+    @Deprecated('Use defaultPressed instead.') bool? defaultSelected,
+    ValueChanged<bool>? onPressedChange,
+    @Deprecated('Use onPressedChange instead.') ValueChanged<bool>? onChanged,
     this.enabled = true,
     this.semanticsLabel = '좋아요',
-  });
+  }) : selected = pressed ?? selected,
+       defaultSelected = defaultPressed ?? defaultSelected ?? false,
+       onChanged = onPressedChange ?? onChanged,
+       assert(pressed == null || selected == null),
+       assert(defaultPressed == null || defaultSelected == null),
+       assert(onPressedChange == null || onChanged == null);
+  @Deprecated('Use pressed instead.')
   final bool? selected;
+  bool? get pressed => selected;
+  @Deprecated('Use defaultPressed instead.')
   final bool defaultSelected;
+  bool get defaultPressed => defaultSelected;
+  @Deprecated('Use onPressedChange instead.')
   final ValueChanged<bool>? onChanged;
+  ValueChanged<bool>? get onPressedChange => onChanged;
   final bool enabled;
   final String semanticsLabel;
 

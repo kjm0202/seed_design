@@ -151,7 +151,9 @@ class SeedSelectBoxGroup extends StatefulWidget {
 
   /// Keeps [value], including null (no selection), under parent control.
   final bool controlled;
+  @Deprecated('Use onValueChange instead.')
   final ValueChanged<Object?>? onValueChanged;
+  ValueChanged<Object?>? get onValueChange => onValueChanged;
   final bool enabled;
   final bool readOnly;
 
@@ -164,10 +166,13 @@ class SeedSelectBoxGroup extends StatefulWidget {
     this.value,
     this.defaultValue,
     this.controlled = false,
-    this.onValueChanged,
+    ValueChanged<Object?>? onValueChange,
+    @Deprecated('Use onValueChange instead.')
+    ValueChanged<Object?>? onValueChanged,
     this.enabled = true,
     this.readOnly = false,
-  });
+  }) : onValueChanged = onValueChange ?? onValueChanged,
+       assert(onValueChange == null || onValueChanged == null);
 
   @override
   State<SeedSelectBoxGroup> createState() => _SeedSelectBoxGroupState();

@@ -43,6 +43,7 @@ class SeedTextInput extends StatefulWidget {
   final String? hintText;
 
   /// One-time seed; prefer [defaultValue] in new code.
+  @Deprecated('Use defaultValue instead.')
   final String? initialValue;
   String? get defaultValue => initialValue;
   final ValueChanged<String>? onChanged;
@@ -70,6 +71,7 @@ class SeedTextInput extends StatefulWidget {
   final List<TextInputFormatter>? inputFormatters;
   final Widget Function(BuildContext, TextEditingController, FocusNode)?
   inputBuilder;
+  @Deprecated('Use onValueChange instead.')
   final ValueChanged<SeedTextValueChange>? onValueChanged;
   ValueChanged<SeedTextValueChange>? get onValueChange => onValueChanged;
   final int? maxGraphemeCount;
@@ -82,7 +84,7 @@ class SeedTextInput extends StatefulWidget {
     this.controller,
     this.value,
     this.hintText,
-    String? initialValue,
+    @Deprecated('Use defaultValue instead.') String? initialValue,
     String? defaultValue,
     this.onChanged,
     this.onSubmitted,
@@ -109,6 +111,7 @@ class SeedTextInput extends StatefulWidget {
     this.inputFormatters,
     this.inputBuilder,
     ValueChanged<SeedTextValueChange>? onValueChange,
+    @Deprecated('Use onValueChange instead.')
     ValueChanged<SeedTextValueChange>? onValueChanged,
     this.maxGraphemeCount,
     this.autoResize = false,
@@ -131,7 +134,7 @@ class SeedTextInput extends StatefulWidget {
     this.controller,
     this.value,
     this.hintText,
-    String? initialValue,
+    @Deprecated('Use defaultValue instead.') String? initialValue,
     String? defaultValue,
     this.onChanged,
     this.onSubmitted,
@@ -158,6 +161,7 @@ class SeedTextInput extends StatefulWidget {
     this.inputFormatters,
     this.inputBuilder,
     ValueChanged<SeedTextValueChange>? onValueChange,
+    @Deprecated('Use onValueChange instead.')
     ValueChanged<SeedTextValueChange>? onValueChanged,
     this.maxGraphemeCount,
     this.autoResize = true,
