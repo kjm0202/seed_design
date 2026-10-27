@@ -34,3 +34,20 @@ migrate_working_dir/
 /doc/
 /.gemini/
 /tool/
+
+# Keep working reports, audits, API notes and other Markdown local by default.
+*.md
+*.markdown
+*.mdx
+# Maintained package documentation, project instructions and attribution only.
+!/README.md
+!/README_ko.md
+!/example/README.md
+!/example/README_ko.md
+!/CHANGELOG.md
+!/AGENTS.md
+!/THIRD_PARTY_NOTICES.md
+!/test/assets/fonts/SOURCE.md
+!LICENSE.md
+!NOTICE.md
+!COPYING.md

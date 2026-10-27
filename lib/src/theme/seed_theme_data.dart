@@ -247,11 +247,17 @@ class SeedThemeData {
             return colorScheme.bg.disabled;
           }
           if (states.contains(WidgetState.selected)) {
-            return colorScheme.bg.neutralSolid;
+            return colorScheme.bg.brandSolid;
           }
           return colorScheme.bg.neutralWeak;
         }),
-        thumbColor: const WidgetStatePropertyAll(Colors.white),
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected) &&
+              !states.contains(WidgetState.disabled)) {
+            return colorScheme.fg.onBrandSolid;
+          }
+          return Colors.white;
+        }),
         trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
       ),
       checkboxTheme: CheckboxThemeData(
@@ -260,11 +266,15 @@ class SeedThemeData {
             return colorScheme.bg.disabled;
           }
           if (states.contains(WidgetState.selected)) {
-            return colorScheme.bg.neutralSolid;
+            return colorScheme.bg.brandSolid;
           }
           return Colors.transparent;
         }),
-        checkColor: WidgetStatePropertyAll(colorScheme.fg.onNeutralSolid),
+        checkColor: WidgetStateProperty.resolveWith((states) {
+          return states.contains(WidgetState.disabled)
+              ? colorScheme.fg.disabled
+              : colorScheme.fg.onBrandSolid;
+        }),
         side: BorderSide(color: colorScheme.stroke.neutralWeak, width: 1.5),
         shape: const RoundedRectangleBorder(borderRadius: SeedBorderRadius.r1),
       ),
@@ -274,7 +284,7 @@ class SeedThemeData {
             return colorScheme.bg.disabled;
           }
           if (states.contains(WidgetState.selected)) {
-            return colorScheme.bg.neutralSolid;
+            return colorScheme.bg.brandSolid;
           }
           return colorScheme.stroke.neutralWeak;
         }),
@@ -393,6 +403,10 @@ extension SeedMaterialThemeExtension on ThemeData {
   ///
   /// Preserves custom app configurations while seamlessly applying SEED design tokens
   /// and Material 3 theme overrides.
+  ///
+  /// An explicit [fontFamily] overrides both the host font and [seedTheme]'s
+  /// typography, preserving its fallback fonts. An explicit [seedTheme] supplies
+  /// the brightness; [brightness] is used only when creating a default SEED theme.
   ThemeData withSeedDesign({
     SeedThemeData? seedTheme,
     Brightness? brightness,
@@ -406,11 +420,14 @@ extension SeedMaterialThemeExtension on ThemeData {
         (effectiveBrightness == Brightness.dark
             ? SeedThemeData.dark(fontFamily: resolvedFont)
             : SeedThemeData.light(fontFamily: resolvedFont));
-    if (seedTheme == null) {
+    if (seedTheme == null || fontFamily != null) {
       effectiveSeedTheme = effectiveSeedTheme.copyWith(
         typography: effectiveSeedTheme.typography.mapStyles(
           (style) => style.copyWith(
-            fontFamilyFallback: inheritedFont?.fontFamilyFallback,
+            fontFamily: fontFamily,
+            fontFamilyFallback: seedTheme == null
+                ? inheritedFont?.fontFamilyFallback
+                : style.fontFamilyFallback,
           ),
         ),
       );

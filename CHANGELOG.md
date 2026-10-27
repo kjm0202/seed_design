@@ -1,5 +1,9 @@
 ## Unreleased
 
+- Honor explicit font overrides with supplied SEED themes while retaining fallback
+  fonts, and align themed Material selection controls with Seed brand colors.
+- Correct Material migration guidance for form fields and tooltips; retain the
+  themed linear progress widget to preserve numeric progress and semantics.
 - Complete checked APIs for Checkbox, toggle Chip and Check SelectBox; preserve
   legacy nullable checkbox/tristate behavior and add uncontrolled defaults.
 - Add Image Frame pressed APIs, Side Navigation collapsed/open callbacks,
@@ -8,8 +12,8 @@
 - Deprecate superseded Flutter argument and getter aliases with migration hints;
   retain separate observers with different payloads. Migrate the example app.
 
-- Define the 1.0 public API contract from the official SEED React props, with
-  source links and Dart adaptations in `REACT_API_REFERENCE.md`.
+- Define the 1.0 public API contract from the official SEED React props,
+  with component-specific source checks and Dart adaptations.
 - **Breaking:** Select now uses list-valued `value`, `defaultValue` and
   `onValueChange` for both single and multiple selection, matching React.
 - Add official `onValueChange`, `onValuesChange`, `onEntriesChange` and

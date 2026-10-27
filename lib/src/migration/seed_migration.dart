@@ -5,11 +5,13 @@ import '../theme/seed_theme_data.dart';
 /// A bridge widget for incrementally migrating legacy Material 3 screens or subtrees
 /// to the SEED Design System.
 ///
-/// Injects [SeedTheme] and wraps descendants in a standard Flutter [Theme] configured
+/// Installs SEED ThemeExtensions and wraps descendants in a [Theme] configured
 /// with SEED design tokens and Material 3 overrides.
 ///
 /// Useful when migrating an app screen-by-screen or feature-by-feature without
 /// immediately changing the root `MaterialApp` theme.
+/// Both Material and SEED descendants must use `package:material_ui/material_ui.dart`.
+/// A supplied [theme] takes precedence over [brightness].
 ///
 /// Example:
 /// ```dart
@@ -51,7 +53,12 @@ class SeedMaterialBridge extends StatelessWidget {
 class SeedMigration {
   const SeedMigration._();
 
-  /// Direct mapping reference from Material 3 components to SEED Design components.
+  /// Manual replacement reference; this map does not transform widget code.
+  ///
+  /// `SeedField` is layout around an input, not a replacement for TextFormField's
+  /// validation, save and reset behavior. Use SeedTextField for those behaviors.
+  /// Keep LinearProgressIndicator under a SEED theme when linear progress is
+  /// needed; a skeleton placeholder does not preserve progress or semantics.
   static const Map<String, String> componentMapping = {
     'ElevatedButton': 'SeedButton(variant: SeedButtonVariant.neutralSolid)',
     'FilledButton': 'SeedButton(variant: SeedButtonVariant.brandSolid)',
@@ -60,7 +67,9 @@ class SeedMigration {
     'FloatingActionButton':
         'SeedFloatingActionButton / SeedContextualFloatingButton',
     'AppBar': 'SeedTopNavigation',
-    'TextField / TextFormField': 'SeedTextInput / SeedField',
+    'TextField': 'SeedTextInput',
+    'TextFormField': 'SeedTextField',
+    'TextField / TextFormField': 'SeedTextInput / SeedTextField',
     'Switch': 'SeedSwitch',
     'Checkbox': 'SeedCheckbox',
     'Radio': 'SeedRadio',
@@ -73,11 +82,11 @@ class SeedMigration {
         'SeedBottomSheet / SeedMenuSheet / showSeedBottomSheet',
     'Chip / FilterChip / ActionChip': 'SeedChip',
     'CircularProgressIndicator': 'SeedProgressCircle',
-    'LinearProgressIndicator': 'SeedSkeleton / SeedProgressCircle',
+    'LinearProgressIndicator': 'LinearProgressIndicator (withSeedDesign theme)',
     'SnackBar / ScaffoldMessenger': 'SeedSnackbar / showSeedSnackbar',
     'Divider': 'SeedDivider',
     'ListTile': 'SeedListItem',
-    'Tooltip': 'SeedHelpBubble',
+    'Tooltip': 'SeedHelpBubbleTooltip',
     'Slider': 'SeedSlider',
     'ExpansionTile': 'SeedAccordionItem',
     'Badge': 'SeedBadge / SeedNotificationBadge',

@@ -78,6 +78,10 @@ final theme = existingTheme.withSeedDesign();
 final customFontTheme = existingTheme.withSeedDesign(fontFamily: 'MyFont');
 ```
 
+An explicit `fontFamily` also overrides the typography of a supplied `seedTheme`,
+while retaining its fallback fonts. A supplied `seedTheme` controls brightness;
+the `brightness` argument is used when creating a default SEED theme.
+
 You can also apply the styles to a single screen:
 
 ```dart
@@ -85,6 +89,23 @@ const SeedMaterialBridge(child: ExistingScreen());
 ```
 
 Existing apps also need to use `material_ui`. `SeedMaterialBridge` does not convert types from the old Material package.
+
+`withSeedDesign()` and `SeedMaterialBridge` apply themes; replace widgets and
+adapt their arguments manually using `SeedMigration.componentMapping`:
+
+| Material widget | Migration |
+| --- | --- |
+| `TextField` | `SeedTextInput`; preserve the controller or use `defaultValue` |
+| `TextFormField` | `SeedTextField`; retain `validator`, `onSaved` and `Form.reset()` |
+| `Tooltip` | `SeedHelpBubbleTooltip(title: message, child: child)` for hover and focus behavior |
+| `LinearProgressIndicator` | Keep the Material widget under the SEED theme, retaining `value` and semantics |
+
+`SeedField` provides field layout around an input. `SeedHelpBubble` is a bubble
+card. `SeedSkeleton` is a loading placeholder. These have different behavior
+from the form field, tooltip and numeric progress widgets above.
+
+The themed Material Checkbox, Switch and Radio use the same brand selection
+colors as the default Seed controls, including contrasting checked marks.
 
 ## Buttons and inputs
 
@@ -120,7 +141,7 @@ Buttons default to `brandSolid`; badges default to `solid`. Use an explicit vari
 
 Give icon-only buttons a `semanticsLabel` so screen readers can describe their action. If you pass a `TextEditingController` or `FocusNode` to an input, you are responsible for disposing of it.
 
-Use the official React prop names listed in the [source mapping](REACT_API_REFERENCE.md). See the [public API contract](PUBLIC_API_CONTRACT.md) for null semantics, state ownership and migration guidance. Select uses list-valued `value/defaultValue/onValueChange` for single and multiple selection. Non-null values are parent-controlled; use `controlled: true` to control an empty selection. Default values initialize local state once. Supply either a text/attachment controller or values and defaults.
+Use the official React prop names for each component. Select uses list-valued `value/defaultValue/onValueChange` for single and multiple selection. Non-null values are parent-controlled; use `controlled: true` to control an empty selection. Default values initialize local state once. Supply either a text/attachment controller or values and defaults.
 
 See the [example code](example/lib/tabs) for other components.
 
@@ -128,7 +149,7 @@ See the [example code](example/lib/tabs) for other components.
 
 Use `SeedDatePicker` for single/range/multiple selection and month/two-month/week/continuous layouts; continuous calendars require `height`, `minHeight` or `maxHeight`. `SeedDatePickerController` navigates and focuses dates without selecting them.
 
-`SeedSelect(multiple: true)`, `SeedSlider.range`, `SeedTextField`, `SeedFieldButton`, `SeedAccordion`, `SeedTabsView` and `SeedChipTabsView` provide their corresponding state and content behavior. Overlay trigger widgets provide controlled opening, placement, focus and dismissal policies. The catalog integrates these examples into its existing input, navigation, feedback and overlay tabs. See the [feature mapping](REACT_PARITY_2026-10-25.md).
+`SeedSelect(multiple: true)`, `SeedSlider.range`, `SeedTextField`, `SeedFieldButton`, `SeedAccordion`, `SeedTabsView` and `SeedChipTabsView` provide their corresponding state and content behavior. Overlay trigger widgets provide controlled opening, placement, focus and dismissal policies. The catalog integrates these examples into its existing input, navigation, feedback and overlay tabs.
 
 Attachments are UI-only. Supply entries and update progress/status through `SeedAttachmentDisplayField` or `SeedAttachmentController`; handle actual selection and uploading in your app. This package does not select, receive, validate or upload files.
 
