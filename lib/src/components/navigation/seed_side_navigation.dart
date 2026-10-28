@@ -276,106 +276,126 @@ class _SeedSideNavigationState extends State<SeedSideNavigation> {
               ? null
               : Border(right: BorderSide(color: colors.stroke.neutralMuted)),
         ),
-        child: Column(
-          children: [
-            // Header & Collapse trigger
-            if (widget.header != null || hasCollapseTrigger)
-              Padding(
-                padding: const EdgeInsets.all(SeedDimension.x2),
-                child: Row(
-                  children: [
-                    if (!_collapsed && widget.header != null)
-                      Expanded(child: widget.header!),
-                    if (hasCollapseTrigger)
-                      IconButton(
-                        icon: Icon(
-                          _collapsed ? Icons.menu : Icons.menu_open,
-                          color: colors.fg.neutralSubtle,
-                          size: 20,
-                        ),
-                        onPressed: _handleToggleCollapse,
-                        splashRadius: 18,
-                      ),
-                  ],
-                ),
-              ),
-
-            if (widget.header != null) const SeedDivider(),
-
-            // Scrollable navigation content
-            Expanded(
-              child: Stack(
-                children: [
-                  ListView.separated(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.fromLTRB(0, 8, 0, 24),
-                    itemCount: widget.groups.length,
-                    separatorBuilder: (_, _) =>
-                        const SizedBox(height: SeedDimension.x2),
-                    itemBuilder: (context, groupIndex) {
-                      final group = widget.groups[groupIndex];
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (!_collapsed && group.label != null)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: SeedDimension.x4,
-                                vertical: SeedDimension.x1,
+        child: ClipRect(
+          child: OverflowBox(
+            alignment: AlignmentDirectional.centerStart,
+            minWidth: currentWidth - 1,
+            maxWidth: currentWidth - 1,
+            child: Column(
+              children: [
+                // Header & Collapse trigger
+                if (widget.header != null || hasCollapseTrigger)
+                  Padding(
+                    padding: const EdgeInsets.all(SeedDimension.x2),
+                    child: Row(
+                      mainAxisAlignment: _collapsed
+                          ? MainAxisAlignment.center
+                          : MainAxisAlignment.end,
+                      children: [
+                        if (!_collapsed && widget.header != null)
+                          Expanded(child: widget.header!),
+                        if (hasCollapseTrigger)
+                          SizedBox(
+                            width: 39,
+                            height: 40,
+                            child: IconButton(
+                              tooltip: _collapsed ? '펼치기' : '접기',
+                              constraints: const BoxConstraints.tightFor(
+                                width: 39,
+                                height: 40,
                               ),
-                              child: Text(
-                                group.label!,
-                                style: typography.t4Bold.copyWith(
-                                  color: colors.fg.neutralMuted,
-                                ),
+                              padding: EdgeInsets.zero,
+                              icon: Icon(
+                                _collapsed ? Icons.menu : Icons.menu_open,
+                                color: colors.fg.neutralSubtle,
+                                size: 20,
                               ),
-                            ),
-                          ...group.items.map(
-                            (item) => _buildMenuItem(
-                              context,
-                              item,
-                              colors,
-                              typography,
+                              onPressed: _handleToggleCollapse,
+                              splashRadius: 18,
                             ),
                           ),
-                        ],
-                      );
-                    },
+                      ],
+                    ),
                   ),
-                  if (_scrolled)
-                    const Positioned(
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      child: SeedDivider(
-                        key: ValueKey('seed-side-nav-scroll-divider'),
+
+                if (widget.header != null) const SeedDivider(),
+
+                // Scrollable navigation content
+                Expanded(
+                  child: Stack(
+                    children: [
+                      ListView.separated(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.fromLTRB(0, 8, 0, 24),
+                        itemCount: widget.groups.length,
+                        separatorBuilder: (_, _) =>
+                            const SizedBox(height: SeedDimension.x2),
+                        itemBuilder: (context, groupIndex) {
+                          final group = widget.groups[groupIndex];
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (!_collapsed && group.label != null)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: SeedDimension.x4,
+                                    vertical: SeedDimension.x1,
+                                  ),
+                                  child: Text(
+                                    group.label!,
+                                    style: typography.t4Bold.copyWith(
+                                      color: colors.fg.neutralMuted,
+                                    ),
+                                  ),
+                                ),
+                              ...group.items.map(
+                                (item) => _buildMenuItem(
+                                  context,
+                                  item,
+                                  colors,
+                                  typography,
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       ),
-                    ),
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    child: SeedScrollFog(
-                      placement: SeedScrollFogPlacement.bottom,
-                      size: 24,
-                      color: effectiveBgColor == Colors.transparent
-                          ? colors.bg.layerDefault
-                          : effectiveBgColor,
-                    ),
+                      if (_scrolled)
+                        const Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          child: SeedDivider(
+                            key: ValueKey('seed-side-nav-scroll-divider'),
+                          ),
+                        ),
+                      Positioned(
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        child: SeedScrollFog(
+                          placement: SeedScrollFogPlacement.bottom,
+                          size: 24,
+                          color: effectiveBgColor == Colors.transparent
+                              ? colors.bg.layerDefault
+                              : effectiveBgColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Footer
+                if (widget.footer != null) ...[
+                  const SeedDivider(),
+                  Padding(
+                    padding: const EdgeInsets.all(SeedDimension.x2),
+                    child: widget.footer!,
                   ),
                 ],
-              ),
+              ],
             ),
-
-            // Footer
-            if (widget.footer != null) ...[
-              const SeedDivider(),
-              Padding(
-                padding: const EdgeInsets.all(SeedDimension.x2),
-                child: widget.footer!,
-              ),
-            ],
-          ],
+          ),
         ),
       ),
     );

@@ -32,6 +32,7 @@ class SeedTabsView extends StatefulWidget {
     this.variant = SeedTabsVariant.line,
     this.size,
     this.fill = true,
+    this.showScrollFog = false,
     this.carousel = false,
     this.swipeable = true,
     this.dynamicHeight = false,
@@ -67,6 +68,7 @@ class SeedTabsView extends StatefulWidget {
   final SeedTabsController? controller;
   final SeedTabsVariant variant;
   final SeedTabsSize? size;
+  final bool showScrollFog;
   final bool fill,
       carousel,
       swipeable,
@@ -388,6 +390,7 @@ class _SeedTabsViewState extends State<SeedTabsView> {
       variant: widget.variant,
       size: widget.size,
       fill: widget.fill,
+      showScrollFog: widget.showScrollFog,
     );
     return Column(
       mainAxisSize: MainAxisSize.min,
