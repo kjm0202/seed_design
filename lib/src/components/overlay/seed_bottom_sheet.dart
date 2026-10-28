@@ -2,7 +2,7 @@ import 'seed_anchored_overlay.dart';
 
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart' show listEquals;
+import 'package:flutter/foundation.dart' show listEquals, ValueListenable;
 import 'package:material_ui/material_ui.dart';
 
 import '../../foundations/colors/seed_palette.dart';
@@ -19,6 +19,8 @@ import '../layout/seed_scroll_fog.dart';
 Future<T?> showSeedBottomSheet<T>({
   required BuildContext context,
   required Widget child,
+  bool modal = true,
+  ValueListenable<bool>? modalListenable,
   bool isDismissible = true,
   bool enableDrag = true,
   bool isScrollControlled = true,
@@ -39,6 +41,8 @@ Future<T?> showSeedBottomSheet<T>({
       from: context,
       to: navigator.context,
     ),
+    modal: modal,
+    modalListenable: modalListenable,
     isDismissible: isDismissible,
     enableDrag: snapPoints == null && enableDrag,
     isScrollControlled: isScrollControlled,
@@ -82,6 +86,8 @@ Future<T?> showSeedBottomSheet<T>({
 
 class _SeedBottomSheetRoute<T> extends ModalBottomSheetRoute<T> {
   _SeedBottomSheetRoute({
+    required this.modal,
+    this.modalListenable,
     required super.builder,
     required super.isScrollControlled,
     super.capturedThemes,
@@ -96,7 +102,24 @@ class _SeedBottomSheetRoute<T> extends ModalBottomSheetRoute<T> {
     super.barrierLabel,
     super.barrierOnTapHint,
     super.sheetAnimationStyle,
-  });
+  }) {
+    modalListenable?.addListener(_modalChanged);
+  }
+
+  final bool modal;
+  final ValueListenable<bool>? modalListenable;
+  bool get _modal => modalListenable?.value ?? modal;
+  void _modalChanged() => changedInternalState();
+
+  @override
+  Widget buildModalBarrier() =>
+      _modal ? super.buildModalBarrier() : const SizedBox.shrink();
+
+  @override
+  void dispose() {
+    modalListenable?.removeListener(_modalChanged);
+    super.dispose();
+  }
 
   double _snapFade = 1;
   void setSnapFade(double value) {
@@ -747,6 +770,7 @@ class _SeedSnappingBottomSheetState extends State<SeedSnappingBottomSheet> {
       Widget sheet(ScrollController controller) {
         final source = widget.sheet;
         return SeedBottomSheet(
+          key: source.key,
           title: source.title,
           maxHeight: source.maxHeight,
           description: source.description,

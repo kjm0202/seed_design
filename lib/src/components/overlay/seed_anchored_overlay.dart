@@ -89,6 +89,8 @@ class SeedAnchoredOverlay extends StatefulWidget {
     this.controller,
     this.open,
     this.defaultOpen = false,
+    this.lazyMount = true,
+    this.unmountOnExit = true,
     SeedOverlayOpenChanged? onOpenChange,
     @Deprecated('Use onOpenChange instead.')
     SeedOverlayOpenChanged? onOpenChanged,
@@ -122,6 +124,7 @@ class SeedAnchoredOverlay extends StatefulWidget {
   final SeedOverlayController? controller;
   final bool? open;
   final bool defaultOpen;
+  final bool lazyMount, unmountOnExit;
   @Deprecated('Use onOpenChange instead.')
   final SeedOverlayOpenChanged? onOpenChanged;
   SeedOverlayOpenChanged? get onOpenChange => onOpenChanged;
@@ -179,6 +182,8 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
       if (mounted &&
           (widget.open ?? widget.controller?.isOpen ?? widget.defaultOpen)) {
         _show();
+      } else if (mounted && !widget.lazyMount) {
+        _portal.show();
       }
     });
   }
@@ -282,7 +287,11 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
       return;
     }
     if (!mounted || _open) return;
-    _portal.hide();
+    if (widget.unmountOnExit) {
+      _portal.hide();
+    } else {
+      setState(() {});
+    }
     if (widget.restoreFocus &&
         reason != SeedOverlayDismissReason.outside &&
         reason != SeedOverlayDismissReason.focusOut &&
@@ -320,127 +329,138 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
           anchor.size;
       final media = MediaQuery.of(overlayContext);
       return Positioned.fill(
-        child: CustomSingleChildLayout(
-          delegate: SeedOverlayPositionDelegate(
-            anchor: rect,
-            side: widget.side,
-            align: widget.align,
-            gap: widget.gap,
-            flip: widget.flip,
-            shift: widget.shift,
-            textDirection: Directionality.of(context),
-            maxWidth: widget.maxWidth,
-            maxHeight: widget.maxHeight,
-            insets: EdgeInsets.fromLTRB(
-              math.max(media.padding.left, media.viewInsets.left) +
-                  widget.overflowPadding,
-              math.max(media.padding.top, media.viewInsets.top) +
-                  widget.overflowPadding,
-              math.max(media.padding.right, media.viewInsets.right) +
-                  widget.overflowPadding,
-              math.max(media.padding.bottom, media.viewInsets.bottom) +
-                  widget.overflowPadding,
-            ),
-            onPosition: (offset, size) {
-              final point = Offset(
-                (rect.center.dx - offset.dx - 6).clamp(
-                  widget.arrowPadding,
-                  math.max(
-                    widget.arrowPadding,
-                    size.width - widget.arrowPadding - 12,
-                  ),
+        child: Offstage(
+          offstage: !_open && !_animation.isAnimating,
+          child: TickerMode(
+            enabled: _open || _animation.isAnimating,
+            child: CustomSingleChildLayout(
+              delegate: SeedOverlayPositionDelegate(
+                anchor: rect,
+                side: widget.side,
+                align: widget.align,
+                gap: widget.gap,
+                flip: widget.flip,
+                shift: widget.shift,
+                textDirection: Directionality.of(context),
+                maxWidth: widget.maxWidth,
+                maxHeight: widget.maxHeight,
+                insets: EdgeInsets.fromLTRB(
+                  math.max(media.padding.left, media.viewInsets.left) +
+                      widget.overflowPadding,
+                  math.max(media.padding.top, media.viewInsets.top) +
+                      widget.overflowPadding,
+                  math.max(media.padding.right, media.viewInsets.right) +
+                      widget.overflowPadding,
+                  math.max(media.padding.bottom, media.viewInsets.bottom) +
+                      widget.overflowPadding,
                 ),
-                (rect.center.dy - offset.dy - 6).clamp(
-                  widget.arrowPadding,
-                  math.max(
-                    widget.arrowPadding,
-                    size.height - widget.arrowPadding - 12,
-                  ),
-                ),
-              );
-              final x = size.width > 0
-                  ? ((point.dx + 6) / size.width * 2 - 1).clamp(-1.0, 1.0)
-                  : 0.0;
-              final y = size.height > 0
-                  ? ((point.dy + 6) / size.height * 2 - 1).clamp(-1.0, 1.0)
-                  : 0.0;
-              final origin = switch (_resolvedSide) {
-                SeedOverlaySide.top => Alignment(x, 1),
-                SeedOverlaySide.bottom => Alignment(x, -1),
-                SeedOverlaySide.left => Alignment(1, y),
-                SeedOverlaySide.right => Alignment(-1, y),
-              };
-              if (_anchorPoint != point || _scaleAlignment != origin) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted &&
-                      (_anchorPoint != point || _scaleAlignment != origin)) {
-                    setState(() {
-                      _anchorPoint = point;
-                      _scaleAlignment = origin;
+                onPosition: (offset, size) {
+                  final point = Offset(
+                    (rect.center.dx - offset.dx - 6).clamp(
+                      widget.arrowPadding,
+                      math.max(
+                        widget.arrowPadding,
+                        size.width - widget.arrowPadding - 12,
+                      ),
+                    ),
+                    (rect.center.dy - offset.dy - 6).clamp(
+                      widget.arrowPadding,
+                      math.max(
+                        widget.arrowPadding,
+                        size.height - widget.arrowPadding - 12,
+                      ),
+                    ),
+                  );
+                  final x = size.width > 0
+                      ? ((point.dx + 6) / size.width * 2 - 1).clamp(-1.0, 1.0)
+                      : 0.0;
+                  final y = size.height > 0
+                      ? ((point.dy + 6) / size.height * 2 - 1).clamp(-1.0, 1.0)
+                      : 0.0;
+                  final origin = switch (_resolvedSide) {
+                    SeedOverlaySide.top => Alignment(x, 1),
+                    SeedOverlaySide.bottom => Alignment(x, -1),
+                    SeedOverlaySide.left => Alignment(1, y),
+                    SeedOverlaySide.right => Alignment(-1, y),
+                  };
+                  if (_anchorPoint != point || _scaleAlignment != origin) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted &&
+                          (_anchorPoint != point ||
+                              _scaleAlignment != origin)) {
+                        setState(() {
+                          _anchorPoint = point;
+                          _scaleAlignment = origin;
+                        });
+                      }
                     });
                   }
-                });
-              }
-            },
-            onResolved: (side) {
-              if (side != _resolvedSide) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted && _resolvedSide != side) {
-                    setState(() => _resolvedSide = side);
-                  }
-                });
-              }
-            },
-          ),
-          child: TapRegion(
-            groupId: _tapGroup,
-            onTapOutside: widget.closeOnInteractOutside
-                ? (_) => _request(false, SeedOverlayDismissReason.outside)
-                : null,
-            child: FocusScope(
-              node: _overlayFocus,
-              onFocusChange: (focused) {
-                if (!focused && widget.closeOnFocusOut && _open) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (mounted &&
-                        _open &&
-                        !_overlayFocus.hasFocus &&
-                        !_triggerFocus.hasFocus) {
-                      _request(false, SeedOverlayDismissReason.focusOut);
-                    }
-                  });
-                }
-              },
-              child: CallbackShortcuts(
-                bindings: {
-                  const SingleActivator(LogicalKeyboardKey.escape): () =>
-                      _request(false, SeedOverlayDismissReason.escapeKey),
                 },
-                child: FadeTransition(
-                  opacity: _curved,
-                  child: AnimatedBuilder(
-                    animation: _animation,
-                    builder: (context, child) => Transform.scale(
-                      alignment: widget.scaleFromAnchor
-                          ? _scaleAlignment
-                          : Alignment.center,
-                      scale: Tween<double>(
-                        begin: _animation.status == AnimationStatus.reverse
-                            ? widget.exitScale ?? widget.enterScale
-                            : widget.enterScale,
-                        end: 1,
-                      ).evaluate(_curved),
-                      child: child,
-                    ),
-                    child: Material(
-                      type: MaterialType.transparency,
-                      child: SeedOverlayScope(
-                        side: _resolvedSide,
-                        isOpen: _open,
-                        anchorPoint: _anchorPoint,
-                        tapGroup: _tapGroup,
-                        close: (reason) => _request(false, reason),
-                        child: Builder(builder: widget.overlayBuilder),
+                onResolved: (side) {
+                  if (side != _resolvedSide) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted && _resolvedSide != side) {
+                        setState(() => _resolvedSide = side);
+                      }
+                    });
+                  }
+                },
+              ),
+              child: TapRegion(
+                enabled: _open,
+                groupId: _tapGroup,
+                onTapOutside: widget.closeOnInteractOutside
+                    ? (_) => _request(false, SeedOverlayDismissReason.outside)
+                    : null,
+                child: FocusScope(
+                  canRequestFocus: _open,
+                  descendantsAreFocusable: _open,
+                  descendantsAreTraversable: _open,
+                  node: _overlayFocus,
+                  onFocusChange: (focused) {
+                    if (!focused && widget.closeOnFocusOut && _open) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted &&
+                            _open &&
+                            !_overlayFocus.hasFocus &&
+                            !_triggerFocus.hasFocus) {
+                          _request(false, SeedOverlayDismissReason.focusOut);
+                        }
+                      });
+                    }
+                  },
+                  child: CallbackShortcuts(
+                    bindings: {
+                      const SingleActivator(LogicalKeyboardKey.escape): () =>
+                          _request(false, SeedOverlayDismissReason.escapeKey),
+                    },
+                    child: FadeTransition(
+                      opacity: _curved,
+                      child: AnimatedBuilder(
+                        animation: _animation,
+                        builder: (context, child) => Transform.scale(
+                          alignment: widget.scaleFromAnchor
+                              ? _scaleAlignment
+                              : Alignment.center,
+                          scale: Tween<double>(
+                            begin: _animation.status == AnimationStatus.reverse
+                                ? widget.exitScale ?? widget.enterScale
+                                : widget.enterScale,
+                            end: 1,
+                          ).evaluate(_curved),
+                          child: child,
+                        ),
+                        child: Material(
+                          type: MaterialType.transparency,
+                          child: SeedOverlayScope(
+                            side: _resolvedSide,
+                            isOpen: _open,
+                            anchorPoint: _anchorPoint,
+                            tapGroup: _tapGroup,
+                            close: (reason) => _request(false, reason),
+                            child: Builder(builder: widget.overlayBuilder),
+                          ),
+                        ),
                       ),
                     ),
                   ),

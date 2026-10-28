@@ -3,7 +3,8 @@ import 'dart:math' as math;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/gestures.dart' show PointerDeviceKind;
+import 'package:flutter/gestures.dart'
+    show GestureBinding, PointerDeviceKind, PointerDownEvent, PointerEvent;
 
 import '../motion/seed_motion.dart';
 import '../colors/seed_color_scheme.dart';
@@ -140,6 +141,51 @@ class SeedPressable extends StatefulWidget {
   State<SeedPressable> createState() => _SeedPressableState();
 }
 
+// Focus can be restored after a route or overlay closes. Track input modality
+// across controls so restoring focus does not turn a mouse click into a ring.
+class _SeedFocusHighlight extends ChangeNotifier {
+  static final instance = _SeedFocusHighlight();
+  bool usingPointer = false;
+
+  void _setUsingPointer(bool value) {
+    if (usingPointer == value) return;
+    usingPointer = value;
+    notifyListeners();
+  }
+
+  void _handlePointerEvent(PointerEvent event) {
+    if (event is PointerDownEvent) _setUsingPointer(true);
+  }
+
+  bool _handleKeyEvent(KeyEvent event) {
+    if (event is KeyDownEvent || event is KeyRepeatEvent) {
+      _setUsingPointer(false);
+    }
+    return false;
+  }
+
+  @override
+  void addListener(VoidCallback listener) {
+    if (!hasListeners) {
+      GestureBinding.instance.pointerRouter.addGlobalRoute(_handlePointerEvent);
+      HardwareKeyboard.instance.addHandler(_handleKeyEvent);
+    }
+    super.addListener(listener);
+  }
+
+  @override
+  void removeListener(VoidCallback listener) {
+    super.removeListener(listener);
+    if (!hasListeners) {
+      GestureBinding.instance.pointerRouter.removeGlobalRoute(
+        _handlePointerEvent,
+      );
+      HardwareKeyboard.instance.removeHandler(_handleKeyEvent);
+      usingPointer = false;
+    }
+  }
+}
+
 class _SeedPressableState extends State<SeedPressable>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
@@ -148,7 +194,6 @@ class _SeedPressableState extends State<SeedPressable>
   bool _isHovered = false;
   bool _hasFocus = false;
   bool _showFocus = false;
-  bool _focusFromPointer = false;
   final FocusNode _internalFocusNode = FocusNode();
 
   FocusNode get _focusNode => widget.focusNode ?? _internalFocusNode;
@@ -158,6 +203,7 @@ class _SeedPressableState extends State<SeedPressable>
   @override
   void initState() {
     super.initState();
+    _SeedFocusHighlight.instance.addListener(_handleFocusHighlightChange);
     _controller = AnimationController(
       vsync: this,
       duration: SeedDuration.pressedScale,
@@ -166,6 +212,7 @@ class _SeedPressableState extends State<SeedPressable>
 
   @override
   void dispose() {
+    _SeedFocusHighlight.instance.removeListener(_handleFocusHighlightChange);
     HardwareKeyboard.instance.removeHandler(_handleKeyEvent);
     _controller.dispose();
     _internalFocusNode.dispose();
@@ -176,16 +223,11 @@ class _SeedPressableState extends State<SeedPressable>
     if (!_interactive) return;
     setState(() {
       _isPressed = true;
-      _focusFromPointer = true;
     });
     _controller.animateTo(1.0, curve: SeedCurves.pressedScale);
   }
 
   bool _handleKeyEvent(KeyEvent event) {
-    if (_focusFromPointer &&
-        (event is KeyDownEvent || event is KeyRepeatEvent)) {
-      setState(() => _focusFromPointer = false);
-    }
     if (_interactive &&
         _focusNode.hasPrimaryFocus &&
         (event.logicalKey == LogicalKeyboardKey.enter ||
@@ -211,8 +253,11 @@ class _SeedPressableState extends State<SeedPressable>
     }
     setState(() {
       _hasFocus = value;
-      if (!value) _focusFromPointer = false;
     });
+  }
+
+  void _handleFocusHighlightChange() {
+    if (mounted && _hasFocus) setState(() {});
   }
 
   void _handleTapUp(TapUpDetails details) {
@@ -324,7 +369,10 @@ class _SeedPressableState extends State<SeedPressable>
             position: DecorationPosition.foreground,
             decoration: BoxDecoration(
               borderRadius: widget.focusBorderRadius,
-              border: _showFocus && !_focusFromPointer && _interactive
+              border:
+                  _showFocus &&
+                      !_SeedFocusHighlight.instance.usingPointer &&
+                      _interactive
                   ? Border.all(
                       color:
                           Theme.of(context)
