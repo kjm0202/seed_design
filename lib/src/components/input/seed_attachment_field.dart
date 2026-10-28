@@ -107,6 +107,7 @@ class SeedAttachmentDisplayField extends StatefulWidget {
     this.showDropzone = false,
     this.isDraggingOver = false,
     this.itemSize = 80,
+    this.triggerIcon,
   }) : onEntriesChanged = onEntriesChange ?? onEntriesChanged,
        assert(onEntriesChange == null || onEntriesChanged == null),
        initialEntries = defaultEntries ?? initialEntries ?? const [],
@@ -134,6 +135,7 @@ class SeedAttachmentDisplayField extends StatefulWidget {
   final int maxEntries;
   final bool enabled, readOnly, reorderable, showDropzone, isDraggingOver;
   final double itemSize;
+  final Widget? triggerIcon;
   final String? label, description, errorMessage;
   final Widget Function(BuildContext, SeedAttachmentController)? itemBuilder;
   final EdgeInsetsGeometry inset;
@@ -225,6 +227,8 @@ class _SeedAttachmentDisplayFieldState
                 enabled: widget.enabled,
                 readOnly: widget.readOnly,
                 itemSize: widget.itemSize,
+                triggerIcon: widget.triggerIcon,
+                showTrigger: !widget.showDropzone,
                 onAdd: () => widget.onTrigger?.call(_controller),
                 onRemove: (item) => _controller.remove(item.id),
                 onRetry: (item) => widget.onRetry?.call(item, _controller),
@@ -258,6 +262,7 @@ class SeedAttachmentField extends SeedAttachmentDisplayField {
     super.showDropzone,
     super.isDraggingOver,
     super.itemSize,
+    super.triggerIcon,
   }) : super(
          entries: items,
          defaultEntries: defaultItems,

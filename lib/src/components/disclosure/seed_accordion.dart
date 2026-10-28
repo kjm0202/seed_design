@@ -179,8 +179,13 @@ class _SeedAccordionItemState extends State<SeedAccordionItem>
             borderRadius: BorderRadius.circular(
               insetPressed ? SeedDimension.x2_5 : 0,
             ),
+            // Blend the overlay before animating so interpolation keeps an
+            // opaque surface instead of flashing toward translucent white.
             color: isPressed
-                ? colors.bg.transparentPressed
+                ? Color.alphaBlend(
+                    colors.bg.transparentPressed,
+                    colors.bg.layerDefault,
+                  )
                 : colors.bg.layerDefault,
           ),
           child: SeedContentScale(
@@ -275,6 +280,12 @@ class _SeedAccordionItemState extends State<SeedAccordionItem>
       return Container(
         decoration: BoxDecoration(
           color: colors.bg.layerDefault,
+          borderRadius: SeedBorderRadius.r3,
+        ),
+        // Keep the existing content inset, but paint the stroke above the
+        // opaque trigger/content so they cannot cover its rounded corners.
+        padding: const EdgeInsets.all(1),
+        foregroundDecoration: BoxDecoration(
           borderRadius: SeedBorderRadius.r3,
           border: Border.all(color: colors.stroke.neutralWeak, width: 1.0),
         ),

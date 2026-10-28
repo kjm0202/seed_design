@@ -63,19 +63,25 @@ class SeedMannerTempLevel {
 /// with level-specific background and text color tokens.
 class SeedMannerTempBadge extends StatelessWidget {
   final double temperature;
+
+  /// Explicit React level (l1..l10), independent of the displayed temperature.
+  /// Null preserves the temperature-derived level.
+  final int? level;
   final bool showEmoji;
 
   const SeedMannerTempBadge({
     super.key,
     required this.temperature,
+    this.level,
     this.showEmoji = false,
-  });
+  }) : assert(level == null || (level >= 1 && level <= 10));
 
   @override
   Widget build(BuildContext context) {
     final colors = context.seedColor;
     final typography = context.seedTypography;
-    final int level = SeedMannerTempLevel.fromTemperature(temperature);
+    final int level =
+        this.level ?? SeedMannerTempLevel.fromTemperature(temperature);
     final SeedMannerTempColor mannerColor = colors.mannerTemp.byLevel(level);
 
     return Container(

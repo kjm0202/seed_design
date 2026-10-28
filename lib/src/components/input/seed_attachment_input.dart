@@ -10,6 +10,7 @@ import '../../foundations/radius/seed_radius.dart';
 import '../../foundations/typography/seed_typography.dart';
 import '../../theme/seed_theme.dart';
 import '../feedback/seed_progress_circle.dart';
+import '../button/seed_button.dart';
 
 /// Status of an individual attachment item.
 enum SeedAttachmentStatus {
@@ -69,6 +70,7 @@ class SeedAttachmentItem {
     bool? enabled,
     bool? isDragging,
     bool? removeEnabled,
+    bool? isRepresentative,
   }) => SeedAttachmentItem(
     id: id,
     name: name ?? this.name,
@@ -82,7 +84,7 @@ class SeedAttachmentItem {
     enabled: enabled ?? this.enabled,
     isDragging: isDragging ?? this.isDragging,
     removeEnabled: removeEnabled ?? this.removeEnabled,
-    isRepresentative: isRepresentative,
+    isRepresentative: isRepresentative ?? this.isRepresentative,
   );
 }
 
@@ -97,7 +99,7 @@ class SeedAttachmentDropzone extends StatelessWidget {
   const SeedAttachmentDropzone({
     super.key,
     this.onTap,
-    this.label = '파일을 드래그하거나 클릭하여 업로드',
+    this.label = '또는 여기로 드래그해서 업로드',
     this.icon,
     this.isDraggingOver = false,
     this.enabled = true,
@@ -135,12 +137,13 @@ class SeedAttachmentDropzone extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                icon ??
-                    Icon(
-                      Icons.cloud_upload_outlined,
-                      size: 28.0,
-                      color: labelColor,
-                    ),
+                SeedButton(
+                  label: '파일 선택',
+                  variant: SeedButtonVariant.neutralWeak,
+                  size: SeedButtonSize.small,
+                  prefixIcon: icon ?? const Icon(Icons.file_upload_outlined),
+                  onPressed: enabled ? onTap : null,
+                ),
                 const SizedBox(height: SeedDimension.x2),
                 Text(
                   label,
@@ -203,6 +206,8 @@ class SeedAttachmentInput extends StatelessWidget {
     this.onRetry,
     this.itemSize = 80.0,
     this.representativeLabel = '대표',
+    this.triggerIcon,
+    this.showTrigger = true,
     this.readOnly = false,
     this.onReorder,
     this.enabled = true,
@@ -228,6 +233,13 @@ class SeedAttachmentInput extends StatelessWidget {
 
   /// Label for representative thumbnail (e.g. '대표').
   final String representativeLabel;
+
+  /// Flutter composition option for React's separate image/general TriggerIcon.
+  /// Omitted values keep the existing camera trigger.
+  final Widget? triggerIcon;
+
+  /// Whether to include the tile trigger beside previews (false for dropzones).
+  final bool showTrigger;
   final bool readOnly;
   final ReorderCallback? onReorder;
 
@@ -275,10 +287,12 @@ class SeedAttachmentInput extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.camera_alt_outlined,
-                size: 24,
-                color: canAdd ? colors.fg.neutralSubtle : colors.fg.disabled,
+              IconTheme.merge(
+                data: IconThemeData(
+                  size: 24,
+                  color: canAdd ? colors.fg.neutralSubtle : colors.fg.disabled,
+                ),
+                child: triggerIcon ?? const Icon(Icons.camera_alt_outlined),
               ),
               const SizedBox(height: 4),
               Text.rich(
@@ -315,10 +329,11 @@ class SeedAttachmentInput extends StatelessWidget {
           ? _buildFileItem(context, item, colors, typography)
           : _buildImageItem(context, item, colors, typography),
     );
+    if (!showTrigger && items.isEmpty) return const SizedBox.shrink();
     if (onReorder != null) {
       return SizedBox(
         height: math.max(
-          triggerHeight,
+          showTrigger ? triggerHeight : 0,
           items.any((item) => item.type == SeedAttachmentType.file)
               ? _fileHeight(context, typography)
               : itemSize,
@@ -327,7 +342,7 @@ class SeedAttachmentInput extends StatelessWidget {
           scrollDirection: Axis.horizontal,
           shrinkWrap: true,
           buildDefaultDragHandles: false,
-          header: trigger,
+          header: showTrigger ? trigger : null,
           itemCount: items.length,
           onReorderItem: (from, to) {
             if (enabled && !readOnly) onReorder!(from, to > from ? to + 1 : to);
@@ -356,7 +371,7 @@ class SeedAttachmentInput extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          trigger,
+          if (showTrigger) trigger,
           for (final item in items)
             Padding(
               padding: const EdgeInsetsDirectional.only(start: 8),
