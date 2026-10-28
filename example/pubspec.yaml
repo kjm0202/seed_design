@@ -1,5 +1,5 @@
 name: seed_design_example
-description: "A new Flutter project."
+description: "Flutter port of the SEED Design Stackflow SPA example."
 
 publish_to: 'none'
 
@@ -16,9 +16,18 @@ dependencies:
   seed_design:
     path: ../
 
+  file_selector: ^1.1.0
+  desktop_drop: ^0.8.4
+  mime: ^2.0.0
+  url_launcher: ^6.3.2
+  shared_preferences: ^2.5.5
+
   cupertino_icons: ^1.0.8
 
 dev_dependencies:
+  shared_preferences_platform_interface: ^2.4.2
+  file_selector_platform_interface: ^2.7.0
+  url_launcher_platform_interface: ^2.3.2
   integration_test:
     sdk: flutter
   flutter_test:
@@ -28,3 +37,9 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/peng.jpeg
+  fonts:
+    - family: WantedSans
+      fonts:
+        - asset: assets/fonts/WantedSansVariable.ttf

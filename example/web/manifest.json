@@ -1,11 +1,11 @@
 {
-    "name": "SEED Design Flutter Showcase",
-    "short_name": "SEED Showcase",
+    "name": "SEED Design Stackflow SPA",
+    "short_name": "SEED SPA",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#F3F4F5",
     "theme_color": "#E14D00",
-    "description": "Interactive showcase for the unofficial Flutter port of SEED Design.",
+    "description": "Stackflow SPA example for the unofficial Flutter port of SEED Design.",
     "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
