@@ -4,6 +4,23 @@ import 'package:material_ui/material_ui.dart' as mui;
 /// A Flutter equivalent of Stackflow's push(activity, params).
 typedef SpaNavigate = void Function(String activity, {Object? arguments});
 
+/// Activities that draw their surface in a modal route above the host page.
+const spaModalActivities = {
+  'ActivityBottomSheet',
+  'ActivityBottomSheetInputFocus',
+  'ActivityBottomSheetTextField',
+  'ActivityBottomSheetKeyboardPlayground',
+  'ActivityNestedBottomSheet',
+  'ActivityMenuSheet',
+  'ActivityMenuSheetSimple',
+  'ActivitySwipeableMenuSheet',
+  'ActivitySidePanel',
+  'ActivityResponsiveSidePanel',
+  'ActivityAlertDialog',
+  'ActivityResponsiveDialog',
+  'ActivityBottomSheetModalTest',
+};
+
 /// Activity pages are built by feature groups. Return null for unknown names.
 typedef SpaActivityBuilder = Widget? Function(
   String activity,

@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show BoxParentData, RenderShiftedBox;
 import 'package:seed_design/seed_design.dart';
@@ -103,25 +105,20 @@ Widget _action(
   isFullWidth: full,
 );
 
-void _snack(BuildContext context, String message) {
-  SeedSnackbarProvider.of(context).show(
-    strategy: SeedSnackbarStrategy.immediate,
-    child: SeedSnackbar(message: message),
-  );
-}
-
-Widget _appBarIconStrip(BuildContext context, String side, int count) {
+Widget _appBarIconStrip(String side, int count) {
   if (count == 0) return const SizedBox.shrink();
   return SizedBox(
     height: 48,
-    width: count * 48.0,
+    width: count * 44.0,
     child: Row(
       children: List.generate(
         count,
-        (i) => IconButton(
-          tooltip: '$side notification ${i + 1}',
-          icon: const Icon(Icons.notifications_none),
-          onPressed: () => _snack(context, '$side ${i + 1}'),
+        (i) => Tooltip(
+          message: '$side notification ${i + 1}',
+          child: SeedTopNavigationIconButton(
+            icon: const Icon(Icons.notifications_none),
+            onPressed: () {},
+          ),
         ),
       ),
     ),
@@ -148,8 +145,8 @@ class _LayerBarPageState extends State<_LayerBarPage> {
       titleText: 'Random Long Title Hello World Commodo occaecat laboris voluptate aute magna.',
       subtitle: 'Subtitle Ut voluptate in sint sunt adipisicing ex adipisicing magna ad fugiat excepteur commodo voluptate.',
       centerTitle: false,
-      leading: _appBarIconStrip(context, 'Left', left),
-      actions: [_appBarIconStrip(context, 'Right', right)],
+      leading: _appBarIconStrip('Left', left),
+      actions: [_appBarIconStrip('Right', right)],
     ),
     body: _scrollPage([
       _action(
@@ -352,7 +349,11 @@ class _SafeAreaBleedPageState extends State<_SafeAreaBleedPage> {
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [_heading(title), _caption(description)],
+            children: [
+              Text(title, style: context.seedTypography.t5Bold),
+              const SizedBox(height: 4),
+              _caption(description),
+            ],
           ),
         ),
         const SizedBox(height: 12),
@@ -375,7 +376,7 @@ class _SafeAreaBleedPageState extends State<_SafeAreaBleedPage> {
             ),
             section(
               '가로 스크롤',
-              '스크롤 영역은 화면 끝까지 넓히고 내용은 safe area 경계에서 시작해요.',
+              '스크롤 영역은 bleedX로 화면 끝까지 넓히고, pl과 pr의 safeArea로 내용을 safe area 경계에서 시작해요. gutter는 안쪽 요소가 가져요.',
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 padding: EdgeInsets.only(
@@ -408,7 +409,7 @@ class _SafeAreaBleedPageState extends State<_SafeAreaBleedPage> {
             ),
             section(
               'Chip Tabs',
-              '스크롤 영역에 gutter와 safe area inset을 합산해 padding을 적용해요.',
+              '스크롤 영역이 gutter를 padding으로 직접 가지면, gutter와 inset을 더한 값을 padding으로 줘요.',
               Padding(
                 padding: EdgeInsets.only(
                   left: MediaQuery.paddingOf(context).left,
@@ -428,7 +429,7 @@ class _SafeAreaBleedPageState extends State<_SafeAreaBleedPage> {
             ),
             section(
               '배경 띠',
-              '배경은 화면 끝까지, 글자는 safe area 안쪽에 있어요.',
+              '배경은 bleedX로 화면 끝까지 채우고, 내용은 pl과 pr의 safeArea와 gutter 안쪽에 둬요.',
               Container(
                 width: double.infinity,
                 padding: EdgeInsets.fromLTRB(
@@ -471,11 +472,7 @@ class _SafeAreaBleedPageState extends State<_SafeAreaBleedPage> {
         top: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(_gutter, 12, _gutter, 12),
-          child: _action(
-            '확인',
-            () => _snack(context, '확인'),
-            variant: SeedButtonVariant.brandSolid,
-          ),
+          child: _action('확인', () {}, variant: SeedButtonVariant.brandSolid),
         ),
       ),
     ],
@@ -554,16 +551,22 @@ class _SwipeBackKeyboardPageState extends State<_SwipeBackKeyboardPage> {
       _action(
         '입력 화면 한 장 더 열기',
         () => widget.navigate('ActivitySwipeBackKeyboard'),
+        variant: SeedButtonVariant.brandSolid,
       ),
       const SizedBox(height: 20),
       const Text('검색어'),
       const SizedBox(height: 8),
-      TextField(
-        focusNode: _focusNode,
-        decoration: const InputDecoration(
-          hintText: '여기를 눌러 키보드를 여세요',
-          border: OutlineInputBorder(),
-          contentPadding: EdgeInsets.all(12),
+      Semantics(
+        // React's input has aria-label="검색어" in addition to its
+        // placeholder. The preceding Text alone is not an input label.
+        label: '검색어',
+        child: TextField(
+          focusNode: _focusNode,
+          decoration: const InputDecoration(
+            hintText: '여기를 눌러 키보드를 여세요',
+            border: OutlineInputBorder(),
+            contentPadding: EdgeInsets.all(12),
+          ),
         ),
       ),
       const SizedBox(height: 20),
@@ -596,6 +599,35 @@ class _TransitionStylePage extends StatefulWidget {
 
 class _TransitionStylePageState extends State<_TransitionStylePage> {
   bool preventSwipeBack = false;
+  SpaCupertinoRoute<dynamic>? _gestureRoute;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final current = ModalRoute.of(context);
+    final next = current is SpaCupertinoRoute ? current : null;
+    if (identical(next, _gestureRoute)) return;
+    _gestureRoute?.swipeEvent.removeListener(_showSwipeFeedback);
+    _gestureRoute = next;
+    _gestureRoute?.swipeEvent.addListener(_showSwipeFeedback);
+  }
+
+  void _showSwipeFeedback() {
+    if (!mounted) return;
+    final message = _gestureRoute?.swipeEvent.value;
+    if (message == null || message.isEmpty) return;
+    SeedSnackbarProvider.of(context).show(
+      strategy: SeedSnackbarStrategy.immediate,
+      duration: const Duration(milliseconds: 500),
+      child: SeedSnackbar(message: message),
+    );
+  }
+
+  @override
+  void dispose() {
+    _gestureRoute?.swipeEvent.removeListener(_showSwipeFeedback);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -603,12 +635,6 @@ class _TransitionStylePageState extends State<_TransitionStylePage> {
     final style = args is Map ? args['transitionStyle']?.toString() : null;
     final route = ModalRoute.of(context);
     return _scrollPage([
-      if (route is SpaCupertinoRoute)
-        ValueListenableBuilder<String>(
-          valueListenable: route.swipeEvent,
-          builder: (_, message, _) => Text(message),
-        ),
-
       for (final transitionStyle in _transitionStyles) ...[
         _action(
           transitionStyle,
@@ -646,7 +672,7 @@ class _TransitionStylePageState extends State<_TransitionStylePage> {
           ),
         ),
       ),
-    ]);
+    ], padding: const EdgeInsets.symmetric(horizontal: _gutter, vertical: 12));
   }
 }
 
@@ -689,13 +715,19 @@ class _PullToRefreshTabsPageState extends State<_PullToRefreshTabsPage> {
         fill: true,
       ),
       Expanded(
-        child: selectedTab == 0
-            ? SeedPullToRefresh(
-                onReady: () {},
-                onRefresh: _refreshAfterDelay,
-                child: _scrollPage([const Text(_lorem)]),
-              )
-            : _scrollPage([const Text('PTR is not available in this tab.')]),
+        // React TabsContent keeps an inactive panel mounted. Removing Tab 1
+        // destroys an in-flight PTR gesture/state before pointer-up.
+        child: IndexedStack(
+          index: selectedTab,
+          children: [
+            SeedPullToRefresh(
+              onReady: () {},
+              onRefresh: _refreshAfterDelay,
+              child: _scrollPage([const Text(_lorem)]),
+            ),
+            _scrollPage([const Text('PTR is not available in this tab.')]),
+          ],
+        ),
       ),
     ],
   );
@@ -758,36 +790,45 @@ class _ArticlePreventPullPage extends StatelessWidget {
       ),
       const SizedBox(height: 32),
       SeedPullToRefreshPreventPull(
-        child: const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Article',
-              style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 14),
-            SelectableText(
-              '이 요소는 Article 내부에 있으므로 텍스트 선택이 가능합니다. '
-              '이 Article은 PTR 제스처를 호출하지 않도록 설정되어 있습니다. '
-              '여기를 아래로 끌어 당기면 PTR이 작동하는 대신 텍스트가 선택됩니다.',
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: _gutter),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Article', style: context.seedTypography.t6Bold),
+              const SizedBox(height: 14),
+              const SelectableText(
+                '이 요소는 Article 내부에 있으므로 텍스트 선택이 가능합니다. '
+                '이 Article은 PTR 제스처를 호출하지 않도록 설정되어 있습니다. '
+                '여기를 아래로 끌어 당기면 PTR이 작동하는 대신 텍스트가 선택됩니다.',
+              ),
+            ],
+          ),
         ),
       ),
       const SizedBox(height: 32),
       const Divider(),
       const SizedBox(height: 32),
-      _heading('Article 외부'),
-      const Text(
-        '이 요소는 Article 외부에 있으므로 텍스트 선택이 불가능합니다. '
-        '이 요소는 PTR을 호출할 수 있습니다. 여기를 아래로 끌어 당겨보세요.',
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: _gutter),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Article 외부', style: context.seedTypography.t6Bold),
+            const SizedBox(height: 14),
+            const Text(
+              '이 요소는 Article 외부에 있으므로 텍스트 선택이 불가능합니다. '
+              '이 요소는 PTR을 호출할 수 있습니다. 여기를 아래로 끌어 당겨보세요.',
+            ),
+          ],
+        ),
       ),
-    ]),
+    ], padding: EdgeInsets.zero),
   );
 }
 
-/// These cases parallel the CSS margin and responsive-value cases in React.
-/// They use measured Flutter paddings and alignment on the available width.
+/// The yellow case inset is fixed at x3 (12px), while each blue DemoBox has
+/// its own independent margin, just as in the React margin playground.
 class _MarginPlaygroundPage extends StatelessWidget {
   const _MarginPlaygroundPage();
 
@@ -803,39 +844,39 @@ class _MarginPlaygroundPage extends StatelessWidget {
           _marginCase(
             "m='x4' — all four sides",
             'm="x4"',
-            padding: const EdgeInsets.all(16),
+            margin: const EdgeInsets.all(16),
           ),
           _marginCase(
             "mx='x6' · my='x2'",
             'mx="x6" · my="x2"',
             description: 'horizontal vs vertical shorthands',
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
           ),
           _marginCase(
             "m='x4' + mt='x8' (specific override)",
             'm="x4" · mt="x8"',
             description:
                 'marginTop overrides the shorthand only for the top edge.',
-            padding: const EdgeInsets.fromLTRB(16, 32, 16, 16),
+            margin: const EdgeInsets.fromLTRB(16, 32, 16, 16),
           ),
           _marginCase(
             "m='x6' + mx='x2' + mr='x10' (three-level cascade)",
             'm=x6 · mx=x2 · mr=x10',
             description:
                 'margin → marginX → marginRight, each level overrides.',
-            padding: const EdgeInsets.fromLTRB(8, 24, 40, 24),
+            margin: const EdgeInsets.fromLTRB(8, 24, 40, 24),
           ),
         ]),
         _marginSection('Value types', [
           _marginCase(
             "Dimension token: mt='spacingY.componentDefault'",
             'mt="spacingY.componentDefault"',
-            padding: const EdgeInsets.only(top: 12),
+            margin: const EdgeInsets.only(top: 12),
           ),
           _marginCase(
             "Raw CSS string: mx='24px'",
             'mx="24px"',
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            margin: const EdgeInsets.symmetric(horizontal: 24),
           ),
           _marginCase('Zero: m={0}', 'm={0}'),
           _marginCase(
@@ -871,7 +912,7 @@ class _MarginPlaygroundPage extends StatelessWidget {
             "mx={{ base: 'x2', md: 'x8' }}",
             'base: x2 · md: x8',
             description: 'Tighter on mobile, roomier on desktop.',
-            padding: EdgeInsets.symmetric(horizontal: md ? 32 : 8),
+            margin: EdgeInsets.symmetric(horizontal: md ? 32 : 8),
           ),
           _marginCase(
             "mx={{ base: 'auto', md: 0 }}",
@@ -890,7 +931,7 @@ class _MarginPlaygroundPage extends StatelessWidget {
             'base: auto · md: 16px',
             description: 'Auto and a dimension mixed across breakpoints.',
             align: md ? Alignment.centerLeft : Alignment.center,
-            padding: md
+            margin: md
                 ? const EdgeInsets.symmetric(horizontal: 16)
                 : EdgeInsets.zero,
           ),
@@ -906,7 +947,7 @@ class _MarginPlaygroundPage extends StatelessWidget {
             description:
                 'Four values across four breakpoints, auto in the middle.',
             align: md && !lg ? Alignment.center : Alignment.centerLeft,
-            padding: EdgeInsets.symmetric(
+            margin: EdgeInsets.symmetric(
               horizontal: lg
                   ? 16
                   : sm && !md
@@ -925,7 +966,7 @@ class _MarginPlaygroundPage extends StatelessWidget {
             'bleed only (existing behavior)',
             'bleedX="x4"',
             description: 'bleedX still works unchanged.',
-            padding: const EdgeInsets.symmetric(horizontal: 4),
+            bleedX: true,
           ),
         ]),
       ];
@@ -936,17 +977,22 @@ class _MarginPlaygroundPage extends StatelessWidget {
 
 Widget _marginSection(String title, List<Widget> children) => Column(
   crossAxisAlignment: CrossAxisAlignment.start,
-  children: [_heading(title), ...children, const SizedBox(height: 24)],
+  children: [
+    Padding(padding: const EdgeInsets.only(bottom: 8), child: _heading(title)),
+    ...children,
+    const SizedBox(height: 24),
+  ],
 );
 
 Widget _marginCase(
   String label,
   String boxLabel, {
   String? description,
-  EdgeInsetsGeometry padding = EdgeInsets.zero,
+  EdgeInsetsGeometry margin = EdgeInsets.zero,
   Alignment align = Alignment.centerLeft,
   double minHeight = 0,
   double offsetY = 0,
+  bool bleedX = false,
 }) => Container(
   padding: const EdgeInsets.all(16),
   margin: const EdgeInsets.only(bottom: 12),
@@ -971,27 +1017,36 @@ Widget _marginCase(
           borderRadius: BorderRadius.circular(4),
         ),
         child: Padding(
-          padding: padding,
-          child: Align(
-            alignment: align,
-            heightFactor: minHeight > 0 ? null : 1,
-            child: _VerticalMargin(
-              top: offsetY,
-              child: Container(
-                constraints: const BoxConstraints(maxWidth: 200),
-                padding: const EdgeInsets.all(12),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2273D4),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  boxLabel,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontFamily: 'monospace',
+          padding: const EdgeInsets.all(12),
+          child: Padding(
+            padding: margin,
+            child: Align(
+              alignment: align,
+              heightFactor: minHeight > 0 ? null : 1,
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: bleedX ? 20 : 0),
+                child: _VerticalMargin(
+                  top: offsetY,
+                  child: Transform.translate(
+                    offset: Offset(bleedX ? -16 : 0, 0),
+                    child: Container(
+                      constraints: const BoxConstraints(maxWidth: 200),
+                      padding: const EdgeInsets.all(12),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2273D4),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        boxLabel,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -1011,10 +1066,32 @@ class _FontMultiplierLayoutPage extends StatefulWidget {
       _FontMultiplierLayoutPageState();
 }
 
+/// The React SEED web bundler reads `font:-apple-system-body` and applies
+/// 0.9412 on iOS (including desktop browsers, which use its iOS fallback).
+/// With the regular 16px Chrome font the bundled dataset is rounded to 0.94.
+/// Flutter native keeps the actual system text scale, including accessibility
+/// multipliers; only the default unscaled Web value uses this CSS baseline.
+double seedFontMultiplierForLayout(
+  double platformScale, {
+  required bool isWeb,
+  required TargetPlatform platform,
+}) {
+  if (!isWeb || platform == TargetPlatform.android || platformScale != 1.0) {
+    return platformScale;
+  }
+  return double.parse(
+    (platformScale * 0.9412).clamp(0.8, 1.35).toStringAsFixed(2),
+  );
+}
+
 class _FontMultiplierLayoutPageState extends State<_FontMultiplierLayoutPage> {
   @override
   Widget build(BuildContext context) {
-    final multiplier = MediaQuery.textScalerOf(context).scale(1.0);
+    final multiplier = seedFontMultiplierForLayout(
+      MediaQuery.textScalerOf(context).scale(1.0),
+      isWeb: kIsWeb,
+      platform: defaultTargetPlatform,
+    );
     final scale = multiplier >= 1.35
         ? 'large'
         : multiplier >= 1.15
@@ -1102,14 +1179,19 @@ Widget _previewScreen(BuildContext context, {bool transparent = false}) =>
       appBar: SeedTopNavigation(
         titleText: 'Preview',
         platform: SeedTopNavigationPlatform.cupertino,
+        gradient: transparent,
         tone: transparent
             ? SeedTopNavigationTone.transparent
             : SeedTopNavigationTone.layer,
-        leading: SeedTopNavigationIconButton(
-          icon: const Icon(Icons.close),
-          semanticsLabel: 'Close',
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
+        leading: (ModalRoute.of(context)?.isFirst ?? true)
+            ? SeedTopNavigationIconButton(
+                icon: const Icon(Icons.close),
+                semanticsLabel: 'Close',
+                // Official AppBarCloseButton is root-only; its default click
+                // handler does not navigate (app-bar.tsx:99-127).
+                onPressed: () {},
+              )
+            : const SizedBox.shrink(),
         actions: [
           SeedTopNavigationIconButton(
             icon: const Icon(Icons.notifications),
@@ -1149,7 +1231,7 @@ class _AppScreenAppBarCustomizationPage extends StatelessWidget {
                 ? SeedPalette.blue500Dark
                 : SeedPalette.blue500Light,
           ),
-          onPressed: () => _snack(context, 'Notification'),
+          onPressed: () {},
         ),
       ],
     ),
@@ -1198,7 +1280,11 @@ class _ResultSectionCtaProgressCirclePageState
             padding: const EdgeInsets.only(bottom: 16),
             child: inProgress
                 ? const SeedProgressCircle(size: 40)
-                : const Icon(Icons.error, size: 40, color: Colors.red),
+                : Icon(
+                    Icons.error,
+                    size: 40,
+                    color: context.seedColor.fg.critical,
+                  ),
           ),
           title: inProgress ? '환불을 요청하고 있어요' : '다시 시도해주세요',
           description: inProgress ? '잠시만 기다려주세요' : '환불 요청에 실패했어요',
