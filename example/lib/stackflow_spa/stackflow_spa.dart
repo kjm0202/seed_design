@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart' as flutter_material;
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
@@ -17,8 +18,25 @@ import 'demo_pages.dart';
 
 /// Standalone example of the React Stackflow SPA, using Flutter's Navigator
 /// to support named routes, push/replace/pop and the native back gesture.
-class StackflowSpaApp extends StatelessWidget {
+class StackflowSpaApp extends StatefulWidget {
   const StackflowSpaApp({super.key});
+
+  @override
+  State<StackflowSpaApp> createState() => _StackflowSpaAppState();
+}
+
+class _StackflowSpaAppState extends State<StackflowSpaApp> {
+  final ValueNotifier<ThemeMode> _themeMode = ValueNotifier(ThemeMode.system);
+
+  void _setThemeMode(ThemeMode mode) {
+    setState(() => _themeMode.value = mode);
+  }
+
+  @override
+  void dispose() {
+    _themeMode.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +46,7 @@ class StackflowSpaApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: SeedThemeData.light(fontFamily: 'WantedSans').toThemeData(),
       darkTheme: SeedThemeData.dark(fontFamily: 'WantedSans').toThemeData(),
-      themeMode: ThemeMode.system,
+      themeMode: _themeMode.value,
       builder: (context, child) => flutter_material.Localizations.override(
         context: context,
         delegates: const [
@@ -51,6 +69,8 @@ class StackflowSpaApp extends StatelessWidget {
         final page = _SpaActivityPage(
           activity: activity,
           arguments: settings.arguments,
+          themeMode: _themeMode,
+          onThemeModeChanged: _setThemeMode,
         );
         final requestedStyle = settings.arguments is Map
             ? (settings.arguments as Map)['transitionStyle']
@@ -117,10 +137,17 @@ class StackflowSpaApp extends StatelessWidget {
 }
 
 class _SpaActivityPage extends StatelessWidget {
-  const _SpaActivityPage({required this.activity, this.arguments});
+  const _SpaActivityPage({
+    required this.activity,
+    required this.themeMode,
+    required this.onThemeModeChanged,
+    this.arguments,
+  });
 
   final String activity;
   final Object? arguments;
+  final ValueListenable<ThemeMode> themeMode;
+  final ValueChanged<ThemeMode> onThemeModeChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -151,6 +178,8 @@ class _SpaActivityPage extends StatelessWidget {
     if (activity == 'ActivityHome') {
       return _SpaHomePage(
         navigate: navigate,
+        themeMode: themeMode,
+        onThemeModeChanged: onThemeModeChanged,
         depth: Navigator.of(context).widget.observers
             .whereType<SpaGestureObserver>()
             .first
@@ -273,9 +302,16 @@ class _SpaActivityPage extends StatelessWidget {
 }
 
 class _SpaHomePage extends StatefulWidget {
-  const _SpaHomePage({required this.navigate, required this.depth});
+  const _SpaHomePage({
+    required this.navigate,
+    required this.themeMode,
+    required this.onThemeModeChanged,
+    required this.depth,
+  });
 
   final SpaNavigate navigate;
+  final ValueListenable<ThemeMode> themeMode;
+  final ValueChanged<ThemeMode> onThemeModeChanged;
   final int depth;
 
   @override
@@ -539,6 +575,51 @@ class _SpaHomePageState extends State<_SpaHomePage> {
               )
             : null,
         actions: [
+          ValueListenableBuilder<ThemeMode>(
+            valueListenable: widget.themeMode,
+            builder: (context, selectedMode, _) => SeedMenuTrigger(
+              align: SeedOverlayAlign.end,
+              triggerBuilder: (context, open, toggle) =>
+                  SeedTopNavigationIconButton(
+                    icon: Icon(switch (selectedMode) {
+                      ThemeMode.system => Icons.brightness_auto_outlined,
+                      ThemeMode.light => Icons.light_mode_outlined,
+                      ThemeMode.dark => Icons.dark_mode_outlined,
+                    }),
+                    semanticsLabel: switch (selectedMode) {
+                      ThemeMode.system => '테마 설정: 자동',
+                      ThemeMode.light => '테마 설정: 라이트',
+                      ThemeMode.dark => '테마 설정: 다크',
+                    },
+                    onPressed: toggle,
+                  ),
+              builder: (context) => SeedMenu(
+                groups: [
+                  SeedMenuGroupData(
+                    items: [
+                      for (final (mode, label, icon) in [
+                        (
+                          ThemeMode.system,
+                          '자동',
+                          Icons.brightness_auto_outlined,
+                        ),
+                        (ThemeMode.light, '라이트', Icons.light_mode_outlined),
+                        (ThemeMode.dark, '다크', Icons.dark_mode_outlined),
+                      ])
+                        SeedMenuItemData(
+                          label: label,
+                          prefixIcon: Icon(icon),
+                          suffixIcon: selectedMode == mode
+                              ? const Icon(Icons.check_rounded)
+                              : null,
+                          onTap: () => widget.onThemeModeChanged(mode),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
           SeedTopNavigationIconButton(
             icon: const Icon(Icons.notifications_none_rounded),
             semanticsLabel: '알림',
