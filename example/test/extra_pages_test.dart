@@ -177,7 +177,18 @@ void main() {
           .toList();
       expect(bell.length, 2);
       for (final icon in bell) {
-        expect(icon.onPressed, isNull);
+        // Official React AppBarIconButton is enabled/focusable even when it
+        // has no onClick handler. An inert callback preserves that contract.
+        expect(icon.onPressed, isNotNull);
+        expect(icon.enabled, isTrue);
+      }
+      for (var index = 0; index < bell.length; index++) {
+        await tester.tap(find.byType(SeedTopNavigationIconButton).at(index));
+        await tester.pumpAndSettle();
+        expect(find.byType(SeedSnackbar), findsNothing);
+        expect(find.text('알림 1'), findsNothing);
+        expect(find.text('알림 2'), findsNothing);
+        expect(find.byIcon(Icons.chevron_left), findsNothing);
       }
       await tester.pumpWidget(const StackflowSpaApp());
       await tester.pumpAndSettle();

@@ -422,6 +422,10 @@ class _SpaArticleDetailPageState extends State<SpaArticleDetailPage> {
     if (article == null) return const SizedBox.shrink();
     final typography = context.seedTypography;
     final colors = context.seedColor;
+    // AppBarBackButton is shown only for stacked React activities, whereas
+    // AppBarCloseButton is shown only for a root activity. The React close
+    // button has no default navigation action.
+    final isRootActivity = !Navigator.of(context).canPop();
     return Scaffold(
       backgroundColor: colors.bg.layerDefault,
       extendBodyBehindAppBar: true,
@@ -433,18 +437,20 @@ class _SpaArticleDetailPageState extends State<SpaArticleDetailPage> {
             ? Colors.transparent
             : colors.bg.layerDefault,
         gradient: _isHeroVisible,
-        leading: SeedTopNavigationIconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
-          semanticsLabel: '뒤로',
-          onPressed: widget.goBack,
-        ),
+        leading: isRootActivity
+            ? null
+            : SeedTopNavigationIconButton(
+                icon: const Icon(Icons.arrow_back_rounded),
+                semanticsLabel: '뒤로',
+                onPressed: widget.goBack,
+              ),
         actions: [
-          SeedTopNavigationIconButton(
-            icon: const Icon(Icons.close_rounded),
-            semanticsLabel: '닫기',
-            onPressed: () =>
-                Navigator.of(context).popUntil((route) => route.isFirst),
-          ),
+          if (isRootActivity)
+            SeedTopNavigationIconButton(
+              icon: const Icon(Icons.close_rounded),
+              semanticsLabel: '닫기',
+              onPressed: () {},
+            ),
         ],
       ),
       body: ListView(

@@ -217,7 +217,12 @@ class _SpaActivityPage extends StatelessWidget {
     void navigate(String target, {Object? arguments}) {
       final route = spaActivityPaths[target];
       if (route == null) return;
-      Navigator.of(context).pushNamed(route, arguments: arguments);
+      if (target == 'ActivitySideNavigation') {
+        // React ActivityHome replaces the current Activity for this entry.
+        Navigator.of(context).pushReplacementNamed(route, arguments: arguments);
+      } else {
+        Navigator.of(context).pushNamed(route, arguments: arguments);
+      }
     }
 
     void goHome() {
@@ -337,6 +342,8 @@ class _SpaActivityPage extends StatelessWidget {
             ? 'Random Long Title Hello World'
             : activity == 'ActivityAvatarStack'
             ? 'Avatar'
+            : activity == 'ActivityForm'
+            ? 'Form Components'
             : activity == 'ActivityPartialDarkMode'
             ? 'Partial Dark Mode'
             : spaActivityTitle(activity),
@@ -349,11 +356,12 @@ class _SpaActivityPage extends StatelessWidget {
                 semanticsLabel: 'Notification ${i + 1}',
                 onPressed: () {},
               ),
-          SeedTopNavigationIconButton(
-            icon: const Icon(Icons.home_outlined),
-            semanticsLabel: '홈으로',
-            onPressed: goHome,
-          ),
+          if (activity != 'ActivityForm')
+            SeedTopNavigationIconButton(
+              icon: const Icon(Icons.home_outlined),
+              semanticsLabel: '홈으로',
+              onPressed: goHome,
+            ),
         ],
       ),
       body: flutter_material.Material(
@@ -441,14 +449,19 @@ class _SpaHomePageState extends State<_SpaHomePage> {
   void _updateSelectedSection() {
     if (_isJumping) return;
     var lastVisible = 0;
+    double? lastRowTop;
     final mobile = MediaQuery.sizeOf(context).width < 768;
     final showPinned = mobile && _scroll.offset > 80;
     for (var index = 0; index < _sectionKeys.length; index++) {
       final render = _sectionKeys[index].currentContext?.findRenderObject();
       if (render is! RenderBox || !render.attached) continue;
       final top = render.localToGlobal(Offset.zero).dy;
-      if (top <= MediaQuery.paddingOf(context).top + (mobile ? 188 : 148)) {
+      if (top <= MediaQuery.paddingOf(context).top + (mobile ? 188 : 148) &&
+          (lastRowTop == null || top > lastRowTop + 1)) {
+        // React selects the first section in the active grid row. Cards in
+        // the same Wrap row share a top, so keep the first matching index.
         lastVisible = index;
+        lastRowTop = top;
       }
     }
     if ((lastVisible != _selectedSection ||

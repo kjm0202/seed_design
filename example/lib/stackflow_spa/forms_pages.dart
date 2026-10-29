@@ -45,12 +45,12 @@ Widget? buildFormsPage(
   }
 }
 
-Widget _scroll(List<Widget> children) => SingleChildScrollView(
-  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+Widget _scroll(List<Widget> children, {double itemSpacing = 24, double verticalPadding = 20}) => SingleChildScrollView(
+  padding: EdgeInsets.symmetric(horizontal: 16, vertical: verticalPadding),
   child: Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      for (final child in children) ...[child, const SizedBox(height: 24)],
+      for (final child in children) ...[child, SizedBox(height: itemSpacing)],
     ],
   ),
 );
@@ -1886,7 +1886,7 @@ class _FormPageState extends State<_FormPage> {
                   ],
                 ),
               ),
-            ]),
+            ], itemSpacing: 16, verticalPadding: 16),
           ),
         ),
         SeedSnackbarAvoidOverlap(

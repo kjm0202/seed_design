@@ -1629,13 +1629,18 @@ class _MenuDemoPageState extends State<_MenuDemoPage> {
     SeedOverlaySide side = SeedOverlaySide.bottom,
     SeedOverlayAlign align = SeedOverlayAlign.start,
     double maxHeight = 480,
+    bool fullWidth = false,
     SeedOverlayOpenChanged? onOpenChange,
   }) => SeedMenuTrigger(
     side: side,
     align: align,
     onOpenChange: onOpenChange,
-    triggerBuilder: (context, open, toggle) =>
-        _button(label, toggle, variant: variant),
+    triggerBuilder: (context, open, toggle) => SeedButton(
+      label: label,
+      onPressed: toggle,
+      variant: variant,
+      isFullWidth: fullWidth,
+    ),
     builder: (ctx) =>
         SeedMenu(groups: groups, size: size, maxHeight: maxHeight),
   );
@@ -1859,9 +1864,17 @@ class _MenuDemoPageState extends State<_MenuDemoPage> {
                   }
                   setState(() => _anchorOpen = next);
                 },
-                triggerBuilder: (ctx, open, toggle) => const CircleAvatar(
-                  radius: 40,
-                  child: Icon(Icons.person, size: 40),
+                triggerBuilder: (ctx, open, toggle) => ClipOval(
+                  child: Image.network(
+                    'https://avatars.githubusercontent.com/u/54893898?v=4',
+                    width: 80,
+                    height: 80,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => const CircleAvatar(
+                      radius: 40,
+                      child: Icon(Icons.person, size: 40),
+                    ),
+                  ),
                 ),
                 builder: (ctx) => const SeedMenu(
                   groups: [
@@ -1887,20 +1900,8 @@ class _MenuDemoPageState extends State<_MenuDemoPage> {
         ),
         _section(
           'Many Items (Scroll)',
-          _menuButton('30개 항목', [
-            SeedMenuGroupData(
-              label: 'Recently Played',
-              items: [
-                for (var i = 1; i <= 30; i++)
-                  SeedMenuItemData(label: 'Track $i'),
-              ],
-            ),
-          ], variant: SeedButtonVariant.neutralWeak),
-        ),
-        _section(
-          'Max Height',
           _menuButton(
-            '30개 항목 (높이 제한)',
+            '30개 항목',
             [
               SeedMenuGroupData(
                 label: 'Recently Played',
@@ -1910,10 +1911,37 @@ class _MenuDemoPageState extends State<_MenuDemoPage> {
                 ],
               ),
             ],
-            maxHeight: 160,
             variant: SeedButtonVariant.neutralWeak,
+            fullWidth: true,
           ),
-          hint: '메뉴의 높이를 160px로 제한합니다.',
+        ),
+        _section(
+          'Max Height',
+          Row(
+            children: [
+              _menuButton(
+                '30개 항목 (높이 제한)',
+                [
+                  SeedMenuGroupData(
+                    label: 'Recently Played',
+                    items: [
+                      for (var i = 1; i <= 30; i++)
+                        SeedMenuItemData(label: 'Track $i'),
+                    ],
+                  ),
+                ],
+                maxHeight: 160,
+                variant: SeedButtonVariant.neutralWeak,
+              ),
+              const SizedBox(width: 16),
+              const Expanded(
+                child: Text(
+                  '--seed-menu-max-height로 기본 480px 대신 160px까지만 열립니다 · 화면에 남은 공간이 더 좁으면 그쪽을 따릅니다',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ),
+            ],
+          ),
         ),
         _section(
           'onOpenChange Reason',
@@ -1953,7 +1981,7 @@ class _MenuDemoPageState extends State<_MenuDemoPage> {
                 ),
               ],
             ),
-          ]),
+          ], fullWidth: true),
         ),
         _section(
           'Menu in BottomSheet',

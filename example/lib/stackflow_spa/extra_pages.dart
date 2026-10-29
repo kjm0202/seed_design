@@ -297,8 +297,9 @@ class _AppBarSlotPage extends StatelessWidget {
             SeedTopNavigationIconButton(
               semanticsLabel: '알림',
               icon: const Icon(Icons.notifications_none_rounded),
-              // Official ActivityAppBarSlot has no Bell onClick handler.
-              onPressed: null,
+              // Official ActivityAppBarSlot bells are enabled buttons without
+              // an onClick handler. Preserve focus and enabled styling.
+              onPressed: () {},
             ),
         ],
       ),

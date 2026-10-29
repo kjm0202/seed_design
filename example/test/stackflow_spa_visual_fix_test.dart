@@ -97,6 +97,8 @@ void main() {
     'Form keeps email and address side by side and serializes successful controls',
     (tester) async {
       await open(tester, '/form', width: 390);
+      expect(find.text('Form Components'), findsOneWidget);
+      expect(find.byIcon(Icons.home_outlined), findsNothing);
       final email = find.byWidgetPredicate(
         (w) => w is SeedTextField && w.label == '이메일',
       );
@@ -119,6 +121,27 @@ void main() {
       }
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
+    },
+  );
+
+  testWidgets(
+    'Menu fills its long-list and sheet trigger rows at phone width',
+    (tester) async {
+      await open(tester, '/menu', width: 390);
+      final longList = find.widgetWithText(SeedButton, '30개 항목');
+      final sheetTrigger = find.widgetWithText(SeedButton, '메뉴에서 시트 열기');
+      expect(tester.getSize(longList).width, closeTo(358, 1));
+      await tester.scrollUntilVisible(
+        sheetTrigger,
+        200,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.pumpAndSettle();
+      expect(tester.getSize(sheetTrigger).width, closeTo(358, 1));
+      expect(
+        find.textContaining('--seed-menu-max-height로 기본 480px 대신 160px'),
+        findsOneWidget,
+      );
     },
   );
 
