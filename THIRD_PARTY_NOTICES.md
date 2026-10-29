@@ -37,12 +37,19 @@ converted to Flutter `Path` commands, preserving the original 640 × 640 geometr
 Copyright 2025 주식회사 당근마켓; Apache License 2.0, with the license and
 notice in `third_party/seed-design/`.
 
-## Wanted Sans (tests only)
+### Stackflow example image
 
-The unmodified test font is from Wanted Sans v1.0.3, revision `f4f2f8fd93c19f1399cf5a7d17d05bb4b103ac14`:
+`example/assets/peng.jpeg` is an unmodified copy of
+`examples/stackflow-spa/src/assets/peng.jpeg` from the SEED Design repository.
+The source repository is distributed under Apache License 2.0; its license and
+notice are included at `third_party/seed-design/`.
+
+## Wanted Sans (tests and SPA example)
+
+The unmodified font is from Wanted Sans v1.0.3, revision `f4f2f8fd93c19f1399cf5a7d17d05bb4b103ac14`:
 https://github.com/wanteddev/wanted-sans/tree/f4f2f8fd93c19f1399cf5a7d17d05bb4b103ac14
 
-License: SIL Open Font License 1.1. See `test/assets/fonts/OFL.txt` and `SOURCE.md` in the source checkout. This font is excluded from the published package.
+License: SIL Open Font License 1.1. The SPA example bundles the font and its license at `example/assets/fonts/OFL.txt` so Korean text renders without network font downloads. The library does not require a particular font.
 
 ## Material Icons
 

@@ -23,7 +23,7 @@ dependencies:
   flutter:
     sdk: flutter
   material_ui: ^1.7.0
-  seed_design: ^0.3.0
+  seed_design: ^1.0.0
 ```
 
 ```sh
@@ -122,13 +122,13 @@ SeedField(
 
 API 이름은 각 컴포넌트의 공식 React prop을 기준으로 합니다. Select는 단일·다중 선택 모두 리스트형 `value/defaultValue/onValueChange`를 사용합니다. non-null 값은 부모가 관리하며, 빈 선택도 부모가 관리하려면 `controlled: true`를 지정합니다. default 값은 내부 상태를 한 번 초기화합니다. 텍스트·첨부 입력에는 컨트롤러 또는 값과 초깃값 중 한 방식만 전달합니다.
 
-다른 컴포넌트의 사용법은 [예제 코드](example/lib/tabs)에서 확인할 수 있습니다.
+다른 컴포넌트의 사용법은 [예제 코드](example/lib/stackflow_spa)에서 확인할 수 있습니다.
 
 ## 상태·콘텐츠를 포함한 UI
 
 `SeedDatePicker`는 단일·범위·다중 선택과 월·두 달·주·연속 보기를 지원합니다. 연속 보기에는 `height`, `minHeight`, `maxHeight` 중 하나가 필요합니다. `SeedDatePickerController`로 선택을 바꾸지 않고 날짜 이동·포커스를 제어할 수 있습니다.
 
-`SeedSelect(multiple: true)`, `SeedSlider.range`, `SeedTextField`, `SeedFieldButton`, `SeedAccordion`, `SeedTabsView`, `SeedChipTabsView`로 상태와 콘텐츠를 함께 구성할 수 있습니다. 오버레이 trigger는 개폐 상태·배치·포커스·닫기 정책을 제공합니다. 예제는 기존 입력·탐색·피드백·오버레이 탭에 통합되어 있습니다.
+`SeedSelect(multiple: true)`, `SeedSlider.range`, `SeedTextField`, `SeedFieldButton`, `SeedAccordion`, `SeedTabsView`, `SeedChipTabsView`로 상태와 콘텐츠를 함께 구성할 수 있습니다. 오버레이 trigger는 개폐 상태·배치·포커스·닫기 정책을 제공합니다. Stackflow SPA 예제에서 컴포넌트별 화면과 게시글 탐색 데모를 확인할 수 있습니다.
 
 첨부는 UI만 제공합니다. `SeedAttachmentDisplayField`/`SeedAttachmentController`에 외부 항목과 진행률·상태를 전달하세요. 실제 파일 선택·OS drop·파일 검사·업로드는 앱이 담당하며 이 패키지는 수행하지 않습니다.
 
@@ -136,6 +136,8 @@ API 이름은 각 컴포넌트의 공식 React prop을 기준으로 합니다. S
 
 
 ## 예제 실행
+
+공식 SEED Design의 Stackflow SPA를 Flutter로 옮긴 예제입니다. 컴포넌트별 화면과 게시글 목록·필터·상세 데모를 제공합니다.
 
 ```sh
 cd example
@@ -145,13 +147,15 @@ flutter run
 
 ## 테스트
 
+소스 저장소를 내려받은 뒤 테스트를 실행합니다.
+
 ```sh
 flutter analyze
 flutter test
 cd example
 flutter test
 # 실행 중인 iOS/Android 시뮬레이터에서 검증:
-flutter test integration_test/continuous_calendar_test.dart -d <device-id>
+flutter test integration_test/stackflow_spa_navigation_test.dart -d <device-id>
 ```
 
 ## 라이선스

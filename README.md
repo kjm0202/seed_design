@@ -23,7 +23,7 @@ dependencies:
   flutter:
     sdk: flutter
   material_ui: ^1.7.0
-  seed_design: ^0.3.0
+  seed_design: ^1.0.0
 ```
 
 ```sh
@@ -143,13 +143,13 @@ Give icon-only buttons a `semanticsLabel` so screen readers can describe their a
 
 Use the official React prop names for each component. Select uses list-valued `value/defaultValue/onValueChange` for single and multiple selection. Non-null values are parent-controlled; use `controlled: true` to control an empty selection. Default values initialize local state once. Supply either a text/attachment controller or values and defaults.
 
-See the [example code](example/lib/tabs) for other components.
+See the [example code](example/lib/stackflow_spa) for other components.
 
 ## Stateful UI and React feature counterparts
 
 Use `SeedDatePicker` for single/range/multiple selection and month/two-month/week/continuous layouts; continuous calendars require `height`, `minHeight` or `maxHeight`. `SeedDatePickerController` navigates and focuses dates without selecting them.
 
-`SeedSelect(multiple: true)`, `SeedSlider.range`, `SeedTextField`, `SeedFieldButton`, `SeedAccordion`, `SeedTabsView` and `SeedChipTabsView` provide their corresponding state and content behavior. Overlay trigger widgets provide controlled opening, placement, focus and dismissal policies. The catalog integrates these examples into its existing input, navigation, feedback and overlay tabs.
+`SeedSelect(multiple: true)`, `SeedSlider.range`, `SeedTextField`, `SeedFieldButton`, `SeedAccordion`, `SeedTabsView` and `SeedChipTabsView` provide their corresponding state and content behavior. Overlay trigger widgets provide controlled opening, placement, focus and dismissal policies. The Stackflow SPA example groups component demos into activity routes and includes an article browsing demo.
 
 Attachments are UI-only. Supply entries and update progress/status through `SeedAttachmentDisplayField` or `SeedAttachmentController`; handle actual selection and uploading in your app. This package does not select, receive, validate or upload files.
 
@@ -157,6 +157,8 @@ Attachments are UI-only. Supply entries and update progress/status through `Seed
 
 
 ## Run the example
+
+The example runs the Flutter port of SEED Design’s Stackflow SPA, with a component activity catalog and article/filter/detail demo.
 
 ```sh
 cd example
@@ -166,13 +168,15 @@ flutter run
 
 ## Tests
 
+Run the test suites from a source checkout:
+
 ```sh
 flutter analyze
 flutter test
 cd example
 flutter test
 # Run against a booted iOS Simulator or Android Emulator:
-flutter test integration_test/continuous_calendar_test.dart -d <device-id>
+flutter test integration_test/stackflow_spa_navigation_test.dart -d <device-id>
 ```
 
 ## License
