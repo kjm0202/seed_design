@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart' as flutter_material;
 import 'package:flutter/foundation.dart' show ValueListenable;
+import 'package:flutter/rendering.dart' show RenderAbstractViewport;
 import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
@@ -14,12 +15,23 @@ import 'spa_paths.dart';
 import 'spa_types.dart';
 import 'spa_routes.dart';
 import 'spa_material_theme.dart';
+import 'spa_history.dart';
 import 'demo_pages.dart';
+
+// The React SPA styles body with bg.layerDefault (global.css). Restrict this
+// fallback to the example; the library's public scaffold default is unchanged.
+ThemeData _spaTheme(SeedThemeData seed) => seed.toThemeData().copyWith(
+  scaffoldBackgroundColor: seed.colorScheme.bg.layerDefault,
+);
 
 /// Standalone example of the React Stackflow SPA, using Flutter's Navigator
 /// to support named routes, push/replace/pop and the native back gesture.
 class StackflowSpaApp extends StatefulWidget {
-  const StackflowSpaApp({super.key});
+  const StackflowSpaApp({super.key, this.onBrowserBack});
+
+  /// Test hook for the SPA browser-back command; production web uses the
+  /// conditional history bridge and native Flutter uses route replacement.
+  final VoidCallback? onBrowserBack;
 
   @override
   State<StackflowSpaApp> createState() => _StackflowSpaAppState();
@@ -27,6 +39,29 @@ class StackflowSpaApp extends StatefulWidget {
 
 class _StackflowSpaAppState extends State<StackflowSpaApp> {
   final ValueNotifier<ThemeMode> _themeMode = ValueNotifier(ThemeMode.system);
+  SeedSnackbarController _snackbarController = SeedSnackbarController(
+    strategy: SeedSnackbarStrategy.immediate,
+  );
+  late final _history = SpaHistoryDelegate(
+    onGenerateRoute: _generateRoute,
+    onBrowserBack: widget.onBrowserBack,
+    onExternalUrlNavigation: _resetExternalSnackbar,
+  );
+
+  void _resetExternalSnackbar() {
+    if (!mounted) return;
+    final oldController = _snackbarController;
+    // Replacing just the controller leaves the actual Navigator/Activity
+    // tree mounted while discarding an old paused/hovered toast and queue.
+    setState(() {
+      _snackbarController = SeedSnackbarController(
+        strategy: SeedSnackbarStrategy.immediate,
+      );
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      oldController.dispose();
+    });
+  }
 
   void _setThemeMode(ThemeMode mode) {
     setState(() => _themeMode.value = mode);
@@ -34,18 +69,21 @@ class _StackflowSpaAppState extends State<StackflowSpaApp> {
 
   @override
   void dispose() {
+    _history.dispose();
+    _snackbarController.dispose();
     _themeMode.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MaterialApp.router(
       title: 'SEED Design Stackflow SPA',
-      navigatorObservers: [SpaGestureObserver()],
+      routerDelegate: _history,
+      routeInformationParser: const SpaHistoryParser(),
       debugShowCheckedModeBanner: false,
-      theme: SeedThemeData.light(fontFamily: 'WantedSans').toThemeData(),
-      darkTheme: SeedThemeData.dark(fontFamily: 'WantedSans').toThemeData(),
+      theme: _spaTheme(SeedThemeData.light(fontFamily: 'WantedSans')),
+      darkTheme: _spaTheme(SeedThemeData.dark(fontFamily: 'WantedSans')),
       themeMode: _themeMode.value,
       builder: (context, child) => flutter_material.Localizations.override(
         context: context,
@@ -57,82 +95,107 @@ class _StackflowSpaAppState extends State<StackflowSpaApp> {
           child: flutter_material.Material(
             type: flutter_material.MaterialType.transparency,
             child: SeedSnackbarProvider(
+              controller: _snackbarController,
               strategy: SeedSnackbarStrategy.immediate,
               child: child ?? const SizedBox.shrink(),
             ),
           ),
         ),
       ),
-      onGenerateRoute: (settings) {
-        final requested = Uri.tryParse(settings.name ?? '/')?.path ?? '/';
-        final activity = spaPathActivities[requested] ?? 'ActivityNotFound';
-        final page = _SpaActivityPage(
-          activity: activity,
-          arguments: settings.arguments,
-          themeMode: _themeMode,
-          onThemeModeChanged: _setThemeMode,
-        );
-        final requestedStyle = settings.arguments is Map
-            ? (settings.arguments as Map)['transitionStyle']
-            : null;
-        final platform = Theme.of(context).platform;
-        if (requestedStyle == 'slideFromRightIOS') {
-          return SpaCupertinoRoute<Object?>(
-            settings: settings,
-            builder: (_) => page,
-          );
-        }
-        if (requestedStyle is String) {
-          return PageRouteBuilder<Object?>(
-            settings: settings,
-            transitionDuration: Duration(
-              milliseconds: platform == TargetPlatform.iOS ? 350 : 300,
-            ),
-            reverseTransitionDuration: Duration(
-              milliseconds: platform == TargetPlatform.iOS ? 350 : 300,
-            ),
-            pageBuilder: (_, _, _) => page,
-            transitionsBuilder: (_, animation, secondaryAnimation, child) {
-              final curved = CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeOutCubic,
-              );
-              return switch (requestedStyle) {
-                'fadeIn' => FadeTransition(opacity: curved, child: child),
-                'fadeFromBottomAndroid' => FadeTransition(
-                  opacity: curved,
-                  child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0, 0.1),
-                      end: Offset.zero,
-                    ).animate(curved),
-                    child: child,
-                  ),
-                ),
-                _ => SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(1, 0),
-                    end: Offset.zero,
-                  ).animate(curved),
-                  child: child,
-                ),
-              };
-            },
-          );
-        }
-        if (platform == TargetPlatform.iOS ||
-            platform == TargetPlatform.macOS) {
-          return SpaCupertinoRoute<Object?>(
-            settings: settings,
-            builder: (_) => page,
-          );
-        }
-        return MaterialPageRoute<Object?>(
-          settings: settings,
-          builder: (_) => page,
-        );
-      },
     );
+  }
+
+  Route<dynamic> _generateRoute(RouteSettings settings) {
+    final routeUri = Uri.tryParse(settings.name ?? '/');
+    final rawPath = routeUri?.path ?? '/';
+    final requested = rawPath.length > 1 && rawPath.endsWith('/')
+        ? rawPath.substring(0, rawPath.length - 1)
+        : rawPath;
+    final activity = spaPathActivities[requested] ?? 'ActivityNotFound';
+    final Object? arguments = switch (activity) {
+      'ActivityDemoArticleDetail' when settings.arguments == null =>
+        int.tryParse(routeUri?.queryParameters['articleId'] ?? ''),
+      'ActivityTransitionStyle' when settings.arguments == null =>
+        routeUri?.queryParameters['transitionStyle'] != null
+            ? <String, String>{
+                'transitionStyle':
+                    routeUri!.queryParameters['transitionStyle']!,
+              }
+            : null,
+      _ => settings.arguments,
+    };
+    final page = _SpaActivityPage(
+      activity: activity,
+      arguments: arguments,
+      themeMode: _themeMode,
+      onThemeModeChanged: _setThemeMode,
+    );
+    if (spaModalActivities.contains(activity)) {
+      // The activity only hosts an independently animated sheet/dialog. An
+      // opaque page beneath that modal would hide every retained parent layer.
+      return PageRouteBuilder<Object?>(
+        settings: settings,
+        opaque: false,
+        transitionDuration: Duration.zero,
+        reverseTransitionDuration: Duration.zero,
+        pageBuilder: (_, _, _) => page,
+      );
+    }
+    final requestedStyle = arguments is Map
+        ? arguments['transitionStyle']
+        : null;
+    final platform = Theme.of(context).platform;
+    if (requestedStyle == 'slideFromRightIOS') {
+      return SpaCupertinoRoute<Object?>(
+        settings: settings,
+        builder: (_) => page,
+      );
+    }
+    if (requestedStyle is String) {
+      return PageRouteBuilder<Object?>(
+        settings: settings,
+        transitionDuration: Duration(
+          milliseconds: platform == TargetPlatform.iOS ? 350 : 300,
+        ),
+        reverseTransitionDuration: Duration(
+          milliseconds: platform == TargetPlatform.iOS ? 350 : 300,
+        ),
+        pageBuilder: (_, _, _) => page,
+        transitionsBuilder: (_, animation, secondaryAnimation, child) {
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          );
+          return switch (requestedStyle) {
+            'fadeIn' => FadeTransition(opacity: curved, child: child),
+            'fadeFromBottomAndroid' => FadeTransition(
+              opacity: curved,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, 0.1),
+                  end: Offset.zero,
+                ).animate(curved),
+                child: child,
+              ),
+            ),
+            _ => SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(1, 0),
+                end: Offset.zero,
+              ).animate(curved),
+              child: child,
+            ),
+          };
+        },
+      );
+    }
+    if (platform == TargetPlatform.iOS || platform == TargetPlatform.macOS) {
+      return SpaCupertinoRoute<Object?>(
+        settings: settings,
+        builder: (_) => page,
+      );
+    }
+    return MaterialPageRoute<Object?>(settings: settings, builder: (_) => page);
   }
 }
 
@@ -154,23 +217,11 @@ class _SpaActivityPage extends StatelessWidget {
     void navigate(String target, {Object? arguments}) {
       final route = spaActivityPaths[target];
       if (route == null) return;
-      if (target == 'ActivitySideNavigation') {
-        Navigator.of(context).pushReplacementNamed(route, arguments: arguments);
-      } else {
-        Navigator.of(context).pushNamed(route, arguments: arguments);
-      }
+      Navigator.of(context).pushNamed(route, arguments: arguments);
     }
 
     void goHome() {
-      final navigator = Navigator.of(context);
-      String? rootName;
-      navigator.popUntil((route) {
-        if (route.isFirst) rootName = route.settings.name;
-        return route.isFirst;
-      });
-      if (rootName != '/') {
-        navigator.pushReplacementNamed('/');
-      }
+      Navigator.of(context).pushNamed('/');
     }
 
     void goBack() => Navigator.of(context).maybePop();
@@ -193,8 +244,29 @@ class _SpaActivityPage extends StatelessWidget {
 
     if (activity == 'ActivityDemoArticleDetail') {
       return SpaArticleDetailPage(
-        articleId: arguments is int ? arguments as int : 1,
+        articleId: arguments is int ? arguments as int : null,
         goBack: goBack,
+      );
+    }
+
+    if (activity == 'ActivityNotFound') {
+      return Scaffold(
+        backgroundColor: context.seedColor.bg.layerDefault,
+        appBar: SeedTopNavigation(
+          titleText: 'Error',
+          centerTitle: false,
+          actions: [
+            SeedTopNavigationIconButton(
+              icon: const Icon(Icons.home_outlined),
+              semanticsLabel: 'Home',
+              onPressed: goHome,
+            ),
+          ],
+        ),
+        body: const Padding(
+          padding: EdgeInsets.all(16),
+          child: Text('404 Not Found'),
+        ),
       );
     }
 
@@ -251,7 +323,6 @@ class _SpaActivityPage extends StatelessWidget {
     }
 
     return Scaffold(
-      backgroundColor: context.seedColor.bg.layerDefault,
       appBar: SeedTopNavigation(
         titleText: activity == 'ActivityDetail' && arguments is Map
             ? ((arguments as Map)['title'] as String? ?? 'Detail')
@@ -291,8 +362,8 @@ class _SpaActivityPage extends StatelessWidget {
             body ??
             SeedResultSection(
               asset: const Icon(Icons.search_off_rounded, size: 44),
-              title: '페이지를 찾지 못했습니다.',
-              description: '주소를 확인하거나 홈으로 돌아가 주세요.',
+              title: '구현되지 않은 예제입니다.',
+              description: '해당 Activity의 Flutter 화면이 아직 구현되지 않았습니다.',
               primaryActionLabel: '홈으로',
               onPrimaryAction: goHome,
             ),
@@ -320,6 +391,11 @@ class _SpaHomePage extends StatefulWidget {
 
 class _SpaHomePageState extends State<_SpaHomePage> {
   final ScrollController _scroll = ScrollController();
+  final ScrollController _chipScroll = ScrollController();
+  final List<GlobalKey> _chipKeys = List.generate(
+    spaSections.length,
+    (_) => GlobalKey(),
+  );
   final List<GlobalKey> _sectionKeys = List.generate(
     spaSections.length,
     (_) => GlobalKey(),
@@ -337,13 +413,35 @@ class _SpaHomePageState extends State<_SpaHomePage> {
   @override
   void dispose() {
     _scroll.dispose();
+    _chipScroll.dispose();
     super.dispose();
+  }
+
+  void _revealChip(int index) {
+    if (!_chipScroll.hasClients) return;
+    final render = _chipKeys[index].currentContext?.findRenderObject();
+    if (render == null || !render.attached) return;
+    final viewport = RenderAbstractViewport.of(render);
+    final left = viewport.getOffsetToReveal(render, 0).offset;
+    final right = viewport.getOffsetToReveal(render, 1).offset;
+    final position = _chipScroll.position;
+    final target = position.pixels < right
+        ? right
+        : position.pixels > left
+        ? left
+        : position.pixels;
+    if ((target - position.pixels).abs() < 1) return;
+    _chipScroll.animateTo(
+      target.clamp(position.minScrollExtent, position.maxScrollExtent),
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeInOut,
+    );
   }
 
   void _updateSelectedSection() {
     if (_isJumping) return;
     var lastVisible = 0;
-    final mobile = MediaQuery.sizeOf(context).width < 600;
+    final mobile = MediaQuery.sizeOf(context).width < 768;
     final showPinned = mobile && _scroll.offset > 80;
     for (var index = 0; index < _sectionKeys.length; index++) {
       final render = _sectionKeys[index].currentContext?.findRenderObject();
@@ -360,6 +458,9 @@ class _SpaHomePageState extends State<_SpaHomePage> {
         _selectedSection = lastVisible;
         _showPinnedSectionTitle = showPinned;
       });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _revealChip(lastVisible);
+      });
     }
   }
 
@@ -370,8 +471,9 @@ class _SpaHomePageState extends State<_SpaHomePage> {
       _isJumping = true;
       _selectedSection = index;
     });
+    _revealChip(index);
     final top = render.localToGlobal(Offset.zero).dy;
-    final mobile = MediaQuery.sizeOf(context).width < 600;
+    final mobile = MediaQuery.sizeOf(context).width < 768;
     final offset =
         (_scroll.offset +
                 top -
@@ -465,81 +567,90 @@ class _SpaHomePageState extends State<_SpaHomePage> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
-          child: Row(
-            children: [
-              Icon(section.icon, size: 20, color: colors.fg.neutralSubtle),
-              const SizedBox(width: 6),
-              Text(section.title, style: context.seedTypography.t5Medium),
-            ],
+        Opacity(
+          // Once the mobile header is pinned, showing the original title
+          // underneath it creates the two-title artifact absent in React.
+          opacity:
+              _showPinnedSectionTitle &&
+                  MediaQuery.sizeOf(context).width < 768 &&
+                  index == _selectedSection
+              ? 0
+              : 1,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
+            child: Row(
+              children: [
+                Icon(section.icon, size: 20, color: colors.fg.neutralSubtle),
+                const SizedBox(width: 6),
+                Text(section.title, style: context.seedTypography.t5Medium),
+              ],
+            ),
           ),
         ),
         ClipRRect(
           borderRadius: BorderRadius.circular(14),
           child: ColoredBox(
             color: colors.bg.layerDefault,
-            child: Column(
-              children: [
-                for (var i = 0; i < section.entries.length; i++)
-                  if (section.entries[i].activity == 'HomeListMenu')
-                    MenuAnchor(
-                      menuChildren: [
-                        SeedMenu(
-                          groups: [
-                            SeedMenuGroupData(
-                              items: [
-                                SeedMenuItemData(
-                                  label: '추가',
-                                  prefixIcon: const Icon(Icons.add),
-                                  onTap: () => showSeedSnackbar(
-                                    context: context,
-                                    message: '추가',
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Column(
+                children: [
+                  for (var i = 0; i < section.entries.length; i++)
+                    if (section.entries[i].activity == 'HomeListMenu')
+                      MenuAnchor(
+                        menuChildren: [
+                          SeedMenu(
+                            groups: [
+                              SeedMenuGroupData(
+                                items: [
+                                  SeedMenuItemData(
+                                    label: '추가',
+                                    prefixIcon: const Icon(Icons.add),
+                                    onTap: () {},
                                   ),
-                                ),
-                                SeedMenuItemData(
-                                  label: '수정',
-                                  prefixIcon: const Icon(Icons.edit),
-                                  onTap: () => showSeedSnackbar(
-                                    context: context,
-                                    message: '수정',
+                                  SeedMenuItemData(
+                                    label: '수정',
+                                    prefixIcon: const Icon(Icons.edit),
+                                    onTap: () {},
                                   ),
-                                ),
-                                SeedMenuItemData(
-                                  label: '삭제',
-                                  prefixIcon: const Icon(Icons.delete),
-                                  isDestructive: true,
-                                  onTap: () => showSeedSnackbar(
-                                    context: context,
-                                    message: '삭제',
+                                  SeedMenuItemData(
+                                    label: '삭제',
+                                    prefixIcon: const Icon(Icons.delete),
+                                    isDestructive: true,
+                                    onTap: () {},
                                   ),
-                                ),
-                              ],
-                            ),
-                          ],
+                                ],
+                              ),
+                            ],
+                          ),
+                        ],
+                        builder: (context, controller, _) => SeedListItem(
+                          titleText: section.entries[i].title,
+                          showDivider: false,
+                          onTap: () => controller.isOpen
+                              ? controller.close()
+                              : controller.open(),
                         ),
-                      ],
-                      builder: (context, controller, _) => SeedListItem(
-                        titleText: section.entries[i].title,
+                      )
+                    else
+                      SeedListItem(
+                        titleText: section.entries[i].activity == 'ActivityHome'
+                            ? '홈 다시 push (깊이: ${widget.depth})'
+                            : section.entries[i].title,
+                        detailText:
+                            section.entries[i].activity.startsWith(
+                                  'Snackbar',
+                                ) ||
+                                section.entries[i].activity == 'ActivityHome' ||
+                                section.entries[i].activity ==
+                                    'HomeAlertDialogStep'
+                            ? null
+                            : section.entries[i].activity,
                         showDivider: false,
-                        onTap: () => controller.isOpen
-                            ? controller.close()
-                            : controller.open(),
+                        onTap: () => _handleEntry(section.entries[i]),
                       ),
-                    )
-                  else
-                    SeedListItem(
-                      titleText: section.entries[i].activity == 'ActivityHome'
-                          ? '홈 다시 push (깊이: ${widget.depth})'
-                          : section.entries[i].title,
-                      detailText:
-                          section.entries[i].activity.startsWith('Snackbar')
-                          ? null
-                          : section.entries[i].activity,
-                      showDivider: false,
-                      onTap: () => _handleEntry(section.entries[i]),
-                    ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -551,11 +662,11 @@ class _SpaHomePageState extends State<_SpaHomePage> {
   Widget build(BuildContext context) {
     final colors = context.seedColor;
     final width = MediaQuery.sizeOf(context).width;
-    final columns = width >= 1280
+    final columns = width >= 1440
         ? 4
-        : width >= 960
+        : width >= 1280
         ? 3
-        : width >= 600
+        : width >= 768
         ? 2
         : 1;
     final available = width - 32 - (columns - 1) * 20;
@@ -623,8 +734,7 @@ class _SpaHomePageState extends State<_SpaHomePage> {
           SeedTopNavigationIconButton(
             icon: const Icon(Icons.notifications_none_rounded),
             semanticsLabel: '알림',
-            onPressed: () =>
-                showSeedSnackbar(context: context, message: '새로운 알림이 없습니다.'),
+            onPressed: () {},
           ),
         ],
       ),
@@ -642,6 +752,8 @@ class _SpaHomePageState extends State<_SpaHomePage> {
                     background: colors.bg.layerBasement,
                     index: _selectedSection,
                     onSelect: _jumpTo,
+                    scrollController: _chipScroll,
+                    chipKeys: _chipKeys,
                   ),
                 ),
                 SliverPadding(
@@ -703,10 +815,14 @@ class _SpaChipBarDelegate extends SliverPersistentHeaderDelegate {
     required this.background,
     required this.index,
     required this.onSelect,
+    required this.scrollController,
+    required this.chipKeys,
   });
   final Color background;
   final int index;
   final ValueChanged<int> onSelect;
+  final ScrollController scrollController;
+  final List<GlobalKey> chipKeys;
 
   @override
   double get minExtent => 52;
@@ -721,15 +837,22 @@ class _SpaChipBarDelegate extends SliverPersistentHeaderDelegate {
   ) {
     return ColoredBox(
       color: background,
-      child: ListView.separated(
+      child: SingleChildScrollView(
+        controller: scrollController,
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        itemCount: spaSections.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 8),
-        itemBuilder: (context, i) => SeedChip(
-          label: spaSections[i].title,
-          checked: index == i,
-          onCheckedChange: (_) => onSelect(i),
+        child: Row(
+          children: [
+            for (var i = 0; i < spaSections.length; i++) ...[
+              if (i > 0) const SizedBox(width: 8),
+              SeedChip(
+                key: chipKeys[i],
+                label: spaSections[i].title,
+                checked: index == i,
+                onCheckedChange: (_) => onSelect(i),
+              ),
+            ],
+          ],
         ),
       ),
     );
@@ -739,5 +862,7 @@ class _SpaChipBarDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(covariant _SpaChipBarDelegate old) =>
       old.background != background ||
       old.index != index ||
-      old.onSelect != onSelect;
+      old.onSelect != onSelect ||
+      old.scrollController != scrollController ||
+      old.chipKeys != chipKeys;
 }

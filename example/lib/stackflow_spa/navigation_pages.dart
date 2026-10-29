@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show SemanticsRole;
 
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -6,6 +7,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:seed_design/seed_design.dart';
 
 import 'spa_types.dart';
+import 'spa_history.dart';
+import 'list_item_native_alert_stub.dart'
+    if (dart.library.js_interop) 'list_item_native_alert_web.dart'
+    as browser_alert;
+
+/// Allows a widget test to observe the browser alert without opening a browser.
+/// Production web calls window.alert directly; native Flutter keeps a modal.
+@visibleForTesting
+void Function(String)? debugListItemNativeAlert;
 
 /// The navigation, tab, and list examples from stackflow-spa.
 Widget? buildNavigationPage(
@@ -73,6 +83,10 @@ class _NavigationPageState extends State<_NavigationPage> {
   final PageController _swipePages = PageController();
   String _radioSelection = 'prefix-title-unchecked-suffix-none';
   final Map<String, bool> _checks = {};
+  bool _feedDialogShowing = false;
+  bool _feedDialogClosedLocally = false;
+  bool _feedDialogPushPending = false;
+  Route<dynamic>? _feedDialogRoute;
 
   @override
   void initState() {
@@ -105,6 +119,14 @@ class _NavigationPageState extends State<_NavigationPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.activity == 'ActivitySwipeableTabs') {
+      final history = SpaHistoryDelegate.maybeOf(context);
+      if (history != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _reconcileFeedDialog(history);
+        });
+      }
+    }
     switch (widget.activity) {
       case 'ActivityTabs':
         return _tabs();
@@ -135,7 +157,6 @@ class _NavigationPageState extends State<_NavigationPage> {
       'Tab 7123123123123',
     ];
     return CustomScrollView(
-      key: ValueKey('tab-scroll-$_simpleTab'),
       slivers: [
         const SliverToBoxAdapter(
           child: Padding(
@@ -236,8 +257,12 @@ class _NavigationPageState extends State<_NavigationPage> {
               duration: const Duration(milliseconds: 250),
               alignment: Alignment.topCenter,
               child: _swipeTab == 0
-                  ? _panel('Tab 1 content', height: 1000)
-                  : _panel('Tab 2 content', height: 92),
+                  ? _panel(
+                      'Tab 1 content',
+                      height: 1000,
+                      padding: const EdgeInsets.all(SeedDimension.x2),
+                    )
+                  : _animatedCompactPanel(),
             ),
           ],
         ),
@@ -267,28 +292,31 @@ class _NavigationPageState extends State<_NavigationPage> {
         color: context.seedColor.bg.informativeSolid,
         foreground: context.seedColor.fg.informativeContrast,
       ),
-      const _DelayedPanel(
-        key: ValueKey('async-2'),
-        delay: Duration(seconds: 1),
-        height: 500,
+      _DelayedPanel(
+        key: const ValueKey('async-2'),
+        delay: const Duration(seconds: 1),
+        // React Box height=500px with p=x4 adds 16px at both edges.
+        // Keep chip-tab sizing independent from this autoHeight example.
+        height: chip ? 500 : 532,
         label: 'Tab 2: Async loaded (500px, 1s delay)',
       ),
       _panel(
         'Tab 3: Immediate (200px)',
-        height: 200,
+        // React selected Tab3 has a 232px outer rect: 200px + p=x4 (32px).
+        height: chip ? 200 : 232,
         color: context.seedColor.bg.positiveSolid,
         foreground: context.seedColor.fg.positiveContrast,
       ),
-      const _DelayedPanel(
-        key: ValueKey('lazy-4'),
-        delay: Duration(milliseconds: 1500),
-        height: 400,
+      _DelayedPanel(
+        key: const ValueKey('lazy-4'),
+        delay: const Duration(milliseconds: 1500),
+        height: chip ? 400 : 432,
         label: 'Lazy loaded content (400px tall, 1500ms delay)',
         loadingLabel: 'Suspense loading...',
       ),
       _panel(
         'Tab 5: Immediate (150px)',
-        height: 150,
+        height: chip ? 150 : 182,
         color: context.seedColor.bg.warningSolid,
         foreground: context.seedColor.fg.warningContrast,
       ),
@@ -305,6 +333,7 @@ class _NavigationPageState extends State<_NavigationPage> {
       defaultValue: '1',
       variant: chip ? SeedTabsVariant.chipSolid : SeedTabsVariant.line,
       showScrollFog: chip,
+      chipListPadding: chip ? const EdgeInsets.symmetric(horizontal: 20) : null,
       fill: !chip,
       carousel: true,
       swipeable: true,
@@ -334,12 +363,13 @@ class _NavigationPageState extends State<_NavigationPage> {
   Widget _panel(
     String label, {
     required double height,
+    EdgeInsetsGeometry padding = const EdgeInsets.all(12),
     Color? color,
     Color? foreground,
   }) => Container(
     height: height,
     alignment: Alignment.topLeft,
-    padding: const EdgeInsets.all(12),
+    padding: padding,
     decoration: BoxDecoration(
       color: color ?? Theme.of(context).colorScheme.surface,
       border: Border.all(color: Theme.of(context).dividerColor),
@@ -347,47 +377,37 @@ class _NavigationPageState extends State<_NavigationPage> {
     child: Text(label, style: TextStyle(color: foreground)),
   );
 
+  /// ActivityAnimatedTabs.tsx renders its short panel with px="x2" and
+  /// py="x10" instead of an arbitrary fixed 92px height. Retain intrinsic
+  /// typography height so the carousel resizes with text scaling.
+  Widget _animatedCompactPanel() => Container(
+    padding: const EdgeInsets.symmetric(
+      horizontal: SeedDimension.x2,
+      vertical: SeedDimension.x10,
+    ),
+    decoration: BoxDecoration(
+      border: Border.all(color: context.seedColor.stroke.neutralMuted),
+    ),
+    child: Text('Tab 2 content', style: context.seedTypography.t5Regular),
+  );
+
   Widget _feedList({required bool withDialog}) {
     final feed = ListView(
       children: [
         if (withDialog) ...[
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 45,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: [
-                const SizedBox(width: 16),
-                SizedBox(
-                  width: 1000,
-                  child: Text(
-                    'Scrolling Area',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ),
-              ],
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SizedBox(
+              width: 1000,
+              child: Text(
+                'Scrolling Area',
+                style: context.seedTypography.t5Regular,
+              ),
             ),
           ),
-          SeedListItem(
-            titleText: 'AlertDialog (step)',
-            onTap: _showFeedDialog,
-            suffix: const Icon(Icons.chevron_right),
-          ),
+          SeedListItem(titleText: 'AlertDialog (step)', onTap: _showFeedDialog),
         ],
-        for (var i = 0; i < 10; i++)
-          SeedListItem(
-            titleText: '독서 습관 만들기',
-            detail: const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('하루 10페이지부터 시작하자. 취침 전 20분 독서는 수면의 질도 높여주는 일석이조 습관이다.'),
-                SizedBox(height: 8),
-                Text('라이프스타일 ⸱ 서초2동'),
-              ],
-            ),
-            onTap: () {},
-            showDivider: false,
-          ),
+        for (var i = 0; i < 10; i++) _feedRow(),
       ],
     );
     return withDialog
@@ -398,34 +418,139 @@ class _NavigationPageState extends State<_NavigationPage> {
         : feed;
   }
 
-  void _showFeedDialog() {
-    showSeedDialog<void>(
-      context: context,
-      child: SeedAlertDialog(
-        title: '제목',
-        description: 'Lorem ipsum dolor sit amet consectetur adipisicing elit.',
-        footer: Builder(
-          builder: (dialogContext) => Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              SeedButton(
-                label: '확인',
-                onPressed: () => Navigator.pop(dialogContext),
+  /// ActivitySwipeableTabs.tsx:143-169 renders each Feed as a button with
+  /// 4px block padding, 16px horizontal gutter, and separate typography/gaps.
+  /// A generic ListItem adds 12px vertical padding and different text tokens.
+  Widget _feedRow() {
+    final colors = context.seedColor;
+    final typography = context.seedTypography;
+    return SeedPressable(
+      onTap: () {},
+      enableScale: false,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: SeedSpacingX.globalGutter,
+          vertical: SeedDimension.x1,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '독서 습관 만들기',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: typography.t5Medium.copyWith(color: colors.fg.neutral),
+            ),
+            const SizedBox(height: SeedDimension.x1),
+            Text(
+              '하루 10페이지부터 시작하자. 취침 전 20분 독서는 수면의 질도 높여주는 일석이조 습관이다.',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: typography.t4Regular.copyWith(
+                color: colors.fg.neutralMuted,
               ),
-              const SizedBox(height: 8),
-              SeedButton(
-                label: 'ActivityChipButton',
-                variant: SeedButtonVariant.neutralSolid,
-                onPressed: () {
-                  Navigator.pop(dialogContext);
-                  widget.navigate('ActivityChipButton');
-                },
+            ),
+            const SizedBox(height: SeedDimension.x2),
+            Text(
+              '라이프스타일 ⸱ 서초2동',
+              style: typography.t4Regular.copyWith(
+                color: colors.fg.neutralSubtle,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  void _showFeedDialog() {
+    final history = SpaHistoryDelegate.maybeOf(context);
+    if (history == null) {
+      _openFeedDialog(null);
+      return;
+    }
+    if (_feedDialogClosedLocally && history.isStepOpen('alert-dialog')) {
+      // React's Step keeps the query parameter after setOpen(false). The
+      // trigger can reopen that same Step without another history entry.
+      _feedDialogClosedLocally = false;
+      if (!_feedDialogShowing) _openFeedDialog(history);
+    } else {
+      history.pushStep('alert-dialog');
+    }
+  }
+
+  void _removeFeedDialog() {
+    final route = _feedDialogRoute;
+    if (route != null && route.isActive) {
+      Navigator.of(context, rootNavigator: true).removeRoute(route);
+    }
+  }
+
+  void _reconcileFeedDialog(SpaHistoryDelegate history) {
+    final expectedOpen = history.isStepOpen('alert-dialog');
+    if (!expectedOpen) _feedDialogClosedLocally = false;
+    if (expectedOpen && !_feedDialogShowing && !_feedDialogClosedLocally) {
+      _openFeedDialog(history);
+    } else if (!expectedOpen && _feedDialogShowing) {
+      _removeFeedDialog();
+    }
+  }
+
+  Future<void> _openFeedDialog(SpaHistoryDelegate? history) async {
+    if (_feedDialogShowing) return;
+    _feedDialogShowing = true;
+    try {
+      await showSeedDialog<void>(
+        context: context,
+        child: Builder(
+          builder: (dialogContext) {
+            _feedDialogRoute = ModalRoute.of(dialogContext);
+            return SeedAlertDialog(
+              title: '제목',
+              description:
+                  'Lorem ipsum dolor sit amet consectetur adipisicing elit.',
+              footer: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SeedButton(
+                    label: '확인',
+                    onPressed: () {
+                      _feedDialogClosedLocally = true;
+                      _removeFeedDialog();
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  SeedButton(
+                    label: 'ActivityChipButton',
+                    variant: SeedButtonVariant.neutralSolid,
+                    onPressed: () {
+                      _feedDialogPushPending = true;
+                      _removeFeedDialog();
+                    },
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      );
+    } finally {
+      _feedDialogShowing = false;
+      _feedDialogRoute = null;
+      if (mounted) {
+        if (_feedDialogPushPending) {
+          _feedDialogPushPending = false;
+          // Keep the source Step's history entry. Back from the child must
+          // restore ?alert-dialog=open and its dialog, as React does.
+          widget.navigate('ActivityChipButton');
+        } else if (history != null &&
+            !_feedDialogClosedLocally &&
+            history.isStepOpen('alert-dialog')) {
+          history.popStep('alert-dialog');
+        }
+      }
+    }
   }
 
   Widget _pagination() => ListView(
@@ -512,6 +637,24 @@ class _NavigationPageState extends State<_NavigationPage> {
           ),
         )
         .toList(),
+  );
+
+  /// Official SPA uses fixed two/three columns even in narrow side insets.
+  /// Give their contents a scrollable minimum width so Flutter can render the
+  /// full labels and marks without RenderFlex overflow on small viewports.
+  Widget _scrollableSelectGroup({
+    required int columns,
+    required Widget child,
+  }) => LayoutBuilder(
+    builder: (context, bounds) => SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: SizedBox(
+        width: bounds.maxWidth < columns * 160
+            ? columns * 160.0
+            : bounds.maxWidth,
+        child: child,
+      ),
+    ),
   );
 
   Widget _sideNavigation() {
@@ -614,10 +757,39 @@ class _NavigationPageState extends State<_NavigationPage> {
                 showCollapseButton: true,
                 tone: _navTone,
                 width: 240,
-                footer: IconButton(
-                  tooltip: '알림',
-                  icon: const Icon(Icons.notifications),
-                  onPressed: () => setState(() => _navSelection = '알림'),
+                footer: Semantics(
+                  container: true,
+                  button: true,
+                  selected: _navSelection == '알림',
+                  child: Tooltip(
+                    message: '알림',
+                    child: InkWell(
+                      onTap: () => setState(() => _navSelection = '알림'),
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        height: 44,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          color: _navSelection == '알림'
+                              ? context.seedColor.bg.transparentSelected
+                              : Colors.transparent,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: _collapsed
+                              ? MainAxisAlignment.center
+                              : MainAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.notifications, size: 20),
+                            if (!_collapsed) ...[
+                              const SizedBox(width: 12),
+                              const Text('알림'),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
               Expanded(
@@ -633,53 +805,50 @@ class _NavigationPageState extends State<_NavigationPage> {
                       padding: const EdgeInsets.all(16),
                       children: [
                         const Text('Side Navigation Tone'),
-                        SeedSelectBoxGroup(
-                          columns:
-                              constraints.maxWidth - (_collapsed ? 56 : 240) <
-                                  400
-                              ? 1
-                              : 2,
-                          value: _navTone.name,
-                          onValueChange: (value) {
-                            if (value is String) {
-                              setState(
-                                () => _navTone = SeedSideNavTone.values.byName(
-                                  value,
+                        _scrollableSelectGroup(
+                          columns: 2,
+                          child: SeedSelectBoxGroup(
+                            columns: 2,
+                            value: _navTone.name,
+                            onValueChange: (value) {
+                              if (value is String) {
+                                setState(
+                                  () => _navTone = SeedSideNavTone.values
+                                      .byName(value),
+                                );
+                              }
+                            },
+                            children: [
+                              for (final tone in SeedSideNavTone.values)
+                                SeedSelectBox(
+                                  title: tone.name,
+                                  value: tone.name,
+                                  control: SeedSelectBoxControl.radiomark,
                                 ),
-                              );
-                            }
-                          },
-                          children: [
-                            for (final tone in SeedSideNavTone.values)
-                              SeedSelectBox(
-                                title: tone.name,
-                                value: tone.name,
-                                control: SeedSelectBoxControl.radiomark,
-                              ),
-                          ],
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 16),
                         const Text('Layout Density'),
-                        SeedSelectBoxGroup(
-                          columns:
-                              constraints.maxWidth - (_collapsed ? 56 : 240) <
-                                  400
-                              ? 1
-                              : 3,
-                          value: _density,
-                          onValueChange: (value) {
-                            if (value is String) {
-                              setState(() => _density = value);
-                            }
-                          },
-                          children: [
-                            for (final density in ['low', 'medium', 'high'])
-                              SeedSelectBox(
-                                title: density,
-                                value: density,
-                                control: SeedSelectBoxControl.radiomark,
-                              ),
-                          ],
+                        _scrollableSelectGroup(
+                          columns: 3,
+                          child: SeedSelectBoxGroup(
+                            columns: 3,
+                            value: _density,
+                            onValueChange: (value) {
+                              if (value is String) {
+                                setState(() => _density = value);
+                              }
+                            },
+                            children: [
+                              for (final density in ['low', 'medium', 'high'])
+                                SeedSelectBox(
+                                  title: density,
+                                  value: density,
+                                  control: SeedSelectBoxControl.radiomark,
+                                ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -821,13 +990,22 @@ class _NavigationPageState extends State<_NavigationPage> {
 
   Widget _variantList() {
     final entries = _variants();
+    final list = ListView.builder(
+      itemCount: entries.length,
+      itemBuilder: (context, index) =>
+          _variantItem(entries[index], index == entries.length - 1),
+    );
     return SeedPullToRefresh(
       onRefresh: () => Future<void>.delayed(const Duration(seconds: 1)),
-      child: ListView.builder(
-        itemCount: entries.length,
-        itemBuilder: (context, index) =>
-            _variantItem(entries[index], index == entries.length - 1),
-      ),
+      child: widget.activity == 'ActivityListRadioItem'
+          ? Semantics(
+              container: true,
+              explicitChildNodes: true,
+              role: SemanticsRole.radioGroup,
+              label: 'ListRadioItem 예시',
+              child: list,
+            )
+          : list,
     );
   }
 
@@ -848,15 +1026,7 @@ class _NavigationPageState extends State<_NavigationPage> {
         ? SeedControlTone.neutral
         : SeedControlTone.brand;
     final mark = radio
-        ? IgnorePointer(
-            child: SeedRadio<String>(
-              value: entry.key,
-              groupValue: _radioSelection,
-              onChanged: (_) {},
-              enabled: !entry.disabled,
-              size: SeedRadioSize.large,
-            ),
-          )
+        ? _RadioListMark(checked: marked, enabled: !entry.disabled)
         : check
         ? SeedCheckmark(
             value: value,
@@ -879,7 +1049,14 @@ class _NavigationPageState extends State<_NavigationPage> {
         : _prefix(entry.prefix);
     final suffix = selectable && entry.position == 'suffix'
         ? mark
-        : _suffix(entry.suffix);
+        : _suffix(
+            entry.suffix,
+            onPressed: button
+                ? () {}
+                : link
+                ? () => unawaited(_showLinkDestination())
+                : _showSuffixAlert,
+          );
     String? detail;
     if (entry.content.contains('detail')) {
       detail = selectable
@@ -889,9 +1066,38 @@ class _NavigationPageState extends State<_NavigationPage> {
         detail = 'lorem ipsum dolor sit amet';
       }
     }
-    return SeedListItem(
+    // React's list-item title is flex-shrink:0 and never line-wraps.
+    // Preserve the full label in text semantics on narrow viewports.
+    final title = Text(
+      entry.key,
+      softWrap: false,
+      overflow: TextOverflow.clip,
+      style: context.seedTypography.t5Regular.copyWith(
+        color: entry.disabled
+            ? context.seedColor.fg.disabled
+            : context.seedColor.fg.neutral,
+      ),
+    );
+    // React ListLinkItem has href=https://example.com, target=_blank.
+    // The dedicated link row supplies URI/link semantics while the callback
+    // continues to request an external browser tab.
+    if (link) {
+      return SeedListLinkItem(
+        key: ValueKey(entry.key),
+        uri: Uri.parse('https://example.com'),
+        title: title,
+        detailText: detail,
+        prefix: prefix,
+        suffix: suffix,
+        highlighted: entry.content.contains('highlighted'),
+        enabled: !entry.disabled,
+        showDivider: !isLast,
+        onTap: () => unawaited(_showLinkDestination()),
+      );
+    }
+    final row = SeedListItem(
       key: ValueKey(entry.key),
-      titleText: entry.key,
+      title: title,
       detailText: detail,
       prefix: prefix,
       suffix: suffix,
@@ -910,10 +1116,24 @@ class _NavigationPageState extends State<_NavigationPage> {
             })
           : button
           ? () => _showListDialog()
-          : link
-          ? () => _showLinkDestination()
           : null,
     );
+    if (radio) {
+      // React List.RadioItem renders one labeled radio input inside RadioRoot.
+      // SeedListItem's generic checked semantics would otherwise expose a
+      // checkbox. Provide the mutually-exclusive radio semantics here without
+      // creating a second 44px SeedRadio touch/focus target or changing layout.
+      return Semantics(
+        label: detail == null ? entry.key : '${entry.key}\n$detail',
+        checked: marked,
+        inMutuallyExclusiveGroup: true,
+        enabled: !entry.disabled,
+        focusable: !entry.disabled,
+        onTap: entry.disabled ? null : row.onTap,
+        child: ExcludeSemantics(child: row),
+      );
+    }
+    return row;
   }
 
   Widget? _prefix(String variant) => switch (variant) {
@@ -928,28 +1148,29 @@ class _NavigationPageState extends State<_NavigationPage> {
     _ => null,
   };
 
-  Widget? _suffix(String variant) => switch (variant) {
-    'icon-info' => const Icon(Icons.info_outline),
-    'icon-chevron' => const Icon(Icons.chevron_right),
-    'buttons' => Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SeedButton(
-          size: SeedButtonSize.xsmall,
-          label: '라벨',
-          variant: SeedButtonVariant.neutralWeak,
-          onPressed: () => _message('Button clicked'),
+  Widget? _suffix(String variant, {required VoidCallback onPressed}) =>
+      switch (variant) {
+        'icon-info' => const Icon(Icons.info_outline),
+        'icon-chevron' => const Icon(Icons.chevron_right),
+        'buttons' => Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SeedButton(
+              size: SeedButtonSize.xsmall,
+              label: '라벨',
+              variant: SeedButtonVariant.neutralWeak,
+              onPressed: onPressed,
+            ),
+            SeedButton(
+              size: SeedButtonSize.xsmall,
+              label: '라벨',
+              variant: SeedButtonVariant.neutralWeak,
+              onPressed: onPressed,
+            ),
+          ],
         ),
-        SeedButton(
-          size: SeedButtonSize.xsmall,
-          label: '라벨',
-          variant: SeedButtonVariant.neutralWeak,
-          onPressed: () => _message('Button clicked'),
-        ),
-      ],
-    ),
-    _ => null,
-  };
+        _ => null,
+      };
 
   void _showListDialog() => showSeedAlertDialog(
     context: context,
@@ -958,6 +1179,28 @@ class _NavigationPageState extends State<_NavigationPage> {
     confirmText: '닫기',
     cancelText: null,
   );
+
+  void _showSuffixAlert() {
+    const message = 'Button clicked';
+    final testAlert = debugListItemNativeAlert;
+    if (testAlert != null) {
+      testAlert(message);
+      return;
+    }
+    // React ActivityListItem.tsx calls window.alert for this suffix,
+    // which is a browser-native blocking alert, not an in-app dialog route.
+    if (browser_alert.supportsNativeAlert) {
+      browser_alert.showNativeAlert(message);
+      return;
+    }
+    // The standalone native example has no browser alert API.
+    showSeedAlertDialog(
+      context: context,
+      title: message,
+      confirmText: '확인',
+      cancelText: null,
+    );
+  }
 
   Future<void> _showLinkDestination() async {
     final opened = await launchUrl(
@@ -990,6 +1233,49 @@ class _ListCase {
   final String position;
   final String state;
   final bool disabled;
+}
+
+/// The React ListRadioItem prefix is a 24px Radiomark. Row selection and
+/// accessibility belong to SeedListItem; a standalone SeedRadio here would add
+/// another 44px focus/touch target and alter every row's layout.
+class _RadioListMark extends StatelessWidget {
+  const _RadioListMark({required this.checked, required this.enabled});
+
+  final bool checked;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.seedColor;
+    return ExcludeSemantics(
+      child: Container(
+        width: 24,
+        height: 24,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: checked && enabled
+              ? colors.bg.brandSolid
+              : colors.bg.transparent,
+          border: Border.all(
+            color: checked && enabled
+                ? colors.bg.brandSolid
+                : colors.stroke.neutralWeak,
+          ),
+        ),
+        child: checked
+            ? Container(
+                width: enabled ? 10 : 12,
+                height: enabled ? 10 : 12,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: enabled ? colors.fg.onBrandSolid : colors.fg.disabled,
+                ),
+              )
+            : null,
+      ),
+    );
+  }
 }
 
 class _DelayedPanel extends StatefulWidget {

@@ -15,7 +15,8 @@ Widget? buildExtraPage(
     case 'ActivityDetail':
       return _DetailPage(navigate: navigate, arguments: arguments);
     case 'ActivityCategorySheet':
-      return _CategorySheetRoute(arguments: arguments);
+      // The activity IS the modal; it has no independent AppBar behind it.
+      return SpaOwnScaffold(child: _CategorySheetRoute(arguments: arguments));
     case 'ActivityAppBarSlot':
       return SpaOwnScaffold(
         child: _AppBarSlotPage(navigate: navigate, goBack: goBack),
@@ -25,7 +26,8 @@ Widget? buildExtraPage(
     case 'ActivityAppScreenIntersectionObserver':
       return SpaOwnScaffold(child: _IntersectionObserverPage(goBack: goBack));
     case 'ActivityAlertDialogStackflow':
-      return _StackflowAlertDialogPage(goBack: goBack);
+      // React mounts only AlertDialogRoot(defaultOpen), not an AppScreen bar.
+      return SpaOwnScaffold(child: _StackflowAlertDialogPage(goBack: goBack));
     case 'ActivityArticlePreventDrag':
       return const _ArticlePreventDragPage();
     default:
@@ -48,13 +50,6 @@ Widget _button(
   isFullWidth: fullWidth,
 );
 
-void _message(BuildContext context, String message) {
-  SeedSnackbarProvider.of(context).show(
-    strategy: SeedSnackbarStrategy.immediate,
-    child: SeedSnackbar(message: message),
-  );
-}
-
 class _DetailPage extends StatelessWidget {
   const _DetailPage({required this.navigate, this.arguments});
   final SpaNavigate navigate;
@@ -63,43 +58,54 @@ class _DetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final map = arguments is Map ? arguments! as Map : const {};
-    final title = map['title'] is String ? map['title'] as String : 'Detail';
     final body = map['body'] is String ? map['body'] as String : '';
     final current = map['transitionStyle'] is String
         ? map['transitionStyle'] as String
         : null;
+    // React ActivityDetail.tsx:42–60: two sections (x3 vertical padding)
+    // separated by x4, with an x2 gap inside each section. Keep the
+    // articleBody typography rather than an unrelated literal TextStyle.
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.zero,
       children: [
-        Text(
-          title,
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 12),
-        Text(body, style: const TextStyle(fontSize: 16, height: 1.5)),
-        if (current != null) ...[
-          const SizedBox(height: 8),
-          Text('transitionStyle: $current'),
-        ],
-        const SizedBox(height: 24),
-        for (final style in _styles) ...[
-          _button(
-            'transitionStyle: $style',
-            () => navigate(
-              'ActivityTransitionStyle',
-              arguments: {'transitionStyle': style},
-            ),
-            variant: current == style
-                ? SeedButtonVariant.neutralWeak
-                : SeedButtonVariant.neutralSolid,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // The page title is already provided by host AppBarMain.
+              Text(body, style: context.seedTypography.articleBody),
+              if (current != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'transitionStyle: $current',
+                  style: context.seedTypography.articleBody,
+                ),
+              ],
+            ],
           ),
-          const SizedBox(height: 8),
-        ],
-        _gap,
-        _button(
-          '홈으로',
-          () => navigate('ActivityHome'),
-          variant: SeedButtonVariant.neutralWeak,
+        ),
+        const SizedBox(height: 16),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var i = 0; i < _styles.length; i++) ...[
+                if (i != 0) const SizedBox(height: 8),
+                _button(
+                  'transitionStyle: ${_styles[i]}',
+                  () => navigate(
+                    'ActivityTransitionStyle',
+                    arguments: {'transitionStyle': _styles[i]},
+                  ),
+                  variant: current == _styles[i]
+                      ? SeedButtonVariant.neutralWeak
+                      : SeedButtonVariant.neutralSolid,
+                ),
+              ],
+            ],
+          ),
         ),
       ],
     );
@@ -149,6 +155,7 @@ class _CategorySheetRoute extends StatefulWidget {
 
 class _CategorySheetRouteState extends State<_CategorySheetRoute> {
   bool opened = false;
+  String? _lastSelected;
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -166,21 +173,35 @@ class _CategorySheetRouteState extends State<_CategorySheetRoute> {
         : null;
     final result = await showSeedBottomSheet<Map<String, String>>(
       context: context,
-      child: _CategorySheetContent(initial: initial),
+      child: _CategorySheetContent(
+        initial: _lastSelected ?? initial,
+        onSelectionChanged: (next) => _lastSelected = next,
+      ),
     );
-    if (mounted) {
-      // Finish the activity route with the sheet's result.
-      Navigator.of(context).pop<Map<String, String>>(result);
+    if (!mounted) return;
+    _lastSelected = result?['value'] ?? _lastSelected;
+    if (ModalRoute.of(context)?.isFirst ?? true) {
+      // Stackflow's pop() on an externally opened root has no predecessor.
+      // React therefore leaves this root activity's sheet visible, including
+      // after Confirm. Re-present the same selection instead of leaving an
+      // empty root route when Flutter's sheet overlay was dismissed.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _present();
+      });
+      return;
     }
+    // A sheet PUSH from Form has a caller: deliver its result and pop.
+    Navigator.of(context).pop<Map<String, String>>(result);
   }
 
   @override
-  Widget build(BuildContext context) => const Center(child: Text('카테고리 선택'));
+  Widget build(BuildContext context) => const SizedBox.expand();
 }
 
 class _CategorySheetContent extends StatefulWidget {
-  const _CategorySheetContent({this.initial});
+  const _CategorySheetContent({this.initial, this.onSelectionChanged});
   final String? initial;
+  final ValueChanged<String?>? onSelectionChanged;
   @override
   State<_CategorySheetContent> createState() => _CategorySheetContentState();
 }
@@ -214,8 +235,11 @@ class _CategorySheetContentState extends State<_CategorySheetContent> {
             title: category.label,
             value: category.value,
             groupValue: selected,
-            onChanged: (next) => setState(() => selected = next),
-            showDivider: index < _categories.length - 1,
+            onChanged: (next) {
+              setState(() => selected = next);
+              widget.onSelectionChanged?.call(next);
+            },
+            showDivider: false,
           );
         },
       ),
@@ -240,50 +264,56 @@ class _AppBarSlotPage extends StatelessWidget {
   final VoidCallback goBack;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: context.seedColor.bg.layerDefault,
-    appBar: SeedTopNavigation(
-      leading: SeedTopNavigationIconButton(
-        icon: const Icon(Icons.chevron_left),
-        semanticsLabel: '뒤로',
-        onPressed: goBack,
-      ),
-      centerTitle: false,
-      title: Container(
-        height: 36,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        alignment: Alignment.centerLeft,
-        decoration: BoxDecoration(
-          color: context.seedColor.bg.neutralWeak,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          '검색어를 입력하세요',
-          style: context.seedTypography.t4Regular.copyWith(
-            color: context.seedColor.fg.neutralMuted,
+  Widget build(BuildContext context) {
+    final isRoot = ModalRoute.of(context)?.isFirst ?? true;
+    return Scaffold(
+      backgroundColor: context.seedColor.bg.layerDefault,
+      appBar: SeedTopNavigation(
+        leading: isRoot
+            ? null
+            : SeedTopNavigationIconButton(
+                icon: const Icon(Icons.chevron_left),
+                semanticsLabel: '뒤로',
+                onPressed: goBack,
+              ),
+        centerTitle: false,
+        title: Container(
+          height: 36,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          alignment: Alignment.centerLeft,
+          decoration: BoxDecoration(
+            color: context.seedColor.bg.neutralWeak,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            '검색어를 입력하세요',
+            style: context.seedTypography.t4Regular.copyWith(
+              color: context.seedColor.fg.neutralMuted,
+            ),
           ),
         ),
+        actions: [
+          for (var i = 0; i < 2; i++)
+            SeedTopNavigationIconButton(
+              semanticsLabel: '알림',
+              icon: const Icon(Icons.notifications_none_rounded),
+              // Official ActivityAppBarSlot has no Bell onClick handler.
+              onPressed: null,
+            ),
+        ],
       ),
-      actions: [
-        for (var i = 0; i < 2; i++)
-          SeedTopNavigationIconButton(
-            semanticsLabel: '알림 $i',
-            icon: const Icon(Icons.notifications_none_rounded),
-            onPressed: () => _message(context, '알림 $i'),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Text(
+            'AppBar.Slot은 커스텀 요소에 stackflow 트랜지션 애니메이션을 적용합니다. 이 페이지에서 뒤로 swipe하면 검색바가 IconButton과 동일하게 fade 트랜지션됩니다.',
           ),
-      ],
-    ),
-    body: ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        const Text(
-          'AppBar.Slot은 커스텀 요소에 stackflow 트랜지션 애니메이션을 적용합니다. 이 페이지에서 뒤로 swipe하면 검색바가 IconButton과 동일하게 fade 트랜지션됩니다.',
-        ),
-        _gap,
-        _button('이 액티비티 다시 열기', () => navigate('ActivityAppBarSlot')),
-      ],
-    ),
-  );
+          _gap,
+          _button('이 액티비티 다시 열기', () => navigate('ActivityAppBarSlot')),
+        ],
+      ),
+    );
+  }
 }
 
 class _DialogPage extends StatefulWidget {
@@ -344,17 +374,12 @@ class _DialogPageState extends State<_DialogPage> {
       SeedSwitch(
         label: '긴 본문 (오버플로)',
         size: SeedSwitchSize.size16,
+        tone: SeedControlTone.neutral,
         checked: overflow,
         onCheckedChange: (next) => setState(() => overflow = next),
       ),
       const SizedBox(height: 20),
       _button('다이얼로그 열기', _openDialog),
-      _gap,
-      _button(
-        '홈으로',
-        () => widget.navigate('ActivityHome'),
-        variant: SeedButtonVariant.ghost,
-      ),
     ],
   );
 }
@@ -410,7 +435,10 @@ class _IntersectionObserverPageState extends State<_IntersectionObserverPage> {
         SeedTopNavigationIconButton(
           semanticsLabel: 'Notification',
           icon: const Icon(Icons.notifications),
-          onPressed: () => _message(context, 'Notification'),
+          // ActivityAppScreenIntersectionObserver.tsx:63-66 has no click
+          // handler. Keep the visual/semantic button enabled (white icon in
+          // the transparent bar), but do not invent a snackbar side effect.
+          onPressed: () {},
         ),
       ],
     ),
@@ -462,19 +490,28 @@ class _StackflowAlertDialogPageState extends State<_StackflowAlertDialogPage> {
   }
 
   Future<void> _showAlert() async {
-    await showSeedAlertDialog(
+    await showSeedDialog<void>(
       context: context,
-      title: '제목',
-      description: 'Stackflow',
-      confirmText: '확인',
-      cancelText: null,
       barrierDismissible: false,
+      child: SeedAlertDialog(
+        title: '제목',
+        description: 'Stackflow',
+        cancelText: null,
+        footer: Builder(
+          builder: (dialogContext) => SeedButton(
+            label: '확인',
+            variant: SeedButtonVariant.neutralSolid,
+            isFullWidth: true,
+            onPressed: () => Navigator.of(dialogContext).pop(),
+          ),
+        ),
+      ),
     );
     if (mounted) widget.goBack();
   }
 
   @override
-  Widget build(BuildContext context) => const Center(child: Text('Stackflow'));
+  Widget build(BuildContext context) => const SizedBox.expand();
 }
 
 class _ArticlePreventDragPage extends StatelessWidget {

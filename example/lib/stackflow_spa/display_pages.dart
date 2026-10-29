@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:seed_design/seed_design.dart';
 
@@ -86,10 +88,114 @@ Widget _stage(BuildContext context, Widget child) => Container(
   child: child,
 );
 
-void _notice(BuildContext context, String message) {
-  SeedSnackbarProvider.of(context).show(
-    strategy: SeedSnackbarStrategy.immediate,
-    child: SeedSnackbar(message: message),
+Widget _scaleStage(
+  BuildContext context,
+  Widget child, {
+  bool failure = false,
+}) => Container(
+  width: double.infinity,
+  padding: const EdgeInsets.all(16),
+  decoration: BoxDecoration(
+    color: failure
+        ? context.seedColor.bg.criticalWeak
+        : context.seedColor.bg.layerDefault,
+    border: Border.all(
+      color: failure
+          ? context.seedColor.stroke.criticalWeak
+          : context.seedColor.stroke.neutralMuted,
+    ),
+    borderRadius: BorderRadius.circular(12),
+  ),
+  child: child,
+);
+
+Widget _scaleLabel(BuildContext context, String label) => Container(
+  padding: const EdgeInsets.symmetric(horizontal: 14),
+  height: 38,
+  alignment: Alignment.center,
+  decoration: BoxDecoration(
+    color: context.seedColor.bg.neutralWeak,
+    borderRadius: BorderRadius.circular(8),
+  ),
+  child: Text(label, style: context.seedTypography.t3Medium),
+);
+
+/// Tests the hand-written scaling equation separately from SeedPressable.
+/// 2 / max(height, width / 4, 24) matches the recipe's distance rule.
+class _ManualScalePressable extends StatefulWidget {
+  const _ManualScalePressable({required this.label});
+  final String label;
+
+  @override
+  State<_ManualScalePressable> createState() => _ManualScalePressableState();
+}
+
+class _ManualScalePressableState extends State<_ManualScalePressable> {
+  bool _pressed = false;
+  void _update(bool next) {
+    if (mounted && _pressed != next) setState(() => _pressed = next);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final width = (widget.label.runes.length * 10 + 28).toDouble();
+    final ratio = 1 - 2 / math.max(38, math.max(width / 4, 24));
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => _update(true),
+      onTapUp: (_) => _update(false),
+      onTapCancel: () => _update(false),
+      child: AnimatedScale(
+        scale: _pressed ? ratio : 1,
+        duration: const Duration(milliseconds: 100),
+        child: _scaleLabel(context, widget.label),
+      ),
+    );
+  }
+}
+
+/// The equivalent of a ref-only experiment: gestures and the render object's
+/// actual size are observed, but no scale transform is attached to the child.
+class _MeasureOnlyPressable extends StatefulWidget {
+  const _MeasureOnlyPressable();
+
+  @override
+  State<_MeasureOnlyPressable> createState() => _MeasureOnlyPressableState();
+}
+
+class _MeasureOnlyPressableState extends State<_MeasureOnlyPressable> {
+  final _node = GlobalKey();
+  Size? _lastSize;
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) => Listener(
+    onPointerDown: (_) {
+      final render = _node.currentContext?.findRenderObject();
+      if (render is RenderBox) _lastSize = render.size;
+      setState(() => _pressed = true);
+    },
+    onPointerUp: (_) => setState(() => _pressed = false),
+    onPointerCancel: (_) => setState(() => _pressed = false),
+    child: Container(
+      key: _node,
+      height: 38,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: _pressed
+            ? context.seedColor.bg.neutralWeakPressed
+            : context.seedColor.bg.neutralWeak,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        'ref만',
+        style: context.seedTypography.t3Medium,
+        semanticsLabel: _lastSize == null
+            ? 'ref만, 크기 미측정'
+            : 'ref만, 폭 ${_lastSize!.width.round()}px 측정됨',
+      ),
+    ),
   );
 }
 
@@ -111,6 +217,11 @@ const _avatarSizes = [
   SeedAvatarSize.size96,
   SeedAvatarSize.size108,
 ];
+
+// ComponentAnalyzer uses one preference provider across React activities.
+// Scope this Flutter preference to the owning Navigator, not to a global
+// process singleton, so a newly created SPA starts with grid disabled.
+final _sharedDisplayGrid = Expando<bool>('stackflow-show-grid');
 
 typedef _VariantSpec = ({
   String variant,
@@ -134,6 +245,7 @@ class _VariantPageState extends State<_VariantPage> {
   String avatarSize = '64';
   final Map<_VariantSpec, bool> _pressed = {};
   bool showGrid = false;
+  bool _loadedGrid = false;
   bool enabled = true;
   bool loading = false;
 
@@ -147,7 +259,15 @@ class _VariantPageState extends State<_VariantPage> {
   // Only values in the React recipe maps are listed here. Flutter avatar
   // compatibility aliases (small, medium, large, xlarge) are not extra sizes.
   List<String> get _variants => _isAction
-      ? SeedButtonVariant.values.map((item) => item.name).toList()
+      ? const [
+          'brandSolid',
+          'neutralSolid',
+          'neutralWeak',
+          'criticalSolid',
+          'brandOutline',
+          'neutralOutline',
+          'ghost',
+        ]
       : _isToggle
       ? SeedToggleButtonVariant.values.map((item) => item.name).toList()
       : _isChip
@@ -161,7 +281,7 @@ class _VariantPageState extends State<_VariantPage> {
       : _isReaction
       ? SeedReactionButtonSize.values.map((item) => item.name).toList()
       : _isChip
-      ? SeedChipSize.values.map((item) => item.name).toList()
+      ? const ['large', 'medium', 'small']
       : const [];
 
   List<String> get _avatarSizeOptions =>
@@ -226,6 +346,20 @@ class _VariantPageState extends State<_VariantPage> {
     if (widget.activity.startsWith('ActivityChip')) variant = 'solid';
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_loadedGrid) {
+      showGrid = _sharedDisplayGrid[Navigator.of(context)] ?? false;
+      _loadedGrid = true;
+    }
+  }
+
+  void _setShowGrid(bool next) {
+    _sharedDisplayGrid[Navigator.of(context)] = next;
+    setState(() => showGrid = next);
+  }
+
   Widget _choose(
     String title,
     String value,
@@ -244,7 +378,18 @@ class _VariantPageState extends State<_VariantPage> {
           const DropdownMenuItem(value: 'ALL', child: Text('All')),
         ],
         onChanged: (next) {
-          if (next != null) setState(() => onChanged(next));
+          if (next != null) {
+            setState(() {
+              onChanged(next);
+              // React's ComponentAnalyzer keys each uncontrolled ToggleButton /
+              // ReactionButton by the full variant tuple. A key that leaves
+              // the showcase unmounts and loses its local pressed state.
+              // Keep only keys still rendered (including when switching to
+              // or from ALL, where some keyed children remain mounted).
+              final active = _combinations().toSet();
+              _pressed.removeWhere((spec, _) => !active.contains(spec));
+            });
+          }
         },
       ),
     );
@@ -260,7 +405,7 @@ class _VariantPageState extends State<_VariantPage> {
         if (spec.layout == 'iconOnly') {
           return SeedButton.iconOnly(
             icon: const Icon(Icons.add),
-            onPressed: () => _notice(context, 'Action Button 눌림'),
+            onPressed: () {},
             size: buttonSize,
             variant: buttonVariant,
             loading: loading,
@@ -272,7 +417,7 @@ class _VariantPageState extends State<_VariantPage> {
           label: '야옹',
           prefixIcon: const Icon(Icons.add),
           suffixIcon: const Icon(Icons.keyboard_arrow_down),
-          onPressed: () => _notice(context, '야옹'),
+          onPressed: () {},
           size: buttonSize,
           variant: buttonVariant,
           loading: loading,
@@ -293,7 +438,9 @@ class _VariantPageState extends State<_VariantPage> {
         return SeedReactionButton(
           pressed: isPressed,
           onPressedChange: changePressed,
-          prefixIcon: const Icon(Icons.sentiment_satisfied_alt),
+          prefixIcon: _SolidSmileIcon(
+            dimension: spec.size == 'small' ? 16 : 20,
+          ),
           label: '야옹쓰',
           count: 10,
           size: SeedReactionButtonSize.values.byName(spec.size),
@@ -313,7 +460,7 @@ class _VariantPageState extends State<_VariantPage> {
             enabled: enabled,
             checked: null,
             onCheckedChange: null,
-            onPressed: () => _notice(context, 'Chip.Button'),
+            onPressed: () {},
           );
         }
         return SeedChip(
@@ -323,7 +470,7 @@ class _VariantPageState extends State<_VariantPage> {
           enabled: enabled,
           checked: null,
           onCheckedChange: null,
-          onPressed: () => _notice(context, 'Chip.Button'),
+          onPressed: () {},
         );
       case 'ActivityAvatar':
         return SeedAvatar(
@@ -331,10 +478,14 @@ class _VariantPageState extends State<_VariantPage> {
             (item) => item.dimension.toStringAsFixed(0) == spec.avatarSize,
           ),
           image: NetworkImage(_avatarUrls[0]),
-          badge: Container(
-            decoration: const BoxDecoration(
-              color: Colors.black,
-              shape: BoxShape.circle,
+          badge: const SizedBox(
+            width: 20,
+            height: 20,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Colors.black,
+                shape: BoxShape.circle,
+              ),
             ),
           ),
         );
@@ -394,7 +545,7 @@ class _VariantPageState extends State<_VariantPage> {
                   SeedSwitch(
                     size: SeedSwitchSize.size24,
                     checked: showGrid,
-                    onCheckedChange: (v) => setState(() => showGrid = v),
+                    onCheckedChange: _setShowGrid,
                   ),
                 ),
                 if (_variants.isNotEmpty)
@@ -423,9 +574,7 @@ class _VariantPageState extends State<_VariantPage> {
                     Positioned.fill(
                       child: IgnorePointer(
                         child: CustomPaint(
-                          painter: _ShowcaseGridPainter(
-                            context.seedColor.fg.neutralMuted,
-                          ),
+                          painter: const _ShowcaseGridPainter(),
                         ),
                       ),
                     ),
@@ -493,41 +642,109 @@ class _VariantPageState extends State<_VariantPage> {
 }
 
 class _ShowcaseGridPainter extends CustomPainter {
-  const _ShowcaseGridPainter(this.lineColor);
-
-  final Color lineColor;
+  const _ShowcaseGridPainter();
 
   @override
   void paint(Canvas canvas, Size size) {
-    for (var x = 0.0; x <= size.width; x += 16) {
-      final major = x.round() % 64 == 0;
+    // ComponentShowcase.css.ts: a 16px phase offset, 64px strong grid,
+    // 16px fine grid; both use fixed gray (130,130,130).
+    for (var x = 16.0; x <= size.width; x += 16) {
+      final major = (x - 16).round() % 64 == 0;
       canvas.drawLine(
         Offset(x, 0),
         Offset(x, size.height),
         Paint()
-          ..color = lineColor.withValues(alpha: major ? 0.3 : 0.13)
+          ..color = Color.fromRGBO(130, 130, 130, major ? 0.5 : 0.25)
           ..strokeWidth = 1,
       );
     }
-    for (var y = 0.0; y <= size.height; y += 16) {
-      final major = y.round() % 64 == 0;
+    for (var y = 16.0; y <= size.height; y += 16) {
+      final major = (y - 16).round() % 64 == 0;
       canvas.drawLine(
         Offset(0, y),
         Offset(size.width, y),
         Paint()
-          ..color = lineColor.withValues(alpha: major ? 0.3 : 0.13)
+          ..color = Color.fromRGBO(130, 130, 130, major ? 0.5 : 0.25)
           ..strokeWidth = 1,
       );
     }
   }
 
   @override
-  bool shouldRepaint(_ShowcaseGridPainter oldDelegate) =>
-      oldDelegate.lineColor != lineColor;
+  bool shouldRepaint(_ShowcaseGridPainter oldDelegate) => false;
+}
+
+/// React uses IconFaceSmileCircleFill, whose face is a solid disc with
+/// reversed eyes and smile. Material's outlined face is visually different.
+class _SolidSmileIcon extends StatelessWidget {
+  const _SolidSmileIcon({required this.dimension});
+  final double dimension;
+
+  @override
+  Widget build(BuildContext context) => SizedBox.square(
+    dimension: dimension,
+    child: CustomPaint(
+      painter: _SolidSmilePainter(IconTheme.of(context).color ?? Colors.black),
+    ),
+  );
+}
+
+class _SolidSmilePainter extends CustomPainter {
+  const _SolidSmilePainter(this.color);
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.save();
+    canvas.scale(size.width / 16, size.height / 16);
+    canvas.drawCircle(const Offset(8, 8), 7.75, Paint()..color = color);
+    final details = Paint()..color = Colors.white;
+    canvas.drawCircle(const Offset(5.6, 6.4), 0.9, details);
+    canvas.drawCircle(const Offset(10.4, 6.4), 0.9, details);
+    canvas.drawArc(
+      const Rect.fromLTWH(4.4, 5.0, 7.2, 6.8),
+      0.15,
+      math.pi - 0.3,
+      false,
+      Paint()
+        ..color = Colors.white
+        ..strokeWidth = 1.25
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round,
+    );
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(_SolidSmilePainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 class _BadgePage extends StatelessWidget {
   const _BadgePage();
+
+  Widget _badgeSection(BuildContext context, String title, Widget child) =>
+      Padding(
+        padding: const EdgeInsets.only(bottom: 32),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: context.seedTypography.t4Bold),
+            const SizedBox(height: 16),
+            child,
+          ],
+        ),
+      );
+
+  Widget _badgeSubheading(BuildContext context, String title) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Text(
+      title,
+      style: context.seedTypography.t2Medium.copyWith(
+        color: context.seedColor.fg.neutralMuted,
+      ),
+    ),
+  );
 
   void _showHelp(BuildContext context, String title, String detail) {
     showSeedBottomSheet<void>(
@@ -579,7 +796,7 @@ class _BadgePage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           for (final size in SeedBadgeSize.values)
-            _section(
+            _badgeSection(
               context,
               size.name,
               Column(
@@ -591,9 +808,9 @@ class _BadgePage extends StatelessWidget {
                         ? context.seedTypography.t1Bold
                         : context.seedTypography.t2Bold,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
                   for (final prefix in [false, true]) ...[
-                    if (prefix) _subheading(context, 'Prefix'),
+                    if (prefix) _badgeSubheading(context, 'Prefix'),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
@@ -627,7 +844,7 @@ class _BadgePage extends StatelessWidget {
                     ),
                   ],
                   const SizedBox(height: 12),
-                  _subheading(context, 'Action'),
+                  _badgeSubheading(context, 'Action'),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
@@ -658,7 +875,7 @@ class _BadgePage extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  _subheading(context, 'Truncate'),
+                  _badgeSubheading(context, 'Truncate'),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
@@ -711,8 +928,8 @@ class _TagGroupPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 _subheading(context, 'Truncate'),
-                SizedBox(
-                  width: 220,
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 220),
                   child: SeedTagGroup(
                     size: size,
                     tone: SeedTagTone.neutralSubtle,
@@ -738,6 +955,21 @@ class _MannerTempPage extends StatefulWidget {
 class _MannerTempPageState extends State<_MannerTempPage> {
   int? level = 1;
   bool showGrid = false;
+  bool _loadedGrid = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_loadedGrid) {
+      showGrid = _sharedDisplayGrid[Navigator.of(context)] ?? false;
+      _loadedGrid = true;
+    }
+  }
+
+  void _setShowGrid(bool next) {
+    _sharedDisplayGrid[Navigator.of(context)] = next;
+    setState(() => showGrid = next);
+  }
 
   Widget controlRow(String label, Widget control) => Container(
     height: 52,
@@ -764,24 +996,23 @@ class _MannerTempPageState extends State<_MannerTempPage> {
           children: [
             if (showGrid)
               Positioned.fill(
-                child: CustomPaint(
-                  painter: _ShowcaseGridPainter(
-                    context.seedColor.fg.neutralMuted,
-                  ),
-                ),
+                child: CustomPaint(painter: const _ShowcaseGridPainter()),
               ),
             SingleChildScrollView(
               padding: const EdgeInsets.all(16),
-              child: Wrap(
-                spacing: 16,
-                runSpacing: 16,
-                children: [
-                  for (final current
-                      in level == null
-                          ? List.generate(10, (i) => i + 1)
-                          : [level!])
-                    SeedMannerTempBadge(temperature: 36.5, level: current),
-                ],
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    for (final current
+                        in level == null
+                            ? List.generate(10, (i) => i + 1)
+                            : [level!]) ...[
+                      if (current != (level ?? 1)) const SizedBox(width: 16),
+                      SeedMannerTempBadge(temperature: 36.5, level: current),
+                    ],
+                  ],
+                ),
               ),
             ),
           ],
@@ -789,10 +1020,7 @@ class _MannerTempPageState extends State<_MannerTempPage> {
       ),
       controlRow(
         '그리드 표시',
-        SeedSwitch(
-          checked: showGrid,
-          onCheckedChange: (value) => setState(() => showGrid = value),
-        ),
+        SeedSwitch(checked: showGrid, onCheckedChange: _setShowGrid),
       ),
       controlRow(
         'level',
@@ -950,7 +1178,7 @@ class _ResultPageState extends State<_ResultPage> {
               asset: showAsset
                   ? const Padding(
                       padding: EdgeInsets.only(bottom: 16),
-                      child: Icon(Icons.diamond, size: 40, color: Colors.blue),
+                      child: _MulticolorDiamond(),
                     )
                   : null,
               title: '완료되었어요',
@@ -973,6 +1201,53 @@ class _ResultPageState extends State<_ResultPage> {
   );
 }
 
+/// Faceted geometry of the React example's multi-color diamond asset.
+class _MulticolorDiamond extends StatelessWidget {
+  const _MulticolorDiamond();
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    label: '다이아몬드',
+    image: true,
+    child: const SizedBox.square(
+      dimension: 40,
+      child: CustomPaint(painter: _DiamondPainter()),
+    ),
+  );
+}
+
+class _DiamondPainter extends CustomPainter {
+  const _DiamondPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final sx = size.width / 40;
+    final sy = size.height / 40;
+    void facet(Color color, List<Offset> points) {
+      final path = Path()..moveTo(points.first.dx * sx, points.first.dy * sy);
+      for (final point in points.skip(1)) {
+        path.lineTo(point.dx * sx, point.dy * sy);
+      }
+      canvas.drawPath(path..close(), Paint()..color = color);
+    }
+
+    const left = Offset(1, 17);
+    const topLeft = Offset(11, 2);
+    const topMid = Offset(20, 2);
+    const topRight = Offset(29, 2);
+    const right = Offset(39, 17);
+    const middle = Offset(20, 17);
+    const bottom = Offset(20, 36);
+    facet(const Color(0xFF77A5FF), [left, topLeft, topMid, middle]);
+    facet(const Color(0xFF4E7FFF), [topMid, topRight, right, middle]);
+    facet(const Color(0xFFB5CAFF), [left, middle, bottom]);
+    facet(const Color(0xFF4D78FF), [middle, bottom, right]);
+  }
+
+  @override
+  bool shouldRepaint(_DiamondPainter oldDelegate) => false;
+}
+
 class _ScaleFeedbackPage extends StatefulWidget {
   const _ScaleFeedbackPage();
 
@@ -983,8 +1258,9 @@ class _ScaleFeedbackPage extends StatefulWidget {
 class _ScaleFeedbackPageState extends State<_ScaleFeedbackPage> {
   bool check = true;
   bool checkInList = true;
+  bool nestedCheck = true;
   String radio = 'first';
-  bool rerender = false;
+  int rerenderCount = 0;
   final _focusNode = FocusNode();
 
   @override
@@ -1005,15 +1281,10 @@ class _ScaleFeedbackPageState extends State<_ScaleFeedbackPage> {
       children: [
         _heading(context, title),
         _subheading(context, description),
-        _stage(
+        _scaleStage(
           context,
-          Container(
-            width: double.infinity,
-            color: highlighted
-                ? context.seedColor.bg.criticalWeak
-                : Colors.transparent,
-            child: child,
-          ),
+          SizedBox(width: double.infinity, child: child),
+          failure: highlighted,
         ),
       ],
     ),
@@ -1025,10 +1296,13 @@ class _ScaleFeedbackPageState extends State<_ScaleFeedbackPage> {
     double? height,
     bool enableScale = true,
     FocusNode? focusNode,
+    VoidCallback? onTap,
   }) {
     return SeedPressable(
       focusNode: focusNode,
-      onTap: () => _notice(context, '$text 눌림'),
+      // ScaleFeedbackPressables.tsx:19-59 has no click feedback for the
+      // specimens; keep the press gesture active for visual scale alone.
+      onTap: onTap ?? () {},
       enableScale: enableScale,
       child: Container(
         width: width,
@@ -1078,7 +1352,7 @@ class _ScaleFeedbackPageState extends State<_ScaleFeedbackPage> {
                       SeedButton(
                         label: size.name,
                         size: size,
-                        onPressed: () => _notice(context, size.name),
+                        onPressed: () {},
                       ),
                   ],
                 ),
@@ -1092,7 +1366,7 @@ class _ScaleFeedbackPageState extends State<_ScaleFeedbackPage> {
                     SeedButton.iconOnly(
                       icon: const Icon(Icons.add),
                       semanticsLabel: '아이콘 전용 정사각 버튼',
-                      onPressed: () => _notice(context, '추가'),
+                      onPressed: () {},
                     ),
                     const SizedBox(height: 16),
                     SizedBox(
@@ -1100,7 +1374,7 @@ class _ScaleFeedbackPageState extends State<_ScaleFeedbackPage> {
                       child: SeedButton(
                         isFullWidth: true,
                         label: '화면 폭을 채우는 버튼',
-                        onPressed: () => _notice(context, '전체 폭'),
+                        onPressed: () {},
                       ),
                     ),
                   ],
@@ -1117,6 +1391,8 @@ class _ScaleFeedbackPageState extends State<_ScaleFeedbackPage> {
                       checked: check,
                       onCheckedChange: (value) => setState(() => check = value),
                     ),
+                    const SizedBox(height: 8),
+                    Text('RadioGroup', style: context.seedTypography.t3Medium),
                     SeedRadio<String>(
                       value: 'first',
                       groupValue: radio,
@@ -1179,13 +1455,13 @@ class _ScaleFeedbackPageState extends State<_ScaleFeedbackPage> {
                     SeedCallout(
                       title: 'asChild button',
                       description: '루트 전체가 줄어듭니다.',
-                      onTap: () => _notice(context, 'Callout'),
+                      onTap: () {},
                     ),
                     const SizedBox(height: 12),
                     SeedCallout(
                       title: 'asChild anchor',
                       description: '링크처럼 동작해도 같습니다.',
-                      onTap: () => _notice(context, 'Callout anchor'),
+                      onTap: () {},
                     ),
                   ],
                 ),
@@ -1223,13 +1499,20 @@ class _ScaleFeedbackPageState extends State<_ScaleFeedbackPage> {
             children: [
               _demo(
                 '적용 방법 세 가지',
-                '크기를 측정해 SEED 공통 축소 공식을 적용합니다.',
+                '직접 계산, ScaleFeedback 콘텐츠 스케일, SeedPressable 래퍼의 세 구현을 비교합니다.',
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    _pressable('순수 CSS'),
-                    _pressable('scale-feedback 상수'),
+                    const _ManualScalePressable(label: '순수 CSS'),
+                    SeedPressable(
+                      enableScale: false,
+                      onTap: () {},
+                      builder: (ctx, pressed) => SeedContentScale(
+                        pressed: pressed,
+                        child: _scaleLabel(ctx, 'scale-feedback 상수'),
+                      ),
+                    ),
                     _pressable('ScaleFeedback', focusNode: _focusNode),
                   ],
                 ),
@@ -1243,18 +1526,10 @@ class _ScaleFeedbackPageState extends State<_ScaleFeedbackPage> {
               const SizedBox(height: 16),
               _demo(
                 '불안정한 ref',
-                '리렌더가 발생해도 누르는 동안 일정하게 축소됩니다.',
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _pressable(rerender ? '렌더 B' : '렌더 A'),
-                    const SizedBox(height: 8),
-                    SeedButton(
-                      label: '리렌더',
-                      size: SeedButtonSize.xsmall,
-                      onPressed: () => setState(() => rerender = !rerender),
-                    ),
-                  ],
+                '누르는 대상 자체가 다시 빌드되어도 축소 피드백을 유지합니다.',
+                _pressable(
+                  '리렌더 $rerenderCount회',
+                  onTap: () => setState(() => rerenderCount++),
                 ),
               ),
               _demo(
@@ -1285,20 +1560,23 @@ class _ScaleFeedbackPageState extends State<_ScaleFeedbackPage> {
                 Wrap(
                   spacing: 8,
                   children: [
-                    for (final label in ['클래스만', 'ref만'])
-                      SeedPressable(
-                        enableScale: false,
-                        onTap: () {},
-                        builder: (ctx, pressed) => Container(
-                          padding: const EdgeInsets.all(16),
-                          color: pressed
-                              ? ctx.seedColor.bg.neutralWeakPressed
-                              : ctx.seedColor.bg.neutralWeak,
-                          child: Text(label),
-                        ),
+                    SeedPressable(
+                      enableScale: false,
+                      onTap: () {},
+                      builder: (ctx, pressed) => Container(
+                        height: 38,
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        alignment: Alignment.center,
+                        color: pressed
+                            ? ctx.seedColor.bg.neutralWeakPressed
+                            : ctx.seedColor.bg.neutralWeak,
+                        child: const Text('클래스만'),
                       ),
+                    ),
+                    const _MeasureOnlyPressable(),
                   ],
                 ),
+                highlighted: true,
               ),
               _demo(
                 '커스텀 래퍼 안의 SEED 마크',
@@ -1315,12 +1593,17 @@ class _ScaleFeedbackPageState extends State<_ScaleFeedbackPage> {
                               : ctx.seedColor.bg.neutralWeak,
                           child: Row(
                             children: [
-                              SeedContentScale(
-                                pressed: !optOut && pressed,
-                                child: const Icon(Icons.check_box),
+                              Expanded(
+                                child: SeedContentScale(
+                                  pressed: !optOut && pressed,
+                                  child: SeedCheckbox(
+                                    label: optOut ? '마크 축소 끔' : '이중 축소',
+                                    checked: nestedCheck,
+                                    onCheckedChange: (value) =>
+                                        setState(() => nestedCheck = value),
+                                  ),
+                                ),
                               ),
-                              const SizedBox(width: 8),
-                              Text(optOut ? '마크 축소 끔' : '이중 축소'),
                             ],
                           ),
                         ),
@@ -1441,15 +1724,15 @@ class _TypographyPageState extends State<_TypographyPage> {
     String label,
     TextStyle style,
     double baseline, {
-    bool isStatic = false,
+    TextScaler? scaler,
   }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 5),
+      padding: const EdgeInsets.only(bottom: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 66,
+            width: 60,
             child: Text(label, style: context.seedTypography.t1Regular),
           ),
           Container(
@@ -1462,15 +1745,18 @@ class _TypographyPageState extends State<_TypographyPage> {
           ),
           const SizedBox(width: 6),
           Expanded(
-            child: Container(
-              color: context.seedColor.bg.neutralWeak,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(4),
               child: ClipRect(
-                child: Text(
-                  '당근 Ag 12',
-                  softWrap: false,
-                  overflow: TextOverflow.visible,
-                  style: style.copyWith(color: context.seedColor.fg.neutral),
-                  textScaler: isStatic ? TextScaler.noScaling : null,
+                child: ColoredBox(
+                  color: context.seedColor.bg.neutralWeak,
+                  child: Text(
+                    '당근 Ag 12',
+                    softWrap: false,
+                    overflow: TextOverflow.visible,
+                    style: style.copyWith(color: context.seedColor.fg.neutral),
+                    textScaler: scaler,
+                  ),
                 ),
               ),
             ),
@@ -1516,17 +1802,28 @@ class _TypographyPageState extends State<_TypographyPage> {
           const Text('raw px, raw rem = 배율이 적용되는 직접 지정 값'),
           const SizedBox(height: 20),
           for (var index = 0; index < _typeSizes.length; index++)
-            _section(
-              context,
-              't${index + 1}   ${_typeSizes[index].toStringAsFixed(0)}px / ${_typeHeights[index].toStringAsFixed(0)}px',
-              Column(
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      't${index + 1}   ${_typeSizes[index].toStringAsFixed(0)}px / ${_typeHeights[index].toStringAsFixed(0)}px',
+                      style: context.seedTypography.t4Bold,
+                    ),
+                  ),
                   _row('dynamic', styles[index], _typeHeights[index]),
                   _row(
                     'static',
-                    styles[index],
+                    TextStyle(
+                      fontSize: _typeSizes[index],
+                      height: _typeHeights[index] / _typeSizes[index],
+                      fontWeight: _weight,
+                    ),
                     _typeHeights[index],
-                    isStatic: true,
+                    scaler: TextScaler.noScaling,
                   ),
                   _row(
                     'raw px',
@@ -1540,11 +1837,15 @@ class _TypographyPageState extends State<_TypographyPage> {
                   _row(
                     'raw rem',
                     TextStyle(
-                      fontSize: _typeSizes[index],
+                      // Resolve the rem-like responsive value from the current
+                      // font scale, then prevent Text from scaling it twice.
+                      fontSize: MediaQuery.textScalerOf(context)
+                          .scale(_typeSizes[index]),
                       height: _typeHeights[index] / _typeSizes[index],
                       fontWeight: _weight,
                     ),
                     _typeHeights[index],
+                    scaler: TextScaler.noScaling,
                   ),
                 ],
               ),

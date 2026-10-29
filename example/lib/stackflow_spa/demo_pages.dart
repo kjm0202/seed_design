@@ -135,9 +135,13 @@ class SpaDemoHomePage extends StatefulWidget {
 class _SpaDemoHomePageState extends State<SpaDemoHomePage> {
   int _tabIndex = 0;
   Set<String> _categories = {};
+  final Set<String> _categoryDraft = {};
 
   Future<void> _openCategorySheet() async {
-    final selection = {..._categories};
+    // React FilterBottomSheet owns `selectedOptions` separately from the
+    // committed filter and retains it across the immediate Escape/reopen
+    // sequence. This draft belongs to the Demo Home page, not a modal route.
+    final selection = _categoryDraft;
     await showSeedBottomSheet(
       context: context,
       child: StatefulBuilder(
@@ -195,39 +199,55 @@ class _SpaDemoHomePageState extends State<SpaDemoHomePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SizedBox(
-          height: 48,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            children: [
-              SeedChip(
-                label: _categories.isEmpty
-                    ? '카테고리'
-                    : _categories.map((id) => spaCategories[id]).join(', '),
-                suffix: const Icon(Icons.keyboard_arrow_down_rounded, size: 18),
-                onPressed: _openCategorySheet,
-              ),
-              for (final filter in ['동네', '작성자', '작성 시간']) ...[
-                const SizedBox(width: 8),
+        Padding(
+          padding: const EdgeInsets.only(top: 16),
+          child: SizedBox(
+            height: 40,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              children: [
                 SeedChip(
-                  label: filter,
+                  label: _categories.isEmpty
+                      ? '카테고리'
+                      : _categories.map((id) => spaCategories[id]).join(', '),
                   suffix: const Icon(
                     Icons.keyboard_arrow_down_rounded,
                     size: 18,
                   ),
-                  onPressed: () => showSeedSnackbar(
-                    context: context,
-                    message: '카테고리로만 필터링할 수 있어요',
-                    variant: SeedSnackbarVariant.critical,
-                    actionLabel: '확인',
-                  ),
+                  onPressed: _openCategorySheet,
                 ),
+                for (final filter in ['동네', '작성자', '작성 시간']) ...[
+                  const SizedBox(width: 8),
+                  SeedChip(
+                    label: filter,
+                    suffix: const Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      size: 18,
+                    ),
+                    // ActivityDemoHome uses a SnackbarProvider adapter. A
+                    // ScaffoldMessenger snackbar is layered below the SPA's
+                    // active Navigator route, so its action cannot be tapped.
+                    onPressed: () => SeedSnackbarProvider.of(context).show(
+                      child: SeedSnackbar(
+                        message: '카테고리로만 필터링할 수 있어요',
+                        variant: SeedSnackbarVariant.critical,
+                        actionLabel: '확인',
+                        onAction: () {},
+                      ),
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
-        for (final article in articles) _articleItem(article),
+        const SizedBox(height: 8),
+        for (var i = 0; i < articles.length; i++) ...[
+          if (i > 0) const SizedBox(height: 16),
+          _articleItem(articles[i]),
+        ],
+        const SizedBox(height: 16),
       ],
     );
   }
@@ -239,7 +259,7 @@ class _SpaDemoHomePageState extends State<SpaDemoHomePage> {
       onTap: () =>
           widget.navigate('ActivityDemoArticleDetail', arguments: article.id),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -297,7 +317,26 @@ class _SpaDemoHomePageState extends State<SpaDemoHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.seedColor.bg.layerDefault,
-      appBar: const SeedTopNavigation(titleText: 'Demo'),
+      // React AppBarMain has neither a Back action nor a centered title.
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(56),
+        child: ColoredBox(
+          color: context.seedColor.bg.layerDefault,
+          child: SafeArea(
+            bottom: false,
+            child: SizedBox(
+              height: 56,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('Demo', style: context.seedTypography.t6Bold),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
       body: SeedTabsView(
         selectedIndex: _tabIndex,
         items: const [
@@ -309,13 +348,24 @@ class _SpaDemoHomePageState extends State<SpaDemoHomePage> {
         dynamicHeight: false,
         children: [
           SingleChildScrollView(child: _recommendations()),
-          Center(
-            child: SeedResultSection(
-              asset: const Icon(Icons.article_rounded, size: 40),
-              title: '구독한 글이 없습니다.',
-              description: '추천 글을 확인해보세요.',
-              primaryActionLabel: '추천 글 보기',
-              onPrimaryAction: () => setState(() => _tabIndex = 0),
+          Align(
+            alignment: Alignment.topCenter,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 48),
+              child: UnconstrainedBox(
+                constrainedAxis: Axis.horizontal,
+                alignment: Alignment.topCenter,
+                child: SeedResultSection(
+                  asset: const Padding(
+                    padding: EdgeInsets.only(bottom: 16),
+                    child: Icon(Icons.article_rounded, size: 40),
+                  ),
+                  title: '구독한 글이 없습니다.',
+                  description: '추천 글을 확인해보세요.',
+                  primaryActionLabel: '추천 글 보기',
+                  onPrimaryAction: () => setState(() => _tabIndex = 0),
+                ),
+              ),
             ),
           ),
         ],
@@ -332,7 +382,7 @@ class SpaArticleDetailPage extends StatefulWidget {
     required this.goBack,
   });
 
-  final int articleId;
+  final int? articleId;
   final VoidCallback goBack;
 
   @override
@@ -368,12 +418,8 @@ class _SpaArticleDetailPageState extends State<SpaArticleDetailPage> {
     final article = spaArticles
         .where((a) => a.id == widget.articleId)
         .firstOrNull;
-    if (article == null) {
-      return Scaffold(
-        appBar: const SeedTopNavigation(titleText: '글'),
-        body: const SeedResultSection(title: '글을 찾을 수 없어요.'),
-      );
-    }
+    // The React activity renders no article when the required ID is missing.
+    if (article == null) return const SizedBox.shrink();
     final typography = context.seedTypography;
     final colors = context.seedColor;
     return Scaffold(
@@ -403,6 +449,7 @@ class _SpaArticleDetailPageState extends State<SpaArticleDetailPage> {
       ),
       body: ListView(
         controller: _scroll,
+        padding: EdgeInsets.zero,
         children: [
           AspectRatio(
             aspectRatio: 1,
@@ -430,7 +477,7 @@ class _SpaArticleDetailPageState extends State<SpaArticleDetailPage> {
                 const SizedBox(height: 8),
                 Text(
                   article.content,
-                  style: typography.t5Regular.copyWith(
+                  style: typography.articleBody.copyWith(
                     color: colors.fg.neutralMuted,
                   ),
                 ),
@@ -438,7 +485,7 @@ class _SpaArticleDetailPageState extends State<SpaArticleDetailPage> {
                 Row(
                   children: [
                     const SeedAvatar(size: SeedAvatarSize.size20),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     Expanded(
                       child: Text(article.author, style: typography.t4Medium),
                     ),
@@ -451,7 +498,10 @@ class _SpaArticleDetailPageState extends State<SpaArticleDetailPage> {
                   ],
                 ),
                 const SizedBox(height: 24),
-                const SeedCallout(description: '따뜻한 댓글을 남겨주세요.'),
+                const SeedCallout(
+                  prefixIcon: Icon(Icons.info_rounded),
+                  description: '따뜻한 댓글을 남겨주세요.',
+                ),
                 const SizedBox(height: 18),
                 SeedSegmentedControl<String>(
                   value: _sort,
@@ -462,10 +512,13 @@ class _SpaArticleDetailPageState extends State<SpaArticleDetailPage> {
                   onValueChange: (v) => setState(() => _sort = v),
                 ),
                 const SizedBox(height: 12),
-                const SeedResultSection(
-                  size: SeedResultSectionSize.medium,
-                  title: '댓글 없음',
-                  description: '댓글이 없습니다.',
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: SeedResultSection(
+                    size: SeedResultSectionSize.medium,
+                    title: '댓글 없음',
+                    description: '댓글이 없습니다.',
+                  ),
                 ),
                 SeedTextField.textarea(
                   controller: _comment,
@@ -479,10 +532,7 @@ class _SpaArticleDetailPageState extends State<SpaArticleDetailPage> {
                   variant: SeedButtonVariant.neutralSolid,
                   size: SeedButtonSize.large,
                   isFullWidth: true,
-                  onPressed: () => showSeedSnackbar(
-                    context: context,
-                    message: '댓글 예제에서는 등록을 지원하지 않습니다.',
-                  ),
+                  onPressed: () {},
                 ),
               ],
             ),

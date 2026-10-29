@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:seed_design/seed_design.dart';
 
+import 'spa_history.dart';
 import 'spa_types.dart';
 
 /// The interactive overlay activities from the React stackflow-spa example.
@@ -28,7 +29,7 @@ Widget? buildOverlayPage(
     case 'ActivityBottomSheetModalTest':
       return SpaOwnScaffold(
         child: Scaffold(
-          backgroundColor: context.seedColor.bg.layerDefault,
+          backgroundColor: Colors.transparent,
           body: _ModalActivityPage(
             key: ValueKey(activity),
             activity: activity,
@@ -40,11 +41,11 @@ Widget? buildOverlayPage(
     case 'ActivityBottomSheetWithAlertDialogStep':
       return const _SheetDialogStepPage();
     case 'ActivityAlertDialogStep':
-      return _AlertDialogStepPage(navigate: navigate);
+      return _StepHistoryPage(kind: _StepKind.alert, navigate: navigate);
     case 'ActivityBottomSheetStep':
-      return _BottomSheetStepPage(navigate: navigate);
+      return _StepHistoryPage(kind: _StepKind.bottom, navigate: navigate);
     case 'ActivityMenuSheetStep':
-      return _MenuSheetStepPage(navigate: navigate);
+      return _StepHistoryPage(kind: _StepKind.menu, navigate: navigate);
     case 'ActivityAlertDialogActivity':
       return _ActivityLaunchPage(
         activity: activity,
@@ -181,6 +182,7 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
   }
 
   Future<void> _openActivity() async {
+    final activityRoute = ModalRoute.of(context);
     switch (widget.activity) {
       case 'ActivityBottomSheet':
         await _openFormSheet();
@@ -191,28 +193,57 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
       case 'ActivityBottomSheetKeyboardPlayground':
         await _openKeyboardPlayground();
       case 'ActivityNestedBottomSheet':
+        // React's onOpenChange calls Stackflow pop(), which does nothing when
+        // a directly entered root Activity has no predecessor. The modal
+        // BottomSheet route would otherwise handle Escape by popping itself.
+        // A pushed nested sheet keeps its normal Escape dismissal behavior.
+        final nestedHasPredecessor =
+            SpaHistoryDelegate.of(context)
+                .currentConfiguration
+                .activities
+                .length >
+            1;
         await showSeedBottomSheet<void>(
           context: context,
-          child: SeedBottomSheet(
-            title: 'BottomSheet × AlertDialog (Activity)',
-            description: '아래 버튼으로 AlertDialog Activity를 push해 위에 얹어보세요.',
-            showHandle: true,
-            content: const Text(
-              'Activity 패턴: BottomSheet 자체 Activity 위에 AlertDialog Activity가 얹힙니다. '
-              'Backdrop이나 Content 빈 영역을 클릭해보세요.',
-            ),
-            footer: _column([
-              _button('Open AlertDialog', () {
-                widget.navigate('ActivityAlertDialog');
-              }),
-              Builder(
-                builder: (ctx) => _button(
-                  '닫기',
-                  () => Navigator.pop(ctx),
-                  variant: SeedButtonVariant.neutralWeak,
+          isDismissible: nestedHasPredecessor,
+          enableDrag: nestedHasPredecessor,
+          child: Builder(
+            builder: (sheetContext) => SeedOverlayScope(
+              side: SeedOverlaySide.bottom,
+              close: (_) {
+                if (nestedHasPredecessor &&
+                    ModalRoute.of(sheetContext)?.isCurrent == true) {
+                  Navigator.of(sheetContext).maybePop();
+                }
+              },
+              child: PopScope<void>(
+                canPop: nestedHasPredecessor,
+                child: SeedBottomSheet(
+                  title: 'BottomSheet × AlertDialog (Activity)',
+                  description: '아래 버튼으로 AlertDialog Activity를 push해 위에 얹어보세요.',
+                  showHandle: true,
+                  content: const SeedCallout(
+                    description:
+                        'Activity 패턴: BottomSheet가 자체 Activity로 떠 있고, 그 위에 AlertDialog Activity가 push되어 얹힙니다. '
+                        '위에 떠 있는 AlertDialog의 Backdrop이나 Content 빈 영역을 클릭해 동작을 관찰해보세요.',
+                  ),
+                  footer: _column([
+                    _button('Open AlertDialog', () {
+                      widget.navigate('ActivityAlertDialog');
+                    }),
+                    Builder(
+                      builder: (ctx) => _button(
+                        '닫기',
+                        () =>
+                            SeedOverlayScope.maybeOf(ctx)
+                                ?.close(SeedOverlayDismissReason.action),
+                        variant: SeedButtonVariant.neutralWeak,
+                      ),
+                    ),
+                  ]),
                 ),
               ),
-            ]),
+            ),
           ),
         );
       case 'ActivityMenuSheet':
@@ -224,10 +255,27 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
       case 'ActivityResponsiveSidePanel':
         await _openSidePanel();
       case 'ActivityAlertDialog':
+        // The source React pop() decision is tied to this Activity's root
+        // identity. Navigator/history transitions can temporarily expose a
+        // stale stack length after browser Back while the dialog is clickable.
+        final canPopAlertActivity = activityRoute == null
+            ? SpaHistoryDelegate.of(context)
+                      .currentConfiguration
+                      .activities
+                      .length >
+                  1
+            : !activityRoute.isFirst;
         _result = await showSeedDialog<Map<String, String>>(
           context: context,
-          barrierDismissible: true,
-          child: _ActivityAlertDialog(navigate: widget.navigate),
+          // React AlertDialogRoot defaults closeOnInteractOutside to false.
+          barrierDismissible: false,
+          // The dialog route's shortcut dismisses directly, bypassing PopScope.
+          // Root Stackflow Activities have no predecessor for pop() to remove.
+          closeOnEscape: canPopAlertActivity,
+          child: _ActivityAlertDialog(
+            navigate: widget.navigate,
+            canPopActivity: canPopAlertActivity,
+          ),
         );
         _result ??= {'message': 'hello'};
       case 'ActivityResponsiveDialog':
@@ -235,7 +283,15 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
       case 'ActivityBottomSheetModalTest':
         await _openModalTest();
     }
-    if (mounted) Navigator.of(context).pop(_result);
+    // Browser history can remove this activity and its modal together. Its
+    // completed modal Future must not pop the newly restored parent activity.
+    // React Stackflow pop() also refuses to remove the directly entered root.
+    if (mounted &&
+        activityRoute?.isCurrent == true &&
+        SpaHistoryDelegate.of(context).currentConfiguration.activities.length >
+            1) {
+      Navigator.of(context).pop(_result);
+    }
   }
 
   Future<void> _openFormSheet() async {
@@ -399,66 +455,82 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
           SeedSheetSnapPoint.fraction(.5),
           SeedSheetSnapPoint.fraction(.85),
         ],
+        // React's viewport snap offsets are applied to a 90vh-capped surface.
+        snapContentHeightFraction: .9,
         snapController: controller,
         child: SeedBottomSheet(
           title: '같이해요 공유',
           showHandle: true,
           expand: true,
           content: StatefulBuilder(
-            builder: (sheetContext, refresh) => _column([
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    for (final room in rooms)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 14),
-                        child: InkWell(
-                          onTap: () {
-                            refresh(() => selected = room.$1);
-                            controller.snapTo(1);
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              if (sheetContext.mounted) {
-                                messageFocus.requestFocus();
-                              }
-                            });
-                          },
-                          child: Column(
-                            children: [
-                              CircleAvatar(
-                                radius: 28,
-                                backgroundColor: selected == room.$1
-                                    ? Colors.blue.shade200
-                                    : Colors.purple.shade100,
-                                child: Text(room.$3),
-                              ),
-                              const SizedBox(height: 8),
-                              SizedBox(
-                                width: 78,
-                                child: Text(
-                                  room.$1,
-                                  maxLines: 2,
-                                  textAlign: TextAlign.center,
+            builder: (sheetContext, refresh) {
+              void selectRoom(String name) {
+                refresh(() => selected = name);
+                controller.snapTo(1);
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (sheetContext.mounted) {
+                    messageFocus.requestFocus();
+                  }
+                });
+              }
+
+              return _column([
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      for (final room in rooms)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 14),
+                          // Flutter Web maps `toggled` to role=switch even with
+                          // button=true. Keep React's button role and expose
+                          // current-room selection via its supported state.
+                          // Flutter Web currently lacks aria-pressed for buttons.
+                          child: Semantics(
+                            button: true,
+                            selected: selected == room.$1,
+                            label: '${room.$1}, ${room.$2}',
+                            onTap: () => selectRoom(room.$1),
+                            child: ExcludeSemantics(
+                              child: InkWell(
+                                onTap: () => selectRoom(room.$1),
+                                child: Column(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 28,
+                                      backgroundColor: room.$1 == '잠실엘스'
+                                          ? Colors.blue.shade200
+                                          : Colors.purple.shade100,
+                                      child: Text(room.$3),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    SizedBox(
+                                      width: 78,
+                                      child: Text(
+                                        room.$1,
+                                        maxLines: 2,
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                    Text(room.$2),
+                                    // Selection is conveyed through the input panel, as in React.
+                                  ],
                                 ),
                               ),
-                              Text(room.$2),
-                              if (selected == room.$1)
-                                const Icon(Icons.check, size: 18),
-                            ],
+                            ),
                           ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              if (selected != null)
-                SeedTextField(
-                  key: ValueKey(selected),
-                  focusNode: messageFocus,
-                  label: '$selected에 보낼 메시지',
-                  placeholder: '메시지를 입력해 주세요. (선택)',
-                ),
-            ], gap: 24),
+                if (selected != null)
+                  SeedTextField(
+                    focusNode: messageFocus,
+                    label: '$selected에 보낼 메시지',
+                    placeholder: '메시지를 입력해 주세요. (선택)',
+                  ),
+              ], gap: 24);
+            },
           ),
           footer: const Text(
             '채팅방을 선택하면 더 큰 snap point로 확장됩니다.',
@@ -517,7 +589,9 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
           final media = MediaQuery.of(sheetContext);
           final sheet = SeedBottomSheet(
             key: sheetKey,
-            expand: fixed,
+            // fixed controls keyboard anchoring, not the sheet's expanded size.
+            // React uses the same intrinsic content in both keyboard modes.
+            expand: false,
             title: 'Keyboard playground',
             showHandle: true,
             showCloseButton: false,
@@ -589,25 +663,32 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
             ]),
             footer: _button('Close', () => Navigator.pop(sheetContext)),
           );
-          final keyboard = reposition ? media.viewInsets.bottom : 0.0;
+          final keyboard = media.viewInsets.bottom;
           Widget surface = snap
               ? SeedSnappingBottomSheet(
                   sheet: sheet,
                   snapPoints: const [
-                    SeedSheetSnapPoint.fraction(.5),
-                    SeedSheetSnapPoint.fraction(.9),
+                    SeedSheetSnapPoint.pixels(360),
+                    SeedSheetSnapPoint.fraction(1),
                   ],
                   initialSnapIndex: 0,
                   dismissible: true,
                 )
               : sheet;
           surface = Padding(
-            padding: EdgeInsets.only(bottom: keyboard),
+            padding: EdgeInsets.only(
+              // With fixed=true the bottom edge remains at the viewport edge;
+              // shrinking the top constraint makes the body scrollable.
+              top: fixed ? keyboard : 0,
+              bottom: !fixed && reposition ? keyboard : 0,
+            ),
             child: surface,
           );
           return MediaQuery(
             data: media.copyWith(
-              viewInsets: reposition ? media.viewInsets : EdgeInsets.zero,
+              viewInsets: reposition || fixed
+                  ? media.viewInsets
+                  : EdgeInsets.zero,
             ),
             child: Align(alignment: Alignment.bottomCenter, child: surface),
           );
@@ -631,10 +712,29 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
 
   Future<void> _openMenuSheet() async {
     final swipeable = widget.activity == 'ActivitySwipeableMenuSheet';
+    void selectAction(String action) {
+      if (swipeable) _notify(context, '선택한 액션: $action');
+      // Official MenuSheet/SwipeableMenuSheet invoke callbackPop(). A directly
+      // entered Activity has no predecessor, and Stackflow leaves its sheet
+      // open while still delivering the swipeable selection Snackbar.
+      final hasPredecessor =
+          SpaHistoryDelegate.of(context)
+              .currentConfiguration
+              .activities
+              .length >
+          1;
+      if (hasPredecessor) {
+        Navigator.of(context).pop({'action': action});
+      }
+    }
+
     _result = await showSeedMenuSheet<Map<String, String>>(
       context: context,
       enableDrag: swipeable,
       closeOnSelect: false,
+      showHandle: swipeable,
+      showCancelButton: !swipeable,
+      groupLabelAlignments: const [TextAlign.start, TextAlign.center],
       title: 'Actions',
       groups: [
         SeedMenuGroupData(
@@ -642,19 +742,13 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
             SeedMenuItemData(
               label: 'Add',
               prefixIcon: const Icon(Icons.add),
-              onTap: () {
-                if (swipeable) _notify(context, '선택한 액션: add');
-                Navigator.of(context).pop({'action': 'add'});
-              },
+              onTap: () => selectAction('add'),
             ),
             SeedMenuItemData(
               label: 'Edit Proident pariatur do cillum labore nisi ex velit fugiat laboris pariatur consequat mollit ex culpa cillum.',
               description: 'Aliqua reprehenderit nostrud ea laborum. Aliquip qui sint amet nulla aliqua mollit consequat sint nostrud cupidatat nisi.',
               prefixIcon: const Icon(Icons.edit),
-              onTap: () {
-                if (swipeable) _notify(context, '선택한 액션: edit');
-                Navigator.of(context).pop({'action': 'edit'});
-              },
+              onTap: () => selectAction('edit'),
             ),
           ],
         ),
@@ -662,25 +756,16 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
           items: [
             SeedMenuItemData(
               label: 'Test1',
-              onTap: () {
-                if (swipeable) _notify(context, '선택한 액션: test1');
-                Navigator.of(context).pop({'action': 'test1'});
-              },
+              onTap: () => selectAction('test1'),
             ),
             SeedMenuItemData(
               label: 'Test2',
-              onTap: () {
-                if (swipeable) _notify(context, '선택한 액션: test2');
-                Navigator.of(context).pop({'action': 'test2'});
-              },
+              onTap: () => selectAction('test2'),
             ),
             SeedMenuItemData(
               label: 'Adipisicing commodo et ex ad reprehenderit. Excepteur sint aute voluptate id.',
               isDestructive: true,
-              onTap: () {
-                if (swipeable) _notify(context, '선택한 액션: delete');
-                Navigator.of(context).pop({'action': 'delete'});
-              },
+              onTap: () => selectAction('delete'),
             ),
           ],
         ),
@@ -692,7 +777,8 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
     _result = await showSeedMenuSheet<Map<String, String>>(
       context: context,
       closeOnSelect: false,
-      enableDrag: false,
+      enableDrag: true,
+      showCancelButton: false,
       title: 'Actions',
       groups: [
         SeedMenuGroupData(
@@ -700,18 +786,50 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
             SeedMenuItemData(
               label: '추가',
               prefixIcon: const Icon(Icons.add),
-              onTap: () => Navigator.of(context).pop({'action': 'add'}),
+              onTap: () {
+                _notify(context, '선택한 액션: add');
+                Navigator.of(context).pop({'action': 'add'});
+              },
             ),
             SeedMenuItemData(
               label: '수정',
               prefixIcon: const Icon(Icons.edit),
-              onTap: () => Navigator.of(context).pop({'action': 'edit'}),
+              onTap: () {
+                // React historySyncPlugin refuses to pop a direct root
+                // Activity. Keep that root's menu mounted after Edit, but
+                // preserve normal pop behavior for a pushed child Activity.
+                final canPopActivity =
+                    SpaHistoryDelegate.of(context)
+                        .currentConfiguration
+                        .activities
+                        .length >
+                    1;
+                _notify(context, '선택한 액션: edit');
+                if (canPopActivity) {
+                  Navigator.of(context).pop({'action': 'edit'});
+                }
+              },
             ),
             SeedMenuItemData(
               label: '삭제',
               prefixIcon: const Icon(Icons.delete),
               isDestructive: true,
-              onTap: () => Navigator.of(context).pop({'action': 'delete'}),
+              onTap: () {
+                // React historySyncPlugin.onBeforePop does not pop a root
+                // Activity (popCount=0). A direct /menu-sheet-activity/simple
+                // visit is its own root; popping the Flutter modal here would
+                // also complete _openActivity and pop that root to '/'.
+                final canPopActivity =
+                    SpaHistoryDelegate.of(context)
+                        .currentConfiguration
+                        .activities
+                        .length >
+                    1;
+                _notify(context, '선택한 액션: delete');
+                if (canPopActivity) {
+                  Navigator.of(context).pop({'action': 'delete'});
+                }
+              },
             ),
           ],
         ),
@@ -795,12 +913,25 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
               ]);
               final footer = showFooter || responsive
                   ? _column([
+                      _button('닫기', () {
+                        // React ActivityResponsiveSidePanel's footer calls
+                        // useFlow().pop(). A directly loaded root Activity
+                        // has no predecessor, so that pop leaves the panel
+                        // open with its current size. An Activity pushed
+                        // from Home still closes normally.
+                        if (responsive) {
+                          final activityCount = SpaHistoryDelegate.of(ctx)
+                              .currentConfiguration
+                              .activities
+                              .length;
+                          if (activityCount <= 1) return;
+                        }
+                        Navigator.pop(ctx);
+                      }, variant: SeedButtonVariant.neutralWeak),
                       _button(
-                        '닫기',
-                        () => Navigator.pop(ctx),
-                        variant: SeedButtonVariant.neutralWeak,
+                        '확인',
+                        responsive ? () {} : () => Navigator.pop(ctx),
                       ),
-                      _button('확인', () => Navigator.pop(ctx)),
                     ], gap: 8)
                   : null;
               if (compact) {
@@ -821,6 +952,7 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
                     : Alignment.centerLeft,
                 child: SeedSidePanel(
                   title: showTitle || responsive ? title : '',
+                  semanticsLabel: title,
                   description: showDescription || responsive
                       ? description
                       : null,
@@ -840,8 +972,11 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
           ),
       transitionBuilder: (ctx, animation, secondaryAnimation, child) =>
           SlideTransition(
-            position: Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero)
-                .animate(
+            position:
+                Tween<Offset>(
+                  begin: Offset(direction == 'right' ? 1 : -1, 0),
+                  end: Offset.zero,
+                ).animate(
                   CurvedAnimation(
                     parent: animation,
                     curve: Curves.easeOutCubic,
@@ -948,8 +1083,12 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
 }
 
 class _ActivityAlertDialog extends StatefulWidget {
-  const _ActivityAlertDialog({required this.navigate});
+  const _ActivityAlertDialog({
+    required this.navigate,
+    required this.canPopActivity,
+  });
   final SpaNavigate navigate;
+  final bool canPopActivity;
   @override
   State<_ActivityAlertDialog> createState() => _ActivityAlertDialogState();
 }
@@ -957,134 +1096,435 @@ class _ActivityAlertDialog extends StatefulWidget {
 class _ActivityAlertDialogState extends State<_ActivityAlertDialog> {
   bool keepMounted = false;
   @override
-  Widget build(BuildContext context) => _RoutePresence(
-    keepMounted: keepMounted,
-    child: SeedAlertDialog(
-      title: '제목',
-      description: '다람쥐 헌 쳇바퀴에 타고파',
-      footer: _column([
-        Row(
-          children: [
-            Expanded(
-              child: _button(
-                '확인',
-                () => Navigator.pop(context, {'message': 'hello'}),
-                variant: SeedButtonVariant.neutralWeak,
+  Widget build(BuildContext context) => PopScope<void>(
+    // Stackflow pop() is a no-op for a directly entered root Activity.
+    // A Flutter dialog route is separately poppable, so it must honor the
+    // Activity stack depth for keyboard/Escape and Android system Back.
+    canPop: widget.canPopActivity,
+    child: _RoutePresence(
+      keepMounted: keepMounted,
+      child: SeedAlertDialog(
+        title: '제목',
+        description: '다람쥐 헌 쳇바퀴에 타고파',
+        footer: _column([
+          Row(
+            children: [
+              Expanded(
+                child: _button('확인', () {
+                  // The React AlertDialogAction invokes useFlow().pop().
+                  // Closing only the Flutter dialog would leave an empty
+                  // root Activity when no predecessor exists.
+                  if (widget.canPopActivity) {
+                    Navigator.pop(context, {'message': 'hello'});
+                  }
+                }, variant: SeedButtonVariant.neutralWeak),
               ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _button('Push', () {
-                widget.navigate(
-                  'ActivityDetail',
-                  arguments: {
-                    'title': 'AlertDialog에서 Push됨',
-                    'body': keepMounted
-                        ? 'AlertDialog가 유지되므로 현재 Activity를 pop하면 다시 표시됩니다.'
-                        : 'AlertDialog를 재진입하면 enter 애니메이션이 다시 실행됩니다.',
-                  },
-                );
-              }),
-            ),
-          ],
-        ),
-        SeedSwitch(
-          label: 'Push 이후에도 AlertDialog 마운트 유지',
-          checked: keepMounted,
-          onCheckedChange: (value) => setState(() => keepMounted = value),
-        ),
-      ]),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _button('Push', () {
+                  widget.navigate(
+                    'ActivityDetail',
+                    arguments: {
+                      'title': 'AlertDialog에서 Push됨',
+                      'body': keepMounted
+                          ? 'AlertDialog가 유지되므로 현재 Activity를 pop하면 다시 표시됩니다.'
+                          : 'AlertDialog를 재진입하면 enter 애니메이션이 다시 실행됩니다.',
+                    },
+                  );
+                }),
+              ),
+            ],
+          ),
+          SeedSwitch(
+            label: 'Push 이후에도 AlertDialog 마운트 유지',
+            checked: keepMounted,
+            onCheckedChange: (value) => setState(() => keepMounted = value),
+          ),
+        ]),
+      ),
     ),
   );
 }
 
-class _SheetDialogStepPage extends StatelessWidget {
+class _SheetDialogStepPage extends StatefulWidget {
   const _SheetDialogStepPage();
+
   @override
-  Widget build(BuildContext context) => _demoScroll([
-    _section(
-      'Step 패턴',
-      const Text(
-        'useStepOverlay로 BottomSheet step과 AlertDialog step을 한 Activity 안에서 동시에 사용합니다. '
-        '시트 위에 다이얼로그를 얹어 Backdrop과 내부 빈 영역을 확인해보세요.',
-      ),
-    ),
-    _button('Open BottomSheet', () {
-      showSeedBottomSheet<void>(
-        context: context,
-        child: Builder(
-          builder: (sheetContext) => SeedBottomSheet(
-            showHandle: true,
-            title: 'BottomSheet (step)',
-            description: '이 BottomSheet 위에 AlertDialog를 얹어볼 수 있어요.',
-            content: _button('Open AlertDialog', () {
-              showSeedDialog<void>(
-                context: sheetContext,
-                barrierDismissible: true,
-                child: Builder(
-                  builder: (dialogContext) => SeedAlertDialog(
-                    title: '제목',
-                    description:
-                        'AlertDialog Backdrop 또는 Content 빈 영역을 클릭해 동작을 관찰해보세요.',
-                    footer: _button('닫기', () => Navigator.pop(dialogContext)),
-                  ),
-                ),
-              );
-            }),
-            footer: _button(
-              '닫기',
-              () => Navigator.pop(sheetContext),
-              variant: SeedButtonVariant.neutralWeak,
-            ),
-          ),
-        ),
-      );
-    }),
-  ]);
+  State<_SheetDialogStepPage> createState() => _SheetDialogStepPageState();
 }
 
-class _AlertDialogStepPage extends StatelessWidget {
-  const _AlertDialogStepPage({required this.navigate});
+class _SheetDialogStepPageState extends State<_SheetDialogStepPage> {
+  bool _sheetShowing = false;
+  bool _alertShowing = false;
+  bool _alertDismissedLocally = false;
+  Route<dynamic>? _sheetRoute;
+  Route<dynamic>? _alertRoute;
+  BuildContext? _sheetContext;
+
+  void _dismissRoute(Route<dynamic>? route) {
+    if (route != null && route.isActive) {
+      Navigator.of(context, rootNavigator: true).removeRoute(route);
+    }
+  }
+
+  Future<void> _openAlert(SpaHistoryDelegate history) async {
+    final sheetContext = _sheetContext;
+    if (sheetContext == null || !sheetContext.mounted || _alertShowing) return;
+    _alertShowing = true;
+    try {
+      await showSeedDialog<void>(
+        context: sheetContext,
+        // React enables outside-press dismissal only for this nested alert.
+        barrierDismissible: true,
+        child: Builder(
+          builder: (dialogContext) {
+            _alertRoute = ModalRoute.of(dialogContext);
+            return SeedAlertDialog(
+              title: '제목',
+              description:
+                  'AlertDialog Backdrop 또는 Content 빈 영역을 클릭해 동작을 관찰해보세요.',
+              footer: _button('닫기', () => history.popStep('alert-dialog')),
+            );
+          },
+        ),
+      );
+    } finally {
+      _alertShowing = false;
+      _alertRoute = null;
+      if (mounted && history.isStepOpen('alert-dialog')) {
+        // Dismissed by the barrier/Escape rather than the Step close action.
+        // Browser popstate arrives asynchronously. Keep the dismissed child
+        // closed while its old query is still present, as React's local
+        // useStepOverlay open state does, rather than reopening it mid-pop.
+        _alertDismissedLocally = true;
+        history.popStep('alert-dialog');
+      }
+    }
+  }
+
+  Future<void> _openSheet(SpaHistoryDelegate history) async {
+    if (_sheetShowing) return;
+    _sheetShowing = true;
+    try {
+      await showSeedBottomSheet<void>(
+        context: context,
+        child: Builder(
+          builder: (sheetContext) {
+            _sheetRoute = ModalRoute.of(sheetContext);
+            _sheetContext = sheetContext;
+            // A direct URL can contain both Step keys. Mount the parent
+            // BottomSheet before opening the child AlertDialog.
+            WidgetsBinding.instance.addPostFrameCallback(
+              (_) => _reconcile(history),
+            );
+            return SeedBottomSheet(
+              showHandle: true,
+              title: 'BottomSheet (step)',
+              description: '이 BottomSheet 위에 AlertDialog를 얹어볼 수 있어요.',
+              content: _button(
+                'Open AlertDialog',
+                () => history.pushStep('alert-dialog'),
+              ),
+              footer: _button(
+                '닫기',
+                () => history.popStep('bottom-sheet'),
+                variant: SeedButtonVariant.neutralWeak,
+              ),
+            );
+          },
+        ),
+      );
+    } finally {
+      _sheetShowing = false;
+      _sheetRoute = null;
+      _sheetContext = null;
+      if (mounted && history.isStepOpen('bottom-sheet')) {
+        history.popStep('bottom-sheet');
+      }
+    }
+  }
+
+  void _reconcile(SpaHistoryDelegate history) {
+    if (!mounted) return;
+    final sheetOpen = history.isStepOpen('bottom-sheet');
+    final alertOpen = history.isStepOpen('alert-dialog');
+    if (!alertOpen) _alertDismissedLocally = false;
+    if (!sheetOpen) {
+      _dismissRoute(_alertRoute);
+      _dismissRoute(_sheetRoute);
+    } else {
+      if (!_sheetShowing) _openSheet(history);
+      if (alertOpen &&
+          !_alertShowing &&
+          !_alertDismissedLocally &&
+          _sheetRoute != null) {
+        _openAlert(history);
+      } else if (!alertOpen) {
+        _dismissRoute(_alertRoute);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final history = SpaHistoryDelegate.of(context);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _reconcile(history));
+    return _demoScroll([
+      _section(
+        'Step 패턴',
+        const Text(
+          'useStepOverlay로 BottomSheet step과 AlertDialog step을 한 Activity 안에서 동시에 사용합니다. '
+          '시트 위에 다이얼로그를 얹어 Backdrop과 내부 빈 영역을 확인해보세요.',
+        ),
+      ),
+      _button('Open BottomSheet', () => history.pushStep('bottom-sheet')),
+    ]);
+  }
+}
+
+enum _StepKind { alert, bottom, menu }
+
+/// One Stackflow Activity owns its Step query, even while its modal route is
+/// present. Browser Back/Forward changes the query without replacing the page.
+class _StepHistoryPage extends StatefulWidget {
+  const _StepHistoryPage({required this.kind, required this.navigate});
+
+  final _StepKind kind;
   final SpaNavigate navigate;
 
   @override
-  Widget build(BuildContext context) => _demoScroll([
-    _button('Alert Dialog 열기', () {
-      showSeedDialog<void>(
-        context: context,
-        child: Builder(
-          builder: (dialogContext) => SeedAlertDialog(
-            title: 'Step',
-            description: 'Alert Dialog가 Step으로 만들어져 있기 때문에 뒤로 가기로 닫을 수 있습니다.',
-            footer: Row(
-              children: [
-                Expanded(
-                  child: _button(
-                    '닫기',
-                    () => Navigator.pop(dialogContext),
-                    variant: SeedButtonVariant.neutralWeak,
+  State<_StepHistoryPage> createState() => _StepHistoryPageState();
+}
+
+class _StepHistoryPageState extends State<_StepHistoryPage> {
+  bool _showing = false;
+  // The React AlertDialog Step footer calls setOpen(false) directly, so the
+  // modal closes while its `alert-dialog=open` URL parameter is retained.
+  bool _alertClosedLocally = false;
+  Route<dynamic>? _modalRoute;
+  Map<String, String>? _pendingDetail;
+
+  String get _stepKey => switch (widget.kind) {
+    _StepKind.alert => 'alert-dialog',
+    _StepKind.bottom => 'bottom-sheet',
+    _StepKind.menu => 'menu-sheet',
+  };
+
+  String get _launchLabel => switch (widget.kind) {
+    _StepKind.alert => 'Alert Dialog 열기',
+    _StepKind.bottom => 'Bottom Sheet 열기',
+    _StepKind.menu => 'Menu Sheet 열기',
+  };
+
+  void _captureRoute(BuildContext overlayContext) {
+    _modalRoute = ModalRoute.of(overlayContext);
+  }
+
+  void _close() {
+    if (widget.kind == _StepKind.alert) {
+      _alertClosedLocally = true;
+      final route = _modalRoute;
+      if (route != null && route.isActive) {
+        Navigator.of(context, rootNavigator: true).removeRoute(route);
+      }
+      return;
+    }
+    SpaHistoryDelegate.of(context).popStep(_stepKey);
+  }
+
+  void _openStep(SpaHistoryDelegate history) {
+    if (widget.kind == _StepKind.alert &&
+        _alertClosedLocally &&
+        history.isStepOpen(_stepKey)) {
+      // React's controlled trigger calls setOpen(true) without pushing a new
+      // Step if the old URL still contains `alert-dialog=open`.
+      _alertClosedLocally = false;
+      if (!_showing) _openModal(history);
+      return;
+    }
+    history.pushStep(_stepKey);
+  }
+
+  void _pushDetail(String title, String body) {
+    _pendingDetail = {'title': title, 'body': body};
+    _close();
+  }
+
+  Future<void> _openModal(SpaHistoryDelegate history) async {
+    _showing = true;
+    try {
+      switch (widget.kind) {
+        case _StepKind.alert:
+          await showSeedDialog<void>(
+            context: context,
+            barrierDismissible: false,
+            child: Builder(
+              builder: (dialogContext) {
+                _captureRoute(dialogContext);
+                return SeedAlertDialog(
+                  title: 'Step',
+                  description:
+                      'Alert Dialog가 Step으로 만들어져 있기 때문에 뒤로 가기로 닫을 수 있습니다.',
+                  footer: Row(
+                    children: [
+                      Expanded(
+                        child: _button(
+                          '닫기',
+                          _close,
+                          variant: SeedButtonVariant.neutralWeak,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _button(
+                          'Push',
+                          () => _pushDetail(
+                            'Alert Dialog에서 이동한 화면',
+                            'Alert Dialog를 닫고 이동했습니다.',
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _button('Push', () {
-                    Navigator.pop(dialogContext);
-                    navigate(
-                      'ActivityDetail',
-                      arguments: {
-                        'title': 'Alert Dialog에서 이동한 화면',
-                        'body': 'Alert Dialog를 닫고 이동했습니다.',
-                      },
-                    );
-                  }),
-                ),
-              ],
+                );
+              },
             ),
-          ),
-        ),
-      );
-    }),
-  ]);
+          );
+        case _StepKind.bottom:
+          await showSeedBottomSheet<void>(
+            context: context,
+            child: Builder(
+              builder: (sheetContext) {
+                _captureRoute(sheetContext);
+                return SeedBottomSheet(
+                  title: 'Step',
+                  showHandle: true,
+                  description:
+                      'Bottom Sheet가 Step으로 만들어져 있기 때문에 뒤로 가기로 닫을 수 있습니다.',
+                  content: const SizedBox.shrink(),
+                  footer: Row(
+                    children: [
+                      Expanded(
+                        child: _button(
+                          '닫기',
+                          _close,
+                          variant: SeedButtonVariant.neutralWeak,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _button(
+                          'Push',
+                          () => _pushDetail(
+                            'Bottom Sheet에서 이동한 화면',
+                            'Bottom Sheet를 닫고 이동했습니다.',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          );
+        case _StepKind.menu:
+          // The menu's public helper creates an unnamed BottomSheet route.
+          // Inline composition lets us retain the exact route identity for
+          // query-driven browser Back/Forward without popping an Activity.
+          await showSeedBottomSheet<void>(
+            context: context,
+            child: Builder(
+              builder: (sheetContext) {
+                _captureRoute(sheetContext);
+                return SeedMenuSheet(
+                  title: 'Step',
+                  showCancelButton: false,
+                  closeOnSelect: false,
+                  groupLabelAlignments: const [
+                    TextAlign.start,
+                    TextAlign.center,
+                  ],
+                  groups: [
+                    SeedMenuGroupData(
+                      items: [
+                        for (final action in ['add', 'edit', 'delete'])
+                          SeedMenuItemData(
+                            label: switch (action) {
+                              'add' => '추가',
+                              'edit' => '수정',
+                              _ => '삭제',
+                            },
+                            prefixIcon: Icon(switch (action) {
+                              'add' => Icons.add,
+                              'edit' => Icons.edit,
+                              _ => Icons.delete,
+                            }),
+                            isDestructive: action == 'delete',
+                            onTap: () {
+                              _notify(context, '선택한 액션: $action');
+                              _close();
+                            },
+                          ),
+                      ],
+                    ),
+                    SeedMenuGroupData(
+                      items: [
+                        SeedMenuItemData(
+                          label: 'Push',
+                          onTap: () => _pushDetail(
+                            'Menu Sheet에서 이동한 화면',
+                            'Menu Sheet를 닫고 이동했습니다.',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              },
+            ),
+          );
+      }
+    } finally {
+      _showing = false;
+      _modalRoute = null;
+      if (mounted) {
+        // Escape, drag or outside tap closes the unnamed modal first. Mirror
+        // React onOpenChange(false) once that exact route has gone away.
+        if (history.isStepOpen(_stepKey) && !_alertClosedLocally) {
+          history.popStep(_stepKey);
+        }
+        final pending = _pendingDetail;
+        _pendingDetail = null;
+        if (pending != null) {
+          widget.navigate('ActivityDetail', arguments: pending);
+        }
+      }
+    }
+  }
+
+  void _reconcile(SpaHistoryDelegate history) {
+    if (!mounted) return;
+    final shouldOpen = history.isStepOpen(_stepKey);
+    if (!shouldOpen) _alertClosedLocally = false;
+    if (shouldOpen && !_showing && !_alertClosedLocally) {
+      _openModal(history);
+    } else if (!shouldOpen && _showing) {
+      final route = _modalRoute;
+      if (route != null && route.isActive) {
+        // Remove the precise modal route. A push to another Activity must not
+        // accidentally get popped as a side effect of Step history changes.
+        Navigator.of(context, rootNavigator: true).removeRoute(route);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Registers the _SpaStepScope dependency for browser Back/Forward updates.
+    final history = SpaHistoryDelegate.of(context);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _reconcile(history));
+    return _demoScroll([_button(_launchLabel, () => _openStep(history))]);
+  }
 }
 
 /// The React Activity examples are plain screens that push a modal activity or
@@ -1106,7 +1546,7 @@ class _ActivityLaunchPage extends StatelessWidget {
     child: Center(
       child: _column([
         _button(
-          '$overlayActivity${overlayActivity == 'ActivityBottomSheet' ? '을' : '를'} Push',
+          '$overlayActivity${overlayActivity == 'ActivityAlertDialog' ? '를' : '을'} Push',
           () => navigate(overlayActivity),
         ),
         _button(
@@ -1124,110 +1564,6 @@ class _ActivityLaunchPage extends StatelessWidget {
   );
 }
 
-class _BottomSheetStepPage extends StatelessWidget {
-  const _BottomSheetStepPage({required this.navigate});
-  final SpaNavigate navigate;
-
-  @override
-  Widget build(BuildContext context) => _demoScroll([
-    _button('Bottom Sheet 열기', () {
-      showSeedBottomSheet<void>(
-        context: context,
-        child: Builder(
-          builder: (sheetContext) => SeedBottomSheet(
-            title: 'Step',
-            showHandle: true,
-            description: 'Bottom Sheet가 Step으로 만들어져 있기 때문에 뒤로 가기로 닫을 수 있습니다.',
-            content: const SizedBox.shrink(),
-            footer: Row(
-              children: [
-                Expanded(
-                  child: _button(
-                    '닫기',
-                    () => Navigator.pop(sheetContext),
-                    variant: SeedButtonVariant.neutralWeak,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _button('Push', () {
-                    Navigator.pop(sheetContext);
-                    navigate(
-                      'ActivityDetail',
-                      arguments: {
-                        'title': 'Bottom Sheet에서 이동한 화면',
-                        'body': 'Bottom Sheet를 닫고 이동했습니다.',
-                      },
-                    );
-                  }),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }),
-  ]);
-}
-
-class _MenuSheetStepPage extends StatelessWidget {
-  const _MenuSheetStepPage({required this.navigate});
-  final SpaNavigate navigate;
-
-  @override
-  Widget build(BuildContext context) => _demoScroll([
-    _button('Menu Sheet 열기', () {
-      showSeedMenuSheet<void>(
-        context: context,
-        title: 'Step',
-        groups: [
-          SeedMenuGroupData(
-            items: [
-              SeedMenuItemData(
-                label: '추가',
-                prefixIcon: const Icon(Icons.add),
-                onTap: () => _notify(context, '선택한 액션: add'),
-              ),
-              SeedMenuItemData(
-                label: '수정',
-                prefixIcon: const Icon(Icons.edit),
-                onTap: () => _notify(context, '선택한 액션: edit'),
-              ),
-              SeedMenuItemData(
-                label: '삭제',
-                prefixIcon: const Icon(Icons.delete),
-                isDestructive: true,
-                onTap: () => _notify(context, '선택한 액션: delete'),
-              ),
-            ],
-          ),
-          SeedMenuGroupData(
-            items: [
-              SeedMenuItemData(
-                label: 'Push',
-                onTap: () {
-                  // Queue the route after menu item dispatch and modal dismissal.
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (context.mounted) {
-                      navigate(
-                        'ActivityDetail',
-                        arguments: {
-                          'title': 'Menu Sheet에서 이동한 화면',
-                          'body': 'Menu Sheet를 닫고 이동했습니다.',
-                        },
-                      );
-                    }
-                  });
-                },
-              ),
-            ],
-          ),
-        ],
-      );
-    }),
-  ]);
-}
-
 class _MenuDemoPage extends StatefulWidget {
   const _MenuDemoPage({required this.navigate});
   final SpaNavigate navigate;
@@ -1239,6 +1575,17 @@ class _MenuDemoPage extends StatefulWidget {
 class _MenuDemoPageState extends State<_MenuDemoPage> {
   bool _anchorOpen = false;
   String _lastReason = '-';
+
+  // Placement-only examples render the two simple items in ActivityMenu.tsx,
+  // not the separate Basic Trigger's grouped actions.
+  List<SeedMenuGroupData> _placementGroups() => const [
+    SeedMenuGroupData(
+      items: [
+        SeedMenuItemData(label: 'Item 1'),
+        SeedMenuItemData(label: 'Item 2'),
+      ],
+    ),
+  ];
 
   List<SeedMenuGroupData> _basicGroups() => [
     SeedMenuGroupData(
@@ -1278,6 +1625,7 @@ class _MenuDemoPageState extends State<_MenuDemoPage> {
     String label,
     List<SeedMenuGroupData> groups, {
     SeedMenuSize size = SeedMenuSize.medium,
+    SeedButtonVariant variant = SeedButtonVariant.brandSolid,
     SeedOverlaySide side = SeedOverlaySide.bottom,
     SeedOverlayAlign align = SeedOverlayAlign.start,
     double maxHeight = 480,
@@ -1287,7 +1635,7 @@ class _MenuDemoPageState extends State<_MenuDemoPage> {
     align: align,
     onOpenChange: onOpenChange,
     triggerBuilder: (context, open, toggle) =>
-        _button(label, toggle, variant: SeedButtonVariant.brandSolid),
+        _button(label, toggle, variant: variant),
     builder: (ctx) =>
         SeedMenu(groups: groups, size: size, maxHeight: maxHeight),
   );
@@ -1325,7 +1673,7 @@ class _MenuDemoPageState extends State<_MenuDemoPage> {
                   const SeedMenuGroupData(
                     items: [SeedMenuItemData(label: '삭제', isDestructive: true)],
                   ),
-                ])
+                ], variant: SeedButtonVariant.neutralWeak)
               : null,
         ),
       ),
@@ -1355,7 +1703,7 @@ class _MenuDemoPageState extends State<_MenuDemoPage> {
                       ),
                     ],
                   ),
-                ]),
+                ], variant: SeedButtonVariant.neutralWeak),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -1438,192 +1786,216 @@ class _MenuDemoPageState extends State<_MenuDemoPage> {
         ),
       ],
     ),
-    body: _demoScroll([
-      _section(
-        'Basic Trigger',
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            _menuButton('Medium', _basicGroups()),
-            _menuButton('Small', const [
-              SeedMenuGroupData(
-                items: [
-                  SeedMenuItemData(label: '추가', prefixIcon: Icon(Icons.add)),
-                  SeedMenuItemData(label: '수정', prefixIcon: Icon(Icons.edit)),
-                  SeedMenuItemData(
-                    label: '삭제',
-                    prefixIcon: Icon(Icons.delete),
-                    isDestructive: true,
-                  ),
-                ],
-              ),
-            ], size: SeedMenuSize.small),
-          ],
-        ),
-      ),
-      _section(
-        'Placement',
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            _menuButton('bottom-start', _basicGroups()),
-            _menuButton(
-              'bottom-end',
-              _basicGroups(),
-              align: SeedOverlayAlign.end,
-            ),
-            _menuButton(
-              'top',
-              _basicGroups(),
-              side: SeedOverlaySide.top,
-              align: SeedOverlayAlign.center,
-            ),
-          ],
-        ),
-      ),
-      _section(
-        'Anchor (Controlled)',
-        Row(
-          children: [
-            Expanded(
-              child: SeedSwitch(
-                label: '메뉴',
-                checked: _anchorOpen,
-                onCheckedChange: (v) => setState(() => _anchorOpen = v),
-              ),
-            ),
-            SeedMenuTrigger(
-              open: _anchorOpen,
-              onOpenChange: (next, reason) {
-                if (!next && reason == SeedOverlayDismissReason.outside) return;
-                setState(() => _anchorOpen = next);
-              },
-              triggerBuilder: (ctx, open, toggle) => const CircleAvatar(
-                radius: 36,
-                child: Icon(Icons.person, size: 40),
-              ),
-              builder: (ctx) => const SeedMenu(
-                groups: [
-                  SeedMenuGroupData(
-                    items: [
-                      SeedMenuItemData(label: '프로필 보기'),
-                      SeedMenuItemData(label: '메시지 보내기'),
-                    ],
-                  ),
-                  SeedMenuGroupData(
-                    items: [
-                      SeedMenuItemData(
-                        label: '숨기기',
-                        prefixIcon: Icon(Icons.visibility_off),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-      _section(
-        'Many Items (Scroll)',
-        _menuButton('30개 항목', [
-          SeedMenuGroupData(
-            label: 'Recently Played',
-            items: [
-              for (var i = 1; i <= 30; i++) SeedMenuItemData(label: 'Track $i'),
+    body: ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        _section(
+          'Basic Trigger',
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              _menuButton('Medium', _basicGroups()),
+              _menuButton('Small', const [
+                SeedMenuGroupData(
+                  items: [
+                    SeedMenuItemData(label: '추가', prefixIcon: Icon(Icons.add)),
+                    SeedMenuItemData(label: '수정', prefixIcon: Icon(Icons.edit)),
+                    SeedMenuItemData(
+                      label: '삭제',
+                      prefixIcon: Icon(Icons.delete),
+                      isDestructive: true,
+                    ),
+                  ],
+                ),
+              ], size: SeedMenuSize.small),
             ],
           ),
-        ]),
-      ),
-      _section(
-        'Max Height',
-        _menuButton('30개 항목 (높이 제한)', [
-          SeedMenuGroupData(
-            label: 'Recently Played',
-            items: [
-              for (var i = 1; i <= 30; i++) SeedMenuItemData(label: 'Track $i'),
+        ),
+        _section(
+          'Placement',
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              _menuButton(
+                'bottom-start',
+                _placementGroups(),
+                variant: SeedButtonVariant.neutralWeak,
+              ),
+              _menuButton(
+                'bottom-end',
+                _placementGroups(),
+                align: SeedOverlayAlign.end,
+                variant: SeedButtonVariant.neutralWeak,
+              ),
+              _menuButton(
+                'top',
+                _placementGroups(),
+                side: SeedOverlaySide.top,
+                align: SeedOverlayAlign.center,
+                variant: SeedButtonVariant.neutralWeak,
+              ),
             ],
           ),
-        ], maxHeight: 160),
-        hint: '메뉴의 높이를 160px로 제한합니다.',
-      ),
-      _section(
-        'onOpenChange Reason',
-        Row(
-          children: [
-            _menuButton(
-              'Reason 추적',
-              const [
-                SeedMenuGroupData(items: [SeedMenuItemData(label: '항목')]),
+        ),
+        _section(
+          'Anchor (Controlled)',
+          Row(
+            children: [
+              Expanded(
+                child: SeedSwitch(
+                  label: '메뉴',
+                  tone: SeedControlTone.neutral,
+                  checked: _anchorOpen,
+                  onCheckedChange: (v) => setState(() => _anchorOpen = v),
+                ),
+              ),
+              SeedMenuTrigger(
+                open: _anchorOpen,
+                onOpenChange: (next, reason) {
+                  if (!next && reason == SeedOverlayDismissReason.outside) {
+                    return;
+                  }
+                  setState(() => _anchorOpen = next);
+                },
+                triggerBuilder: (ctx, open, toggle) => const CircleAvatar(
+                  radius: 40,
+                  child: Icon(Icons.person, size: 40),
+                ),
+                builder: (ctx) => const SeedMenu(
+                  groups: [
+                    SeedMenuGroupData(
+                      items: [
+                        SeedMenuItemData(label: '프로필 보기'),
+                        SeedMenuItemData(label: '메시지 보내기'),
+                      ],
+                    ),
+                    SeedMenuGroupData(
+                      items: [
+                        SeedMenuItemData(
+                          label: '숨기기',
+                          prefixIcon: Icon(Icons.visibility_off),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        _section(
+          'Many Items (Scroll)',
+          _menuButton('30개 항목', [
+            SeedMenuGroupData(
+              label: 'Recently Played',
+              items: [
+                for (var i = 1; i <= 30; i++)
+                  SeedMenuItemData(label: 'Track $i'),
               ],
-              onOpenChange: (open, reason) {
-                setState(() => _lastReason = reason.name);
-              },
             ),
-            const SizedBox(width: 16),
-            Expanded(child: Text('마지막: $_lastReason')),
-          ],
+          ], variant: SeedButtonVariant.neutralWeak),
         ),
-      ),
-      _section(
-        'Menu → BottomSheet',
-        _menuButton('메뉴에서 시트 열기', [
-          SeedMenuGroupData(
-            items: [
-              const SeedMenuItemData(label: '추가', prefixIcon: Icon(Icons.add)),
-              SeedMenuItemData(
-                label: 'BottomSheet 열기',
-                prefixIcon: const Icon(Icons.ios_share),
-                onTap: () => WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted) _openSheet(context);
-                }),
+        _section(
+          'Max Height',
+          _menuButton(
+            '30개 항목 (높이 제한)',
+            [
+              SeedMenuGroupData(
+                label: 'Recently Played',
+                items: [
+                  for (var i = 1; i <= 30; i++)
+                    SeedMenuItemData(label: 'Track $i'),
+                ],
               ),
             ],
+            maxHeight: 160,
+            variant: SeedButtonVariant.neutralWeak,
           ),
-        ]),
-      ),
-      _section(
-        'Menu in BottomSheet',
-        _button('BottomSheet 열기', () => _openSheet(context, showMenu: true)),
-      ),
-      _section(
-        'Menu in AlertDialog',
-        _button('AlertDialog 열기', _openDialogWithMenu),
-      ),
-      _section(
-        'Navigation',
-        _menuButton('더보기', [
-          SeedMenuGroupData(
-            items: [
-              const SeedMenuItemData(
-                label: '공유',
-                prefixIcon: Icon(Icons.share),
+          hint: '메뉴의 높이를 160px로 제한합니다.',
+        ),
+        _section(
+          'onOpenChange Reason',
+          Row(
+            children: [
+              _menuButton(
+                'Reason 추적',
+                const [
+                  SeedMenuGroupData(items: [SeedMenuItemData(label: '항목')]),
+                ],
+                variant: SeedButtonVariant.neutralWeak,
+                onOpenChange: (open, reason) {
+                  setState(() => _lastReason = reason.name);
+                },
               ),
-              const SeedMenuItemData(
-                label: '북마크',
-                prefixIcon: Icon(Icons.bookmark),
-              ),
-              SeedMenuItemData(
-                label: '홈으로 이동',
-                prefixIcon: const Icon(Icons.home),
-                onTap: () => widget.navigate('ActivityHome'),
-              ),
+              const SizedBox(width: 16),
+              Expanded(child: Text('마지막: $_lastReason')),
             ],
           ),
-          const SeedMenuGroupData(
-            items: [
-              SeedMenuItemData(
-                label: '신고',
-                isDestructive: true,
-                prefixIcon: Icon(Icons.flag),
-              ),
-            ],
-          ),
-        ]),
-      ),
-    ]),
+        ),
+        _section(
+          'Menu → BottomSheet',
+          _menuButton('메뉴에서 시트 열기', [
+            SeedMenuGroupData(
+              items: [
+                const SeedMenuItemData(
+                  label: '추가',
+                  prefixIcon: Icon(Icons.add),
+                ),
+                SeedMenuItemData(
+                  label: 'BottomSheet 열기',
+                  prefixIcon: const Icon(Icons.ios_share),
+                  onTap: () =>
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) _openSheet(context);
+                      }),
+                ),
+              ],
+            ),
+          ]),
+        ),
+        _section(
+          'Menu in BottomSheet',
+          _button('BottomSheet 열기', () => _openSheet(context, showMenu: true)),
+        ),
+        _section(
+          'Menu in AlertDialog',
+          _button('AlertDialog 열기', _openDialogWithMenu),
+        ),
+        _section(
+          'Navigation',
+          _menuButton('더보기', [
+            SeedMenuGroupData(
+              items: [
+                const SeedMenuItemData(
+                  label: '공유',
+                  prefixIcon: Icon(Icons.share),
+                ),
+                const SeedMenuItemData(
+                  label: '북마크',
+                  prefixIcon: Icon(Icons.bookmark),
+                ),
+                SeedMenuItemData(
+                  label: '홈으로 이동',
+                  prefixIcon: const Icon(Icons.home),
+                  onTap: () => widget.navigate('ActivityHome'),
+                ),
+              ],
+            ),
+            const SeedMenuGroupData(
+              items: [
+                SeedMenuItemData(
+                  label: '신고',
+                  isDestructive: true,
+                  prefixIcon: Icon(Icons.flag),
+                ),
+              ],
+            ),
+          ]),
+        ),
+      ],
+    ),
   );
 }
 
@@ -1646,6 +2018,7 @@ class _HelpBubbleDemoPageState extends State<_HelpBubbleDemoPage> {
     String label, {
     String? title,
     String? description,
+    SeedButtonVariant variant = SeedButtonVariant.brandSolid,
     SeedOverlaySide side = SeedOverlaySide.top,
     SeedOverlayAlign align = SeedOverlayAlign.center,
     bool flip = true,
@@ -1660,7 +2033,7 @@ class _HelpBubbleDemoPageState extends State<_HelpBubbleDemoPage> {
     showCloseButton: showCloseButton,
     closeOnInteractOutside: dismissOutside,
     triggerBuilder: (context, open, toggle) =>
-        _button(label, toggle, variant: SeedButtonVariant.brandSolid),
+        _button(label, toggle, variant: variant),
   );
 
   void _showSheet() {
@@ -1682,12 +2055,15 @@ class _HelpBubbleDemoPageState extends State<_HelpBubbleDemoPage> {
                 '기본',
                 title: 'sheet 위의 help bubble',
                 description: '시트 스크림 위로 올라와야 해요.',
+                align: SeedOverlayAlign.start,
+                variant: SeedButtonVariant.neutralWeak,
               ),
               _helpButton(
                 '바깥 탭 무시',
                 title: 'closeOnInteractOutside=false',
                 description: '시트를 닫으면 함께 닫혀야 해요.',
                 dismissOutside: false,
+                variant: SeedButtonVariant.neutralWeak,
               ),
               _button('시트 닫기', () => Navigator.pop(ctx)),
             ],
@@ -1864,7 +2240,11 @@ class _HelpBubbleDemoPageState extends State<_HelpBubbleDemoPage> {
           title: 'Hover 트리거 테스트',
           description: '포인터를 올리거나 키보드로 포커스해보세요.',
           maxWidth: 200,
-          child: _button('Hover 트리거 테스트', () {}),
+          child: _button(
+            'Hover 트리거 테스트',
+            () {},
+            variant: SeedButtonVariant.brandSolid,
+          ),
         ),
       ),
     ),
@@ -1875,7 +2255,11 @@ class _HelpBubbleDemoPageState extends State<_HelpBubbleDemoPage> {
           title: 'Portal 트리거 테스트',
           description: '포털로 body에 렌더되는 변종이에요.',
           maxWidth: 200,
-          child: _button('Portal 트리거 테스트', () {}),
+          child: _button(
+            'Portal 트리거 테스트',
+            () {},
+            variant: SeedButtonVariant.brandSolid,
+          ),
         ),
       ),
     ),
@@ -1934,6 +2318,7 @@ class _PopoverDemoPageState extends State<_PopoverDemoPage> {
 
   Widget _popoverButton(
     String label, {
+    Key? triggerKey,
     String? title,
     String? description,
     String? bodyText,
@@ -1951,7 +2336,7 @@ class _PopoverDemoPageState extends State<_PopoverDemoPage> {
     double maxHeight = 420,
     WidgetBuilder? customBody,
   }) => SeedPopoverTrigger(
-    key: ValueKey('popover-$label'),
+    key: triggerKey ?? ValueKey('popover-$label'),
     open: open,
     onOpenChange: onOpenChange,
     side: _side(placement),
@@ -2132,27 +2517,41 @@ class _PopoverDemoPageState extends State<_PopoverDemoPage> {
         'placement 12종',
         _column([
           Wrap(
-            spacing: 6,
-            runSpacing: 6,
+            spacing: 8,
+            runSpacing: 8,
             children: [
-              for (final value in placements)
-                _button(
-                  value,
-                  () => setState(() => placement = value),
-                  size: SeedButtonSize.xsmall,
-                  variant: placement == value
-                      ? SeedButtonVariant.neutralSolid
-                      : SeedButtonVariant.neutralWeak,
+              for (var row = 0; row < placements.length; row += 3)
+                SizedBox(
+                  width: MediaQuery.sizeOf(context).width - 40,
+                  child: Row(
+                    children: [
+                      for (var i = row; i < row + 3; i++) ...[
+                        if (i > row) const SizedBox(width: 8),
+                        Expanded(
+                          child: _button(
+                            placements[i],
+                            () => setState(() => placement = placements[i]),
+                            size: SeedButtonSize.xsmall,
+                            variant: placement == placements[i]
+                                ? SeedButtonVariant.neutralSolid
+                                : SeedButtonVariant.neutralWeak,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
             ],
           ),
           Center(
             child: _popoverButton(
               'placement=$placement',
+              triggerKey: const ValueKey('popover-placement-demo'),
               title: placement,
               placement: placement,
               showCloseButton: false,
               closeOnInteractOutside: false,
+              closeOnFocusOut: false,
               bodyText: '요청 placement: $placement',
             ),
           ),
