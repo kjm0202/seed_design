@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
 
 import '../../foundations/motion/seed_motion.dart';
@@ -33,6 +34,7 @@ class SeedTabsView extends StatefulWidget {
     this.size,
     this.fill = true,
     this.showScrollFog = false,
+    this.chipListPadding,
     this.carousel = false,
     this.swipeable = true,
     this.dynamicHeight = false,
@@ -69,6 +71,11 @@ class SeedTabsView extends StatefulWidget {
   final SeedTabsVariant variant;
   final SeedTabsSize? size;
   final bool showScrollFog;
+
+  /// Optional inset for the chip tab strip. Null preserves [SeedTabs]' default
+  /// inset; this value is forwarded directly to the tab header.
+  final EdgeInsetsGeometry? chipListPadding;
+
   final bool fill,
       carousel,
       swipeable,
@@ -103,6 +110,7 @@ class SeedChipTabsView extends SeedTabsView {
     super.variant = SeedTabsVariant.chipSolid,
     super.size,
     super.fill = false,
+    super.chipListPadding,
     super.carousel,
     super.swipeable,
     super.dynamicHeight,
@@ -339,6 +347,23 @@ class _SeedTabsViewState extends State<SeedTabsView> {
               },
               child: PageView.builder(
                 controller: _pages,
+                // Embla accepts both MouseEvent and TouchEvent drags. Flutter
+                // ScrollBehavior excludes desktop mouse by default; enable it
+                // for this carousel without changing global scroll behavior.
+                scrollBehavior: ScrollConfiguration.of(context).copyWith(
+                  dragDevices: {
+                    ...ScrollConfiguration.of(context).dragDevices,
+                    PointerDeviceKind.mouse,
+                  },
+                ),
+                // React eagerly mounts every non-lazy panel. PageView's
+                // default zero cache otherwise defers offscreen children.
+                allowImplicitScrolling: !widget.lazyMount && widget.keepAlive,
+                scrollCacheExtent: ScrollCacheExtent.viewport(
+                  !widget.lazyMount && widget.keepAlive
+                      ? widget.children.length.toDouble()
+                      : 0,
+                ),
                 physics: widget.swipeable
                     ? const PageScrollPhysics()
                     : const NeverScrollableScrollPhysics(),
@@ -352,11 +377,11 @@ class _SeedTabsViewState extends State<SeedTabsView> {
                 },
                 itemBuilder: (context, index) {
                   Widget child = widget.children[index];
-                  if (widget.unmountOnExit && index != _index) {
-                    child = const SizedBox.shrink();
-                  }
-                  if (widget.dynamicHeight &&
-                      !(widget.unmountOnExit && index != _index)) {
+                  final mounted =
+                      (!widget.lazyMount || _visited.contains(index)) &&
+                      !(widget.unmountOnExit && index != _index);
+                  if (!mounted) child = const SizedBox.shrink();
+                  if (widget.dynamicHeight && mounted) {
                     child = OverflowBox(
                       minHeight: 0,
                       maxHeight: double.infinity,
@@ -391,6 +416,7 @@ class _SeedTabsViewState extends State<SeedTabsView> {
       size: widget.size,
       fill: widget.fill,
       showScrollFog: widget.showScrollFog,
+      chipListPadding: widget.chipListPadding,
     );
     return Column(
       mainAxisSize: MainAxisSize.min,

@@ -388,7 +388,7 @@ class _SeedTablePaginationState extends State<SeedTablePagination> {
                     child: Semantics(
                       label: '페이지당 표시 개수',
                       child: SeedSelect<int>(
-                        size: SeedInputButtonSize.small,
+                        size: SeedInputButtonSize.medium,
                         enabled: !widget.disabled,
                         value: [rows],
                         groups: [
@@ -423,33 +423,49 @@ class _SeedTablePaginationState extends State<SeedTablePagination> {
                 spacing: SeedDimension.x4,
                 runSpacing: SeedDimension.x2,
                 children: [
-                  if (total != null && widget.showRangeSelect && total > 0)
-                    SizedBox(
-                      width: 196,
-                      child: Semantics(
-                        label: '표시 범위',
-                        child: SeedSelect<int>(
-                          size: SeedInputButtonSize.small,
-                          enabled: !widget.disabled && pageOptions.length > 1,
-                          value: [page],
-                          groups: [
-                            SeedSelectGroup(
-                              items: [
-                                for (final p in pageOptions)
-                                  SeedSelectItem(
-                                    value: p,
-                                    label:
-                                        '${(p - 1) * rows + 1}–${(p * rows).clamp(0, total)} / 총 $total개',
-                                  ),
+                  if (total != null && widget.showRangeSelect)
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: SeedDimension.x2,
+                      runSpacing: SeedDimension.x2,
+                      children: [
+                        SizedBox(
+                          width: 96,
+                          child: Semantics(
+                            label: '표시 범위',
+                            child: SeedSelect<int>(
+                              size: SeedInputButtonSize.medium,
+                              enabled:
+                                  !widget.disabled && pageOptions.length > 1,
+                              value: [page],
+                              groups: [
+                                SeedSelectGroup(
+                                  items: [
+                                    for (final p in pageOptions)
+                                      SeedSelectItem(
+                                        value: p,
+                                        label:
+                                            '${(p - 1) * rows + 1}–${(p * rows).clamp(0, total)}',
+                                      ),
+                                  ],
+                                ),
                               ],
+                              onChanged: (p) => _changePage(
+                                p,
+                                SeedTablePageChangeReason.pageRange,
+                              ),
                             ),
-                          ],
-                          onChanged: (p) => _changePage(
-                            p,
-                            SeedTablePageChangeReason.pageRange,
                           ),
                         ),
-                      ),
+                        Text(
+                          '/ 총 $total개',
+                          style: typography.t4Regular.copyWith(
+                            color: widget.disabled
+                                ? colors.fg.disabled
+                                : colors.fg.neutral,
+                          ),
+                        ),
+                      ],
                     )
                   else
                     Text(

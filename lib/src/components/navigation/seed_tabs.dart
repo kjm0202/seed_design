@@ -64,6 +64,10 @@ class SeedTabs extends StatefulWidget {
   final bool showScrollFog;
   final Axis orientation;
 
+  /// Optional list inset for chip variants. The default remains 16px on both
+  /// sides; this corresponds to ChipTabsList's customizable CSS padding.
+  final EdgeInsetsGeometry? chipListPadding;
+
   const SeedTabs({
     super.key,
     required this.items,
@@ -74,6 +78,7 @@ class SeedTabs extends StatefulWidget {
     this.fill = false,
     this.showScrollFog = false,
     this.orientation = Axis.horizontal,
+    this.chipListPadding,
   }) : size =
            size ??
            (variant == SeedTabsVariant.line
@@ -90,14 +95,22 @@ class _SeedTabsState extends State<SeedTabs> {
     widget.items.length,
     (_) => GlobalKey(),
   );
+  late List<GlobalKey> _chipItemKeys = List.generate(
+    widget.items.length,
+    (_) => GlobalKey(),
+  );
   double? _hugIndicatorLeft;
   double? _hugIndicatorWidth;
   bool _measureScheduled = false;
+  bool _lineRevealScheduled = false;
+  bool _chipRevealScheduled = false;
 
   @override
   void initState() {
     super.initState();
     _scheduleHugMeasure();
+    _scheduleLineReveal();
+    _scheduleChipReveal();
   }
 
   @override
@@ -105,14 +118,96 @@ class _SeedTabsState extends State<SeedTabs> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.items.length != widget.items.length) {
       _hugItemKeys = List.generate(widget.items.length, (_) => GlobalKey());
+      _chipItemKeys = List.generate(widget.items.length, (_) => GlobalKey());
       _hugIndicatorLeft = null;
       _hugIndicatorWidth = null;
     }
     if (widget.variant == SeedTabsVariant.line && !widget.fill) {
-      final bool selectionChanged =
-          oldWidget.selectedIndex != widget.selectedIndex;
       _measureHugIndicatorSync();
-      _scheduleHugMeasure(scrollIntoView: selectionChanged);
+      _scheduleHugMeasure();
+    }
+    if (widget.variant == SeedTabsVariant.line &&
+        (oldWidget.selectedIndex != widget.selectedIndex ||
+            oldWidget.variant != widget.variant ||
+            oldWidget.fill != widget.fill ||
+            oldWidget.items.length != widget.items.length)) {
+      _scheduleLineReveal();
+    }
+    if (oldWidget.selectedIndex != widget.selectedIndex ||
+        oldWidget.variant != widget.variant ||
+        oldWidget.items.length != widget.items.length) {
+      _scheduleChipReveal();
+    }
+  }
+
+  void _scheduleLineReveal() {
+    if (widget.variant != SeedTabsVariant.line ||
+        widget.items.isEmpty ||
+        _lineRevealScheduled) {
+      return;
+    }
+    _lineRevealScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _lineRevealScheduled = false;
+      if (!mounted ||
+          widget.variant != SeedTabsVariant.line ||
+          widget.selectedIndex < 0 ||
+          widget.selectedIndex >= _hugItemKeys.length) {
+        return;
+      }
+      _revealSelectedTab(_hugItemKeys[widget.selectedIndex]);
+    });
+  }
+
+  void _scheduleChipReveal() {
+    if (widget.variant == SeedTabsVariant.line ||
+        widget.items.isEmpty ||
+        _chipRevealScheduled) {
+      return;
+    }
+    _chipRevealScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _chipRevealScheduled = false;
+      if (!mounted ||
+          widget.variant == SeedTabsVariant.line ||
+          widget.selectedIndex < 0 ||
+          widget.selectedIndex >= _chipItemKeys.length) {
+        return;
+      }
+      _revealSelectedTab(_chipItemKeys[widget.selectedIndex]);
+    });
+  }
+
+  void _revealSelectedTab(GlobalKey itemKey) {
+    final itemContext = itemKey.currentContext;
+    final itemBox = itemContext?.findRenderObject();
+    final scrollable = itemContext == null
+        ? null
+        : Scrollable.maybeOf(itemContext);
+    if (itemBox is! RenderBox || scrollable == null) return;
+
+    final position = scrollable.position;
+    if (!position.hasPixels || !position.hasContentDimensions) return;
+    final viewport = RenderAbstractViewport.of(itemBox);
+    final leading = viewport.getOffsetToReveal(itemBox, 0).offset;
+    final trailing = viewport.getOffsetToReveal(itemBox, 1).offset;
+
+    // Match React useTabs scrollTabIntoView's 16px reveal buffer. Offsets
+    // from the viewport are axis-direction aware (LTR and RTL); scroll only
+    // when a selected trigger is actually outside the visible viewport.
+    var target = position.pixels;
+    if (position.pixels < trailing) {
+      target = trailing + SeedDimension.x4;
+    } else if (position.pixels > leading) {
+      target = leading - SeedDimension.x4;
+    }
+    target = target.clamp(position.minScrollExtent, position.maxScrollExtent);
+    if ((target - position.pixels).abs() > 0.5) {
+      position.animateTo(
+        target,
+        duration: SeedDuration.d4,
+        curve: SeedCurves.easing,
+      );
     }
   }
 
@@ -135,13 +230,13 @@ class _SeedTabsState extends State<SeedTabs> {
     }
   }
 
-  void _scheduleHugMeasure({bool scrollIntoView = false}) {
+  void _scheduleHugMeasure() {
     if (widget.variant != SeedTabsVariant.line ||
         widget.fill ||
         widget.items.isEmpty) {
       return;
     }
-    if (_measureScheduled && !scrollIntoView) return;
+    if (_measureScheduled) return;
     _measureScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _measureScheduled = false;
@@ -171,17 +266,6 @@ class _SeedTabsState extends State<SeedTabs> {
             _hugIndicatorLeft = nextLeft;
             _hugIndicatorWidth = nextWidth;
           });
-        }
-      }
-      if (scrollIntoView && itemCtx != null && itemCtx.mounted) {
-        final scrollable = Scrollable.maybeOf(itemCtx);
-        if (scrollable != null) {
-          Scrollable.ensureVisible(
-            itemCtx,
-            duration: SeedDuration.d4,
-            curve: SeedCurves.easing,
-            alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
-          );
         }
       }
     });
@@ -273,13 +357,16 @@ class _SeedTabsState extends State<SeedTabs> {
                           explicitChildNodes: true,
                           child: Row(
                             children: List.generate(items.length, (index) {
-                              return SizedBox(
-                                width: widths[index],
-                                child: _buildLineTabItem(
-                                  context,
-                                  index,
-                                  nodes[index],
-                                  showBottomIndicator: false,
+                              return KeyedSubtree(
+                                key: _hugItemKeys[index],
+                                child: SizedBox(
+                                  width: widths[index],
+                                  child: _buildLineTabItem(
+                                    context,
+                                    index,
+                                    nodes[index],
+                                    showBottomIndicator: false,
+                                  ),
                                 ),
                               );
                             }),
@@ -481,7 +568,9 @@ class _SeedTabsState extends State<SeedTabs> {
     }
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: SeedDimension.x4),
+      padding:
+          widget.chipListPadding ??
+          const EdgeInsets.symmetric(horizontal: SeedDimension.x4),
       child: Semantics(
         role: SemanticsRole.tabBar,
         explicitChildNodes: true,
@@ -489,16 +578,19 @@ class _SeedTabsState extends State<SeedTabs> {
           children: List.generate(items.length, (index) {
             final item = items[index];
             final bool isLast = index == items.length - 1;
-            return Padding(
-              padding: EdgeInsetsDirectional.only(
-                end: isLast ? 0 : SeedDimension.x2,
-              ),
-              child: _buildChipTabItem(
-                context,
-                index,
-                item,
-                index == widget.selectedIndex,
-                nodes[index],
+            return KeyedSubtree(
+              key: _chipItemKeys[index],
+              child: Padding(
+                padding: EdgeInsetsDirectional.only(
+                  end: isLast ? 0 : SeedDimension.x2,
+                ),
+                child: _buildChipTabItem(
+                  context,
+                  index,
+                  item,
+                  index == widget.selectedIndex,
+                  nodes[index],
+                ),
               ),
             );
           }),

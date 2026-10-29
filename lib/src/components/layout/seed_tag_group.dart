@@ -135,9 +135,11 @@ class SeedTagGroup extends StatelessWidget {
           ],
         ],
       );
-      if (item.semanticsLabel != null) {
+      if (item.semanticsLabel != null || item.labelWidget == null) {
         return Semantics(
-          label: item.semanticsLabel,
+          // Keep the original label accessible even when its Text is allotted
+          // zero width beside an icon during truncation.
+          label: item.semanticsLabel ?? item.label,
           excludeSemantics: true,
           child: content,
         );
@@ -173,17 +175,6 @@ class SeedTagGroup extends StatelessWidget {
     }
     return LayoutBuilder(
       builder: (context, constraints) {
-        double measure(String text, TextStyle style) {
-          final painter = TextPainter(
-            text: TextSpan(text: text, style: style),
-            textDirection: Directionality.of(context),
-            textScaler: MediaQuery.textScalerOf(context),
-          )..layout();
-          final width = painter.width;
-          painter.dispose();
-          return width;
-        }
-
         final affixes = [
           for (final item in items)
             (item.icon == null ? 0.0 : iconSizeFor(item.size ?? size) + 2) +
@@ -191,17 +182,12 @@ class SeedTagGroup extends StatelessWidget {
                     ? 0.0
                     : iconSizeFor(item.size ?? size) + 2),
         ];
-        final widths = [
-          for (var i = 0; i < items.length; i++)
-            measure(items[i].label, style(items[i])) + affixes[i],
-        ];
         return SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           primary: false,
           physics: const NeverScrollableScrollPhysics(),
           child: _SeedTruncatedTags(
             availableWidth: constraints.maxWidth,
-            preferredWidths: widths,
             minimumWidths: affixes,
             shrinkFactors: items.map((item) => item.flexShrink).toList(),
             direction: Directionality.of(context),
@@ -223,21 +209,19 @@ class SeedTagGroup extends StatelessWidget {
 class _SeedTruncatedTags extends MultiChildRenderObjectWidget {
   const _SeedTruncatedTags({
     required this.availableWidth,
-    required this.preferredWidths,
     required this.minimumWidths,
     required this.shrinkFactors,
     required this.direction,
     required super.children,
   });
   final double availableWidth;
-  final List<double> preferredWidths, minimumWidths, shrinkFactors;
+  final List<double> minimumWidths, shrinkFactors;
   final TextDirection direction;
 
   @override
   RenderObject createRenderObject(BuildContext context) =>
       _SeedTruncatedTagsRender(
         availableWidth,
-        preferredWidths,
         minimumWidths,
         shrinkFactors,
         direction,
@@ -250,7 +234,6 @@ class _SeedTruncatedTags extends MultiChildRenderObjectWidget {
   ) {
     renderObject
       ..availableWidth = availableWidth
-      ..preferredWidths = preferredWidths
       ..minimumWidths = minimumWidths
       ..shrinkFactors = shrinkFactors
       ..direction = direction
@@ -272,13 +255,12 @@ class _SeedTruncatedTagsRender extends RenderBox
         > {
   _SeedTruncatedTagsRender(
     this.availableWidth,
-    this.preferredWidths,
     this.minimumWidths,
     this.shrinkFactors,
     this.direction,
   );
   double availableWidth;
-  List<double> preferredWidths, minimumWidths, shrinkFactors;
+  List<double> minimumWidths, shrinkFactors;
   TextDirection direction;
 
   @override
@@ -291,7 +273,17 @@ class _SeedTruncatedTagsRender extends RenderBox
   @override
   void performLayout() {
     final children = getChildrenAsList();
-    final widths = List<double>.of(preferredWidths);
+    // Measure the actual rendered children (including inherited text style,
+    // rounded paragraph widths and custom label widgets), rather than forcing
+    // TextPainter's fractional glyph width back onto a RenderParagraph.
+    final widths = <double>[];
+    for (var i = 0; i < children.length; i += 2) {
+      children[i].layout(
+        BoxConstraints(maxHeight: constraints.maxHeight),
+        parentUsesSize: true,
+      );
+      widths.add(children[i].size.width);
+    }
     var separatorsWidth = 0.0;
     for (var i = 1; i < children.length; i += 2) {
       children[i].layout(

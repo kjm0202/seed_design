@@ -345,7 +345,7 @@ void main() {
                         as BoxDecoration)
                     .color,
                 officialColor(
-                  selected && enabled
+                  selected
                       ? r'$color.bg.brand-solid'
                       : r'$color.palette.gray-600',
                   dark: dark,

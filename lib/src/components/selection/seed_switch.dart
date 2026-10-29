@@ -117,10 +117,9 @@ class _SeedSwitchMarkState extends State<SeedSwitchMark> {
         enabled: widget.enabled && SeedControlScope.enabledOf(context),
       );
     }
-    final interactive =
-        widget.enabled &&
-        (widget.value == null || widget.onChanged != null) &&
-        SeedControlScope.enabledOf(context);
+    // A controlled switch without a callback is still enabled and focusable,
+    // as in React's SwitchRoot. Taps simply leave its controlled value intact.
+    final interactive = widget.enabled && SeedControlScope.enabledOf(context);
     return SeedPressable(
       enabled: interactive,
       semanticButton: false,
@@ -186,7 +185,10 @@ class _SeedSwitchGraphic extends StatelessWidget {
           height: size.trackHeight,
           padding: EdgeInsets.all((size.trackHeight - size.thumbSize) / 2),
           decoration: BoxDecoration(
-            color: value && enabled
+            // The brand checked track keeps its brand color when disabled;
+            // the disabled opacity above provides the muted appearance.
+            // Neutral checked controls intentionally turn gray when disabled.
+            color: value && (enabled || tone == SeedControlTone.brand)
                 ? (tone == SeedControlTone.brand
                       ? colors.bg.brandSolid
                       : colors.bg.neutralSolid)
@@ -300,10 +302,7 @@ class _SeedSwitchState extends State<SeedSwitch> {
       SeedSwitchSize.size24 => typography.t4Medium,
       SeedSwitchSize.size32 => typography.t5Medium,
     };
-    final interactive =
-        widget.enabled &&
-        (widget.value == null || widget.onChanged != null) &&
-        SeedControlScope.enabledOf(context);
+    final interactive = widget.enabled && SeedControlScope.enabledOf(context);
     return SeedPressable(
       enabled: interactive,
       semanticButton: false,

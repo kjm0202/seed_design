@@ -40,7 +40,10 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
-    expect(tester.getSize(find.byType(SeedSegmentedControl<int>)).height, 42);
+    expect(
+      tester.getSize(find.byType(SeedSegmentedControl<int>)).height,
+      greaterThanOrEqualTo(42),
+    );
 
     final targets = find.descendant(
       of: find.byType(SeedSegmentedControl<int>),

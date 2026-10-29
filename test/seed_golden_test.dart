@@ -142,6 +142,9 @@ class _Catalog extends StatelessWidget {
                     const SeedSwitch(
                       value: false,
                       label: '알림 사용 불가',
+                      // Controlled callback absence does not imply disabled
+                      // in React. The disabled sample must request it.
+                      enabled: false,
                       onChanged: null,
                     ),
                     const SizedBox(height: 12),
