@@ -470,13 +470,15 @@ void main() {
     expect(calls, 0);
   });
 
-  testWidgets('desktop side panel preserves requested width', (tester) async {
+  testWidgets('desktop side panel caps its preferred width at 80%', (
+    tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(800, 700));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       host(const SeedSidePanel(title: 'Panel', width: 720, body: SizedBox())),
     );
-    expect(tester.getSize(find.byType(SeedSidePanel)).width, 720);
+    expect(tester.getSize(find.byType(SeedSidePanel)).width, 640);
   });
 
   testWidgets('selected disabled segment has a disabled indicator', (

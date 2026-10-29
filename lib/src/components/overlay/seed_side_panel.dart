@@ -24,6 +24,7 @@ enum SeedSidePanelSize {
 Future<T?> showSeedSidePanel<T>({
   required BuildContext context,
   required String title,
+  String? semanticsLabel,
   Widget? titleWidget,
   String? description,
   Widget? descriptionWidget,
@@ -52,6 +53,7 @@ Future<T?> showSeedSidePanel<T>({
         capturedThemes.wrap(
           SeedSidePanel(
             title: title,
+            semanticsLabel: semanticsLabel,
             titleWidget: titleWidget,
             description: description,
             descriptionWidget: descriptionWidget,
@@ -93,6 +95,7 @@ class SeedSidePanel extends StatefulWidget {
   const SeedSidePanel({
     super.key,
     required this.title,
+    this.semanticsLabel,
     this.titleWidget,
     this.description,
     this.descriptionWidget,
@@ -110,6 +113,10 @@ class SeedSidePanel extends StatefulWidget {
        assert(maxWidth == null || maxWidth > 0);
 
   final String title;
+
+  /// Accessible dialog name when the visible title is intentionally omitted.
+  /// Mirrors the React SidePanel.Content `aria-label` override.
+  final String? semanticsLabel;
   final Widget? titleWidget;
   final String? description;
   final Widget? descriptionWidget;
@@ -121,7 +128,7 @@ class SeedSidePanel extends StatefulWidget {
   final double? _width;
   final double? maxWidth;
 
-  /// Preferred content width, capped at 80% of the available safe width on mobile.
+  /// Preferred content width, capped at 80% of the available safe width by default.
   /// Official small, medium (default), and large widths are 480, 720, and 960.
   double get width => _width ?? size.width;
   final bool fromRight;
@@ -174,7 +181,7 @@ class _SeedSidePanelState extends State<SeedSidePanel> {
       scopesRoute: true,
       namesRoute: true,
       role: SemanticsRole.dialog,
-      label: widget.title,
+      label: widget.semanticsLabel ?? widget.title,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final availableWidth = math.min(
@@ -182,8 +189,7 @@ class _SeedSidePanelState extends State<SeedSidePanel> {
             mediaQuery.size.width,
           );
           final safeWidth = math.max(0.0, availableWidth - insets.horizontal);
-          final rawCap =
-              mediaQuery.size.width < 768 ? safeWidth * 0.8 : safeWidth;
+          final rawCap = safeWidth * 0.8;
           final effectiveCap = widget.maxWidth != null
               ? math.min(widget.maxWidth!, safeWidth)
               : rawCap;

@@ -1,5 +1,7 @@
 import 'dart:math' as math;
 
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
+import 'package:flutter/rendering.dart' show RenderStack;
 import 'package:material_ui/material_ui.dart';
 
 import '../../foundations/colors/seed_color_scheme.dart';
@@ -25,10 +27,11 @@ Future<T?> showSeedMenuSheet<T>({
   bool isDismissible = true,
   bool enableDrag = true,
   bool showHandle = true,
+  List<TextAlign>? groupLabelAlignments,
 }) => showSeedBottomSheet<T>(
   context: context,
   isDismissible: isDismissible,
-  enableDrag: enableDrag,
+  enableDrag: enableDrag && isDismissible,
   child: SeedMenuSheet(
     title: title,
     description: description,
@@ -38,6 +41,9 @@ Future<T?> showSeedMenuSheet<T>({
     closeOnSelect: closeOnSelect,
     labelAlign: labelAlign,
     showHandle: showHandle,
+    swipeable: enableDrag,
+    handleDragDismissible: isDismissible,
+    groupLabelAlignments: groupLabelAlignments,
   ),
 );
 
@@ -53,6 +59,9 @@ class SeedMenuSheet extends StatelessWidget {
     this.closeOnSelect = true,
     this.labelAlign = TextAlign.start,
     this.showHandle = true,
+    this.swipeable = true,
+    this.handleDragDismissible = true,
+    this.groupLabelAlignments,
   });
 
   final String? title;
@@ -65,6 +74,16 @@ class SeedMenuSheet extends StatelessWidget {
   final bool closeOnSelect;
   final TextAlign labelAlign;
   final bool showHandle;
+
+  /// The swipeable variant uses 24px header inset; the legacy non-drawer
+  /// MenuSheet uses 16px. [showSeedMenuSheet] derives this from `enableDrag`.
+  final bool swipeable;
+
+  /// Whether the swipeable handle can dismiss the containing sheet.
+  final bool handleDragDismissible;
+
+  /// Optional per-group alignment matching MenuSheetGroup.labelAlign.
+  final List<TextAlign>? groupLabelAlignments;
 
   @override
   Widget build(BuildContext context) {
@@ -85,7 +104,13 @@ class SeedMenuSheet extends StatelessWidget {
               maxWidth: 480,
               maxHeight: math.max(
                 0,
-                math.min(constraints.maxHeight, mediaQuery.size.height * 0.9),
+                math.min(
+                  constraints.maxHeight,
+                  math.min(
+                    mediaQuery.size.height * 0.9,
+                    mediaQuery.size.height - mediaQuery.padding.top,
+                  ),
+                ),
               ),
             ),
             child: SizedBox(
@@ -101,7 +126,7 @@ class SeedMenuSheet extends StatelessWidget {
                     Padding(
                       padding: EdgeInsets.fromLTRB(
                         16,
-                        24,
+                        swipeable ? 24 : 16,
                         16,
                         16 + mediaQuery.padding.bottom,
                       ),
@@ -188,6 +213,12 @@ class SeedMenuSheet extends StatelessWidget {
                                               groups[g].items[i],
                                               colors,
                                               typography,
+                                              groupLabelAlignments != null &&
+                                                      g <
+                                                          groupLabelAlignments!
+                                                              .length
+                                                  ? groupLabelAlignments![g]
+                                                  : labelAlign,
                                             ),
                                           ],
                                         ],
@@ -234,17 +265,14 @@ class SeedMenuSheet extends StatelessWidget {
                     ),
                     if (showHandle)
                       Positioned(
-                        top: 6,
+                        top: 0,
                         left: 0,
                         right: 0,
                         child: Center(
-                          child: Container(
-                            width: 36,
-                            height: 4,
-                            decoration: BoxDecoration(
-                              color: colors.stroke.neutralWeak,
-                              borderRadius: SeedBorderRadius.full,
-                            ),
+                          child: _SeedMenuSheetHandle(
+                            swipeable: swipeable,
+                            dismissible: handleDragDismissible,
+                            color: colors.stroke.neutralWeak,
                           ),
                         ),
                       ),
@@ -263,6 +291,7 @@ class SeedMenuSheet extends StatelessWidget {
     SeedMenuItemData item,
     SeedColorScheme colors,
     SeedTypography typography,
+    TextAlign itemLabelAlign,
   ) {
     Color labelColor;
     if (!item.enabled) {
@@ -306,14 +335,14 @@ class SeedMenuSheet extends StatelessWidget {
             ],
             Expanded(
               child: Column(
-                crossAxisAlignment: labelAlign == TextAlign.center
+                crossAxisAlignment: itemLabelAlign == TextAlign.center
                     ? CrossAxisAlignment.center
                     : CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     item.label,
-                    textAlign: labelAlign,
+                    textAlign: itemLabelAlign,
                     style: typography.t5Regular.copyWith(
                       color: labelColor,
                       fontWeight: FontWeight.w400,
@@ -323,7 +352,7 @@ class SeedMenuSheet extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       item.description!,
-                      textAlign: labelAlign,
+                      textAlign: itemLabelAlign,
                       style: typography.t3Medium.copyWith(
                         color: item.enabled
                             ? colors.fg.neutralSubtle
@@ -344,6 +373,136 @@ class SeedMenuSheet extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// The React swipeable sheet recognises a drag on the handle itself, including
+/// a short, fast swipe. Flutter's enclosing ModalBottomSheetRoute uses a
+/// different fling threshold, so this touch target applies the Drawer
+/// release rules to handle gestures while the route keeps handling body drags.
+class _SeedMenuSheetHandle extends StatefulWidget {
+  const _SeedMenuSheetHandle({
+    required this.swipeable,
+    required this.dismissible,
+    required this.color,
+  });
+
+  final bool swipeable;
+  final bool dismissible;
+  final Color color;
+
+  @override
+  State<_SeedMenuSheetHandle> createState() => _SeedMenuSheetHandleState();
+}
+
+class _SeedMenuSheetHandleState extends State<_SeedMenuSheetHandle> {
+  int? _pointer;
+  Offset? _start;
+  Duration? _startTime;
+  PointerDeviceKind? _kind;
+  bool _moved = false;
+  bool _dismissScheduled = false;
+
+  void _resetPointer() {
+    _pointer = null;
+    _start = null;
+    _startTime = null;
+    _kind = null;
+    _moved = false;
+  }
+
+  void _pointerDown(PointerDownEvent event) {
+    if (_pointer != null) return;
+    _pointer = event.pointer;
+    _start = event.position;
+    _startTime = event.timeStamp;
+    _kind = event.kind;
+    _moved = false;
+  }
+
+  void _pointerMove(PointerMoveEvent event) {
+    if (event.pointer != _pointer || _start == null) return;
+    final threshold = _kind == PointerDeviceKind.touch ? 10.0 : 2.0;
+    if ((event.position - _start!).distance > threshold) _moved = true;
+  }
+
+  void _pointerUp(PointerUpEvent event) {
+    if (event.pointer != _pointer || _start == null || _startTime == null) {
+      return;
+    }
+    final dy = event.position.dy - _start!.dy;
+    final elapsedMicros = (event.timeStamp - _startTime!).inMicroseconds;
+    final shouldDismiss =
+        _moved && dy > 0 && _shouldDismissDrag(dy, elapsedMicros);
+    _resetPointer();
+    if (!shouldDismiss || _dismissScheduled) return;
+
+    // The surrounding bottom-sheet route recognises body swipes separately.
+    // Defer dismissal to avoid popping its parent if the route already popped.
+    _dismissScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _dismissScheduled = false;
+      if (mounted && ModalRoute.of(context)?.isCurrent == true) {
+        _close(context, SeedOverlayDismissReason.drag);
+      }
+    });
+    // A pointer-up alone need not trigger another frame on Flutter Web.
+    // Schedule one so the guarded close runs even without a concurrent fling.
+    WidgetsBinding.instance.scheduleFrame();
+  }
+
+  bool _shouldDismissDrag(double dy, int elapsedMicros) {
+    // React Drawer useDrawer.ts: velocity > 0.4 CSS px/ms, or distance >=
+    // 25% of the actual visible sheet height. Using pointer event timestamps
+    // matches rapid browser mouse/touch sequences that Flutter's fling tracker
+    // may coalesce into one or fewer samples.
+    final height = context
+        .findAncestorRenderObjectOfType<RenderStack>()
+        ?.size
+        .height;
+    final longEnough = height != null && dy >= height * .25;
+    // React useDrawer.ts computes abs(distance) / timeTaken without a zero
+    // guard. A down/up pair in the same millisecond therefore has +Infinity
+    // velocity for a nonzero drag and crosses its 0.4 CSS px/ms threshold.
+    // Flutter may report such input with identical PointerEvent timestamps;
+    // reject a true slow drag only when elapsed time is positive and measured.
+    final fastEnough =
+        elapsedMicros == 0 ||
+        (elapsedMicros > 0 && dy * 1000000 / elapsedMicros > 400);
+    return longEnough || fastEnough;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final visual = SizedBox(
+      width: 44,
+      // The official handle touch area is 44x44 centered on the bar at y=8.
+      // The part inside the sheet spans y=0..30.
+      height: widget.swipeable ? 30 : 10,
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Container(
+            width: 36,
+            height: 4,
+            decoration: BoxDecoration(
+              color: widget.color,
+              borderRadius: SeedBorderRadius.full,
+            ),
+          ),
+        ),
+      ),
+    );
+    if (!widget.swipeable || !widget.dismissible) return visual;
+    return Listener(
+      behavior: HitTestBehavior.opaque,
+      onPointerDown: _pointerDown,
+      onPointerMove: _pointerMove,
+      onPointerUp: _pointerUp,
+      onPointerCancel: (_) => _resetPointer(),
+      child: visual,
     );
   }
 }

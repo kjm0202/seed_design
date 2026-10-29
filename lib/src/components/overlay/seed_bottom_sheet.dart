@@ -27,11 +27,22 @@ Future<T?> showSeedBottomSheet<T>({
   List<SeedSheetSnapPoint>? snapPoints,
   int initialSnapIndex = 0,
   int? fadeFromIndex,
+
+  /// The maximum React content height as a fraction of the viewport. Its
+  /// snap transforms still use the full viewport height.
+  double snapContentHeightFraction = .9,
+
+  /// Keep the sheet anchored while the keyboard reduces its usable height.
+  bool fixed = false,
+
+  /// Allow input focus to move the sheet above the on-screen keyboard.
+  bool repositionInputs = true,
   bool handleOnly = false,
   SeedSheetController? snapController,
   ValueChanged<int>? onSnapChanged,
   bool skipAnimation = false,
 }) {
+  assert(snapContentHeightFraction > 0 && snapContentHeightFraction <= 1);
   final navigator = Navigator.of(context);
   final localizations = MaterialLocalizations.of(context);
   final reduceMotion = skipAnimation || MediaQuery.disableAnimationsOf(context);
@@ -43,6 +54,11 @@ Future<T?> showSeedBottomSheet<T>({
     ),
     modal: modal,
     modalListenable: modalListenable,
+    initialSnapFade:
+        snapPoints == null ||
+            initialSnapIndex >= (fadeFromIndex ?? snapPoints.length - 1)
+        ? 1
+        : 0,
     isDismissible: isDismissible,
     enableDrag: snapPoints == null && enableDrag,
     isScrollControlled: isScrollControlled,
@@ -62,24 +78,31 @@ Future<T?> showSeedBottomSheet<T>({
       curve: SeedCurves.enterExpressive,
       reverseCurve: SeedCurves.exit.flipped,
     ),
-    builder: (context) => Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: snapPoints == null
-          ? child
-          : SeedSnappingBottomSheet(
-              sheet: child is SeedBottomSheet
-                  ? child
-                  : SeedBottomSheet(content: child, showHandle: true),
-              snapPoints: snapPoints,
-              initialSnapIndex: initialSnapIndex,
-              controller: snapController,
-              onSnapChanged: onSnapChanged,
-              handleOnly: handleOnly,
-              fadeFromIndex: fadeFromIndex,
-              onFadeChanged: route.setSnapFade,
-              dismissible: isDismissible,
-            ),
-    ),
+    builder: (context) {
+      final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+      return Padding(
+        padding: EdgeInsets.only(
+          top: fixed ? keyboardInset : 0,
+          bottom: !fixed && repositionInputs ? keyboardInset : 0,
+        ),
+        child: snapPoints == null
+            ? child
+            : SeedSnappingBottomSheet(
+                sheet: child is SeedBottomSheet
+                    ? child
+                    : SeedBottomSheet(content: child, showHandle: true),
+                snapPoints: snapPoints,
+                initialSnapIndex: initialSnapIndex,
+                controller: snapController,
+                onSnapChanged: onSnapChanged,
+                handleOnly: handleOnly,
+                fadeFromIndex: fadeFromIndex ?? snapPoints.length - 1,
+                contentHeightFraction: snapContentHeightFraction,
+                onFadeChanged: route.setSnapFade,
+                dismissible: isDismissible,
+              ),
+      );
+    },
   );
   return navigator.push(route);
 }
@@ -87,6 +110,7 @@ Future<T?> showSeedBottomSheet<T>({
 class _SeedBottomSheetRoute<T> extends ModalBottomSheetRoute<T> {
   _SeedBottomSheetRoute({
     required this.modal,
+    required double initialSnapFade,
     this.modalListenable,
     required super.builder,
     required super.isScrollControlled,
@@ -102,7 +126,7 @@ class _SeedBottomSheetRoute<T> extends ModalBottomSheetRoute<T> {
     super.barrierLabel,
     super.barrierOnTapHint,
     super.sheetAnimationStyle,
-  }) {
+  }) : _snapFade = initialSnapFade {
     modalListenable?.addListener(_modalChanged);
   }
 
@@ -121,7 +145,7 @@ class _SeedBottomSheetRoute<T> extends ModalBottomSheetRoute<T> {
     super.dispose();
   }
 
-  double _snapFade = 1;
+  double _snapFade;
   void setSnapFade(double value) {
     if (value == _snapFade) return;
     _snapFade = value;
@@ -585,6 +609,7 @@ class SeedSnappingBottomSheet extends StatefulWidget {
     this.onSnapChanged,
     this.handleOnly = false,
     this.fadeFromIndex,
+    this.contentHeightFraction = 1,
     this.onFadeChanged,
     this.dismissible = true,
   });
@@ -596,6 +621,11 @@ class SeedSnappingBottomSheet extends StatefulWidget {
   final bool handleOnly;
   final bool dismissible;
   final int? fadeFromIndex;
+
+  /// Offsets fraction snap positions for content capped below viewport height.
+  /// A .9-height surface translated by React's viewport snap points reveals
+  /// (fraction - .1) of the viewport.
+  final double contentHeightFraction;
   final ValueChanged<double>? onFadeChanged;
   @override
   State<SeedSnappingBottomSheet> createState() =>
@@ -632,6 +662,9 @@ class _SeedSnappingBottomSheetState extends State<SeedSnappingBottomSheet> {
   void initState() {
     super.initState();
     assert(widget.snapPoints.isNotEmpty);
+    assert(
+      widget.contentHeightFraction > 0 && widget.contentHeightFraction <= 1,
+    );
     widget.controller?.addListener(_controllerChanged);
   }
 
@@ -750,12 +783,39 @@ class _SeedSnappingBottomSheetState extends State<SeedSnappingBottomSheet> {
       // Public indices follow the caller's order. Only the physical snap sizes
       // passed to DraggableScrollableSheet must be sorted and unique.
       final points = widget.snapPoints
-          .map((point) => point.resolve(available))
+          .map(
+            (point) =>
+                (point.resolve(available) - (1 - widget.contentHeightFraction))
+                    .clamp(.01, widget.contentHeightFraction),
+          )
           .toList();
       final sortedPoints = points.toSet().toList()..sort();
       // DraggableScrollableSheet treats a new snapSizes list as a configuration
       // change and starts a ballistic snap. Keep it stable during our own snaps.
-      if (!listEquals(_points, points)) _points = points;
+      if (!listEquals(_points, points)) {
+        final previousSnap = _points.isNotEmpty && _index < _points.length
+            ? _points[_index]
+            : null;
+        final wasAtSnap =
+            previousSnap != null &&
+            _fraction != null &&
+            (_fraction! - previousSnap).abs() < .001;
+        _points = points;
+        // React resolves pixel points against the current viewport on resize.
+        // A settled sheet must follow its logical snap index, not retain the
+        // fractional extent calculated for the previous viewport height.
+        if (!_draggingHandle && (wasAtSnap || _snappingTo != null)) {
+          final next = _points[_index.clamp(0, _points.length - 1)];
+          _fraction = next;
+          if (!widget.handleOnly && _drag.isAttached) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && _drag.isAttached && !_draggingHandle) {
+                _drag.jumpTo(next);
+              }
+            });
+          }
+        }
+      }
       if (!listEquals(_sortedPoints, sortedPoints)) {
         _sortedPoints = sortedPoints;
       }
