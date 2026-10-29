@@ -1725,7 +1725,17 @@ class _MenuDemoPageState extends State<_MenuDemoPage> {
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: context.seedColor.bg.layerDefault,
     appBar: SeedTopNavigation(
-      titleText: 'Menu',
+      // React keeps an empty AppBarLeft at the root, reserving its 14px
+      // additional title inset even when Back is hidden.
+      title: Padding(
+        padding: EdgeInsets.only(left: Navigator.of(context).canPop() ? 0 : 14),
+        child: Text(
+          'Menu',
+          style: context.seedTypography.t6Bold.copyWith(
+            color: context.seedColor.fg.neutral,
+          ),
+        ),
+      ),
       centerTitle: false,
       actions: [
         SeedMenuTrigger(

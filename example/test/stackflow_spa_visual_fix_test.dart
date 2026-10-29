@@ -21,6 +21,29 @@ Future<void> open(
 }
 
 void main() {
+  for (final width in [390.0, 800.0]) {
+    for (final (route, title) in [
+      ('/form', 'Form Components'),
+      ('/menu', 'Menu'),
+    ]) {
+      testWidgets('$route root title preserves React x32 inset at $width', (
+        tester,
+      ) async {
+        tester.view.physicalSize = Size(width, 844);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(const StackflowSpaApp());
+        await tester.pumpAndSettle();
+        tester
+            .state<NavigatorState>(find.byType(Navigator))
+            .pushReplacementNamed(route);
+        await tester.pumpAndSettle();
+        expect(tester.getTopLeft(find.text(title)).dx, closeTo(32, 0.5));
+      });
+    }
+  }
+
   testWidgets(
     'LayerBar uses a white surface and starts controls below AppBar',
     (tester) async {
@@ -121,6 +144,26 @@ void main() {
       }
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
+    },
+  );
+
+  testWidgets(
+    'TransparentBar compact controls keep one-line segments and full CTA labels',
+    (tester) async {
+      await open(tester, '/transparent-bar', width: 390);
+      final control = find.byType(SeedSegmentedControl<String>);
+      expect(tester.getSize(control).height, closeTo(42, 1));
+      expect(find.text('safeArea'), findsOneWidget);
+      const longTitle = 'ActivityTransitionStyle (fadeFromBottomAndroid)';
+      final longButton = find.widgetWithText(SeedButton, longTitle);
+      await tester.scrollUntilVisible(
+        longButton,
+        160,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.pumpAndSettle();
+      expect(tester.getSize(longButton).width, greaterThan(358));
+      expect(tester.takeException(), isNull);
     },
   );
 

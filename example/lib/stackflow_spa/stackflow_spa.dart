@@ -327,9 +327,25 @@ class _SpaActivityPage extends StatelessWidget {
       );
     }
 
+    final rootForm =
+        activity == 'ActivityForm' && !Navigator.of(context).canPop();
     return Scaffold(
       appBar: SeedTopNavigation(
-        titleText: activity == 'ActivityDetail' && arguments is Map
+        title: rootForm
+            ? Padding(
+                // React retains an empty AppBarLeft when Back is hidden.
+                padding: const EdgeInsets.only(left: 14),
+                child: Text(
+                  'Form Components',
+                  style: context.seedTypography.t6Bold.copyWith(
+                    color: context.seedColor.fg.neutral,
+                  ),
+                ),
+              )
+            : null,
+        titleText: rootForm
+            ? null
+            : activity == 'ActivityDetail' && arguments is Map
             ? ((arguments as Map)['title'] as String? ?? 'Detail')
             : activity == 'ActivityTransitionStyle'
             ? (arguments is Map

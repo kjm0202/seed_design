@@ -252,9 +252,21 @@ class _TransparentBarPageState extends State<_TransparentBarPage> {
                 constraints: const BoxConstraints(maxWidth: 368),
                 child: SeedSegmentedControl<String>(
                   segments: const [
-                    SeedSegment(value: 'none', label: 'none'),
-                    SeedSegment(value: 'safeArea', label: 'safeArea'),
-                    SeedSegment(value: 'appBar', label: 'appBar'),
+                    SeedSegment(
+                      value: 'none',
+                      child: Text('none', softWrap: false, maxLines: 1),
+                    ),
+                    // Keep this English token on one line, as in React. The
+                    // child supplies its accessible text while the default
+                    // empty label avoids pre-measuring a wrapped two-line row.
+                    SeedSegment(
+                      value: 'safeArea',
+                      child: Text('safeArea', softWrap: false, maxLines: 1),
+                    ),
+                    SeedSegment(
+                      value: 'appBar',
+                      child: Text('appBar', softWrap: false, maxLines: 1),
+                    ),
                   ],
                   value: layerOffsetTop,
                   onValueChange: (next) =>
@@ -283,12 +295,19 @@ class _TransparentBarPageState extends State<_TransparentBarPage> {
               ),
               for (final style in _transitionStyles) ...[
                 _gap,
-                _action(
-                  'ActivityTransitionStyle ($style)',
-                  full: false,
-                  () => widget.navigate(
-                    'ActivityTransitionStyle',
-                    arguments: {'transitionStyle': style},
+                SizedBox(
+                  height: 40,
+                  child: OverflowBox(
+                    maxWidth: MediaQuery.sizeOf(context).width,
+                    alignment: Alignment.center,
+                    child: _action(
+                      'ActivityTransitionStyle ($style)',
+                      full: false,
+                      () => widget.navigate(
+                        'ActivityTransitionStyle',
+                        arguments: {'transitionStyle': style},
+                      ),
+                    ),
                   ),
                 ),
               ],
