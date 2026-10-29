@@ -188,7 +188,9 @@ void main() {
     }
   });
 
-  testWidgets('accordion exposes one named heading button', (tester) async {
+  testWidgets('accordion exposes a heading containing one named button', (
+    tester,
+  ) async {
     final semantics = tester.ensureSemantics();
     await tester.pumpWidget(
       host(
@@ -208,11 +210,18 @@ void main() {
       ),
     );
     final data = node.getSemanticsData();
-    expect(data.label, 'Details');
     expect(data.headingLevel, 4);
-    // ignore: deprecated_member_use
-    expect(data.hasFlag(ui.SemanticsFlag.isButton), isTrue);
-    expect(data.hasAction(ui.SemanticsAction.tap), isTrue);
+    expect(data.flagsCollection.isButton, isFalse);
+    final children = <SemanticsNode>[];
+    node.visitChildren((child) {
+      children.add(child);
+      return true;
+    });
+    expect(children, hasLength(1));
+    final button = children.single.getSemanticsData();
+    expect(button.label, 'Details');
+    expect(button.flagsCollection.isButton, isTrue);
+    expect(button.hasAction(ui.SemanticsAction.tap), isTrue);
     semantics.dispose();
   });
 

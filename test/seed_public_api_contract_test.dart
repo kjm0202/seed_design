@@ -533,6 +533,9 @@ void main() {
       );
       await tester.sendKeyEvent(LogicalKeyboardKey.tab);
       await tester.pump();
+      // React useSelectFloating.ts:106-129 reports focusOut even when an
+      // externally controlled parent rejects the proposed dismissal.
+      expect(events[1], (false, SeedOverlayDismissReason.focusOut));
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pumpAndSettle();
       expect(events.last, (false, SeedOverlayDismissReason.escapeKey));
@@ -547,14 +550,14 @@ void main() {
         tester.widget<MenuAnchor>(find.byType(MenuAnchor)).controller!.isOpen,
         isTrue,
       );
-      expect(visibility, [false, false, false]);
+      expect(visibility, [false, false, false, false]);
       update(() => open = false);
       await tester.pumpAndSettle();
       expect(
         tester.widget<MenuAnchor>(find.byType(MenuAnchor)).controller!.isOpen,
         isFalse,
       );
-      expect(events, hasLength(3));
+      expect(events, hasLength(4));
     },
   );
 

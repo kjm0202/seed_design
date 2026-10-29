@@ -156,82 +156,87 @@ class _SeedAccordionItemState extends State<SeedAccordionItem>
                   : colors.fg.disabled,
             );
 
-    final trigger = SeedPressable(
-      focusNode: widget.focusNode,
+    final trigger = Semantics(
+      container: true,
+      explicitChildNodes: true,
+      header: true,
       headingLevel: widget.headingLevel,
-      enabled: widget.enabled,
-      expanded: _isExpanded,
-      enableScale: false,
-      onTap: _handleTap,
-      builder: (context, _) {
-        final isPressed =
-            SeedInteractionState.maybeOf(context)?.pressed ?? false;
-        final insetPressed =
-            isPressed && widget.variant == SeedAccordionVariant.inline;
-        return AnimatedContainer(
-          duration: SeedDuration.colorTransition,
-          curve: SeedCurves.easing,
-          margin: EdgeInsets.symmetric(
-            horizontal: insetPressed ? SeedDimension.x1_5 : 0,
-          ),
-          padding: size.padding,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(
-              insetPressed ? SeedDimension.x2_5 : 0,
+      child: SeedPressable(
+        focusNode: widget.focusNode,
+        enabled: widget.enabled,
+        expanded: _isExpanded,
+        enableScale: false,
+        onTap: _handleTap,
+        builder: (context, _) {
+          final isPressed =
+              SeedInteractionState.maybeOf(context)?.pressed ?? false;
+          final insetPressed =
+              isPressed && widget.variant == SeedAccordionVariant.inline;
+          return AnimatedContainer(
+            duration: SeedDuration.colorTransition,
+            curve: SeedCurves.easing,
+            margin: EdgeInsets.symmetric(
+              horizontal: insetPressed ? SeedDimension.x1_5 : 0,
             ),
-            // Blend the overlay before animating so interpolation keeps an
-            // opaque surface instead of flashing toward translucent white.
-            color: isPressed
-                ? Color.alphaBlend(
-                    colors.bg.transparentPressed,
-                    colors.bg.layerDefault,
-                  )
-                : colors.bg.layerDefault,
-          ),
-          child: SeedContentScale(
-            child: Row(
-              children: [
-                if (widget.prefix != null) ...[
-                  IconTheme.merge(
-                    data: IconThemeData(
-                      size: 22,
-                      color: widget.enabled
-                          ? colors.fg.neutral
-                          : colors.fg.disabled,
+            padding: size.padding,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(
+                insetPressed ? SeedDimension.x2_5 : 0,
+              ),
+              // Blend the overlay before animating so interpolation keeps an
+              // opaque surface instead of flashing toward translucent white.
+              color: isPressed
+                  ? Color.alphaBlend(
+                      colors.bg.transparentPressed,
+                      colors.bg.layerDefault,
+                    )
+                  : colors.bg.layerDefault,
+            ),
+            child: SeedContentScale(
+              child: Row(
+                children: [
+                  if (widget.prefix != null) ...[
+                    IconTheme.merge(
+                      data: IconThemeData(
+                        size: 22,
+                        color: widget.enabled
+                            ? colors.fg.neutral
+                            : colors.fg.disabled,
+                      ),
+                      child: widget.prefix!,
                     ),
-                    child: widget.prefix!,
+                    const SizedBox(width: SeedDimension.x3),
+                  ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(widget.title, style: titleStyle),
+                        if (widget.description != null) ...[
+                          const SizedBox(height: SeedDimension.x0_5),
+                          Text(widget.description!, style: descStyle),
+                        ],
+                      ],
+                    ),
                   ),
                   const SizedBox(width: SeedDimension.x3),
+                  RotationTransition(
+                    turns: _iconTurns,
+                    child: Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      size: size.iconSize,
+                      color: widget.enabled
+                          ? colors.fg.neutralSubtle
+                          : colors.fg.disabled,
+                    ),
+                  ),
                 ],
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(widget.title, style: titleStyle),
-                      if (widget.description != null) ...[
-                        const SizedBox(height: SeedDimension.x0_5),
-                        Text(widget.description!, style: descStyle),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(width: SeedDimension.x3),
-                RotationTransition(
-                  turns: _iconTurns,
-                  child: Icon(
-                    Icons.keyboard_arrow_down_rounded,
-                    size: size.iconSize,
-                    color: widget.enabled
-                        ? colors.fg.neutralSubtle
-                        : colors.fg.disabled,
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
 
     Widget contentBody = ClipRect(
@@ -373,7 +378,9 @@ class _SeedAccordionState extends State<SeedAccordion> {
     return Focus(
       canRequestFocus: false,
       onKeyEvent: (node, event) {
-        if (event is! KeyDownEvent) return KeyEventResult.ignored;
+        if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+          return KeyEventResult.ignored;
+        }
         final available = [
           for (var i = 0; i < ids.length; i++)
             if (widget.enabled && widget.items[i].enabled) ids[i],

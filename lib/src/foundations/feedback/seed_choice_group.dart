@@ -36,12 +36,15 @@ class _SeedChoiceGroupState extends State<SeedChoiceGroup> {
   }
 
   KeyEventResult _onKey(FocusNode _, KeyEvent event) {
-    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
     final current = _nodes.indexWhere((node) => node.hasPrimaryFocus);
     if (current < 0) return KeyEventResult.ignored;
     final key = event.logicalKey;
     final rtl = Directionality.of(context) == TextDirection.rtl;
-    final allowHorizontal = widget.axis == null || widget.axis == Axis.horizontal;
+    final allowHorizontal =
+        widget.axis == null || widget.axis == Axis.horizontal;
     final allowVertical = widget.axis == null || widget.axis == Axis.vertical;
     final forward =
         (allowVertical && key == LogicalKeyboardKey.arrowDown) ||

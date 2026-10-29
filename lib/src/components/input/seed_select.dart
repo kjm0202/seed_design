@@ -3,6 +3,8 @@ import 'seed_field.dart';
 import '../overlay/seed_anchored_overlay.dart';
 
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, TargetPlatform;
 
 import '../../foundations/motion/seed_motion.dart';
 
@@ -172,6 +174,11 @@ class SeedSelect<T> extends StatefulWidget {
 class _SeedSelectState<T> extends State<SeedSelect<T>> {
   final MenuController _menuController = MenuController();
   final SeedOverlayController _anchored = SeedOverlayController();
+  final List<FocusNode> _menuItemFocusNodes = [];
+  final FocusNode _menuTriggerFocus = FocusNode();
+  final FocusNode _readOnlyFocus = FocusNode();
+  final FocusNode _readOnlyVisualFocus = FocusNode();
+  bool _showReadOnlyFocus = false;
 
   bool _reportedOpen = false;
   void _emitOpen(bool open, SeedOverlayDismissReason reason) {
@@ -213,6 +220,71 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
   List<SeedSelectItem<T>> get _selectedItems => [
     for (final value in _selectedValues) ?_findItem(value),
   ];
+
+  void _syncMenuItemFocusNodes() {
+    final count = widget.groups.fold<int>(
+      0,
+      (n, group) => n + group.items.length,
+    );
+    while (_menuItemFocusNodes.length < count) {
+      _menuItemFocusNodes.add(
+        FocusNode(
+          onKeyEvent: (node, event) {
+            if (event is KeyDownEvent &&
+                event.logicalKey == LogicalKeyboardKey.tab) {
+              _requestOpen(false, reason: SeedOverlayDismissReason.focusOut);
+              final shift = HardwareKeyboard.instance.isShiftPressed;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted) return;
+                final trigger =
+                    SeedFieldScope.maybeOf(context)?.focusNode ??
+                    _menuTriggerFocus;
+                trigger.requestFocus();
+                if (shift) {
+                  FocusScope.of(context).previousFocus();
+                } else {
+                  FocusScope.of(context).nextFocus();
+                }
+              });
+              return KeyEventResult.handled;
+            }
+            return KeyEventResult.ignored;
+          },
+        ),
+      );
+    }
+    while (_menuItemFocusNodes.length > count) {
+      _menuItemFocusNodes.removeLast().dispose();
+    }
+  }
+
+  void _focusOpenMenu() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted ||
+          !_menuController.isOpen ||
+          widget.readOnly ||
+          !widget.enabled) {
+        return;
+      }
+      var index = 0;
+      FocusNode? firstEnabled;
+      for (final group in widget.groups) {
+        for (final item in group.items) {
+          if (item.enabled && index < _menuItemFocusNodes.length) {
+            final node = _menuItemFocusNodes[index];
+            firstEnabled ??= node;
+            if (_selectedValues.contains(item.value)) {
+              node.requestFocus();
+              return;
+            }
+          }
+          index++;
+        }
+      }
+      firstEnabled?.requestFocus();
+    });
+  }
+
   void _requestOpen(
     bool value, {
     SeedOverlayDismissReason reason = SeedOverlayDismissReason.trigger,
@@ -224,6 +296,7 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
         value ? _anchored.open() : _anchored.close(reason);
       } else {
         value ? _menuController.open() : _menuController.close();
+        if (value) _focusOpenMenu();
       }
     }
   }
@@ -254,6 +327,7 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
           (widget.open ?? widget.defaultOpen) &&
           widget.side == null) {
         _menuController.open();
+        _focusOpenMenu();
       }
     });
   }
@@ -269,6 +343,7 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted || !widget.enabled || widget.readOnly) return;
         widget.open! ? _menuController.open() : _menuController.close();
+        if (widget.open!) _focusOpenMenu();
       });
     }
   }
@@ -291,6 +366,7 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
   Widget build(BuildContext context) {
     final colors = context.seedColor;
     final typography = context.seedTypography;
+    _syncMenuItemFocusNodes();
 
     final menu = LayoutBuilder(
       builder: (context, constraints) => widget.side == null
@@ -444,13 +520,26 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
   @override
   void dispose() {
     _anchored.dispose();
+    _menuTriggerFocus.dispose();
+    for (final node in _menuItemFocusNodes) {
+      node.dispose();
+    }
+    _readOnlyFocus.dispose();
+    _readOnlyVisualFocus.dispose();
     super.dispose();
   }
 
   Widget _trigger(BuildContext context, bool open, VoidCallback toggle) {
     final effectiveSize = _effectiveSize(context);
-    return SeedInputButton(
+    final field = SeedFieldScope.maybeOf(context);
+    final trigger = SeedInputButton(
       size: widget.size,
+      // The readonly appearance has no independent focus target.
+      focusNode: widget.readOnly
+          ? _readOnlyVisualFocus
+          : widget.side == null
+          ? field?.focusNode ?? _menuTriggerFocus
+          : null,
       expanded: open,
       value: widget.multiple
           ? (widget.formatValue?.call(_selectedItems) ??
@@ -498,6 +587,72 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
       isError: widget.isError,
       onPressed: toggle,
     );
+    if (!widget.readOnly) return trigger;
+
+    // Select's readonly combobox remains a focus target (useSelect.ts), while
+    // FieldButton's readonly trigger is disabled. Keep that distinction here
+    // instead of changing SeedInputButton for every consumer.
+    final focusNode = field?.focusNode ?? _readOnlyFocus;
+    final enabled = widget.enabled && !(field?.disabled ?? false);
+    return Focus(
+      // Flutter's default directional traversal moves focus on ArrowDown/
+      // ArrowUp. React's readonly combobox ignores those keys and keeps DOM
+      // focus on its trigger (useSelectHighlight.ts). Consume the traversal
+      // intent here while preserving the editable Select's keyboard handling.
+      canRequestFocus: false,
+      skipTraversal: true,
+      onKeyEvent: (_, event) {
+        if ((event is KeyDownEvent || event is KeyRepeatEvent) &&
+            (event.logicalKey == LogicalKeyboardKey.arrowDown ||
+                event.logicalKey == LogicalKeyboardKey.arrowUp)) {
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Semantics(
+        container: true,
+        button: true,
+        readOnly: true,
+        enabled: enabled,
+        focusable: enabled,
+        focused: focusNode.hasFocus,
+        onFocus: enabled && defaultTargetPlatform != TargetPlatform.iOS
+            ? focusNode.requestFocus
+            : null,
+        expanded: false,
+        label: widget.label,
+        value: widget.multiple
+            ? (widget.formatValue?.call(_selectedItems) ??
+                  _selectedItems.map((item) => item.label).join(', '))
+            : _selectedItem?.label ?? widget.placeholder,
+        child: FocusableActionDetector(
+          enabled: enabled,
+          focusNode: focusNode,
+          includeFocusSemantics: false,
+          onFocusChange: (_) => setState(() {}),
+          onShowFocusHighlight: (value) =>
+              setState(() => _showReadOnlyFocus = value),
+          child: Listener(
+            onPointerDown: enabled ? (_) => focusNode.requestFocus() : null,
+            child: DecoratedBox(
+              position: DecorationPosition.foreground,
+              decoration: BoxDecoration(
+                borderRadius: effectiveSize == SeedInputButtonSize.medium
+                    ? SeedBorderRadius.r3
+                    : SeedBorderRadius.r2,
+                border: _showReadOnlyFocus && enabled
+                    ? Border.all(
+                        color: context.seedColor.stroke.focusRing,
+                        width: 2,
+                      )
+                    : null,
+              ),
+              child: ExcludeSemantics(child: trigger),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   List<Widget> _buildMenuChildren(
@@ -508,6 +663,7 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
     final effectiveSize = _effectiveSize(context);
     final isLarge = effectiveSize == SeedInputButtonSize.medium;
     final children = <Widget>[];
+    var itemIndex = 0;
 
     for (int g = 0; g < widget.groups.length; g++) {
       final group = widget.groups[g];
@@ -545,6 +701,7 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
           Semantics(
             selected: isSelected,
             child: MenuItemButton(
+              focusNode: _menuItemFocusNodes[itemIndex++],
               closeOnActivate: false,
               style: ButtonStyle(
                 padding: WidgetStatePropertyAll(

@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/gestures.dart'
@@ -286,6 +288,9 @@ class _SeedPressableState extends State<SeedPressable>
 
   void _activate() {
     if (!_interactive || widget.onTap == null) return;
+    // Web accessibility activation reaches Semantics.onTap, bypassing the
+    // GestureDetector. Both paths must establish the same keyboard actor.
+    _focusNode.requestFocus();
     widget.onTap!();
   }
 
@@ -316,6 +321,9 @@ class _SeedPressableState extends State<SeedPressable>
       enabled: _interactive,
       focusable: _interactive,
       focused: _interactive ? _hasFocus : null,
+      onFocus: _interactive && defaultTargetPlatform != TargetPlatform.iOS
+          ? _focusNode.requestFocus
+          : null,
       label: widget.semanticsLabel,
       value: widget.semanticsValue,
       excludeSemantics: widget.semanticsLabel != null,
@@ -390,12 +398,7 @@ class _SeedPressableState extends State<SeedPressable>
               onTapDown: _interactive ? _handleTapDown : null,
               onTapUp: _interactive ? _handleTapUp : null,
               onTapCancel: _interactive ? _handleTapCancel : null,
-              onTap: _interactive && widget.onTap != null
-                  ? () {
-                      _focusNode.requestFocus();
-                      _activate();
-                    }
-                  : null,
+              onTap: _interactive && widget.onTap != null ? _activate : null,
               onLongPress: _interactive ? widget.onLongPress : null,
               child: _SizeReporter(
                 onSizeChanged: (newSize) {

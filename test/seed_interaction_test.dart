@@ -10,6 +10,68 @@ Widget host(Widget child) => MaterialApp(
 );
 
 void main() {
+  for (final keyboardReturn in [false, true]) {
+    testWidgets(
+      'restored focus follows the last input method (keyboard=$keyboardReturn)',
+      (tester) async {
+        final manager = FocusManager.instance;
+        final previousStrategy = manager.highlightStrategy;
+        manager.highlightStrategy = FocusHighlightStrategy.alwaysTraditional;
+        addTearDown(() => manager.highlightStrategy = previousStrategy);
+        final launchFocus = FocusNode();
+        final backFocus = FocusNode();
+        addTearDown(launchFocus.dispose);
+        addTearDown(backFocus.dispose);
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: SeedThemeData.light().toThemeData(),
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => SeedPressable(
+                  focusNode: launchFocus,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (context) => Scaffold(
+                        body: TextButton(
+                          focusNode: backFocus,
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('Back'),
+                        ),
+                      ),
+                    ),
+                  ),
+                  child: const Text('Open page'),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Open page'), kind: PointerDeviceKind.mouse);
+        await tester.pumpAndSettle();
+        if (keyboardReturn) {
+          backFocus.requestFocus();
+          await tester.pump();
+          await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        } else {
+          await tester.tap(find.text('Back'), kind: PointerDeviceKind.mouse);
+        }
+        await tester.pumpAndSettle();
+
+        expect(launchFocus.hasFocus, isTrue);
+        final box = tester.widget<DecoratedBox>(
+          find.descendant(
+            of: find.byType(SeedPressable),
+            matching: find.byType(DecoratedBox),
+          ),
+        );
+        final border = (box.decoration as BoxDecoration).border;
+        expect(border, keyboardReturn ? isNotNull : isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
+  }
+
   testWidgets('pointer focus stays hidden until keyboard interaction', (
     tester,
   ) async {
@@ -214,6 +276,7 @@ void main() {
           isEnabled: true,
           isFocusable: true,
           hasTapAction: true,
+          hasFocusAction: true,
         ),
       );
       await tester.tap(find.text('알림'));
@@ -244,6 +307,7 @@ void main() {
         isEnabled: true,
         isFocusable: true,
         hasTapAction: true,
+        hasFocusAction: true,
       ),
     );
   });
