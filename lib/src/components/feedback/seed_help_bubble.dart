@@ -314,7 +314,7 @@ class SeedTooltipDelayGroup extends StatefulWidget {
   const SeedTooltipDelayGroup({
     super.key,
     required this.child,
-    this.openDelay = const Duration(milliseconds: 500),
+    this.openDelay = const Duration(milliseconds: 200),
     this.closeDelay = const Duration(milliseconds: 100),
     this.skipDelay = const Duration(milliseconds: 800),
   });
@@ -354,7 +354,7 @@ class SeedHelpBubbleTooltip extends StatefulWidget {
     this.side = SeedOverlaySide.top,
     this.align = SeedOverlayAlign.center,
     this.flip = true,
-    this.keepOpenOnContentHover = true,
+    this.keepOpenOnContentHover = false,
     this.maxWidth = 280,
     this.isBrand = false,
   });
@@ -396,7 +396,7 @@ class _SeedHelpBubbleTooltipState extends State<SeedHelpBubbleTooltip> {
               ? Duration.zero
               : widget.openDelay ??
                     g?.widget.openDelay ??
-                    const Duration(milliseconds: 500))
+                    const Duration(milliseconds: 200))
         : widget.closeDelay ??
               g?.widget.closeDelay ??
               const Duration(milliseconds: 100);
@@ -443,6 +443,7 @@ class _SeedHelpBubbleTooltipState extends State<SeedHelpBubbleTooltip> {
     flip: widget.flip,
     maxWidth: widget.maxWidth,
     autoFocus: false,
+    contentFocusable: false,
     restoreFocus: false,
     onOpenChange: (open, reason) {
       widget.onOpenChange?.call(open);

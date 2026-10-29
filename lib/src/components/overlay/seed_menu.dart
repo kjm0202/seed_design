@@ -89,6 +89,20 @@ class _SeedMenuState extends State<SeedMenu> {
       : widget.size;
 
   @override
+  void initState() {
+    super.initState();
+    // The overlay itself initially receives keyboard focus. Advance it to the
+    // first enabled action, matching React Menu's list-navigation entry point.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || SeedOverlayScope.maybeOf(context)?.isOpen != true) return;
+      final index = _items.indexWhere((item) => item.enabled);
+      if (index >= 0 && index < _nodes.length) {
+        _nodes[index].requestFocus();
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _searchReset?.cancel();
     for (final node in _nodes) {
@@ -266,7 +280,7 @@ class _SeedMenuState extends State<SeedMenu> {
                 item.onTap?.call();
                 if (widget.closeOnSelect && context.mounted) {
                   SeedOverlayScope.maybeOf(context)
-                      ?.close(SeedOverlayDismissReason.action);
+                      ?.close(SeedOverlayDismissReason.itemClick);
                 }
               }
             : null,

@@ -14,6 +14,7 @@ enum SeedOverlayDismissReason {
   trigger,
   closeButton,
   action,
+  itemClick,
   escapeKey,
   outside,
   focusOut,
@@ -105,6 +106,7 @@ class SeedAnchoredOverlay extends StatefulWidget {
     this.maxWidth,
     this.maxHeight,
     this.autoFocus = true,
+    this.contentFocusable = true,
     this.restoreFocus = true,
     this.closeOnInteractOutside = true,
     this.closeOnFocusOut = false,
@@ -134,6 +136,10 @@ class SeedAnchoredOverlay extends StatefulWidget {
   final double gap, overflowPadding, arrowPadding;
   final bool flip, shift;
   final double? maxWidth, maxHeight;
+
+  /// Whether the overlay content can receive keyboard or accessibility focus.
+  /// Disable for descriptive content such as a tooltip.
+  final bool contentFocusable;
   final bool autoFocus,
       restoreFocus,
       closeOnInteractOutside,
@@ -154,8 +160,13 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
   final GlobalKey _anchorKey = GlobalKey();
   final Object _ownTapGroup = Object();
   Object? _parentTapGroup;
-  Object get _tapGroup => _parentTapGroup ?? _ownTapGroup;
+  // Each overlay needs an independent dismissal boundary. Reusing the
+  // ancestor's group makes a tap in the exposed parent count as INSIDE the
+  // nested child, so the child never receives onTapOutside.
+  Object get _tapGroup => _ownTapGroup;
   final FocusScopeNode _overlayFocus = FocusScopeNode();
+  // React PopoverContent itself receives initial focus before its actions.
+  final FocusNode _contentFocus = FocusNode(debugLabel: 'Seed overlay content');
   final FocusNode _triggerFocus = FocusNode();
   final List<ScrollPosition> _scrollPositions = [];
   late final AnimationController _animation = AnimationController(
@@ -172,6 +183,7 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
   Offset? _anchorPoint;
   bool _open = false;
   FocusNode? _returnFocus;
+  SeedOverlayDismissReason? _requestedDismissReason;
   late SeedOverlaySide _resolvedSide = widget.side;
   bool get _desired => widget.open ?? widget.controller?.isOpen ?? _open;
   @override
@@ -216,6 +228,33 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
     if (mounted && _open) setState(() {});
   }
 
+  // A non-modal popover participates in the page's tab order directly after
+  // its trigger. OverlayPortal descendants can be excluded from Flutter's
+  // default traversal, so move to a real page focus target at the boundary.
+  bool _focusAtTriggerBoundary({required bool backwards}) {
+    final scope = _triggerFocus.nearestScope;
+    if (scope == null) return false;
+    final outside = scope.descendants
+        .where(
+          (node) =>
+              node.canRequestFocus &&
+              !node.skipTraversal &&
+              !identical(node, _contentFocus) &&
+              !node.ancestors.contains(_contentFocus),
+        )
+        .toList();
+    final trigger = _triggerFocus.descendants.where(
+      (node) => node.canRequestFocus && !node.skipTraversal,
+    );
+    if (trigger.isEmpty) return false;
+    final index = outside.indexOf(trigger.first);
+    if (index == -1) return false;
+    final destination = backwards ? index : index + 1;
+    if (destination >= outside.length) return false;
+    outside[destination].requestFocus();
+    return true;
+  }
+
   @override
   void didUpdateWidget(SeedAnchoredOverlay oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -226,14 +265,13 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
       widget.controller?.addListener(_controllerChanged);
     }
     if (_desired != _open) {
+      final reason =
+          _requestedDismissReason ??
+          widget.controller?.reason ??
+          SeedOverlayDismissReason.programmatic;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          _desired
-              ? _show()
-              : _hide(
-                  widget.controller?.reason ??
-                      SeedOverlayDismissReason.programmatic,
-                );
+          _desired ? _show() : _hide(reason);
         }
       });
     }
@@ -246,6 +284,14 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
 
   void _request(bool open, SeedOverlayDismissReason reason) {
     if (!open && widget.canClose?.call(reason) == false) return;
+    if (!open && widget.open != null) {
+      _requestedDismissReason = reason;
+      // A controlled parent commits its response during the next build. Keep
+      // that request's reason through the build, but discard rejected requests.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _requestedDismissReason = null;
+      });
+    }
     widget.onOpenChanged?.call(open, reason);
     if (widget.open != null) return;
     if (widget.controller != null) {
@@ -265,13 +311,19 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
         ? Duration.zero
         : widget.enterDuration;
     _animation.forward();
-    if (widget.autoFocus) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || !_open) return;
-        final first = _overlayFocus.traversalDescendants.firstOrNull;
-        (first ?? _overlayFocus).requestFocus();
-      });
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_open) return;
+      // SeedPressable requests focus before invoking its callback. Flutter
+      // applies that request asynchronously, so the opening callback may still
+      // see the outside control that was focused before the trigger was tapped.
+      final focused = FocusManager.instance.primaryFocus;
+      if (focused != null && focused.ancestors.contains(_triggerFocus)) {
+        _returnFocus = focused;
+      }
+      if (widget.autoFocus && widget.contentFocusable) {
+        _contentFocus.requestFocus();
+      }
+    });
   }
 
   Future<void> _hide(SeedOverlayDismissReason reason) async {
@@ -296,7 +348,23 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
         reason != SeedOverlayDismissReason.outside &&
         reason != SeedOverlayDismissReason.focusOut &&
         reason != SeedOverlayDismissReason.parentClosed) {
-      if (_returnFocus?.context != null) _returnFocus!.requestFocus();
+      var target = _returnFocus;
+      // Touch activation need not focus a Flutter button before it opens the
+      // overlay. Returning to a parent focus container loses the trigger's tab
+      // stop; React Popover returns to its trigger in this path as well.
+      // Preserve a previously focused control, including explicit external
+      // focus, and use the trigger only when no control had focus on opening.
+      if (target == null ||
+          target is FocusScopeNode ||
+          _triggerFocus.ancestors.contains(target)) {
+        for (final node in _triggerFocus.descendants) {
+          if (node.canRequestFocus && !node.skipTraversal) {
+            target = node;
+            break;
+          }
+        }
+      }
+      if (target?.context != null) target!.requestFocus();
     }
   }
 
@@ -309,6 +377,7 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
     _curved.dispose();
     _animation.dispose();
     _overlayFocus.dispose();
+    _contentFocus.dispose();
     _triggerFocus.dispose();
     super.dispose();
   }
@@ -412,53 +481,109 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
                 onTapOutside: widget.closeOnInteractOutside
                     ? (_) => _request(false, SeedOverlayDismissReason.outside)
                     : null,
-                child: FocusScope(
-                  canRequestFocus: _open,
-                  descendantsAreFocusable: _open,
-                  descendantsAreTraversable: _open,
-                  node: _overlayFocus,
-                  onFocusChange: (focused) {
-                    if (!focused && widget.closeOnFocusOut && _open) {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (mounted &&
-                            _open &&
-                            !_overlayFocus.hasFocus &&
-                            !_triggerFocus.hasFocus) {
-                          _request(false, SeedOverlayDismissReason.focusOut);
-                        }
-                      });
-                    }
-                  },
+                child: TapRegion(
+                  enabled: _open && _parentTapGroup != null,
+                  // Also register the nested portal with its parent's group:
+                  // clicking the child must not dismiss the parent, while
+                  // clicking the parent must dismiss only the child.
+                  groupId: _parentTapGroup,
                   child: CallbackShortcuts(
+                    // Escape also reaches the scope itself when it is focused.
                     bindings: {
                       const SingleActivator(LogicalKeyboardKey.escape): () =>
                           _request(false, SeedOverlayDismissReason.escapeKey),
                     },
-                    child: FadeTransition(
-                      opacity: _curved,
-                      child: AnimatedBuilder(
-                        animation: _animation,
-                        builder: (context, child) => Transform.scale(
-                          alignment: widget.scaleFromAnchor
-                              ? _scaleAlignment
-                              : Alignment.center,
-                          scale: Tween<double>(
-                            begin: _animation.status == AnimationStatus.reverse
-                                ? widget.exitScale ?? widget.enterScale
-                                : widget.enterScale,
-                            end: 1,
-                          ).evaluate(_curved),
-                          child: child,
-                        ),
-                        child: Material(
-                          type: MaterialType.transparency,
-                          child: SeedOverlayScope(
-                            side: _resolvedSide,
-                            isOpen: _open,
-                            anchorPoint: _anchorPoint,
-                            tapGroup: _tapGroup,
-                            close: (reason) => _request(false, reason),
-                            child: Builder(builder: widget.overlayBuilder),
+                    child: FocusScope(
+                      canRequestFocus: _open && widget.contentFocusable,
+                      descendantsAreFocusable: _open && widget.contentFocusable,
+                      descendantsAreTraversable:
+                          _open && widget.contentFocusable,
+                      node: _overlayFocus,
+                      onFocusChange: (focused) {
+                        if (!focused && widget.closeOnFocusOut && _open) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (mounted &&
+                                _open &&
+                                !_overlayFocus.hasFocus &&
+                                !_triggerFocus.hasFocus) {
+                              _request(
+                                false,
+                                SeedOverlayDismissReason.focusOut,
+                              );
+                            }
+                          });
+                        }
+                      },
+                      child: Focus(
+                        focusNode: _contentFocus,
+                        canRequestFocus: _open && widget.contentFocusable,
+                        onKeyEvent: (node, event) {
+                          // The content is the initial tab stop. Flutter may
+                          // mark controls inside an OverlayPortal as skipped
+                          // for traversal, even though they remain focusable.
+                          // Move among those real controls explicitly.
+                          if (event is KeyDownEvent &&
+                              event.logicalKey == LogicalKeyboardKey.tab) {
+                            final controls = _contentFocus.descendants
+                                .where((focus) => focus.canRequestFocus)
+                                .toList();
+                            final current = FocusManager.instance.primaryFocus;
+                            final index = current == node
+                                ? -1
+                                : controls.indexOf(current!);
+                            if (current == node || index >= 0) {
+                              final backwards =
+                                  HardwareKeyboard.instance.isShiftPressed;
+                              // The content is before its actions in the React
+                              // ["floating", "content"] tab order. Reverse Tab
+                              // at that initial stop must leave to the trigger,
+                              // never wrap around to the final child action.
+                              final next = backwards ? index - 1 : index + 1;
+                              if (next >= 0 && next < controls.length) {
+                                controls[next].requestFocus();
+                                return KeyEventResult.handled;
+                              }
+                              if (backwards && current != node && index == 0) {
+                                _contentFocus.requestFocus();
+                                return KeyEventResult.handled;
+                              }
+                              if (_focusAtTriggerBoundary(
+                                backwards: backwards,
+                              )) {
+                                return KeyEventResult.handled;
+                              }
+                            }
+                          }
+                          return KeyEventResult.ignored;
+                        },
+                        child: FadeTransition(
+                          opacity: _curved,
+                          child: AnimatedBuilder(
+                            animation: _animation,
+                            builder: (context, child) => Transform.scale(
+                              alignment: widget.scaleFromAnchor
+                                  ? _scaleAlignment
+                                  : Alignment.center,
+                              scale: Tween<double>(
+                                begin:
+                                    _animation.status == AnimationStatus.reverse
+                                    ? widget.exitScale ?? widget.enterScale
+                                    : widget.enterScale,
+                                end: 1,
+                              ).evaluate(_curved),
+                              child: child,
+                            ),
+                            child: Material(
+                              type: MaterialType.transparency,
+                              child: SeedOverlayScope(
+                                side: _resolvedSide,
+                                isOpen: _open,
+                                anchorPoint: _anchorPoint,
+                                tapGroup: _tapGroup,
+                                close: (reason) => _request(false, reason),
+                                child: Builder(builder: widget.overlayBuilder),
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -471,26 +596,55 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
         ),
       );
     },
-    child: TapRegion(
-      groupId: _tapGroup,
-      child: Focus(
-        focusNode: _triggerFocus,
-        canRequestFocus: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (widget.anchor != null)
-              KeyedSubtree(key: _anchorKey, child: widget.anchor!),
-            KeyedSubtree(
-              key: widget.anchor == null ? _anchorKey : null,
-              child: widget.triggerBuilder(
-                context,
-                _open,
-                () => _request(!_open, SeedOverlayDismissReason.trigger),
+    child: CallbackShortcuts(
+      // Tooltip / HelpBubble autoFocus=false retains focus at its trigger.
+      bindings: _open
+          ? {
+              const SingleActivator(LogicalKeyboardKey.escape): () =>
+                  _request(false, SeedOverlayDismissReason.escapeKey),
+            }
+          : const {},
+      child: TapRegion(
+        groupId: _tapGroup,
+        child: Focus(
+          focusNode: _triggerFocus,
+          canRequestFocus: false,
+          onKeyEvent: (node, event) {
+            // An open React popover stays immediately after its trigger in the
+            // keyboard tab order. Flutter Web can otherwise advance from the
+            // trigger straight to the following page button after a reverse
+            // Tab exits the portal, leaving the still-open popup behind.
+            if (!_open ||
+                !widget.autoFocus ||
+                !widget.contentFocusable ||
+                event is! KeyDownEvent ||
+                event.logicalKey != LogicalKeyboardKey.tab ||
+                HardwareKeyboard.instance.isShiftPressed) {
+              return KeyEventResult.ignored;
+            }
+            final focused = FocusManager.instance.primaryFocus;
+            if (focused == null || !focused.ancestors.contains(node)) {
+              return KeyEventResult.ignored;
+            }
+            _contentFocus.requestFocus();
+            return KeyEventResult.handled;
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (widget.anchor != null)
+                KeyedSubtree(key: _anchorKey, child: widget.anchor!),
+              KeyedSubtree(
+                key: widget.anchor == null ? _anchorKey : null,
+                child: widget.triggerBuilder(
+                  context,
+                  _open,
+                  () => _request(!_open, SeedOverlayDismissReason.trigger),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     ),

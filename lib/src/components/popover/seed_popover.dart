@@ -5,6 +5,7 @@ import '../layout/seed_scroll_area.dart';
 import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/services.dart';
 
 import '../../foundations/dimensions/seed_dimension.dart';
 import '../../foundations/feedback/seed_scale_feedback.dart';
@@ -289,7 +290,7 @@ class _SeedPopoverPositionDelegate extends SingleChildLayoutDelegate {
 }
 
 /// Lifecycle-managed anchored popover. The card remains independently composable.
-class SeedPopoverTrigger extends StatelessWidget {
+class SeedPopoverTrigger extends StatefulWidget {
   const SeedPopoverTrigger({
     super.key,
     required this.triggerBuilder,
@@ -309,10 +310,11 @@ class SeedPopoverTrigger extends StatelessWidget {
     this.unmountOnExit = false,
     this.autoFocus = true,
     this.closeOnInteractOutside = true,
-    this.closeOnFocusOut = true,
+    bool? closeOnFocusOut,
     this.maxWidth = 480,
     this.maxHeight = 600,
-  }) : onOpenChanged = onOpenChange ?? onOpenChanged,
+  }) : closeOnFocusOut = closeOnFocusOut ?? closeOnInteractOutside,
+       onOpenChanged = onOpenChange ?? onOpenChanged,
        assert(onOpenChange == null || onOpenChanged == null);
   final Widget Function(BuildContext, bool, VoidCallback) triggerBuilder;
   final WidgetBuilder builder;
@@ -333,25 +335,168 @@ class SeedPopoverTrigger extends StatelessWidget {
   final SeedOverlaySide side;
   final SeedOverlayAlign align;
   final double maxWidth, maxHeight;
+
+  @override
+  State<SeedPopoverTrigger> createState() => _SeedPopoverTriggerState();
+}
+
+class _SeedPopoverTriggerState extends State<SeedPopoverTrigger> {
+  // React's PopoverDismissibleLayer listens for Escape independently of where
+  // keyboard focus resides. The underlying anchored overlay's local shortcut
+  // cannot receive Escape when a persistent popover leaves focus on an
+  // external placement selector.
+  static final List<_SeedPopoverTriggerState> _openStack = [];
+  static bool _stackUpdateScheduled = false;
+  final SeedOverlayController _localController = SeedOverlayController();
+  FocusScopeNode? _overlayFocusScope;
+  FocusNode? _triggerFocus;
+  bool _globalEscapeRegistered = false;
+
+  SeedOverlayController get _controller =>
+      widget.controller ?? _localController;
+  bool get _isOpen => widget.open ?? _controller.isOpen;
+
+  // Dismissible layers handle only the topmost outside interaction. Otherwise
+  // Flutter TapRegion sends the same outside pointer to every nested portal,
+  // closing both the inner and outer Popover on one tap. React's dismissible
+  // layer preserves the parent until the following interaction.
+  bool get _isTopmostOrClosed =>
+      !_isOpen || _openStack.isEmpty || identical(_openStack.last, this);
+
+  static void _notifyOpenStackChanged() {
+    if (_stackUpdateScheduled) return;
+    _stackUpdateScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _stackUpdateScheduled = false;
+      for (final state in List<_SeedPopoverTriggerState>.of(_openStack)) {
+        if (state.mounted) state.setState(() {});
+      }
+    });
+    WidgetsBinding.instance.scheduleFrame();
+  }
+
+  void _trackOpen(bool open) {
+    var changed = false;
+    if (open) {
+      if (!_openStack.contains(this)) {
+        _openStack.add(this);
+        changed = true;
+      }
+    } else {
+      changed = _openStack.remove(this);
+    }
+    if (changed) _notifyOpenStackChanged();
+  }
+
+  void _onControllerChanged() {
+    if (mounted && widget.open == null) _trackOpen(_isOpen);
+  }
+
+  void _syncGlobalEscapeHandler() {
+    // Escape is independent from outside-pointer dismissal. When focus-out
+    // dismissal is disabled, keyboard focus can leave an open popover even if
+    // outside pointer dismissal remains enabled. The overlay-local shortcut
+    // then cannot receive Escape, so keep the topmost popover listening.
+    final shouldRegister =
+        !widget.closeOnInteractOutside || !widget.closeOnFocusOut;
+    if (shouldRegister == _globalEscapeRegistered) return;
+    if (shouldRegister) {
+      HardwareKeyboard.instance.addHandler(_handleGlobalKey);
+    } else {
+      HardwareKeyboard.instance.removeHandler(_handleGlobalKey);
+    }
+    _globalEscapeRegistered = shouldRegister;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.controller == null &&
+        widget.open == null &&
+        widget.defaultOpen) {
+      _localController.open();
+    }
+    _controller.addListener(_onControllerChanged);
+    _trackOpen(_isOpen);
+    _syncGlobalEscapeHandler();
+  }
+
+  @override
+  void didUpdateWidget(covariant SeedPopoverTrigger oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      (oldWidget.controller ?? _localController).removeListener(
+        _onControllerChanged,
+      );
+      _controller.addListener(_onControllerChanged);
+    }
+    _trackOpen(_isOpen);
+    _syncGlobalEscapeHandler();
+  }
+
+  void _onOpenChanged(bool open, SeedOverlayDismissReason reason) {
+    _trackOpen(open);
+    widget.onOpenChanged?.call(open, reason);
+  }
+
+  bool _handleGlobalKey(KeyEvent event) {
+    if (event is! KeyDownEvent ||
+        event.logicalKey != LogicalKeyboardKey.escape ||
+        !_isOpen ||
+        _openStack.isEmpty ||
+        !identical(_openStack.last, this) ||
+        _overlayFocusScope?.hasFocus == true ||
+        _triggerFocus?.hasFocus == true ||
+        ModalRoute.of(context)?.isCurrent == false) {
+      return false;
+    }
+    // Local Escape shortcuts may have already closed the popup earlier in the
+    // same event. A controller read above keeps the callback single-shot.
+    _onOpenChanged(false, SeedOverlayDismissReason.escapeKey);
+    if (widget.open == null) {
+      _controller.close(SeedOverlayDismissReason.escapeKey);
+    }
+    return true;
+  }
+
+  @override
+  void dispose() {
+    if (_globalEscapeRegistered) {
+      HardwareKeyboard.instance.removeHandler(_handleGlobalKey);
+    }
+    _openStack.remove(this);
+    _controller.removeListener(_onControllerChanged);
+    _localController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) => SeedAnchoredOverlay(
-    triggerBuilder: triggerBuilder,
-    overlayBuilder: builder,
-    anchor: anchor,
-    controller: controller,
-    open: open,
-    defaultOpen: defaultOpen,
-    onOpenChanged: onOpenChanged,
-    side: side,
-    align: align,
-    flip: flip,
-    shift: slide,
-    lazyMount: lazyMount,
-    unmountOnExit: unmountOnExit,
-    maxWidth: maxWidth,
-    maxHeight: maxHeight,
-    autoFocus: autoFocus,
-    closeOnInteractOutside: closeOnInteractOutside,
-    closeOnFocusOut: closeOnFocusOut,
+    triggerBuilder: (context, open, toggle) => Builder(
+      builder: (inside) {
+        _triggerFocus = Focus.of(inside);
+        return widget.triggerBuilder(inside, open, toggle);
+      },
+    ),
+    overlayBuilder: (context) {
+      _overlayFocusScope = FocusScope.of(context);
+      return widget.builder(context);
+    },
+    anchor: widget.anchor,
+    controller: _controller,
+    open: widget.open,
+    defaultOpen: widget.defaultOpen,
+    onOpenChanged: _onOpenChanged,
+    side: widget.side,
+    align: widget.align,
+    flip: widget.flip,
+    shift: widget.slide,
+    lazyMount: widget.lazyMount,
+    unmountOnExit: widget.unmountOnExit,
+    maxWidth: widget.maxWidth,
+    maxHeight: widget.maxHeight,
+    autoFocus: widget.autoFocus,
+    closeOnInteractOutside: widget.closeOnInteractOutside && _isTopmostOrClosed,
+    closeOnFocusOut: widget.closeOnFocusOut,
   );
 }
