@@ -1,5 +1,8 @@
 screenshots/
 /doc/
+/example/doc/
+/example/assets/fonts/README.md
+/AGENTS.md
 .gemini/
 test/
 

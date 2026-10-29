@@ -27,12 +27,13 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-      - name: Set up Flutter
+      - name: Set up latest stable Flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
-          flutter-version: '3.47.7'
           channel: stable
           cache: true
+      - name: Report Flutter version
+        run: flutter --version
       - name: Configure Pages
         uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
       - name: Install dependencies
@@ -42,9 +43,9 @@ jobs:
       - name: Test showcase
         working-directory: example
         run: flutter test --no-pub
-      - name: Build showcase
+      - name: Build WASM showcase
         working-directory: example
-        run: flutter build web --release --no-pub --base-href /seed_design/
+        run: flutter build web --release --wasm --no-pub --base-href /seed_design/
       - name: Upload site
         uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
         with:
