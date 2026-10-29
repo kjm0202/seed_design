@@ -51,12 +51,19 @@ enum _PullState { idle, pulling, ready, loading }
 class _SeedPullToRefreshState extends State<SeedPullToRefresh> {
   _PullState _state = _PullState.idle;
   int? _pointer;
+  final Set<int> _downPointers = {};
+  bool _multiTouchBlocked = false;
   final Set<int> _preventedPointers = {};
   double _pointerY = 0;
+  double _pointerDownY = 0;
+  PointerDeviceKind _pointerDeviceKind = PointerDeviceKind.touch;
   double? _originY;
   double _offset = 0;
   double _scrollOvershoot = 0;
   bool _dragAccepted = false;
+  bool _scrollAtTop = false;
+  bool _rearmAfterDisable = false;
+  bool _rearmAfterLoading = false;
 
   bool get _canPull => widget.enabled && !widget.preventPull;
   bool get _dragging =>
@@ -65,31 +72,61 @@ class _SeedPullToRefreshState extends State<SeedPullToRefresh> {
   @override
   void didUpdateWidget(covariant SeedPullToRefresh oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!_canPull && _state != _PullState.loading) _reset();
+    if (!_canPull && _state != _PullState.loading) {
+      // React disableEvent aborts the visible pull without clearing
+      // originRef. The held contact is released only by end/cancel, so it may
+      // start another pull if re-enabled before the finger is lifted.
+      if (_dragging) {
+        _rearmAfterDisable = _pointer != null && _dragAccepted;
+      }
+      _originY = null;
+      _offset = 0;
+      _state = _PullState.idle;
+    }
   }
 
   void _reset() {
     _pointer = null;
     _originY = null;
     _dragAccepted = false;
+    _scrollAtTop = false;
+    _rearmAfterDisable = false;
+    _rearmAfterLoading = false;
     _offset = 0;
     _state = _PullState.idle;
   }
 
   void _down(PointerDownEvent event) {
-    if (_pointer != null) {
-      // A multi-touch interruption never commits a refresh.
-      setState(_reset);
+    _downPointers.add(event.pointer);
+    if (_downPointers.length > 1) {
+      // A second physical finger invalidates this gesture until all contacts
+      // have ended. It must not settle an already-running refresh.
+      _multiTouchBlocked = true;
+      if (_state == _PullState.loading) {
+        _pointer = null;
+        _originY = null;
+        _dragAccepted = false;
+        _rearmAfterLoading = false;
+      } else {
+        setState(_reset);
+      }
       return;
     }
+    if (_multiTouchBlocked) return;
     if (_preventedPointers.contains(event.pointer) ||
-        !_canPull ||
-        _state == _PullState.loading ||
         event.buttons != kPrimaryButton) {
       return;
     }
+    // React records the contact even while disabled. If enabled becomes true
+    // before touchend, later moves of that same contact may start a pull.
     _pointer = event.pointer;
     _pointerY = event.position.dy;
+    _pointerDownY = event.position.dy;
+    _pointerDeviceKind = event.kind;
+    // The translated content can lose its ScrollStart while the first
+    // refresh's loading indicator is shown. Keep the last known scroll-top
+    // state for a contact that begins during that loading interval.
+    if (_state != _PullState.loading) _scrollAtTop = false;
   }
 
   void _move(PointerMoveEvent event) {
@@ -98,8 +135,30 @@ class _SeedPullToRefreshState extends State<SeedPullToRefresh> {
       setState(_reset);
       return;
     }
+    final previousY = _pointerY;
     _pointerY = event.position.dy;
-    if (_originY != null && _dragAccepted) _updatePull();
+    final canRearm = _rearmAfterLoading ? _scrollAtTop : _dragAccepted;
+    if (_originY != null && _dragAccepted) {
+      _updatePull();
+    } else if (_canPull &&
+        (_rearmAfterDisable || _rearmAfterLoading) &&
+        canRearm &&
+        _state == _PullState.idle &&
+        _pointerY > previousY) {
+      // React starts a fresh pull on the first positive move after either
+      // disabled→enabled or a pending refresh settling mid-contact.
+      setState(() {
+        _rearmAfterDisable = false;
+        // During loading Flutter's translated content may not receive a new
+        // ScrollStart. A retained top-of-scroll owner can still resume on its
+        // next move, as React's root touch handler does.
+        if (_rearmAfterLoading && _scrollAtTop) _dragAccepted = true;
+        _rearmAfterLoading = false;
+        _originY = _pointerY;
+        _offset = 0;
+        _state = _PullState.pulling;
+      });
+    }
   }
 
   void _updatePull() {
@@ -107,18 +166,18 @@ class _SeedPullToRefreshState extends State<SeedPullToRefresh> {
     if (!_canPull || origin == null) return;
     final distance = (_pointerY - origin) * widget.displacementMultiplier;
     final ready = distance > widget.threshold;
-    final becameReady = ready && _state != _PullState.ready;
     setState(() {
-      // Follow a retreating pointer rather than retaining a negative pull.
-      if (distance < 0) _originY = null;
+      // React keeps this contact in "pulling" and rebases y0 whenever the
+      // displacement reaches zero or turns negative (usePullToRefresh.ts).
+      // Clearing the origin here instead would require a fresh scroll
+      // notification before the SAME finger could pull down again.
+      if (distance <= 0) _originY = _pointerY;
       _offset = math.max(0, distance);
-      _state = distance < 0
-          ? _PullState.idle
-          : ready
-          ? _PullState.ready
-          : _PullState.pulling;
+      _state = ready ? _PullState.ready : _PullState.pulling;
     });
-    if (becameReady) widget.onReady?.call();
+    // React usePullToRefresh invokes onPtrReady for *every* delivered move
+    // above the threshold, including moves while already in the ready state.
+    if (ready) widget.onReady?.call();
   }
 
   bool _scrollNotification(ScrollNotification notification) {
@@ -132,7 +191,7 @@ class _SeedPullToRefreshState extends State<SeedPullToRefresh> {
     if (_scrollOvershoot != overshoot) {
       setState(() => _scrollOvershoot = overshoot);
     }
-    if (!_canPull || _pointer == null || _state == _PullState.loading) {
+    if (_pointer == null) {
       return false;
     }
 
@@ -142,6 +201,13 @@ class _SeedPullToRefreshState extends State<SeedPullToRefresh> {
         notification.dragDetails != null) {
       _dragAccepted = true;
     }
+    if (_dragAccepted) _scrollAtTop = metrics.extentBefore == 0;
+    if (!_canPull) return false;
+    if (_state == _PullState.loading) {
+      // A fresh touch may begin during an unresolved refresh. Remember its
+      // scroll arena ownership, but never pull or refresh until it settles.
+      return false;
+    }
     final details = switch (notification) {
       ScrollUpdateNotification(:final dragDetails) => dragDetails,
       OverscrollNotification(:final dragDetails) => dragDetails,
@@ -150,7 +216,15 @@ class _SeedPullToRefreshState extends State<SeedPullToRefresh> {
     if (_dragAccepted &&
         details != null &&
         _originY == null &&
+        !_rearmAfterLoading &&
         metrics.extentBefore == 0 &&
+        // On browsers React receives the first touchmove after the native
+        // touch-slop interval. Flutter's scroll arena can issue an overscroll
+        // on the *first* sub-slop move, making its PTR READY prematurely.
+        // Match the native touch delivery boundary without delaying the
+        // pointer/mouse path that React binds on non-touch platforms.
+        (_pointerDeviceKind != PointerDeviceKind.touch ||
+            details.globalPosition.dy - _pointerDownY > kTouchSlop) &&
         details.delta.dy > 0) {
       _originY = details.globalPosition.dy;
     }
@@ -160,13 +234,31 @@ class _SeedPullToRefreshState extends State<SeedPullToRefresh> {
   }
 
   void _end(PointerEvent event, {bool cancelled = false}) {
+    // A still-held pointer can be released after a parent switches tabs and
+    // disposes this subtree. Ignore that late event; the old PTR no longer
+    // owns a mounted state or a refresh callback.
+    if (!mounted) return;
+    _downPointers.remove(event.pointer);
+    if (_downPointers.isEmpty) _multiTouchBlocked = false;
     _preventedPointers.remove(event.pointer);
     if (event.pointer != _pointer) return;
+    if (_state == _PullState.loading) {
+      // React clears the contact origin on end/cancel while an older refresh
+      // stays loading. The outstanding Future must still control settlement.
+      _pointer = null;
+      _originY = null;
+      _dragAccepted = false;
+      _rearmAfterLoading = false;
+      return;
+    }
     final refresh = !cancelled && _canPull && _state == _PullState.ready;
     setState(() {
       _pointer = null;
       _originY = null;
       _dragAccepted = false;
+      if (!refresh) _scrollAtTop = false;
+      _rearmAfterDisable = false;
+      _rearmAfterLoading = false;
       _state = refresh ? _PullState.loading : _PullState.idle;
       _offset = refresh ? widget.threshold : 0;
     });
@@ -179,7 +271,21 @@ class _SeedPullToRefreshState extends State<SeedPullToRefresh> {
     } catch (_) {
       // React also settles rejected refreshes back to idle.
     } finally {
-      if (mounted) setState(_reset);
+      if (mounted) {
+        setState(() {
+          if (_pointer == null) {
+            _reset();
+          } else {
+            // React startEvent retains a new origin even during loading;
+            // after settle, the still-held contact may begin a new pull on
+            // its next downward move, using that move as the new y0.
+            _offset = 0;
+            _originY = null;
+            _state = _PullState.idle;
+            _rearmAfterLoading = true;
+          }
+        });
+      }
     }
   }
 
