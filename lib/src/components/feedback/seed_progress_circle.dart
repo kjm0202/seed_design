@@ -21,7 +21,8 @@ class SeedProgressCircle extends StatelessWidget {
   final String? semanticsLabel;
 
   /// A numeric or percentage value for the native progress-bar semantics.
-  /// When omitted, Flutter announces the percentage derived from [value].
+  /// When omitted, announces the percentage derived from [value], or
+  /// `loading...` for indeterminate progress, as in SEED React.
   final String? semanticsValue;
 
   const SeedProgressCircle({
@@ -66,7 +67,9 @@ class SeedProgressCircle extends StatelessWidget {
       child: CircularProgressIndicator(
         value: value,
         semanticsLabel: semanticsLabel,
-        semanticsValue: semanticsValue,
+        // The Web engine has no ARIA role for loadingSpinner yet. Keep a
+        // textual loading state instead of leaving an unnamed, empty node.
+        semanticsValue: semanticsValue ?? (value == null ? 'loading...' : null),
         backgroundColor: effectiveTrackColor,
         valueColor: AlwaysStoppedAnimation<Color>(effectiveColor),
         strokeWidth: strokeWidth,

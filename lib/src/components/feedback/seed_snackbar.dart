@@ -163,7 +163,7 @@ class _SeedSnackbarEntry {
 /// Queue and timeout state independent of a page's ScaffoldMessenger.
 class SeedSnackbarController extends ChangeNotifier {
   SeedSnackbarController({
-    this.strategy = SeedSnackbarStrategy.queued,
+    this.strategy = SeedSnackbarStrategy.immediate,
     this.pauseOnInteraction = true,
   });
   SeedSnackbarStrategy strategy;
@@ -267,8 +267,12 @@ class SeedSnackbarController extends ChangeNotifier {
     if (_paused) {
       _timer?.cancel();
       _elapsed.stop();
-      _remaining = _remaining - _elapsed.elapsed;
-      if (_remaining.isNegative) _remaining = Duration.zero;
+      // React useSnackbar.ts:98–101,119–137 changes active -> persist on
+      // pointer/focus pause, then persist -> active on resume. The active
+      // effect schedules a NEW visibleDuration timeout; it does not continue
+      // the original timer's remainder. Keep detach/reattach accounting
+      // independent from this interaction-driven restart.
+      _remaining = _current?.duration ?? Duration.zero;
     } else {
       _resume();
     }
@@ -316,7 +320,7 @@ class SeedSnackbarProvider extends StatefulWidget {
     super.key,
     required this.child,
     this.controller,
-    this.strategy = SeedSnackbarStrategy.queued,
+    this.strategy = SeedSnackbarStrategy.immediate,
     this.pauseOnInteraction = true,
   });
   final Widget child;

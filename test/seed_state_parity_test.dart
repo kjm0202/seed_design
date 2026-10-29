@@ -12,9 +12,11 @@ Widget host(Widget child) => MaterialApp(
 );
 void main() {
   testWidgets(
-    'snackbar pauses the remaining timeout while hovered and preserves queue',
+    'snackbar pauses while hovered and preserves explicit queued strategy',
     (tester) async {
-      final controller = SeedSnackbarController();
+      final controller = SeedSnackbarController(
+        strategy: SeedSnackbarStrategy.queued,
+      );
       addTearDown(controller.dispose);
       await tester.pumpWidget(
         host(

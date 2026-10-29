@@ -9,7 +9,7 @@ import '../../foundations/radius/seed_radius.dart';
 import '../../theme/seed_theme.dart';
 import '../feedback/seed_progress_circle.dart';
 
-/// Variant options for [SeedButton] / [SeedActionButton].
+/// Variant options for [SeedButton].
 enum SeedButtonVariant {
   brandSolid,
   neutralSolid,
@@ -20,7 +20,7 @@ enum SeedButtonVariant {
   ghost,
 }
 
-/// Size options for [SeedButton] / [SeedActionButton].
+/// Size options for [SeedButton].
 enum SeedButtonSize {
   xsmall,
   small,
@@ -353,10 +353,23 @@ class SeedButton extends StatelessWidget {
     required bool enabled,
   }) {
     if (!enabled) {
+      // Each recipe's later [data-loading] rule overrides only its background;
+      // disabled foreground, stroke and interaction guards still apply.
+      final loadingBackground = switch (variant) {
+        SeedButtonVariant.brandSolid => colors.bg.brandSolidPressed,
+        SeedButtonVariant.neutralSolid => colors.bg.neutralSolidPressed,
+        SeedButtonVariant.neutralWeak => colors.bg.neutralWeakPressed,
+        SeedButtonVariant.criticalSolid => colors.bg.criticalSolidPressed,
+        SeedButtonVariant.brandOutline ||
+        SeedButtonVariant.neutralOutline => colors.bg.transparent,
+        SeedButtonVariant.ghost => colors.bg.transparentPressed,
+      };
       return (
-        variant == SeedButtonVariant.brandOutline ||
-                variant == SeedButtonVariant.neutralOutline ||
-                variant == SeedButtonVariant.ghost
+        loading
+            ? loadingBackground
+            : variant == SeedButtonVariant.brandOutline ||
+                  variant == SeedButtonVariant.neutralOutline ||
+                  variant == SeedButtonVariant.ghost
             ? colors.bg.transparent
             : colors.bg.disabled,
         colors.fg.disabled,
