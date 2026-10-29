@@ -34,6 +34,10 @@ class SeedListItem extends StatelessWidget {
   final bool? checked;
   final bool? toggled;
   final VoidCallback? onTap;
+
+  /// URI exposed to accessibility services for a navigable link row. The
+  /// caller remains responsible for opening the destination in [onTap].
+  final Uri? linkUrl;
   final EdgeInsetsGeometry padding;
 
   const SeedListItem({
@@ -52,6 +56,7 @@ class SeedListItem extends StatelessWidget {
     this.checked,
     this.toggled,
     this.onTap,
+    this.linkUrl,
     this.padding = const EdgeInsets.symmetric(
       horizontal: SeedDimension.x4,
       vertical: SeedDimension.x3,
@@ -105,113 +110,125 @@ class SeedListItem extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SeedPressable(
-            enabled: enabled && onTap != null,
-            onTap: onTap,
-            enableScale: false,
-            semanticButton: checked == null && toggled == null && onTap != null,
-            checked: checked,
-            toggled: toggled,
-            builder: (context, isPressed) {
-              isPressed =
-                  enabled &&
-                  (isPressed ||
-                      parentInteraction?.pressed == true ||
-                      parentInteraction?.hovered == true);
-              Color bgColor = colors.bg.transparent;
-              if (highlighted) {
-                bgColor = colors.bg.brandWeak;
-              }
-              if (isPressed) {
-                bgColor = highlighted
-                    ? colors.bg.brandWeakPressed
-                    : colors.bg.transparentPressed;
-              }
+          Semantics(
+            link: linkUrl != null,
+            linkUrl: linkUrl,
+            onTap: linkUrl != null && enabled ? onTap : null,
+            child: SeedPressable(
+              enabled: enabled && onTap != null,
+              onTap: onTap,
+              enableScale: false,
+              semanticButton:
+                  checked == null &&
+                  toggled == null &&
+                  onTap != null &&
+                  linkUrl == null,
+              checked: checked,
+              toggled: toggled,
+              builder: (context, isPressed) {
+                isPressed =
+                    enabled &&
+                    (isPressed ||
+                        parentInteraction?.pressed == true ||
+                        parentInteraction?.hovered == true);
+                Color bgColor = colors.bg.transparent;
+                if (highlighted) {
+                  bgColor = colors.bg.brandWeak;
+                }
+                if (isPressed) {
+                  bgColor = highlighted
+                      ? colors.bg.brandWeakPressed
+                      : colors.bg.transparentPressed;
+                }
 
-              return Stack(
-                children: [
-                  Positioned.fill(
-                    child: AnimatedContainer(
-                      duration: SeedDuration.d3,
-                      curve: SeedCurves.easing,
-                      margin: EdgeInsets.symmetric(
-                        horizontal: isPressed ? SeedDimension.x1_5 : 0,
-                      ),
-                      decoration: BoxDecoration(
-                        color: bgColor,
-                        borderRadius: BorderRadius.circular(
-                          isPressed ? SeedDimension.x2_5 : 0,
+                return Stack(
+                  children: [
+                    Positioned.fill(
+                      child: AnimatedContainer(
+                        duration: SeedDuration.d3,
+                        curve: SeedCurves.easing,
+                        margin: EdgeInsets.symmetric(
+                          horizontal: isPressed ? SeedDimension.x1_5 : 0,
+                        ),
+                        decoration: BoxDecoration(
+                          color: bgColor,
+                          borderRadius: BorderRadius.circular(
+                            isPressed ? SeedDimension.x2_5 : 0,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  Padding(
-                    padding: padding,
-                    child: SeedContentScale(
-                      pressed: parentInteraction?.pressed,
-                      child: Row(
-                        crossAxisAlignment: align == SeedListItemAlign.center
-                            ? CrossAxisAlignment.center
-                            : CrossAxisAlignment.start,
-                        children: [
-                          if (prefix != null) ...[
-                            IconTheme(
-                              data: IconThemeData(
-                                size: 22.0,
-                                color: enabled
-                                    ? colors.fg.neutral
-                                    : colors.fg.disabled,
+                    Padding(
+                      padding: padding,
+                      child: SeedContentScale(
+                        pressed: parentInteraction?.pressed,
+                        child: Row(
+                          crossAxisAlignment: align == SeedListItemAlign.center
+                              ? CrossAxisAlignment.center
+                              : CrossAxisAlignment.start,
+                          children: [
+                            if (prefix != null) ...[
+                              IconTheme(
+                                data: IconThemeData(
+                                  size: 22.0,
+                                  color: enabled
+                                      ? colors.fg.neutral
+                                      : colors.fg.disabled,
+                                ),
+                                child: prefix!,
                               ),
-                              child: prefix!,
-                            ),
-                            const SizedBox(width: SeedDimension.x3),
-                          ],
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.only(
-                                right: SeedDimension.x2_5,
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  titleWidget,
-                                  if (detailWidget != null) ...[
-                                    const SizedBox(height: SeedDimension.x0_5),
-                                    detailWidget,
+                              const SizedBox(width: SeedDimension.x3),
+                            ],
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.only(
+                                  right: SeedDimension.x2_5,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    titleWidget,
+                                    if (detailWidget != null) ...[
+                                      const SizedBox(
+                                        height: SeedDimension.x0_5,
+                                      ),
+                                      detailWidget,
+                                    ],
                                   ],
+                                ),
+                              ),
+                            ),
+                            if (suffixTextWidget != null || suffix != null) ...[
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  ?suffixTextWidget,
+                                  if (suffixTextWidget != null &&
+                                      suffix != null)
+                                    const SizedBox(width: SeedDimension.x1),
+                                  if (suffix != null)
+                                    IconTheme(
+                                      data: IconThemeData(
+                                        size: 18.0,
+                                        color: enabled
+                                            ? colors.fg.neutralSubtle
+                                            : colors.fg.disabled,
+                                      ),
+                                      child: suffix!,
+                                    ),
                                 ],
                               ),
-                            ),
-                          ),
-                          if (suffixTextWidget != null || suffix != null) ...[
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                ?suffixTextWidget,
-                                if (suffixTextWidget != null && suffix != null)
-                                  const SizedBox(width: SeedDimension.x1),
-                                if (suffix != null)
-                                  IconTheme(
-                                    data: IconThemeData(
-                                      size: 18.0,
-                                      color: enabled
-                                          ? colors.fg.neutralSubtle
-                                          : colors.fg.disabled,
-                                    ),
-                                    child: suffix!,
-                                  ),
-                              ],
-                            ),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              );
-            },
+                  ],
+                );
+              },
+            ),
           ),
           if (showDivider &&
               (_SeedListDividers.maybeOf(context)?.showDividers ?? true))
@@ -220,6 +237,59 @@ class SeedListItem extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A link row with the same visual layout as [SeedListItem].
+///
+/// The URI is part of its semantics. [onTap] opens the destination in the
+/// application, allowing consumers to choose their navigation integration.
+class SeedListLinkItem extends StatelessWidget {
+  const SeedListLinkItem({
+    super.key,
+    required this.uri,
+    this.title,
+    this.titleText,
+    this.detail,
+    this.detailText,
+    this.prefix,
+    this.suffix,
+    this.suffixText,
+    this.align = SeedListItemAlign.center,
+    this.highlighted = false,
+    this.enabled = true,
+    this.showDivider = true,
+    this.onTap,
+    this.padding = const EdgeInsets.symmetric(
+      horizontal: SeedDimension.x4,
+      vertical: SeedDimension.x3,
+    ),
+  }) : assert(title == null || titleText == null);
+
+  final Uri uri;
+  final Widget? title, detail, prefix, suffix;
+  final String? titleText, detailText, suffixText;
+  final SeedListItemAlign align;
+  final bool highlighted, enabled, showDivider;
+  final VoidCallback? onTap;
+  final EdgeInsetsGeometry padding;
+
+  @override
+  Widget build(BuildContext context) => SeedListItem(
+    title: title,
+    titleText: titleText,
+    detail: detail,
+    detailText: detailText,
+    prefix: prefix,
+    suffix: suffix,
+    suffixText: suffixText,
+    align: align,
+    highlighted: highlighted,
+    enabled: enabled,
+    showDivider: showDivider,
+    onTap: onTap,
+    linkUrl: uri,
+    padding: padding,
+  );
 }
 
 /// Container that groups multiple [SeedListItem] items with optional dividers.

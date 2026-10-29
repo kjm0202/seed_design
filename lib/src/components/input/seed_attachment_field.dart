@@ -102,12 +102,15 @@ class SeedAttachmentDisplayField extends StatefulWidget {
     this.label,
     this.description,
     this.errorMessage,
+    this.invalid,
+    this.showRequiredIndicator = false,
     this.itemBuilder,
     this.inset = EdgeInsets.zero,
     this.showDropzone = false,
     this.isDraggingOver = false,
     this.itemSize = 80,
     this.triggerIcon,
+    this.representativeLabel = '대표',
   }) : onEntriesChanged = onEntriesChange ?? onEntriesChanged,
        assert(onEntriesChange == null || onEntriesChanged == null),
        initialEntries = defaultEntries ?? initialEntries ?? const [],
@@ -136,7 +139,17 @@ class SeedAttachmentDisplayField extends StatefulWidget {
   final bool enabled, readOnly, reorderable, showDropzone, isDraggingOver;
   final double itemSize;
   final Widget? triggerIcon;
+
+  /// Badge text for the representative item. Existing callers retain '대표'.
+  final String representativeLabel;
   final String? label, description, errorMessage;
+
+  /// Independent validation state. When omitted, a legacy [errorMessage]
+  /// continues to indicate an invalid field.
+  final bool? invalid;
+
+  /// Displays the required mark beside [label], as in React AttachmentDisplayField.
+  final bool showRequiredIndicator;
   final Widget Function(BuildContext, SeedAttachmentController)? itemBuilder;
   final EdgeInsetsGeometry inset;
   @override
@@ -203,41 +216,47 @@ class _SeedAttachmentDisplayFieldState
   }
 
   @override
-  Widget build(BuildContext context) => SeedField(
-    label: widget.label,
-    helperText: widget.description,
-    errorMessage: widget.errorMessage,
-    child: Padding(
-      padding: widget.inset,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (widget.showDropzone) ...[
-            SeedAttachmentDropzone(
-              enabled: _controller.canAdd,
-              isDraggingOver: widget.isDraggingOver,
-              onTap: () => widget.onTrigger?.call(_controller),
-            ),
-            const SizedBox(height: 8),
-          ],
-          widget.itemBuilder?.call(context, _controller) ??
-              SeedAttachmentInput(
-                items: widget.entries ?? _controller.items,
-                maxCount: widget.maxEntries,
-                enabled: widget.enabled,
-                readOnly: widget.readOnly,
-                itemSize: widget.itemSize,
-                triggerIcon: widget.triggerIcon,
-                showTrigger: !widget.showDropzone,
-                onAdd: () => widget.onTrigger?.call(_controller),
-                onRemove: (item) => _controller.remove(item.id),
-                onRetry: (item) => widget.onRetry?.call(item, _controller),
-                onReorder: widget.reorderable ? _controller.reorder : null,
+  Widget build(BuildContext context) {
+    final invalid = widget.invalid ?? widget.errorMessage != null;
+    return SeedField(
+      label: widget.label,
+      required: widget.showRequiredIndicator,
+      isInvalid: invalid,
+      helperText: widget.description,
+      errorMessage: invalid ? widget.errorMessage : null,
+      child: Padding(
+        padding: widget.inset,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (widget.showDropzone) ...[
+              SeedAttachmentDropzone(
+                enabled: _controller.canAdd,
+                isDraggingOver: widget.isDraggingOver,
+                onTap: () => widget.onTrigger?.call(_controller),
               ),
-        ],
+              const SizedBox(height: 8),
+            ],
+            widget.itemBuilder?.call(context, _controller) ??
+                SeedAttachmentInput(
+                  items: widget.entries ?? _controller.items,
+                  maxCount: widget.maxEntries,
+                  enabled: widget.enabled,
+                  readOnly: widget.readOnly,
+                  itemSize: widget.itemSize,
+                  triggerIcon: widget.triggerIcon,
+                  representativeLabel: widget.representativeLabel,
+                  showTrigger: !widget.showDropzone,
+                  onAdd: () => widget.onTrigger?.call(_controller),
+                  onRemove: (item) => _controller.remove(item.id),
+                  onRetry: (item) => widget.onRetry?.call(item, _controller),
+                  onReorder: widget.reorderable ? _controller.reorder : null,
+                ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class SeedAttachmentField extends SeedAttachmentDisplayField {
@@ -257,12 +276,15 @@ class SeedAttachmentField extends SeedAttachmentDisplayField {
     super.label,
     super.description,
     super.errorMessage,
+    super.invalid,
+    super.showRequiredIndicator,
     super.itemBuilder,
     super.inset,
     super.showDropzone,
     super.isDraggingOver,
     super.itemSize,
     super.triggerIcon,
+    super.representativeLabel,
   }) : super(
          entries: items,
          defaultEntries: defaultItems,
