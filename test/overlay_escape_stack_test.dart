@@ -333,8 +333,11 @@ void main() {
       await tester.pumpAndSettle();
       expect(first.isOpen, isTrue);
       expect(second.isOpen, isTrue);
-      final scope = FocusManager.instance.primaryFocus?.nearestScope;
-      expect(scope?.onKeyEvent, isNotNull);
+      // Parent route scope owns the scoped Escape handler. A collapsed body
+      // can legitimately leave primaryFocus null while two portals remain
+      // open; never infer the owning scope from that transient focus state.
+      final scope = FocusScope.of(tester.element(find.text('Parent')));
+      expect(scope.onKeyEvent, isNotNull);
 
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pumpAndSettle();
@@ -343,12 +346,130 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pumpAndSettle();
       expect(first.isOpen, isFalse);
-      expect(scope?.onKeyEvent, isNull,
+      expect(scope.onKeyEvent, isNull,
           reason: 'Route FocusScope handler must be restored after final close');
       expect(events, [
         'second:false:escapeKey',
         'first:false:escapeKey',
       ]);
     });
+  }
+
+  // Round13 post-8788661: a controlled multiple->single Accordion can hide
+  // its still-open Menu. React keeps the trigger programmatically focusable
+  // without exposing other hidden content to pointer/AX/Tab traversal.
+  for (final width in [390.0, 800.0]) {
+    for (final action in ['tab', 'shiftTab', 'escape', 'reenable']) {
+      testWidgets('Accordion hidden Menu $action preserves focus $width', (tester) async {
+        tester.view.physicalSize = Size(width, 844);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        Set<String> values = {'a', 'c'};
+        bool enabled = true;
+        bool multiple = true;
+        late StateSetter updateParent;
+        final controller = SeedOverlayController();
+        final trigger = FocusNode(debugLabel: 'collapsed-menu-trigger');
+        final hiddenIdle = FocusNode(debugLabel: 'collapsed-hidden-control');
+        final outside = FocusNode(debugLabel: 'outside');
+        final events = <String>[];
+        addTearDown(() {
+          controller.dispose();
+          trigger.dispose();
+          hiddenIdle.dispose();
+          outside.dispose();
+        });
+        await tester.pumpWidget(MaterialApp(
+          theme: SeedThemeData.light(fontFamily: seedTestFontFamily).toThemeData(),
+          home: Scaffold(body: Column(children: [
+            TextButton(focusNode: outside, onPressed: () {},
+              child: const Text('Outside')),
+            SizedBox(width: 340, child: StatefulBuilder(builder: (_, update) {
+              updateParent = update;
+              return SeedAccordion(
+                values: values, multiple: multiple, enabled: enabled,
+                items: [
+                  SeedAccordionItem(value: 'a', title: 'Parent A',
+                    content: Column(children: [
+                      SeedMenuTrigger(
+                        controller: controller, skipAnimation: true,
+                        onOpenChange: (open, reason) =>
+                            events.add('$open:${reason.name}'),
+                        triggerBuilder: (_, _, toggle) => TextButton(
+                          focusNode: trigger, onPressed: toggle,
+                          child: const Text('Child Menu')),
+                        builder: (_) => const SeedMenu(groups: [
+                          SeedMenuGroupData(items: [
+                            SeedMenuItemData(label: 'Action'),
+                          ]),
+                        ]),
+                      ),
+                      TextButton(focusNode: hiddenIdle, onPressed: () {},
+                        child: const Text('Idle hidden button')),
+                    ]),
+                  ),
+                  const SeedAccordionItem(
+                    value: 'c', title: 'Parent C', content: Text('Content C')),
+                ],
+              );
+            })),
+          ])),
+        ));
+        await tester.pumpAndSettle();
+        final semantics = tester.ensureSemantics();
+        try {
+          await tester.tap(find.text('Child Menu'));
+          await tester.pumpAndSettle();
+          expect(controller.isOpen, isTrue);
+          updateParent(() {
+            multiple = false;
+            values = {'c', 'a'};
+            enabled = false;
+          });
+          await tester.pumpAndSettle();
+          expect(controller.isOpen, isTrue);
+          expect(trigger.canRequestFocus, isTrue);
+          expect(trigger.skipTraversal, isTrue);
+          expect(hiddenIdle.skipTraversal, isTrue);
+          expect(find.text('Idle hidden button').hitTestable(), findsNothing);
+          final semanticsTree = tester.binding.rootPipelineOwner.semanticsOwner
+              ?.rootSemanticsNode?.toStringDeep() ?? '';
+          expect(semanticsTree.contains('Idle hidden button'), isFalse);
+
+          if (action == 'reenable') {
+            updateParent(() {
+              multiple = true;
+              values = {'a', 'c'};
+              enabled = true;
+            });
+            await tester.pumpAndSettle();
+            expect(trigger.canRequestFocus, isTrue);
+          } else if (action == 'shiftTab') {
+            await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+          }
+          await tester.sendKeyEvent(
+            action == 'tab' || action == 'shiftTab'
+                ? LogicalKeyboardKey.tab
+                : LogicalKeyboardKey.escape,
+          );
+          if (action == 'shiftTab') {
+            await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+          }
+          await tester.pumpAndSettle();
+          expect(trigger.hasFocus, isTrue,
+            reason: 'React returns keyboard focus to the child Menu trigger');
+          expect(controller.isOpen, action == 'shiftTab');
+          if (action == 'tab') {
+            expect(events, contains('false:focusOut'));
+          } else if (action != 'shiftTab') {
+            expect(events, contains('false:escapeKey'));
+          }
+          expect(hiddenIdle.hasFocus, isFalse);
+          expect(tester.takeException(), isNull);
+        } finally {
+          semantics.dispose();
+        }
+      });
+    }
   }
 }

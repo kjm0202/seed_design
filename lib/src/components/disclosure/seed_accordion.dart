@@ -29,6 +29,27 @@ enum SeedAccordionSize {
         );
 }
 
+/// Internal focus policy for a collapsed Accordion content subtree. Hidden
+/// controls remain excluded from pointer, semantics and sequential traversal,
+/// but an already-open floating overlay can return focus to its trigger.
+class SeedAccordionContentFocusScope extends InheritedWidget {
+  const SeedAccordionContentFocusScope({
+    super.key,
+    required this.hidden,
+    required super.child,
+  });
+
+  final bool hidden;
+
+  static SeedAccordionContentFocusScope? maybeOf(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<SeedAccordionContentFocusScope>();
+
+  @override
+  bool updateShouldNotify(SeedAccordionContentFocusScope oldWidget) =>
+      oldWidget.hidden != hidden;
+}
+
 /// Accordion item component of SEED Design System.
 ///
 /// Features animated chevron rotation, trigger header with prefix/title/description,
@@ -244,18 +265,26 @@ class _SeedAccordionItemState extends State<SeedAccordionItem>
         animation: _controller.view,
         builder: (context, child) {
           final hidden = _controller.isDismissed && !_isExpanded;
-          return ExcludeFocus(
-            excluding: hidden,
-            child: ExcludeSemantics(
+          // A floating Menu/Popover portal can remain open when a controlled
+          // Accordion is externally collapsed. Keep its trigger eligible for
+          // programmatic focus return, while excluding the entire hidden body
+          // from sequential Tab traversal. Pointer and accessibility exclusion
+          // below remain independently enforced.
+          return SeedAccordionContentFocusScope(
+            hidden: hidden,
+            child: ExcludeFocusTraversal(
               excluding: hidden,
-              child: IgnorePointer(
-                ignoring: hidden,
-                child: Opacity(
-                  opacity: _heightFactor.value,
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    heightFactor: _heightFactor.value,
-                    child: child,
+              child: ExcludeSemantics(
+                excluding: hidden,
+                child: IgnorePointer(
+                  ignoring: hidden,
+                  child: Opacity(
+                    opacity: _heightFactor.value,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      heightFactor: _heightFactor.value,
+                      child: child,
+                    ),
                   ),
                 ),
               ),

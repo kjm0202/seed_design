@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
+import '../disclosure/seed_accordion.dart';
 import '../../foundations/motion/seed_motion.dart';
 import '../button/seed_button.dart';
 
@@ -190,7 +191,8 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
             if (overlay.mounted &&
                 overlay._open &&
                 overlay.widget.tabExitsContent &&
-                !overlay._contentFocus.canRequestFocus &&
+                (!overlay._contentFocus.canRequestFocus ||
+                    overlay._accordionContentHidden) &&
                 !overlay._overlayFocus.hasFocus &&
                 !overlay._triggerFocus.hasFocus) {
               overlay._request(false, SeedOverlayDismissReason.escapeKey);
@@ -235,6 +237,8 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
   final FocusNode _contentFocus = FocusNode(debugLabel: 'Seed overlay content');
   final FocusNode _triggerFocus = FocusNode();
   final List<ScrollPosition> _scrollPositions = [];
+  bool _accordionContentHidden = false;
+  bool _accordionWasHiddenWhileOpen = false;
   late final AnimationController _animation = AnimationController(
     vsync: this,
     duration: widget.enterDuration,
@@ -269,6 +273,26 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _accordionContentHidden =
+        SeedAccordionContentFocusScope.maybeOf(context)?.hidden ?? false;
+    if (_accordionContentHidden && _open && widget.tabExitsContent) {
+      _accordionWasHiddenWhileOpen = true;
+      // The Accordion removed its content from traversal, not from the focus
+      // tree. Its floating Menu retains keyboard focus while visually hidden.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _open && _accordionContentHidden) {
+          final owners = _menuEscapeScopes[_menuEscapeScope]?.owners;
+          if (owners != null && owners.length > 1) {
+            // Multiple simultaneously open child menus retain the route's
+            // existing topmost-only Escape dispatcher, not competing popup
+            // focus requests from sibling portals.
+            _menuEscapeScope?.requestFocus();
+          } else {
+            _contentFocus.requestFocus();
+          }
+        }
+      });
+    }
     final parent = SeedOverlayScope.maybeOf(context);
     _parentTapGroup = parent?.tapGroup;
     if (parent != null && !parent.isOpen && _open) {
@@ -298,6 +322,14 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
   // its trigger. OverlayPortal descendants can be excluded from Flutter's
   // default traversal, so move to a real page focus target at the boundary.
   bool _focusAtTriggerBoundary({required bool backwards}) {
+    if (_accordionContentHidden) {
+      for (final target in _triggerFocus.descendants) {
+        if (target.canRequestFocus) {
+          target.requestFocus();
+          return true;
+        }
+      }
+    }
     final scope = _triggerFocus.nearestScope;
     if (scope == null) return false;
     final outside = scope.descendants
@@ -369,6 +401,7 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
 
   void _show() {
     if (_open) return;
+    _accordionWasHiddenWhileOpen = false;
     _returnFocus = FocusManager.instance.primaryFocus;
     setState(() => _open = true);
     _portal.show();
@@ -418,6 +451,19 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
         reason != SeedOverlayDismissReason.focusOut &&
         reason != SeedOverlayDismissReason.parentClosed) {
       var target = _returnFocus;
+      // A Menu that outlived a temporarily collapsed Accordion should return
+      // Escape focus to its original trigger even if the parent reopened in
+      // the meantime. Ordinary overlays retain their existing return target.
+      if (_accordionWasHiddenWhileOpen &&
+          widget.tabExitsContent &&
+          reason == SeedOverlayDismissReason.escapeKey) {
+        for (final node in _triggerFocus.descendants) {
+          if (node.canRequestFocus) {
+            target = node;
+            break;
+          }
+        }
+      }
       // Touch activation need not focus a Flutter button before it opens the
       // overlay. Returning to a parent focus container loses the trigger's tab
       // stop; React Popover returns to its trigger in this path as well.
@@ -427,7 +473,8 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
           target is FocusScopeNode ||
           _triggerFocus.ancestors.contains(target)) {
         for (final node in _triggerFocus.descendants) {
-          if (node.canRequestFocus && !node.skipTraversal) {
+          if (node.canRequestFocus &&
+              (!node.skipTraversal || _accordionContentHidden)) {
             target = node;
             break;
           }
@@ -605,7 +652,8 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
                                 for (final target
                                     in _triggerFocus.descendants) {
                                   if (target.canRequestFocus &&
-                                      !target.skipTraversal) {
+                                      (!target.skipTraversal ||
+                                          _accordionContentHidden)) {
                                     target.requestFocus();
                                     return KeyEventResult.handled;
                                   }
