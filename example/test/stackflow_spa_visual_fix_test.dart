@@ -22,6 +22,50 @@ Future<void> open(
 }
 
 void main() {
+  for (final (route, title) in [
+    ('/tabs-auto-height-lazy', 'Tabs AutoHeight + LazyMount'),
+    ('/chip-tabs-scroll-fog', 'ChipTabs ScrollFog + LazyMount'),
+  ]) {
+    testWidgets('$route shows the official React AppBar title', (tester) async {
+      await open(tester, route, width: 390);
+      expect(find.text(title), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('ChipTabs color panel has no border in official React', (
+    tester,
+  ) async {
+    await open(tester, '/chip-tabs-scroll-fog', width: 390);
+    final panel = tester.widget<Container>(
+      find
+          .ancestor(
+            of: find.text('Tab 1: Immediate (100px)'),
+            matching: find.byType(Container),
+          )
+          .first,
+    );
+    expect((panel.decoration! as BoxDecoration).border, isNull);
+  });
+
+  testWidgets(
+    'Modal-prop sheet matches React compact neutral switch and label',
+    (tester) async {
+      await open(tester, '/bottom-sheet-modal-test', width: 390);
+      expect(find.text('현재 modal: true'), findsOneWidget);
+      expect(tester.getRect(find.text('modal prop 토글')).right, closeTo(374, 1));
+      final mark = tester.widget<SeedSwitchMark>(find.byType(SeedSwitchMark));
+      expect(mark.size, SeedSwitchSize.size16);
+      expect(mark.tone, SeedControlTone.neutral);
+      await tester.tap(find.text('modal prop 토글'));
+      await tester.pumpAndSettle();
+      expect(find.text('현재 modal: false'), findsOneWidget);
+      await tester.tap(find.text('modal prop 토글'));
+      await tester.pumpAndSettle();
+      expect(find.text('현재 modal: true'), findsOneWidget);
+    },
+  );
+
   testWidgets('TimePicker keeps the official React AppBar title', (
     tester,
   ) async {

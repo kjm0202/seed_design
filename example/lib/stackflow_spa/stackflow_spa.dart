@@ -360,6 +360,10 @@ class _SpaActivityPage extends StatelessWidget {
             ? 'Avatar'
             : activity == 'ActivityTimePicker'
             ? 'TimePicker'
+            : activity == 'ActivityTabsAutoHeightLazy'
+            ? 'Tabs AutoHeight + LazyMount'
+            : activity == 'ActivityChipTabsScrollFog'
+            ? 'ChipTabs ScrollFog + LazyMount'
             : activity == 'ActivityAlertDialogActivity' ||
                   activity == 'ActivityBottomSheetActivity'
             ? 'Activity'

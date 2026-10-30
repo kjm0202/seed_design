@@ -1098,7 +1098,7 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
         child: StatefulBuilder(
           builder: (ctx, refresh) => SeedBottomSheet(
             title: 'BottomSheet Modal Prop 테스트',
-            description: 'modal prop을 동적으로 변경할 때 애니메이션이 재실행되지 않는지 테스트합니다.',
+            description: '이 화면은 BottomSheet의 modal prop을 동적으로 변경할 때 애니메이션이 재실행되지 않는지 테스트하기 위한 화면입니다.',
             headerAlign: SeedBottomSheetHeaderAlign.center,
             showHandle: true,
             showCloseButton: false,
@@ -1107,10 +1107,31 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
                 '이 화면은 BottomSheet의 modal prop을 동적으로 변경할 때 애니메이션이 재실행되지 않는지 테스트하기 위한 화면입니다.',
               ),
               Text('현재 modal: ${modal.value}'),
-              SeedSwitch(
-                label: 'modal prop 토글',
-                checked: modal.value,
-                onCheckedChange: (v) => refresh(() => modal.value = v),
+              SeedPressable(
+                semanticButton: false,
+                semanticsLabel: 'modal prop 토글',
+                toggled: modal.value,
+                enableScale: false,
+                onTap: () => refresh(() => modal.value = !modal.value),
+                builder: (ctx, pressed) => SizedBox(
+                  height: 44,
+                  width: double.infinity,
+                  child: Row(
+                    children: [
+                      SeedSwitchMark(
+                        size: SeedSwitchSize.size16,
+                        tone: SeedControlTone.neutral,
+                        checked: modal.value,
+                        interactive: false,
+                      ),
+                      const Spacer(),
+                      Text(
+                        'modal prop 토글',
+                        style: ctx.seedTypography.t4Regular,
+                      ),
+                    ],
+                  ),
+                ),
               ),
               _button('닫기', () => Navigator.pop(ctx)),
             ]),

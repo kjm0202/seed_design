@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:seed_design/seed_design.dart';
 import 'package:seed_design_example/stackflow_spa/stackflow_spa.dart';
@@ -19,6 +21,126 @@ Future<NavigatorState> open(WidgetTester tester, String route) async {
 }
 
 void main() {
+  for (final width in [390.0, 800.0]) {
+    for (final route in ['/time-picker', '/wheel-picker']) {
+      testWidgets('Root $route initial Tab focuses first wheel column $width', (
+        tester,
+      ) async {
+        tester.view.physicalSize = Size(width, width == 390 ? 844 : 800);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(const StackflowSpaApp());
+        await tester.pumpAndSettle();
+        final done = Completer<void>();
+        tester.binding.defaultBinaryMessenger.handlePlatformMessage(
+          SystemChannels.navigation.name,
+          SystemChannels.navigation.codec.encodeMethodCall(
+            MethodCall('pushRouteInformation', {
+              'location': route,
+              'state': null,
+            }),
+          ),
+          (_) => done.complete(),
+        );
+        await tester.pump();
+        await done.future;
+        await tester.pumpAndSettle();
+        expect(find.byType(SeedWheelPicker), findsOneWidget);
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pumpAndSettle();
+        expect(
+          FocusManager.instance.primaryFocus?.context
+              ?.findAncestorWidgetOfExactType<SeedWheelPicker>(),
+          isNotNull,
+          reason:
+              'React first Tab targets picker rather than header close/Home',
+        );
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.pumpAndSettle();
+        final reverseFocus = FocusManager.instance.primaryFocus?.context;
+        if (route == '/time-picker') {
+          expect(
+            reverseFocus
+                ?.findAncestorWidgetOfExactType<SeedTopNavigationIconButton>(),
+            isNotNull,
+            reason: 'React first column reverse Tab returns to Home',
+          );
+        } else {
+          var reverseClose = false;
+          reverseFocus?.visitAncestorElements((element) {
+            if (element.widget.runtimeType.toString() ==
+                '_SeedBottomSheetCloseButton') {
+              reverseClose = true;
+              return false;
+            }
+            return true;
+          });
+          expect(
+            reverseClose,
+            isTrue,
+            reason: 'React first year column reverse Tab returns to Close',
+          );
+        }
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pumpAndSettle();
+        expect(
+          FocusManager.instance.primaryFocus?.context
+              ?.findAncestorWidgetOfExactType<SeedWheelPicker>(),
+          isNotNull,
+        );
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pumpAndSettle();
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+        await tester.pumpAndSettle();
+        expect(
+          find.text(route == '/time-picker' ? '선택한 시간: 13:00' : '2026년 8월 19일'),
+          findsOneWidget,
+        );
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await tester.pumpAndSettle();
+        expect(
+          find.text(route == '/time-picker' ? '선택한 시간: 13:10' : '2026년 8월 20일'),
+          findsOneWidget,
+        );
+
+        for (var i = 0; i < (route == '/time-picker' ? 1 : 3); i++) {
+          await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        }
+        await tester.pumpAndSettle();
+        final focusedContext = FocusManager.instance.primaryFocus?.context;
+        if (route == '/time-picker') {
+          expect(
+            focusedContext
+                ?.findAncestorWidgetOfExactType<SeedTopNavigationIconButton>(),
+            isNotNull,
+            reason: 'Header Home must remain reachable after picker columns',
+          );
+        } else {
+          var closeButtonFocused = false;
+          focusedContext?.visitAncestorElements((element) {
+            if (element.widget.runtimeType.toString() ==
+                '_SeedBottomSheetCloseButton') {
+              closeButtonFocused = true;
+              return false;
+            }
+            return true;
+          });
+          expect(
+            closeButtonFocused,
+            isTrue,
+            reason: 'Sheet Close must remain reachable after picker actions',
+          );
+        }
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
+
   testWidgets('home remains reachable after replacing its root activity', (
     tester,
   ) async {

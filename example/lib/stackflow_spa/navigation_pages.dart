@@ -289,6 +289,7 @@ class _NavigationPageState extends State<_NavigationPage> {
       _panel(
         'Tab 1: Immediate (100px)',
         height: 132,
+        showBorder: false,
         color: context.seedColor.bg.informativeSolid,
         foreground: context.seedColor.fg.informativeContrast,
       ),
@@ -302,6 +303,7 @@ class _NavigationPageState extends State<_NavigationPage> {
       ),
       _panel(
         'Tab 3: Immediate (200px)',
+        showBorder: false,
         // React selected Tab3 has a 232px outer rect: 200px + p=x4 (32px).
         height: chip ? 200 : 232,
         color: context.seedColor.bg.positiveSolid,
@@ -316,13 +318,14 @@ class _NavigationPageState extends State<_NavigationPage> {
       ),
       _panel(
         'Tab 5: Immediate (150px)',
+        showBorder: false,
         height: chip ? 150 : 182,
         color: context.seedColor.bg.warningSolid,
         foreground: context.seedColor.fg.warningContrast,
       ),
       if (chip)
         for (var n = 6; n <= 10; n++)
-          _panel('Tab $n: Immediate (120px)', height: 120),
+          _panel('Tab $n: Immediate (120px)', height: 120, showBorder: false),
     ];
     final explanation = chip
         ? 'Check 1 (DES-1532): tab 2/4 content loads after a delay and the carousel height follows.\n'
@@ -366,13 +369,16 @@ class _NavigationPageState extends State<_NavigationPage> {
     EdgeInsetsGeometry padding = const EdgeInsets.all(12),
     Color? color,
     Color? foreground,
+    bool showBorder = true,
   }) => Container(
     height: height,
     alignment: Alignment.topLeft,
     padding: padding,
     decoration: BoxDecoration(
       color: color ?? Theme.of(context).colorScheme.surface,
-      border: Border.all(color: Theme.of(context).dividerColor),
+      border: showBorder
+          ? Border.all(color: Theme.of(context).dividerColor)
+          : null,
     ),
     child: Text(label, style: TextStyle(color: foreground)),
   );

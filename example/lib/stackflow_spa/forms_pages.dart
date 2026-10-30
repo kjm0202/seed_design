@@ -998,11 +998,15 @@ class _TimePageState extends State<_TimePage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SeedTimePicker(
-            value: time,
-            minuteStep: 10,
-            semanticsLabel: '약속 시간',
-            onValueChange: (next) => setState(() => time = next),
+          Focus(
+            autofocus: true,
+            skipTraversal: true,
+            child: SeedTimePicker(
+              value: time,
+              minuteStep: 10,
+              semanticsLabel: '약속 시간',
+              onValueChange: (next) => setState(() => time = next),
+            ),
           ),
           const SizedBox(height: 16),
           Text(
@@ -1117,67 +1121,71 @@ class _WheelSheetState extends State<_WheelSheet> {
     content: Center(
       child: SizedBox(
         width: 360,
-        child: SeedWheelPicker(
-          semanticsLabel: '날짜 선택',
-          columns: [
-            SeedWheelColumn.value<int>(
-              items: [for (var y = 2020; y <= 2030; y++) y],
-              value: year,
-              width: _yearColumnWidth,
-              semanticsLabel: '연도',
-              semanticsValueFormatter: (value) => '$value년',
-              onValueChange: (value, details) => updateYear(value),
-              itemBuilder: (context, item, selected) => Center(
-                child: Text(
-                  '$item년',
-                  style: context.seedTypography.t10Medium.copyWith(
-                    color: selected
-                        ? context.seedColor.fg.neutral
-                        : context.seedColor.fg.disabled,
+        child: Focus(
+          autofocus: true,
+          skipTraversal: true,
+          child: SeedWheelPicker(
+            semanticsLabel: '날짜 선택',
+            columns: [
+              SeedWheelColumn.value<int>(
+                items: [for (var y = 2020; y <= 2030; y++) y],
+                value: year,
+                width: _yearColumnWidth,
+                semanticsLabel: '연도',
+                semanticsValueFormatter: (value) => '$value년',
+                onValueChange: (value, details) => updateYear(value),
+                itemBuilder: (context, item, selected) => Center(
+                  child: Text(
+                    '$item년',
+                    style: context.seedTypography.t10Medium.copyWith(
+                      color: selected
+                          ? context.seedColor.fg.neutral
+                          : context.seedColor.fg.disabled,
+                    ),
                   ),
                 ),
               ),
-            ),
-            SeedWheelColumn.value<int>(
-              items: [for (var m = 1; m <= 12; m++) m],
-              value: month,
-              width: _monthColumnWidth,
-              loop: true,
-              semanticsLabel: '월',
-              semanticsValueFormatter: (value) => '$value월',
-              onValueChange: (value, details) => updateMonth(value),
-              itemBuilder: (context, item, selected) => Center(
-                child: Text(
-                  '$item월',
-                  style: context.seedTypography.t10Medium.copyWith(
-                    color: selected
-                        ? context.seedColor.fg.neutral
-                        : context.seedColor.fg.disabled,
+              SeedWheelColumn.value<int>(
+                items: [for (var m = 1; m <= 12; m++) m],
+                value: month,
+                width: _monthColumnWidth,
+                loop: true,
+                semanticsLabel: '월',
+                semanticsValueFormatter: (value) => '$value월',
+                onValueChange: (value, details) => updateMonth(value),
+                itemBuilder: (context, item, selected) => Center(
+                  child: Text(
+                    '$item월',
+                    style: context.seedTypography.t10Medium.copyWith(
+                      color: selected
+                          ? context.seedColor.fg.neutral
+                          : context.seedColor.fg.disabled,
+                    ),
                   ),
                 ),
               ),
-            ),
-            SeedWheelColumn.value<int>(
-              items: [for (var d = 1; d <= lastDay; d++) d],
-              value: day,
-              width: _dayColumnWidth,
-              loop: true,
-              semanticsLabel: '일',
-              semanticsValueFormatter: (value) => '$value일',
-              onValueChange: (value, details) =>
-                  setState(() => widget.date.day = value),
-              itemBuilder: (context, item, selected) => Center(
-                child: Text(
-                  '$item일',
-                  style: context.seedTypography.t10Medium.copyWith(
-                    color: selected
-                        ? context.seedColor.fg.neutral
-                        : context.seedColor.fg.disabled,
+              SeedWheelColumn.value<int>(
+                items: [for (var d = 1; d <= lastDay; d++) d],
+                value: day,
+                width: _dayColumnWidth,
+                loop: true,
+                semanticsLabel: '일',
+                semanticsValueFormatter: (value) => '$value일',
+                onValueChange: (value, details) =>
+                    setState(() => widget.date.day = value),
+                itemBuilder: (context, item, selected) => Center(
+                  child: Text(
+                    '$item일',
+                    style: context.seedTypography.t10Medium.copyWith(
+                      color: selected
+                          ? context.seedColor.fg.neutral
+                          : context.seedColor.fg.disabled,
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     ),
