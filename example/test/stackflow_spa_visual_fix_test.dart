@@ -560,6 +560,45 @@ void main() {
     });
   }
 
+  for (final width in [390.0, 800.0]) {
+    for (final (route, isSwitch) in [
+      ('/list-item-check', false),
+      ('/list-item-switch', true),
+    ]) {
+      testWidgets('$route activates with Space, not Enter at $width', (
+        tester,
+      ) async {
+        await open(tester, route, width: width);
+        const label = 'prefix-title-unchecked-suffix-none';
+        final rowFinder = find.byKey(const ValueKey(label));
+        bool value() {
+          final row = tester.widget<SeedListItem>(rowFinder);
+          return (isSwitch ? row.toggled : row.checked) ?? false;
+        }
+
+        expect(value(), isFalse);
+        await tester.tap(find.text(label));
+        await tester.pumpAndSettle();
+        expect(value(), isTrue);
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+        expect(
+          value(),
+          isTrue,
+          reason: 'React native checkbox/switch ignores Enter',
+        );
+        await tester.sendKeyEvent(LogicalKeyboardKey.space);
+        await tester.pumpAndSettle();
+        expect(
+          value(),
+          isFalse,
+          reason: 'React native checkbox/switch toggles on Space',
+        );
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
+
   testWidgets(
     'Avatar ALL sizes fit in the 800px preview without artificial tile widths',
     (tester) async {

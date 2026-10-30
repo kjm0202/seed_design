@@ -103,6 +103,14 @@ class SeedPressable extends StatefulWidget {
   final SemanticsRole? semanticsRole;
   final int? headingLevel;
   final bool semanticButton;
+
+  /// Retain Enter for button-like targets, but allow native checkbox/switch
+  /// parity (Space-only) for controls built on this pressable.
+  final bool activateOnEnter;
+
+  /// Disabled native selection rows blur the previously focused input on a
+  /// physical pointer tap, without enabling the disabled control itself.
+  final bool unfocusOnDisabledTap;
   final bool? checked;
   final bool? mixed;
   final bool? toggled;
@@ -127,6 +135,8 @@ class SeedPressable extends StatefulWidget {
     this.semanticsRole,
     this.headingLevel,
     this.semanticButton = true,
+    this.activateOnEnter = true,
+    this.unfocusOnDisabledTap = false,
     this.checked,
     this.mixed,
     this.toggled,
@@ -359,12 +369,27 @@ class _SeedPressableState extends State<SeedPressable>
           onShowFocusHighlight: (value) {
             if (mounted) setState(() => _showFocus = value);
           },
-          shortcuts: const {
-            SingleActivator(LogicalKeyboardKey.enter, includeRepeats: false):
-                ActivateIntent(),
-            SingleActivator(LogicalKeyboardKey.space, includeRepeats: false):
-                ActivateIntent(),
-          },
+          shortcuts: widget.activateOnEnter
+              ? const {
+                  SingleActivator(
+                    LogicalKeyboardKey.enter,
+                    includeRepeats: false,
+                  ): ActivateIntent(),
+                  SingleActivator(
+                    LogicalKeyboardKey.space,
+                    includeRepeats: false,
+                  ): ActivateIntent(),
+                }
+              : const {
+                  SingleActivator(
+                    LogicalKeyboardKey.enter,
+                    includeRepeats: false,
+                  ): DoNothingIntent(),
+                  SingleActivator(
+                    LogicalKeyboardKey.space,
+                    includeRepeats: false,
+                  ): ActivateIntent(),
+                },
           actions: {
             ActivateIntent: CallbackAction<ActivateIntent>(
               onInvoke: (_) {
@@ -395,7 +420,11 @@ class _SeedPressableState extends State<SeedPressable>
             child: GestureDetector(
               excludeFromSemantics: true,
               behavior: widget.behavior,
-              onTapDown: _interactive ? _handleTapDown : null,
+              onTapDown: _interactive
+                  ? _handleTapDown
+                  : widget.unfocusOnDisabledTap
+                  ? (_) => FocusManager.instance.primaryFocus?.unfocus()
+                  : null,
               onTapUp: _interactive ? _handleTapUp : null,
               onTapCancel: _interactive ? _handleTapCancel : null,
               onTap: _interactive && widget.onTap != null ? _activate : null,

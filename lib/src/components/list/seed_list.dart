@@ -123,6 +123,9 @@ class SeedListItem extends StatelessWidget {
                   toggled == null &&
                   onTap != null &&
                   linkUrl == null,
+              activateOnEnter: checked == null && toggled == null,
+              unfocusOnDisabledTap:
+                  !enabled && (checked != null || toggled != null),
               checked: checked,
               toggled: toggled,
               builder: (context, isPressed) {
