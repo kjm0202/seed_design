@@ -26,6 +26,63 @@ Future<void> _browserNavigation(
 }
 
 void main() {
+  testWidgets(
+    'restored in-session pushed Step still browser-backs on dismiss',
+    (tester) async {
+      final entries = <Map<dynamic, dynamic>>[];
+      var browserBackCalls = 0;
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.navigation,
+        (call) async {
+          if (call.method == 'routeInformationUpdated') {
+            entries.add(Map<dynamic, dynamic>.from(call.arguments as Map));
+          }
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.navigation,
+          null,
+        ),
+      );
+      await tester.pumpWidget(
+        StackflowSpaApp(onBrowserBack: () => browserBackCalls++),
+      );
+      await tester.pumpAndSettle();
+      tester
+          .state<NavigatorState>(find.byType(Navigator))
+          .pushNamed('/menu-sheet-step');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Menu Sheet 열기'));
+      await tester.pumpAndSettle();
+      final stepEntry = Map<dynamic, dynamic>.from(entries.last);
+      await tester.tap(find.text('Push').last);
+      await tester.pumpAndSettle();
+      expect(Uri.parse(entries.last['uri'] as String).path, '/detail');
+      await _browserNavigation(
+        tester,
+        stepEntry['uri'] as String,
+        state: stepEntry['state'],
+      );
+      expect(find.byType(SeedMenuSheet), findsNothing);
+      await tester.tap(find.text('Menu Sheet 열기'));
+      await tester.pumpAndSettle();
+      expect(find.byType(SeedMenuSheet), findsOneWidget);
+      final history = SpaHistoryDelegate.of(
+        tester.element(find.text('Menu Sheet 열기')),
+      );
+      history.popStep('menu-sheet');
+      await tester.pumpAndSettle();
+      expect(
+        browserBackCalls,
+        1,
+        reason: 'React Step pop uses browser Back even after Activity route rebuild',
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('pushed Step browser Back preserves Forward entry on close', (
     tester,
   ) async {

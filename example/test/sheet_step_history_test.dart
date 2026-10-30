@@ -33,6 +33,74 @@ Future<void> _revisit(WidgetTester tester, Map<dynamic, dynamic> state) async {
 void main() {
   for (final width in [390.0, 800.0]) {
     testWidgets(
+      'Menu Sheet Push then browser Back restores locally closed state at $width',
+      (tester) async {
+        tester.view.physicalSize = Size(width, 844);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        final updates = <Map<dynamic, dynamic>>[];
+        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.navigation,
+          (call) async {
+            if (call.method == 'routeInformationUpdated') {
+              updates.add(Map<dynamic, dynamic>.from(call.arguments as Map));
+            }
+            return null;
+          },
+        );
+        addTearDown(
+          () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+            SystemChannels.navigation,
+            null,
+          ),
+        );
+        await tester.pumpWidget(const StackflowSpaApp());
+        await tester.pumpAndSettle();
+        tester
+            .state<NavigatorState>(find.byType(Navigator))
+            .pushNamed('/menu-sheet-step');
+        await tester.pumpAndSettle();
+        final opener = find.widgetWithText(SeedButton, 'Menu Sheet 열기');
+        await tester.tap(opener);
+        await tester.pumpAndSettle();
+        final stepEntry = Map<dynamic, dynamic>.from(updates.last);
+        expect(
+          Uri.parse(stepEntry['uri'] as String).queryParameters['menu-sheet'],
+          'open',
+        );
+        await tester.tap(find.text('Push').last);
+        await tester.pumpAndSettle();
+        expect(Uri.parse(updates.last['uri'] as String).path, '/detail');
+        final detailEntry = Map<dynamic, dynamic>.from(updates.last);
+        await _revisit(tester, stepEntry);
+        expect(
+          Uri.parse(stepEntry['uri'] as String).queryParameters['menu-sheet'],
+          'open',
+        );
+        expect(
+          find.byType(SeedMenuSheet),
+          findsNothing,
+          reason: 'React retains setOpen(false) across detail Push and browser Back',
+        );
+        await _revisit(tester, detailEntry);
+        expect(find.byType(SeedMenuSheet), findsNothing);
+        await _revisit(tester, stepEntry);
+        expect(find.byType(SeedMenuSheet), findsNothing,
+            reason: 'Forward then Back must still restore local closed state');
+        await tester.tap(find.widgetWithText(SeedButton, 'Menu Sheet 열기'));
+        await tester.pumpAndSettle();
+        expect(find.byType(SeedMenuSheet), findsOneWidget);
+        expect(
+          SpaHistoryDelegate.of(tester.element(find.byType(SeedMenuSheet)))
+              .isStepOpen('menu-sheet'),
+          isTrue,
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+  for (final width in [390.0, 800.0]) {
+    testWidgets(
       'Menu Sheet Step action closes locally but retains query at $width',
       (tester) async {
         tester.view.physicalSize = Size(width, 844);

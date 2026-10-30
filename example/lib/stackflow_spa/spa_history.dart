@@ -185,6 +185,15 @@ class SpaHistoryDelegate extends RouterDelegate<SpaHistory>
   // previous base entry in *this browser tab's* history. Never navigate off-
   // app merely because a direct URL initially contains ?key=open.
   final Set<Route<dynamic>> _locallyPushedSteps = {};
+  // A real browser Back/Forward can reconstruct the named Activity route.
+  // Remember which Step slots were actually pushed by this live SPA session,
+  // so the restored route can still history.back() rather than replaceState.
+  final Set<String> _knownLocallyPushedStepSlots = {};
+  // React keeps a controlled Step's local open=false state when its Activity
+  // is covered by a pushed Detail and restored through browser Back. Flutter
+  // Router may reconstruct that Activity's State, so retain this transient
+  // (non-URL, non-serialized) value for the Activity slot in this SPA session.
+  final Set<String> _locallyClosedStepSlots = {};
   // A live Route is trusted only after a local PUSH or restoration of a
   // matching, session-owned browser entry.
   final Set<Route<dynamic>> _locallyPushedActivities = {};
@@ -295,11 +304,41 @@ class SpaHistoryDelegate extends RouterDelegate<SpaHistory>
     return route != null && _valuesFor(route)[key] == 'open';
   }
 
+  String? _localStepSlot(String key) {
+    final routes = _observer.routes
+        .where((route) => route.settings.name != null)
+        .toList();
+    if (routes.isEmpty) return null;
+    final path = _normalizedActivityPath(
+      Uri.tryParse(routes.last.settings.name ?? '/'),
+    );
+    // Browser Back reconstructs routes but preserves their Activity position.
+    // Ignore query parameters: Step open and local close share one Activity.
+    return '${routes.length}:$path:$key';
+  }
+
+  bool wasStepClosedLocally(String key) {
+    final slot = _localStepSlot(key);
+    return slot != null && _locallyClosedStepSlots.contains(slot);
+  }
+
+  void setStepClosedLocally(String key, bool closed) {
+    final slot = _localStepSlot(key);
+    if (slot == null) return;
+    if (closed) {
+      _locallyClosedStepSlots.add(slot);
+    } else {
+      _locallyClosedStepSlots.remove(slot);
+    }
+  }
+
   void pushStep(String key, {String value = 'open'}) {
     final route = _activeNamedRoute;
     if (route == null) return;
     final next = {..._valuesFor(route), key: value};
     if (mapEquals(next, _valuesFor(route))) return;
+    final slot = _localStepSlot(key);
+    if (slot != null) _knownLocallyPushedStepSlots.add(slot);
     _stepRoute = route;
     _stepValues = next;
     _locallyPushedSteps.add(route);
@@ -392,6 +431,8 @@ class SpaHistoryDelegate extends RouterDelegate<SpaHistory>
       return;
     }
     if (configuration.fromExternalUrl) {
+      _locallyClosedStepSlots.clear();
+      _knownLocallyPushedStepSlots.clear();
       // React's full-document /form/ → / → /form/ address navigation
       // remounts the root SnackbarProvider. Flutter hash navigation keeps
       // the Dart app alive, so reset only this incoming *unserialized* visit.
@@ -527,6 +568,23 @@ class SpaHistoryDelegate extends RouterDelegate<SpaHistory>
     // Popstate has already positioned the browser on this Activity's entry.
     // Retained or verified session-owned routes can later use browser Back.
     final restored = _activeNamedRoute;
+    if (restored != null &&
+        !configuration.fromExternalUrl &&
+        configuration.sessionId == _sessionId &&
+        restoredHasStep) {
+      // Only trust a Step previously pushed in this same SPA session. An
+      // externally entered ?key=open URL never acquires browser-back rights.
+      final params = Uri.tryParse(restoredActivity.name ?? '/')
+          ?.queryParameters;
+      for (final key in params?.keys ?? <String>[]) {
+        final slot = _localStepSlot(key);
+        if (params?[key] == 'open' &&
+            slot != null &&
+            _knownLocallyPushedStepSlots.contains(slot)) {
+          _locallyPushedSteps.add(restored);
+        }
+      }
+    }
     if (restored != null && _locallyPushedActivities.contains(restored)) {
       _lastPublishedRoute = restored;
     }
@@ -557,6 +615,8 @@ class SpaHistoryDelegate extends RouterDelegate<SpaHistory>
   void dispose() {
     _disposed = true;
     _locallyPushedSteps.clear();
+    _knownLocallyPushedStepSlots.clear();
+    _locallyClosedStepSlots.clear();
     _locallyPushedActivities.clear();
     _localActivityIds.clear();
     _knownLocalActivityIds.clear();

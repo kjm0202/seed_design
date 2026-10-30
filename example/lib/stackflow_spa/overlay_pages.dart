@@ -1402,6 +1402,7 @@ class _StepHistoryPageState extends State<_StepHistoryPage> {
 
   void _closeMenuLocally() {
     _menuClosedLocally = true;
+    SpaHistoryDelegate.of(context).setStepClosedLocally(_stepKey, true);
     final route = _modalRoute;
     if (route != null && route.isActive) {
       Navigator.of(context, rootNavigator: true).removeRoute(route);
@@ -1416,6 +1417,9 @@ class _StepHistoryPageState extends State<_StepHistoryPage> {
       // Step if the old URL still contains `alert-dialog=open`.
       _alertClosedLocally = false;
       _menuClosedLocally = false;
+      if (widget.kind == _StepKind.menu) {
+        history.setStepClosedLocally(_stepKey, false);
+      }
       if (!_showing) _openModal(history);
       return;
     }
@@ -1588,9 +1592,15 @@ class _StepHistoryPageState extends State<_StepHistoryPage> {
   void _reconcile(SpaHistoryDelegate history) {
     if (!mounted) return;
     final shouldOpen = history.isStepOpen(_stepKey);
+    if (widget.kind == _StepKind.menu) {
+      _menuClosedLocally = history.wasStepClosedLocally(_stepKey);
+    }
     if (!shouldOpen) {
       _alertClosedLocally = false;
       _menuClosedLocally = false;
+      if (widget.kind == _StepKind.menu) {
+        history.setStepClosedLocally(_stepKey, false);
+      }
     }
     if (shouldOpen &&
         !_showing &&
