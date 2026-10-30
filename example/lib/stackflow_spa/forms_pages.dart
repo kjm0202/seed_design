@@ -1023,6 +1023,7 @@ class _WheelPage extends StatefulWidget {
 
 class _WheelPageState extends State<_WheelPage> {
   bool sheetOpened = false;
+  final _date = _WheelDate();
 
   @override
   void initState() {
@@ -1034,12 +1035,26 @@ class _WheelPageState extends State<_WheelPage> {
 
   Future<void> openSheet() async {
     if (sheetOpened) return;
+    // Stackflow's root Activity has no predecessor: useFlow().pop() is a
+    // no-op, so Done/Close/Escape/scrim must leave its sheet active.
+    // A pushed Activity *does* have a predecessor and must return to it.
+    final rootActivity = !Navigator.of(context).canPop();
     sheetOpened = true;
     await showSeedBottomSheet<void>(
       context: context,
-      child: const _WheelSheet(),
+      child: _WheelSheet(date: _date),
     );
-    if (mounted) widget.goBack();
+    if (!mounted) return;
+    sheetOpened = false;
+    if (!rootActivity) {
+      widget.goBack();
+    } else {
+      // The overlay route was dismissed, but React keeps the root Activity
+      // open; restore the sheet with the same date selection.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) openSheet();
+      });
+    }
   }
 
   @override
@@ -1050,17 +1065,24 @@ class _WheelPageState extends State<_WheelPage> {
 
 /// The React activity is a sheet route; Flutter's page route opens a matching
 /// SEED sheet on its first frame and pops the page when the sheet closes.
+class _WheelDate {
+  int year = 2026;
+  int month = 8;
+  int day = 20;
+}
+
 class _WheelSheet extends StatefulWidget {
-  const _WheelSheet();
+  const _WheelSheet({required this.date});
+  final _WheelDate date;
 
   @override
   State<_WheelSheet> createState() => _WheelSheetState();
 }
 
 class _WheelSheetState extends State<_WheelSheet> {
-  int year = 2026;
-  int month = 8;
-  int day = 20;
+  int get year => widget.date.year;
+  int get month => widget.date.month;
+  int get day => widget.date.day;
   int get lastDay => DateUtils.getDaysInMonth(year, month);
 
   // React max-content columns measured in CDP at 390/800: year 118.73,
@@ -1070,14 +1092,14 @@ class _WheelSheetState extends State<_WheelSheet> {
   static const double _dayColumnWidth = 87;
 
   void updateYear(int value) => setState(() {
-    year = value;
-    day = min(day, lastDay);
+    widget.date.year = value;
+    widget.date.day = min(day, lastDay);
   });
   void updateMonth(int value) => setState(() {
-    month = value;
-    day = min(day, lastDay);
+    widget.date.month = value;
+    widget.date.day = min(day, lastDay);
   });
-  void nextDay() => setState(() => day = day % lastDay + 1);
+  void nextDay() => setState(() => widget.date.day = day % lastDay + 1);
 
   @override
   Widget build(BuildContext context) => SeedBottomSheet(
@@ -1133,7 +1155,8 @@ class _WheelSheetState extends State<_WheelSheet> {
               loop: true,
               semanticsLabel: '일',
               semanticsValueFormatter: (value) => '$value일',
-              onValueChange: (value, details) => setState(() => day = value),
+              onValueChange: (value, details) =>
+                  setState(() => widget.date.day = value),
               itemBuilder: (context, item, selected) => Center(
                 child: Text(
                   '$item일',

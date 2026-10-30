@@ -989,60 +989,81 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
 
   Future<void> _openResponsiveDialog() async {
     String size = 'medium';
+    // React's `onOpenChange(false) => pop()` cannot remove an Activity loaded
+    // directly as the root. Match that behavior for Escape/back and backdrop
+    // dismissals; a pushed Activity still dismisses in the ordinary way.
+    final canPopActivity = !(ModalRoute.of(context)?.isFirst ?? true);
     await showGeneralDialog<void>(
       context: context,
-      barrierDismissible: true,
+      barrierDismissible: canPopActivity,
       barrierLabel: '닫기',
       barrierColor: Colors.black54,
       pageBuilder: (dialogContext, animation, secondaryAnimation) =>
-          StatefulBuilder(
-            builder: (ctx, refresh) {
-              final compact = MediaQuery.sizeOf(ctx).width < 768;
-              final content = SeedSegmentedControl<String>(
-                segments: const [
-                  SeedSegment(value: 'medium', label: 'Medium'),
-                  SeedSegment(value: 'large', label: 'Large'),
-                ],
-                value: size,
-                onValueChange: (next) => refresh(() => size = next),
-              );
-              final footer = Row(
-                children: [
-                  Expanded(
-                    child: _button(
-                      '취소',
-                      () => Navigator.pop(ctx),
-                      variant: SeedButtonVariant.neutralWeak,
+          PopScope<void>(
+            canPop: canPopActivity,
+            child: StatefulBuilder(
+              builder: (ctx, refresh) {
+                final compact = MediaQuery.sizeOf(ctx).width < 768;
+                final content = SeedSegmentedControl<String>(
+                  segments: const [
+                    SeedSegment(value: 'medium', label: 'Medium'),
+                    SeedSegment(value: 'large', label: 'Large'),
+                  ],
+                  value: size,
+                  onValueChange: (next) => refresh(() => size = next),
+                );
+                final footer = Row(
+                  children: [
+                    Expanded(
+                      child: _button('취소', () {
+                        if (canPopActivity) Navigator.pop(ctx);
+                      }, variant: SeedButtonVariant.neutralWeak),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(child: _button('확인', () => Navigator.pop(ctx))),
-                ],
-              );
-              if (compact) {
-                return Align(
-                  alignment: Alignment.bottomCenter,
-                  child: SeedBottomSheet(
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _button('확인', () {
+                        if (canPopActivity) Navigator.pop(ctx);
+                      }),
+                    ),
+                  ],
+                );
+                if (compact) {
+                  return SeedOverlayScope(
+                    side: SeedOverlaySide.bottom,
+                    close: (_) {
+                      if (canPopActivity) Navigator.pop(ctx);
+                    },
+                    child: Align(
+                      alignment: Alignment.bottomCenter,
+                      child: SeedBottomSheet(
+                        title: 'Responsive Dialog',
+                        description: 'md 이상에서는 Dialog, sm 이하에서는 Bottom Sheet로 표시됩니다. 뷰포트를 줄여서 자동 전환을 확인해보세요.',
+                        // React ResponsiveDialogContent renders no
+                        // ResponsiveDialogHandle unless explicitly composed.
+                        showHandle: false,
+                        content: content,
+                        footer: footer,
+                      ),
+                    ),
+                  );
+                }
+                return SeedOverlayScope(
+                  side: SeedOverlaySide.bottom,
+                  close: (_) {
+                    if (canPopActivity) Navigator.pop(ctx);
+                  },
+                  child: SeedDialog(
                     title: 'Responsive Dialog',
                     description: 'md 이상에서는 Dialog, sm 이하에서는 Bottom Sheet로 표시됩니다. 뷰포트를 줄여서 자동 전환을 확인해보세요.',
-                    // React ResponsiveDialogContent renders no
-                    // ResponsiveDialogHandle unless explicitly composed.
-                    showHandle: false,
+                    size: size == 'large'
+                        ? SeedDialogSize.large
+                        : SeedDialogSize.medium,
                     content: content,
                     footer: footer,
                   ),
                 );
-              }
-              return SeedDialog(
-                title: 'Responsive Dialog',
-                description: 'md 이상에서는 Dialog, sm 이하에서는 Bottom Sheet로 표시됩니다. 뷰포트를 줄여서 자동 전환을 확인해보세요.',
-                size: size == 'large'
-                    ? SeedDialogSize.large
-                    : SeedDialogSize.medium,
-                content: content,
-                footer: footer,
-              );
-            },
+              },
+            ),
           ),
     );
   }

@@ -1,9 +1,59 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:seed_design/seed_design.dart';
 import 'package:seed_design_example/stackflow_spa/stackflow_spa.dart';
 
 void main() {
+  for (final width in [390.0, 800.0]) {
+    for (final dismiss in ['done', 'close', 'escape', 'scrim']) {
+      testWidgets(
+        'WheelPicker deep-link root retains date after $dismiss at $width',
+        (tester) async {
+          tester.view.physicalSize = Size(width, width == 390 ? 844 : 800);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          await tester.pumpWidget(const StackflowSpaApp());
+          await tester.pumpAndSettle();
+          final done = Completer<void>();
+          tester.binding.defaultBinaryMessenger.handlePlatformMessage(
+            SystemChannels.navigation.name,
+            SystemChannels.navigation.codec.encodeMethodCall(
+              const MethodCall('pushRouteInformation', {
+                'location': '/wheel-picker',
+                'state': null,
+              }),
+            ),
+            (_) => done.complete(),
+          );
+          await tester.pump();
+          await done.future;
+          await tester.pumpAndSettle();
+          expect(find.byType(SeedBottomSheet), findsOneWidget);
+          await tester.tap(find.text('다음 날로 변경'));
+          await tester.pumpAndSettle();
+          expect(find.text('2026년 8월 21일'), findsOneWidget);
+          switch (dismiss) {
+            case 'done':
+              await tester.tap(find.text('완료'));
+            case 'close':
+              await tester.tap(find.byIcon(Icons.close_rounded).last);
+            case 'escape':
+              await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+            case 'scrim':
+              await tester.tapAt(const Offset(8, 80));
+          }
+          await tester.pumpAndSettle();
+          expect(find.byType(SeedBottomSheet), findsOneWidget);
+          expect(find.text('2026년 8월 21일'), findsOneWidget);
+        },
+      );
+    }
+  }
+
   testWidgets('React ALL variant expands action-button showcase into a grid', (
     tester,
   ) async {

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:seed_design/seed_design.dart';
 import 'package:seed_design_example/stackflow_spa/stackflow_spa.dart';
@@ -57,6 +58,68 @@ void main() {
       expect(find.text('Responsive Dialog'), findsWidgets);
     },
   );
+
+  testWidgets(
+    'ResponsiveDialog entered as root retains open selected size on Escape',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(const StackflowSpaApp());
+      await tester.pumpAndSettle();
+      tester
+          .state<NavigatorState>(find.byType(Navigator))
+          .pushReplacementNamed('/responsive-dialog');
+      await tester.pumpAndSettle();
+      final sizeControl = find.byType(SeedSegmentedControl<String>);
+      expect(sizeControl, findsOneWidget);
+      await tester.tap(find.text('Large'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<SeedSegmentedControl<String>>(sizeControl).value,
+        'large',
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(find.text('Responsive Dialog'), findsWidgets);
+      expect(sizeControl, findsOneWidget);
+      expect(
+        tester.widget<SeedSegmentedControl<String>>(sizeControl).value,
+        'large',
+      );
+      await tester.tap(find.text('취소'));
+      await tester.pumpAndSettle();
+      expect(sizeControl, findsOneWidget);
+      await tester.tap(find.text('확인'));
+      await tester.pumpAndSettle();
+      expect(sizeControl, findsOneWidget);
+      await tester.tap(
+        find
+            .byWidgetPredicate(
+              (widget) =>
+                  widget is SeedPressable && widget.semanticsLabel == '닫기',
+            )
+            .last,
+      );
+      await tester.pumpAndSettle();
+      expect(sizeControl, findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('ResponsiveDialog pushed from Home still dismisses with Escape', (
+    tester,
+  ) async {
+    await open(tester, '/responsive-dialog', width: 800);
+    expect(find.byType(SeedDialog), findsOneWidget);
+    await tester.tap(find.text('Large'));
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.byType(SeedDialog), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 
   for (final width in [390.0, 800.0]) {
     for (final (route, title) in [
