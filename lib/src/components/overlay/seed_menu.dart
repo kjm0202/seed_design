@@ -57,6 +57,7 @@ class SeedMenu extends StatefulWidget {
   const SeedMenu({
     super.key,
     required this.groups,
+    this.semanticsLabel,
     this.width,
     this.size = SeedMenuSize.medium,
     this.closeOnSelect = true,
@@ -65,6 +66,10 @@ class SeedMenu extends StatefulWidget {
   final SeedMenuSize size;
   final bool closeOnSelect;
   final double maxHeight;
+
+  /// Accessible name for this menu, corresponding to the trigger's label
+  /// (the React MenuContent aria-labelledby/aria-label contract).
+  final String? semanticsLabel;
 
   /// The groups of items in the menu.
   final List<SeedMenuGroupData> groups;
@@ -182,6 +187,7 @@ class _SeedMenuState extends State<SeedMenu> {
     var itemIndex = 0;
     return Semantics(
       role: SemanticsRole.menu,
+      label: widget.semanticsLabel,
       child: Focus(
         onKeyEvent: _typeahead,
         child: Container(

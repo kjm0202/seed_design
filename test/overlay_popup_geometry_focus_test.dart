@@ -513,4 +513,41 @@ void main() {
     );
     handle.dispose();
   });
+
+  testWidgets('Round13 Menu exposes an explicit accessible name', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    final controller = SeedOverlayController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: SeedThemeData.light(fontFamily: seedTestFontFamily)
+            .toThemeData(),
+        home: Scaffold(
+          body: SeedMenuTrigger(
+            controller: controller,
+            triggerBuilder: (_, _, toggle) => TextButton(
+              onPressed: toggle,
+              child: const Text('Open named menu'),
+            ),
+            builder: (_) => const SeedMenu(
+              semanticsLabel: 'Open named menu',
+              groups: [
+                SeedMenuGroupData(items: [SeedMenuItemData(label: 'Entry A')]),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Open named menu'));
+    await tester.pumpAndSettle();
+    final data = tester
+        .getSemantics(find.byType(SeedMenu))
+        .getSemanticsData();
+    expect(data.role, SemanticsRole.menu);
+    expect(data.label, 'Open named menu');
+    handle.dispose();
+  });
 }

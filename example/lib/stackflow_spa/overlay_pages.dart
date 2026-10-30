@@ -1735,8 +1735,12 @@ class _MenuDemoPageState extends State<_MenuDemoPage> {
       variant: variant,
       isFullWidth: fullWidth,
     ),
-    builder: (ctx) =>
-        SeedMenu(groups: groups, size: size, maxHeight: maxHeight),
+    builder: (ctx) => SeedMenu(
+      groups: groups,
+      semanticsLabel: label,
+      size: size,
+      maxHeight: maxHeight,
+    ),
   );
 
   void _openSheet(BuildContext context, {bool showMenu = false}) {
