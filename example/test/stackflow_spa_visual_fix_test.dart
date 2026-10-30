@@ -22,6 +22,27 @@ Future<void> open(
 }
 
 void main() {
+  for (final width in [390.0, 800.0]) {
+    testWidgets(
+      'Accordion inline content shares React trigger left inset $width',
+      (tester) async {
+        await open(tester, '/accordion', width: width);
+        final trigger = find.text('당근마켓은 어떤 서비스인가요?').first;
+        await tester.tap(trigger);
+        await tester.pumpAndSettle();
+        final content = find
+            .text(
+              '당근마켓은 동네 이웃 간의 중고거래를 돕는 플랫폼입니다. 가까운 이웃과 직거래로 안전하게 거래할 수 있어요.',
+            )
+            .first;
+        expect(
+          tester.getTopLeft(content).dx,
+          closeTo(tester.getTopLeft(trigger).dx, 2),
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
   for (final (route, title) in [
     ('/tabs-auto-height-lazy', 'Tabs AutoHeight + LazyMount'),
     ('/chip-tabs-scroll-fog', 'ChipTabs ScrollFog + LazyMount'),

@@ -77,6 +77,50 @@ void main() {
     },
   );
 
+  testWidgets(
+    'Select paired fields shrink side-by-side within 390px viewport',
+    (tester) async {
+      await _open(tester, '/select', width: 390);
+      final fields = find.byType(SeedSelect<String>);
+      final first = tester.getRect(fields.at(0));
+      final second = tester.getRect(fields.at(1));
+      final third = tester.getRect(fields.at(2));
+      final fourth = tester.getRect(fields.at(3));
+      expect(first.width, inInclusiveRange(165, 180));
+      expect(second.top, closeTo(first.top, 1));
+      expect(second.right, lessThanOrEqualTo(375));
+      expect(third.width, inInclusiveRange(160, 180));
+      expect(fourth.top, closeTo(third.top, 1));
+      expect(fourth.right, lessThanOrEqualTo(375));
+      final firstMultiple = tester.getRect(fields.at(10));
+      final secondMultiple = tester.getRect(fields.at(11));
+      expect(firstMultiple.width, inInclusiveRange(160, 180));
+      expect(secondMultiple.top, closeTo(firstMultiple.top, 1));
+      expect(secondMultiple.right, lessThanOrEqualTo(375));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  for (final width in [390.0, 800.0]) {
+    testWidgets(
+      'Select prefix examples retain official React explanations $width',
+      (tester) async {
+        await _open(tester, '/select', width: width);
+        expect(
+          find.text(
+            '미선택: star · 사과/바나나: 각 item 아이콘이 star를 이김 · 체리(무아이콘): static star로 fallback',
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.text('1개 선택: 그 item 아이콘 미러 · 2개 이상: static star로 복귀'),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   for (final width in [390.0, 800.0]) {
     testWidgets('EX-11 TimePicker matches React full content width at $width', (
       tester,
@@ -107,6 +151,28 @@ void main() {
     await tester.pump();
     expect(find.text('제출한 수량: 5개'), findsOneWidget);
   });
+
+  for (final width in [390.0, 800.0]) {
+    testWidgets(
+      'Quantity demo uses official React section typography and copy $width',
+      (tester) async {
+        await _open(tester, '/quantity-picker', width: width);
+        final title = tester.widget<Text>(find.text('범위 경계와 자릿수'));
+        expect(title.style?.fontSize, SeedFontSize.t4);
+        expect(title.style?.fontWeight, FontWeight.w700);
+
+        const description = '최솟값·중간값·최댓값에서 action 상태와 값 표시 너비를 확인합니다.';
+        final copy = tester.widget<Text>(find.text(description));
+        expect(copy.style?.fontSize, SeedFontSize.t5);
+        expect(find.text('외부 상태 동기화와 step 단위 증감 동작을 확인합니다.'), findsOneWidget);
+        expect(
+          find.text('최소 수량에서 Decrement 버튼이 Remove 버튼으로 전환되는지 확인합니다.'),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
 
   testWidgets('EX-11 Select sheet keeps the handle and puts Select in footer', (
     tester,

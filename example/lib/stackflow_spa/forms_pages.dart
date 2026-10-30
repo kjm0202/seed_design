@@ -63,18 +63,22 @@ Widget _scroll(List<Widget> children, {double itemSpacing = 24, double verticalP
   ),
 );
 
-Widget _section(String title, String description, Widget content) => Column(
-  crossAxisAlignment: CrossAxisAlignment.start,
-  children: [
-    Text(
-      title,
-      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-    ),
-    const SizedBox(height: 4),
-    Text(description, style: const TextStyle(color: Colors.grey, fontSize: 13)),
-    const SizedBox(height: 12),
-    content,
-  ],
+Widget _section(String title, String description, Widget content) => Builder(
+  builder: (context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(title, style: context.seedTypography.t4Bold),
+      const SizedBox(height: 2),
+      Text(
+        description,
+        style: context.seedTypography.t5Regular.copyWith(
+          color: context.seedColor.fg.neutralMuted,
+        ),
+      ),
+      const SizedBox(height: 8),
+      content,
+    ],
+  ),
 );
 
 Widget _wrap(List<Widget> children) => Wrap(
@@ -405,7 +409,7 @@ class _QuantityPageState extends State<_QuantityPage> {
   Widget build(BuildContext context) => _scroll([
     _section(
       '범위 경계와 자릿수',
-      '최솟값·중간값·최댓값에서 버튼 상태와 표시 너비를 확인합니다.',
+      '최솟값·중간값·최댓값에서 action 상태와 값 표시 너비를 확인합니다.',
       _wrap([
         qty(min: 1, max: 999, defaultValue: 1),
         qty(min: 1, max: 999, defaultValue: 10),
@@ -414,7 +418,7 @@ class _QuantityPageState extends State<_QuantityPage> {
     ),
     _section(
       '제어 상태와 step',
-      '외부 상태와 5개 단위 증감을 확인합니다.',
+      '외부 상태 동기화와 step 단위 증감 동작을 확인합니다.',
       _wrap([
         qty(
           value: controlled,
@@ -426,7 +430,7 @@ class _QuantityPageState extends State<_QuantityPage> {
     ),
     _section(
       'Removable',
-      '최솟값에서 감소 버튼이 삭제 버튼으로 전환됩니다.',
+      '최소 수량에서 Decrement 버튼이 Remove 버튼으로 전환되는지 확인합니다.',
       removed
           ? _wrap([
               const Text('상품을 삭제했습니다.'),
@@ -448,7 +452,7 @@ class _QuantityPageState extends State<_QuantityPage> {
     ),
     _section(
       'Loading',
-      '전체 버튼과 증가 버튼의 로딩 상태를 각각 확인합니다.',
+      '버튼으로 전체 action과 Increment action의 loading 상태를 각각 확인합니다.',
       _wrap([
         SeedButton(
           label: loading ? '로딩 해제' : '로딩 시작',
@@ -461,12 +465,12 @@ class _QuantityPageState extends State<_QuantityPage> {
     ),
     _section(
       '상태',
-      'disabled, readOnly, invalid 상태를 비교합니다.',
+      'disabled, readOnly, invalid 상태의 시각적·상호작용 차이를 확인합니다.',
       _wrap([qty(disabled: true), qty(readOnly: true), qty(invalid: true)]),
     ),
     _section(
       'Field 통합',
-      '11개를 선택하면 오류가 나타납니다.',
+      '11개를 선택하면 Field와 Quantity Picker에 오류 상태를 함께 표시합니다.',
       SeedField(
         label: '구매 수량',
         required: true,
@@ -521,7 +525,7 @@ class _QuantityPageState extends State<_QuantityPage> {
         ),
       ),
     ),
-  ]);
+  ], verticalPadding: 16);
 }
 
 class _SegmentsPage extends StatelessWidget {
@@ -609,6 +613,43 @@ class _SelectPageState extends State<_SelectPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: children,
     ),
+  );
+
+  // React HStack lets fixed-width Select wrappers shrink as flex items at
+  // phone widths. A horizontal scroller here clips the second field entirely.
+  Widget _selectPairRow(Widget first, Widget second, {double gap = 12}) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Flexible(fit: FlexFit.loose, child: first),
+      SizedBox(width: gap),
+      Flexible(fit: FlexFit.loose, child: second),
+    ],
+  );
+
+  Widget _selectExplanationRow(
+    Widget Function(double width) control,
+    String explanation, {
+    double minimumControlWidth = 150,
+    }
+  ) => LayoutBuilder(
+    builder: (context, constraints) {
+      // React's flex row retains the text alongside the Select even at 390px.
+      final controlWidth = min(220.0, max(minimumControlWidth, (constraints.maxWidth - 16) * .44));
+      return Row(
+        children: [
+          control(controlWidth),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              explanation,
+              style: context.seedTypography.t3Regular.copyWith(
+                color: context.seedColor.fg.neutralMuted,
+              ),
+            ),
+          ),
+        ],
+      );
+    },
   );
 
   Widget _selectSection(String title, Widget content) => Column(
@@ -738,7 +779,7 @@ class _SelectPageState extends State<_SelectPage> {
     return _scroll([
       _selectSection(
         'Size',
-        _selectRow([
+        _selectPairRow(
           select(
             size: SeedInputButtonSize.medium,
             initial: const ['apple'],
@@ -756,13 +797,12 @@ class _SelectPageState extends State<_SelectPage> {
               ),
             ],
           ),
-          const SizedBox(width: 12),
           select(size: SeedInputButtonSize.small, initial: const ['apple']),
-        ]),
+        ),
       ),
       _selectSection(
         'With Field (Label / Description / Error)',
-        _selectRow([
+        _selectPairRow(
           select(
             label: '과일',
             description: '가장 좋아하는 과일을 골라주세요',
@@ -770,7 +810,6 @@ class _SelectPageState extends State<_SelectPage> {
             required: true,
             width: 260,
           ),
-          const SizedBox(width: 16),
           select(
             label: '배송 방법',
             description: '배송 옵션을 선택하세요',
@@ -786,7 +825,8 @@ class _SelectPageState extends State<_SelectPage> {
               ),
             ],
           ),
-        ]),
+          gap: 16,
+        ),
       ),
       _selectSection(
         'With Description & Groups & Disabled',
@@ -799,11 +839,11 @@ class _SelectPageState extends State<_SelectPage> {
       ),
       _selectSection(
         'Disabled / ReadOnly',
-        _selectRow([
+        _selectPairRow(
           select(label: '비활성', enabled: false, initial: const ['apple']),
-          const SizedBox(width: 16),
           select(label: '읽기 전용', readOnly: true, initial: const ['banana']),
-        ]),
+          gap: 16,
+        ),
       ),
       _selectSection(
         'Controlled + onValueChange',
@@ -831,9 +871,9 @@ class _SelectPageState extends State<_SelectPage> {
       ),
       _selectSection(
         'Prefix Icon 우선순위 (static vs 선택 item)',
-        select(
+        _selectExplanationRow((width) => select(
           prefix: const Icon(Icons.star_outline),
-          width: 220,
+          width: width,
           groups: const [
             SeedSelectGroup(
               items: [
@@ -851,15 +891,15 @@ class _SelectPageState extends State<_SelectPage> {
               ],
             ),
           ],
-        ),
+        ), '미선택: star · 사과/바나나: 각 item 아이콘이 star를 이김 · 체리(무아이콘): static star로 fallback'),
       ),
       _selectSection(
         'Multiple × Prefix Icon',
-        select(
+        _selectExplanationRow((width) => select(
           multiple: true,
           initial: const ['apple'],
           prefix: const Icon(Icons.star_outline),
-          width: 220,
+          width: width,
           groups: const [
             SeedSelectGroup(
               items: [
@@ -881,24 +921,24 @@ class _SelectPageState extends State<_SelectPage> {
               ],
             ),
           ],
-        ),
+        ), '1개 선택: 그 item 아이콘 미러 · 2개 이상: static star로 복귀', minimumControlWidth: 200),
       ),
       _selectSection(
         'Multiple',
-        _selectRow([
+        _selectPairRow(
           select(
             multiple: true,
             selected: multiValue,
             onValueChange: (next) => setState(() => multiValue = next),
           ),
-          const SizedBox(width: 16),
           select(
             multiple: true,
             selected: multiValue,
             onValueChange: (next) => setState(() => multiValue = next),
             format: (items) => '${items.length}개 선택됨',
           ),
-        ]),
+          gap: 16,
+        ),
       ),
       _selectSection(
         'Many Items (Scroll)',

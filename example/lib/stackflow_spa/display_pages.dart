@@ -1113,7 +1113,10 @@ class _AccordionPage extends StatelessWidget {
                   title: faq.$2,
                   description: faq.$3,
                   content: Padding(
-                    padding: const EdgeInsets.all(16),
+                    // SeedAccordionContent already contributes the 16px
+                    // horizontal inset. React's Box p=x4 results in one inset,
+                    // not two; preserve only the vertical demo spacing here.
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                     child: Text(
                       faq.$4,
                       style: context.seedTypography.t4Regular.copyWith(

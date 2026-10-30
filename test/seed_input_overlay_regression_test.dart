@@ -162,6 +162,28 @@ void main() {
       await tester.pumpAndSettle();
       expect(anchor.controller!.isOpen, isFalse);
       expect(selected, isEmpty);
+
+      // Re-enabling must not resurrect the dismissed popup or commit a stale
+      // option. Escape cancels the fresh popup, and only a later click selects.
+      updateParent(() => enabled = true);
+      await tester.pumpAndSettle();
+      expect(anchor.controller!.isOpen, isFalse);
+      expect(selected, isEmpty);
+
+      await tester.tap(find.text('선택해주세요'));
+      await tester.pumpAndSettle();
+      expect(anchor.controller!.isOpen, isTrue);
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(anchor.controller!.isOpen, isFalse);
+      expect(selected, isEmpty);
+
+      await tester.tap(find.text('선택해주세요'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Second option'));
+      await tester.pumpAndSettle();
+      expect(anchor.controller!.isOpen, isFalse);
+      expect(selected, [2]);
       expect(tester.takeException(), isNull);
     },
   );
