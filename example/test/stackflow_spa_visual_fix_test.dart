@@ -463,6 +463,44 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  for (final width in [390.0, 800.0]) {
+    testWidgets('Popover nested cascade reason labels match React at $width', (
+      tester,
+    ) async {
+      await open(tester, '/popover', width: width);
+      final outer = find.text('바깥 popover');
+      await tester.scrollUntilVisible(
+        outer,
+        200,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(outer);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('안쪽 popover'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('바깥 popover 닫기'));
+      await tester.pumpAndSettle();
+      expect(find.text('outer close · -'), findsOneWidget);
+      expect(find.text('nested close · cascadeDismiss'), findsOneWidget);
+      expect(find.text('안쪽 레이어'), findsNothing);
+      expect(find.text('바깥 레이어'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('Side Navigation shows all density choices initially at 600px', (
+    tester,
+  ) async {
+    await open(tester, '/side-navigation', width: 600);
+    final high = find.text('high');
+    expect(high, findsOneWidget);
+    expect(find.text('low'), findsOneWidget);
+    expect(find.text('medium'), findsOneWidget);
+    expect(tester.getRect(high).right, lessThanOrEqualTo(600));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'Avatar ALL sizes fit in the 800px preview without artificial tile widths',
     (tester) async {

@@ -2414,10 +2414,24 @@ class _PopoverDemoPageState extends State<_PopoverDemoPage> {
         _ => SeedOverlayAlign.center,
       };
 
-  void _record(String scope, bool open, SeedOverlayDismissReason reason) {
+  // The demo displays React PopoverOpenChangeDetails reasons, rather than the
+  // names of Flutter's internal dismissal enum.
+  String _reactDismissReason(SeedOverlayDismissReason? reason) =>
+      switch (reason) {
+        null => '-',
+        SeedOverlayDismissReason.escapeKey => 'escapeKeyDown',
+        SeedOverlayDismissReason.outside => 'interactOutside',
+        SeedOverlayDismissReason.parentClosed => 'cascadeDismiss',
+        _ => reason.name,
+      };
+
+  void _record(String scope, bool open, SeedOverlayDismissReason? reason) {
     if (!mounted) return;
     setState(() {
-      eventLog.insert(0, '$scope ${open ? "open" : "close"} · ${reason.name}');
+      eventLog.insert(
+        0,
+        '$scope ${open ? "open" : "close"} · ${_reactDismissReason(reason)}',
+      );
       if (eventLog.length > 8) eventLog.removeLast();
     });
   }
@@ -2541,7 +2555,7 @@ class _PopoverDemoPageState extends State<_PopoverDemoPage> {
           const Text('아래 버튼으로 부모 레이어를 먼저 닫으면 안쪽 레이어도 닫힙니다.'),
           _button('바깥 popover 닫기', () {
             setState(() => outerOpen = false);
-            _record('outer', false, SeedOverlayDismissReason.programmatic);
+            _record('outer', false, null);
           }),
         ]),
       ),

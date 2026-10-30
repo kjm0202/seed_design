@@ -646,8 +646,9 @@ class _NavigationPageState extends State<_NavigationPage> {
   );
 
   /// Official SPA uses fixed two/three columns even in narrow side insets.
-  /// Give their contents a scrollable minimum width so Flutter can render the
-  /// full labels and marks without RenderFlex overflow on small viewports.
+  /// Three short density labels fit in narrower columns than the two longer
+  /// tone labels. Keep all three density choices painted at 600px rather than
+  /// introducing an unnecessary horizontal scroll/clipped third option.
   Widget _scrollableSelectGroup({
     required int columns,
     required Widget child,
@@ -655,8 +656,8 @@ class _NavigationPageState extends State<_NavigationPage> {
     builder: (context, bounds) => SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: SizedBox(
-        width: bounds.maxWidth < columns * 160
-            ? columns * 160.0
+        width: bounds.maxWidth < columns * (columns == 3 ? 128.0 : 160.0)
+            ? columns * (columns == 3 ? 128.0 : 160.0)
             : bounds.maxWidth,
         child: child,
       ),
