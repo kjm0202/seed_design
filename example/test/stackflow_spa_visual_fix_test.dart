@@ -254,6 +254,18 @@ void main() {
       final control = find.byType(SeedSegmentedControl<String>);
       expect(tester.getSize(control).height, closeTo(42, 1));
       expect(find.text('safeArea'), findsOneWidget);
+      // Official React's 24px gradient toggle occupies only its visual height.
+      // Flutter's 44px touch target must not shift the subsequent CTA down.
+      expect(
+        tester
+            .getTopLeft(find.widgetWithText(SeedButton, 'ActivityLayerBar'))
+            .dy,
+        closeTo(399, 2),
+      );
+      expect(tester.getSize(find.byType(SeedSwitch)).height, 44);
+      await tester.tap(find.text('gradient'));
+      await tester.pumpAndSettle();
+      expect(tester.widget<SeedSwitch>(find.byType(SeedSwitch)).checked, false);
       const longTitle = 'ActivityTransitionStyle (fadeFromBottomAndroid)';
       final longButton = find.widgetWithText(SeedButton, longTitle);
       await tester.scrollUntilVisible(
@@ -266,6 +278,17 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('TransparentBar desktop CTA follows the React switch baseline', (
+    tester,
+  ) async {
+    await open(tester, '/transparent-bar', width: 800);
+    expect(
+      tester.getTopLeft(find.widgetWithText(SeedButton, 'ActivityLayerBar')).dy,
+      closeTo(706, 2),
+    );
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
     'Menu fills its long-list and sheet trigger rows at phone width',

@@ -274,12 +274,20 @@ class _TransparentBarPageState extends State<_TransparentBarPage> {
                 ),
               ),
               _gap,
-              SeedSwitch(
-                label: 'gradient',
-                size: SeedSwitchSize.size24,
-                tone: SeedControlTone.neutral,
-                checked: gradient,
-                onCheckedChange: (next) => setState(() => gradient = next),
+              SizedBox(
+                height: 24,
+                child: OverflowBox(
+                  minHeight: 44,
+                  maxHeight: 44,
+                  alignment: Alignment.center,
+                  child: SeedSwitch(
+                    label: 'gradient',
+                    size: SeedSwitchSize.size24,
+                    tone: SeedControlTone.neutral,
+                    checked: gradient,
+                    onCheckedChange: (next) => setState(() => gradient = next),
+                  ),
+                ),
               ),
               _gap,
               _action(
