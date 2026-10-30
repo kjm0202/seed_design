@@ -164,4 +164,191 @@ void main() {
       }
     }
   }
+
+  // The official React Accordion keeps its floating child Menu open when a
+  // controlled parent collapses. Escape still dismisses that Menu even though
+  // the Accordion trigger/content have become non-focusable. This is distinct
+  // from the existing dialog/sheet Escape tests.
+  for (final width in [390.0, 800.0]) {
+    testWidgets('Accordion-controlled collapse retains nested Menu Escape $width', (
+      tester,
+    ) async {
+      tester.view.physicalSize = Size(width, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      late StateSetter updateParent;
+      Set<String> values = {'a'};
+      bool enabled = true;
+      final controller = SeedOverlayController();
+      final events = <String>[];
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: SeedThemeData.light(fontFamily: seedTestFontFamily)
+              .toThemeData(),
+          home: Scaffold(
+            body: SizedBox(
+              width: 350,
+              child: StatefulBuilder(
+                builder: (_, update) {
+                  updateParent = update;
+                  return SeedAccordion(
+                    values: values,
+                    enabled: enabled,
+                    items: [
+                      SeedAccordionItem(
+                        value: 'a',
+                        title: 'Accordion parent',
+                        content: SeedMenuTrigger(
+                          controller: controller,
+                          skipAnimation: true,
+                          onOpenChange: (open, reason) =>
+                              events.add('$open:${reason.name}'),
+                          triggerBuilder: (_, _, toggle) => TextButton(
+                            onPressed: toggle,
+                            child: const Text('Inner menu trigger'),
+                          ),
+                          builder: (_) => const SeedMenu(
+                            groups: [
+                              SeedMenuGroupData(
+                                items: [SeedMenuItemData(label: 'Menu action')],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Inner menu trigger'));
+      await tester.pumpAndSettle();
+      expect(controller.isOpen, isTrue);
+      updateParent(() {
+        values = {};
+        enabled = false;
+      });
+      await tester.pumpAndSettle();
+      expect(
+        controller.isOpen,
+        isTrue,
+        reason: 'Controlled parent may collapse without dismissing nested Menu',
+      );
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      // ignore: avoid_print
+      print(
+        'R13_TRACKED_MENU_ESCAPE width=$width open=${controller.isOpen} events=$events',
+      );
+      expect(
+        controller.isOpen,
+        isFalse,
+        reason: 'Escape must reach the open Menu after parent loses focus',
+      );
+      expect(events, ['true:trigger', 'false:escapeKey']);
+    });
+  }
+
+  // Route-scoped fallback must dismiss just the topmost orphaned Menu. It
+  // must then release the scope handler once the final Menu closes.
+  for (final width in [390.0, 800.0]) {
+    testWidgets('Accordion collapsed stacked Menus Escape in LIFO order $width', (tester) async {
+      tester.view.physicalSize = Size(width, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      late StateSetter updateParent;
+      bool collapsed = false;
+      final first = SeedOverlayController();
+      final second = SeedOverlayController();
+      final events = <String>[];
+      addTearDown(() {
+        first.dispose();
+        second.dispose();
+      });
+
+      Widget menu(String label, SeedOverlayController controller) =>
+          SeedMenuTrigger(
+            controller: controller,
+            skipAnimation: true,
+            onOpenChange: (open, reason) =>
+                events.add('$label:$open:${reason.name}'),
+            triggerBuilder: (_, _, toggle) => TextButton(
+              onPressed: toggle,
+              child: Text(label),
+            ),
+            builder: (_) => SeedMenu(
+              groups: [
+                SeedMenuGroupData(
+                  items: [SeedMenuItemData(label: '$label item')],
+                ),
+              ],
+            ),
+          );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: SeedThemeData.light(fontFamily: seedTestFontFamily)
+              .toThemeData(),
+          home: Scaffold(
+            body: SizedBox(
+              width: 350,
+              child: StatefulBuilder(builder: (_, update) {
+                updateParent = update;
+                return SeedAccordion(
+                  values: collapsed ? const {} : const {'a'},
+                  enabled: !collapsed,
+                  items: [
+                    SeedAccordionItem(
+                      value: 'a',
+                      title: 'Parent',
+                      content: Column(
+                        children: [
+                          menu('first', first),
+                          menu('second', second),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              }),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      first.open();
+      await tester.pumpAndSettle();
+      second.open();
+      await tester.pumpAndSettle();
+      expect(first.isOpen, isTrue);
+      expect(second.isOpen, isTrue);
+      updateParent(() => collapsed = true);
+      await tester.pumpAndSettle();
+      expect(first.isOpen, isTrue);
+      expect(second.isOpen, isTrue);
+      final scope = FocusManager.instance.primaryFocus?.nearestScope;
+      expect(scope?.onKeyEvent, isNotNull);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(second.isOpen, isFalse);
+      expect(first.isOpen, isTrue);
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(first.isOpen, isFalse);
+      expect(scope?.onKeyEvent, isNull,
+          reason: 'Route FocusScope handler must be restored after final close');
+      expect(events, [
+        'second:false:escapeKey',
+        'first:false:escapeKey',
+      ]);
+    });
+  }
 }

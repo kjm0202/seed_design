@@ -156,8 +156,72 @@ class SeedAnchoredOverlay extends StatefulWidget {
   State<SeedAnchoredOverlay> createState() => _SeedAnchoredOverlayState();
 }
 
+class _MenuEscapeScopeBinding {
+  _MenuEscapeScopeBinding(this.previous);
+
+  final KeyEventResult Function(FocusNode, KeyEvent)? previous;
+  late final KeyEventResult Function(FocusNode, KeyEvent) handler;
+  final List<_SeedAnchoredOverlayState> owners = [];
+}
+
 class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
     with SingleTickerProviderStateMixin {
+  // Menu Escape is normally handled by the focused popup or trigger below.
+  // A collapsed, controlled Accordion can exclude both from the focus tree
+  // without unmounting its still-open floating Menu. Bind a fallback to that
+  // Menu's own route FocusScope, never to the global keyboard dispatcher.
+  static final Map<FocusScopeNode, _MenuEscapeScopeBinding> _menuEscapeScopes =
+      {};
+  FocusScopeNode? _menuEscapeScope;
+
+  void _bindMenuEscapeScope() {
+    if (!widget.tabExitsContent || !_open) return;
+    final scope = _triggerFocus.nearestScope;
+    if (scope == null || identical(_menuEscapeScope, scope)) return;
+    _unbindMenuEscapeScope();
+    final binding = _menuEscapeScopes.putIfAbsent(scope, () {
+      final binding = _MenuEscapeScopeBinding(scope.onKeyEvent);
+      binding.handler = (node, event) {
+        if (event is KeyDownEvent &&
+            event.logicalKey == LogicalKeyboardKey.escape) {
+          // Most recently opened child owns Escape. In normal focusable
+          // states, its local CallbackShortcuts handle the event first.
+          for (final overlay in binding.owners.reversed) {
+            if (overlay.mounted &&
+                overlay._open &&
+                overlay.widget.tabExitsContent &&
+                !overlay._contentFocus.canRequestFocus &&
+                !overlay._overlayFocus.hasFocus &&
+                !overlay._triggerFocus.hasFocus) {
+              overlay._request(false, SeedOverlayDismissReason.escapeKey);
+              return KeyEventResult.handled;
+            }
+          }
+        }
+        return binding.previous?.call(node, event) ?? KeyEventResult.ignored;
+      };
+      scope.onKeyEvent = binding.handler;
+      return binding;
+    });
+    binding.owners.add(this);
+    _menuEscapeScope = scope;
+  }
+
+  void _unbindMenuEscapeScope() {
+    final scope = _menuEscapeScope;
+    if (scope == null) return;
+    _menuEscapeScope = null;
+    final binding = _menuEscapeScopes[scope];
+    if (binding == null) return;
+    binding.owners.remove(this);
+    if (binding.owners.isEmpty) {
+      if (identical(scope.onKeyEvent, binding.handler)) {
+        scope.onKeyEvent = binding.previous;
+      }
+      _menuEscapeScopes.remove(scope);
+    }
+  }
+
   final OverlayPortalController _portal = OverlayPortalController();
   final GlobalKey _anchorKey = GlobalKey();
   final Object _ownTapGroup = Object();
@@ -308,6 +372,7 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
     _returnFocus = FocusManager.instance.primaryFocus;
     setState(() => _open = true);
     _portal.show();
+    _bindMenuEscapeScope();
     _animation.duration =
         widget.skipAnimation || MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
@@ -315,6 +380,7 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
     _animation.forward();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_open) return;
+      _bindMenuEscapeScope();
       // SeedPressable requests focus before invoking its callback. Flutter
       // applies that request asynchronously, so the opening callback may still
       // see the outside control that was focused before the trigger was tapped.
@@ -330,6 +396,7 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
 
   Future<void> _hide(SeedOverlayDismissReason reason) async {
     if (!_open) return;
+    _unbindMenuEscapeScope();
     setState(() => _open = false);
     _animation.reverseDuration =
         widget.skipAnimation || MediaQuery.disableAnimationsOf(context)
@@ -372,6 +439,7 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
 
   @override
   void dispose() {
+    _unbindMenuEscapeScope();
     widget.controller?.removeListener(_controllerChanged);
     for (final position in _scrollPositions) {
       position.removeListener(_refresh);
