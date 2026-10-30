@@ -104,6 +104,36 @@ void main() {
       },
     );
 
+    for (final width in [390.0, 800.0]) {
+      testWidgets('ToggleButton React pill focus ring matches shape $width', (
+        tester,
+      ) async {
+        tester.view.physicalSize = Size(width, 844);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        await tester.pumpWidget(
+          host(
+            SeedToggleButton(
+              label: 'Like',
+              selected: false,
+              onSelectedChanged: (_) {},
+            ),
+          ),
+        );
+        final pressable = tester.widget<SeedPressable>(
+          find.descendant(
+            of: find.byType(SeedToggleButton),
+            matching: find.byType(SeedPressable),
+          ),
+        );
+        expect(
+          pressable.focusBorderRadius,
+          SeedBorderRadius.full,
+          reason: 'React toggle-button.css uses --seed-radius-full',
+        );
+      });
+    }
+
     testWidgets(
       'SeedAvatarStack stacks avatars with negative gap and stroke separation',
       (tester) async {

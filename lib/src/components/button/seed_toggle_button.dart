@@ -85,6 +85,9 @@ class SeedToggleButton extends StatelessWidget {
     return SeedPressable(
       enabled: enabled && !loading && onSelectedChanged != null,
       toggled: selected,
+      // The React toggle-button uses the full pill radius for both its body
+      // and the focus-visible outline.
+      focusBorderRadius: SeedBorderRadius.full,
       semanticsLabel: semanticsLabel ?? label,
       onTap: () => onSelectedChanged?.call(!selected),
       builder: (context, isPressed) {
