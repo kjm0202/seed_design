@@ -390,5 +390,5 @@ class SeedMenuTrigger extends SeedAnchoredOverlay {
     super.maxWidth,
     super.maxHeight,
     super.skipAnimation,
-  }) : super(overlayBuilder: builder);
+  }) : super(overlayBuilder: builder, tabExitsContent: true);
 }

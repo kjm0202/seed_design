@@ -24,6 +24,36 @@ const _fruit = [
 void main() {
   for (final width in [390.0, 800.0]) {
     testWidgets(
+      'pointer-open Select ArrowDown seeds selected option on first key at $width',
+      (tester) async {
+        tester.view.physicalSize = mui.Size(width, 844);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(
+          _host(const SeedSelect<String>(
+            groups: _fruit,
+            defaultValue: ['apple'],
+          )),
+        );
+        await tester.tap(find.text('사과'));
+        await tester.pumpAndSettle();
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await tester.pumpAndSettle();
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+        expect(
+          tester.widget<SeedInputButton>(find.byType(SeedInputButton)).value,
+          '사과',
+          reason: 'React useSelectHighlight pointer opens without highlight; '
+              'first ArrowDown seeds the selected apple, rather than banana',
+        );
+      },
+    );
+  }
+
+  for (final width in [390.0, 800.0]) {
+    testWidgets(
       'keyboard-open controlled Select highlights selected item at $width',
       (tester) async {
         tester.view.physicalSize = mui.Size(width, 844);

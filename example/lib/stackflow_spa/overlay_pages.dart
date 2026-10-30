@@ -2397,6 +2397,7 @@ class _PopoverDemoPageState extends State<_PopoverDemoPage> {
     bool? open,
     SeedOverlayOpenChanged? onOpenChange,
     String footerLabel = '확인',
+    String? semanticsLabel,
     double maxWidth = 360,
     double maxHeight = 420,
     WidgetBuilder? customBody,
@@ -2420,6 +2421,7 @@ class _PopoverDemoPageState extends State<_PopoverDemoPage> {
       // An explicit empty title means the React sample omits the title slot.
       // Supplying Text('') would still reserve an empty header row in Flutter.
       titleText: title == '' ? null : title ?? label,
+      semanticsLabel: semanticsLabel,
       descriptionText: description,
       showCloseButton: showCloseButton,
       maxWidth: maxWidth,
@@ -2571,6 +2573,7 @@ class _PopoverDemoPageState extends State<_PopoverDemoPage> {
             _popoverButton(
               '헤더 없음',
               title: '',
+              semanticsLabel: '필터',
               showCloseButton: false,
               bodyText: 'Header 슬롯 자체가 렌더되지 않습니다.',
               footerLabel: '적용',

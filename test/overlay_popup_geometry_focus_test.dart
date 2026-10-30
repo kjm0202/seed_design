@@ -1,3 +1,5 @@
+import 'dart:ui' show SemanticsRole;
+
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -324,4 +326,191 @@ void main() {
       },
     );
   }
+
+  for (final width in [390.0, 800.0]) {
+    testWidgets(
+      'Round4 Menu Tab exits nested dialog and focuses Confirm $width',
+      (tester) async {
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = Size(width, width == 390 ? 844 : 800);
+        addTearDown(tester.view.reset);
+        final menu = SeedOverlayController();
+        final confirm = FocusNode(debugLabel: 'round4-confirm');
+        final trigger = FocusNode(debugLabel: 'round4-menu-trigger');
+        addTearDown(() {
+          menu.dispose();
+          confirm.dispose();
+          trigger.dispose();
+        });
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: SeedThemeData.light(fontFamily: seedTestFontFamily)
+                .toThemeData(),
+            home: Scaffold(
+              body: Builder(
+                builder: (ctx) => TextButton(
+                  onPressed: () => showSeedDialog<void>(
+                    context: ctx,
+                    child: SeedAlertDialog(
+                      title: 'Menu in AlertDialog',
+                      footer: Row(
+                        children: [
+                          SeedMenuTrigger(
+                            controller: menu,
+                            skipAnimation: true,
+                            triggerBuilder: (_, _, toggle) => TextButton(
+                              focusNode: trigger,
+                              onPressed: toggle,
+                              child: const Text('Open Menu'),
+                            ),
+                            builder: (_) => const SeedMenu(
+                              groups: [
+                                SeedMenuGroupData(
+                                  items: [
+                                    SeedMenuItemData(label: '추가'),
+                                    SeedMenuItemData(label: '수정'),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          TextButton(
+                            focusNode: confirm,
+                            onPressed: () {},
+                            child: const Text('확인'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  child: const Text('Open dialog'),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('Open dialog'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Open Menu'));
+        await tester.pumpAndSettle();
+        expect(menu.isOpen, isTrue);
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pumpAndSettle();
+        expect(menu.isOpen, isFalse);
+        expect(
+          confirm.hasFocus,
+          isTrue,
+          reason: 'React closes nested menu on Tab and focuses Confirm',
+        );
+        await tester.tap(find.text('Open Menu'));
+        await tester.pumpAndSettle();
+        expect(menu.isOpen, isTrue);
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.pumpAndSettle();
+        expect(
+          menu.isOpen,
+          isTrue,
+          reason: 'React keeps the menu open at its reverse Tab boundary',
+        );
+        expect(
+          trigger.hasFocus,
+          isTrue,
+          reason: 'React Shift+Tab moves from menu to trigger',
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets('Round4 SeedPopover exposes native dialog semantics', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    final controller = SeedOverlayController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: SeedThemeData.light(fontFamily: seedTestFontFamily)
+            .toThemeData(),
+        home: Scaffold(
+          body: SeedPopoverTrigger(
+            controller: controller,
+            triggerBuilder: (_, _, toggle) =>
+                TextButton(onPressed: toggle, child: const Text('Open popup')),
+            builder: (_) => const SeedPopover(
+              titleText: 'Accessible popup',
+              body: Text('body'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Open popup'));
+    await tester.pumpAndSettle();
+    final semantics = tester.getSemantics(find.byType(SeedPopover));
+    expect(semantics.getSemanticsData().role, SemanticsRole.dialog);
+    expect(semantics.getSemanticsData().label, 'Accessible popup');
+    handle.dispose();
+  });
+
+  testWidgets('Round4 headerless Popover supports an explicit dialog name', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: SeedThemeData.light(fontFamily: seedTestFontFamily)
+            .toThemeData(),
+        home: const Scaffold(
+          body: SeedPopover(
+            semanticsLabel: '필터',
+            body: Text('Headerless body'),
+          ),
+        ),
+      ),
+    );
+    final data = tester
+        .getSemantics(find.byType(SeedPopover))
+        .getSemanticsData();
+    expect(data.role, SemanticsRole.dialog);
+    expect(data.label, '필터');
+    handle.dispose();
+  });
+
+  testWidgets('Round4 SeedMenu already exposes a native menu role', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    final controller = SeedOverlayController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: SeedThemeData.light(fontFamily: seedTestFontFamily)
+            .toThemeData(),
+        home: Scaffold(
+          body: SeedMenuTrigger(
+            controller: controller,
+            triggerBuilder: (_, _, toggle) => TextButton(
+              onPressed: toggle,
+              child: const Text('Open native menu'),
+            ),
+            builder: (_) => const SeedMenu(
+              groups: [
+                SeedMenuGroupData(items: [SeedMenuItemData(label: 'Entry A')]),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Open native menu'));
+    await tester.pumpAndSettle();
+    expect(
+      tester.getSemantics(find.byType(SeedMenu)).getSemanticsData().role,
+      SemanticsRole.menu,
+    );
+    handle.dispose();
+  });
 }

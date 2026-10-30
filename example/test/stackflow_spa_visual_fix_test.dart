@@ -324,6 +324,7 @@ void main() {
       find.byType(SeedPopover).last,
     );
     expect(visiblePopover.titleText, isNull);
+    expect(visiblePopover.semanticsLabel, '필터');
     expect(visiblePopover.descriptionText, isNull);
     expect(visiblePopover.showCloseButton, isFalse);
     expect(find.text('적용'), findsOneWidget);

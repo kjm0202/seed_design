@@ -1,3 +1,5 @@
+import 'dart:ui' show SemanticsRole;
+
 import '../layout/seed_scroll_fog.dart';
 import '../overlay/seed_anchored_overlay.dart';
 import '../layout/seed_scroll_area.dart';
@@ -25,6 +27,9 @@ class SeedPopover extends StatelessWidget {
   final Widget? body;
   final Widget? footer;
   final VoidCallback? onClose;
+
+  /// Accessible dialog name, especially when the visual header is omitted.
+  final String? semanticsLabel;
   final double minWidth;
   final double maxWidth;
   final double maxHeight;
@@ -41,6 +46,7 @@ class SeedPopover extends StatelessWidget {
     this.body,
     this.footer,
     this.onClose,
+    this.semanticsLabel,
     this.minWidth = 320.0,
     this.maxWidth = 480.0,
     this.maxHeight = 600.0,
@@ -50,7 +56,19 @@ class SeedPopover extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => Semantics(
+    role: SemanticsRole.dialog,
+    explicitChildNodes: true,
+    // Flutter Web's route-role bridge only transfers the label to aria-label
+    // when the same semantics node explicitly names its route.
+    namesRoute: (semanticsLabel?.isNotEmpty ?? false) ||
+        (titleText?.isNotEmpty ?? false),
+    label: semanticsLabel ??
+        (titleText?.isNotEmpty == true ? titleText : null),
+    child: _buildSurface(context),
+  );
+
+  Widget _buildSurface(BuildContext context) {
     final colors = context.seedColor;
     final typography = context.seedTypography;
     final shadows = context.seedShadows;

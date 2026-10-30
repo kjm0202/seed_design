@@ -77,9 +77,17 @@ void main() {
           await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
           await tester.pumpAndSettle();
           expect(
+            options[0].focusNode!.hasFocus,
+            isTrue,
+            reason: 'React pointer open seeds no highlight; first ArrowDown '
+                'highlights the first enabled item',
+          );
+          await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+          await tester.pumpAndSettle();
+          expect(
             options[1].focusNode!.hasFocus,
             isTrue,
-            reason: 'ArrowDown should move highlight to the next option',
+            reason: 'second ArrowDown advances to the next option',
           );
           expect(
             background.hasFocus,

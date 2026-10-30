@@ -110,6 +110,7 @@ class SeedAnchoredOverlay extends StatefulWidget {
     this.restoreFocus = true,
     this.closeOnInteractOutside = true,
     this.closeOnFocusOut = false,
+    this.tabExitsContent = false,
     this.skipAnimation = false,
     this.enterScale = 0.95,
     this.exitScale,
@@ -144,6 +145,7 @@ class SeedAnchoredOverlay extends StatefulWidget {
       restoreFocus,
       closeOnInteractOutside,
       closeOnFocusOut,
+      tabExitsContent,
       skipAnimation;
   final double enterScale;
   final double? exitScale;
@@ -524,6 +526,32 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
                           // Move among those real controls explicitly.
                           if (event is KeyDownEvent &&
                               event.logicalKey == LogicalKeyboardKey.tab) {
+                            // React Menu uses Tab to leave its roving menu
+                            // items, closing the popup and continuing to the
+                            // next control in the parent dialog. Ordinary
+                            // Popovers retain their internal tab traversal.
+                            if (widget.tabExitsContent) {
+                              if (HardwareKeyboard.instance.isShiftPressed) {
+                                // React reverse-Tab returns to MenuTrigger
+                                // while keeping the popup open.
+                                for (final target
+                                    in _triggerFocus.descendants) {
+                                  if (target.canRequestFocus &&
+                                      !target.skipTraversal) {
+                                    target.requestFocus();
+                                    return KeyEventResult.handled;
+                                  }
+                                }
+                              } else if (_focusAtTriggerBoundary(
+                                backwards: false,
+                              )) {
+                                _request(
+                                  false,
+                                  SeedOverlayDismissReason.focusOut,
+                                );
+                                return KeyEventResult.handled;
+                              }
+                            }
                             final controls = _contentFocus.descendants
                                 .where((focus) => focus.canRequestFocus)
                                 .toList();

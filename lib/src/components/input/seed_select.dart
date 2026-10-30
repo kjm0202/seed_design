@@ -179,6 +179,8 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
   final FocusNode _readOnlyFocus = FocusNode();
   final FocusNode _readOnlyVisualFocus = FocusNode();
   bool _showReadOnlyFocus = false;
+  bool _triggerPointerDown = false;
+  bool _pointerOpenAwaitingKeyboardHighlight = false;
 
   bool _reportedOpen = false;
   void _emitOpen(bool open, SeedOverlayDismissReason reason) {
@@ -230,6 +232,28 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
       _menuItemFocusNodes.add(
         FocusNode(
           onKeyEvent: (node, event) {
+            if (event is KeyDownEvent &&
+                _pointerOpenAwaitingKeyboardHighlight) {
+              // React's pointer-open Select has no highlighted option yet.
+              // Its first Arrow key highlights the selected option (or first
+              // enabled option), rather than stepping to the next one.
+              // Material MenuAnchor already focuses that same option on open.
+              if (event.logicalKey == LogicalKeyboardKey.arrowDown ||
+                  event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                _pointerOpenAwaitingKeyboardHighlight = false;
+                return KeyEventResult.handled;
+              }
+              if (event.logicalKey == LogicalKeyboardKey.enter ||
+                  event.logicalKey == LogicalKeyboardKey.space) {
+                _pointerOpenAwaitingKeyboardHighlight = false;
+                _requestOpen(false);
+                return KeyEventResult.handled;
+              }
+              if (event.logicalKey == LogicalKeyboardKey.home ||
+                  event.logicalKey == LogicalKeyboardKey.end) {
+                _pointerOpenAwaitingKeyboardHighlight = false;
+              }
+            }
             if (event is KeyDownEvent &&
                 event.logicalKey == LogicalKeyboardKey.tab) {
               _requestOpen(false, reason: SeedOverlayDismissReason.focusOut);
@@ -290,6 +314,9 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
     SeedOverlayDismissReason reason = SeedOverlayDismissReason.trigger,
   }) {
     if (widget.readOnly || !widget.enabled) return;
+    final pointerOpen = _triggerPointerDown;
+    _triggerPointerDown = false;
+    _pointerOpenAwaitingKeyboardHighlight = value && pointerOpen;
     _emitOpen(value, reason);
     if (widget.open == null) {
       if (widget.side != null) {
@@ -374,6 +401,7 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
               alignmentOffset: widget.menuOffset,
               crossAxisUnconstrained: false,
               onClose: () {
+                _pointerOpenAwaitingKeyboardHighlight = false;
                 if (widget.open != false) {
                   _emitOpen(
                     false,
@@ -587,7 +615,13 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
       isError: widget.isError,
       onPressed: toggle,
     );
-    if (!widget.readOnly) return trigger;
+    if (!widget.readOnly) {
+      return Listener(
+        onPointerDown: (_) => _triggerPointerDown = true,
+        onPointerCancel: (_) => _triggerPointerDown = false,
+        child: trigger,
+      );
+    }
 
     // Select's readonly combobox remains a focus target (useSelect.ts), while
     // FieldButton's readonly trigger is disabled. Keep that distinction here
