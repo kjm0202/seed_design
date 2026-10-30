@@ -67,6 +67,20 @@ void main() {
         expect(find.byType(SeedBottomSheet), findsOneWidget);
         expect(find.text('2026년 8월 20일'), findsOneWidget);
 
+        // React WheelPicker CSS uses max-content column widths, not three
+        // equally expanded thirds. CDP 390: year=118.73, month=83.09,
+        // day=86.97, centered as a group in the 360px root.
+        final datePicker = tester.widget<SeedWheelPicker>(
+          find.byType(SeedWheelPicker),
+        );
+        final columnWidths = [
+          for (final column in datePicker.columns) column.width,
+        ];
+        expect(columnWidths, everyElement(isNotNull));
+        expect(columnWidths[0], closeTo(119, 10));
+        expect(columnWidths[1], closeTo(83, 10));
+        expect(columnWidths[2], closeTo(87, 10));
+
         // The official medium WheelPicker uses t10Medium (26px, w500) for
         // all three wheels, not the default 14px example body text.
         for (final label in ['2026년', '8월', '20일']) {

@@ -1063,6 +1063,12 @@ class _WheelSheetState extends State<_WheelSheet> {
   int day = 20;
   int get lastDay => DateUtils.getDaysInMonth(year, month);
 
+  // React max-content columns measured in CDP at 390/800: year 118.73,
+  // month 83.09, day 86.97px. Stable widths avoid Web font-load races.
+  static const double _yearColumnWidth = 119;
+  static const double _monthColumnWidth = 83;
+  static const double _dayColumnWidth = 87;
+
   void updateYear(int value) => setState(() {
     year = value;
     day = min(day, lastDay);
@@ -1086,6 +1092,7 @@ class _WheelSheetState extends State<_WheelSheet> {
             SeedWheelColumn.value<int>(
               items: [for (var y = 2020; y <= 2030; y++) y],
               value: year,
+              width: _yearColumnWidth,
               semanticsLabel: '연도',
               semanticsValueFormatter: (value) => '$value년',
               onValueChange: (value, details) => updateYear(value),
@@ -1103,6 +1110,7 @@ class _WheelSheetState extends State<_WheelSheet> {
             SeedWheelColumn.value<int>(
               items: [for (var m = 1; m <= 12; m++) m],
               value: month,
+              width: _monthColumnWidth,
               loop: true,
               semanticsLabel: '월',
               semanticsValueFormatter: (value) => '$value월',
@@ -1121,6 +1129,7 @@ class _WheelSheetState extends State<_WheelSheet> {
             SeedWheelColumn.value<int>(
               items: [for (var d = 1; d <= lastDay; d++) d],
               value: day,
+              width: _dayColumnWidth,
               loop: true,
               semanticsLabel: '일',
               semanticsValueFormatter: (value) => '$value일',
