@@ -39,6 +39,52 @@ Future<void> _direct(WidgetTester tester, String route) async {
 
 void main() {
   for (final width in [390.0, 800.0]) {
+    testWidgets('HelpBubble dynamic trigger fills fractional width $width', (
+      tester,
+    ) async {
+      tester.view.physicalSize = Size(width, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await _route(tester, '/help-bubble');
+
+      await tester.scrollUntilVisible(
+        find.text('Trigger 너비: 40%'),
+        350,
+        scrollable: find.byType(Scrollable).last,
+        maxScrolls: 25,
+      );
+      await tester.pumpAndSettle();
+      final changeTriggerWidth =
+          tester.widget<Slider>(find.byType(Slider).first).onChanged!;
+      for (final percentage in [40, 96, 26]) {
+        if (percentage != 40) {
+          // Exercise the real demo slider callback while isolating geometry
+          // from the unrelated browser/pointer event delivery contract.
+          changeTriggerWidth(percentage.toDouble());
+          await tester.pumpAndSettle();
+        }
+        final trigger = find.widgetWithText(
+          SeedButton,
+          '너비 $percentage%',
+        );
+        expect(trigger, findsOneWidget);
+        await tester.ensureVisible(trigger);
+        await tester.pumpAndSettle();
+        final fractional = find
+            .ancestor(of: trigger, matching: find.byType(FractionallySizedBox))
+            .first;
+        final parentWidth = tester.getSize(fractional).width;
+        final factor = tester.widget<FractionallySizedBox>(fractional).widthFactor;
+        expect(factor, closeTo(percentage / 100, .0001));
+        expect(
+          tester.getSize(trigger).width,
+          closeTo(parentWidth * factor!, 1),
+          reason: 'React dynamically stretches the HelpBubble trigger',
+        );
+      }
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets(
       'Root BottomSheetTextField preserves typed value after Escape $width',
       (tester) async {

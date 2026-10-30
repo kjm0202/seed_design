@@ -2190,6 +2190,7 @@ class _HelpBubbleDemoPageState extends State<_HelpBubbleDemoPage> {
     bool flip = true,
     bool showCloseButton = false,
     bool dismissOutside = true,
+    bool fullWidth = false,
   }) => SeedHelpBubbleTrigger(
     title: title ?? label,
     description: description,
@@ -2198,8 +2199,12 @@ class _HelpBubbleDemoPageState extends State<_HelpBubbleDemoPage> {
     flip: flip,
     showCloseButton: showCloseButton,
     closeOnInteractOutside: dismissOutside,
-    triggerBuilder: (context, open, toggle) =>
-        _button(label, toggle, variant: variant),
+    triggerBuilder: (context, open, toggle) => SeedButton(
+      label: label,
+      onPressed: toggle,
+      variant: variant,
+      isFullWidth: fullWidth,
+    ),
   );
 
   void _showSheet() {
@@ -2370,6 +2375,7 @@ class _HelpBubbleDemoPageState extends State<_HelpBubbleDemoPage> {
         title: 'Width 조절 테스트',
         side: SeedOverlaySide.right,
         dismissOutside: false,
+        fullWidth: true,
         description:
             'trigger를 넓혀 좌우 공간이 없어지면 top/bottom으로 폴백돼요. '
             '말풍선을 열어둔 채 슬라이더를 움직여 보세요.',
