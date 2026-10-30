@@ -1042,7 +1042,14 @@ class _WheelPageState extends State<_WheelPage> {
     sheetOpened = true;
     await showSeedBottomSheet<void>(
       context: context,
-      child: _WheelSheet(date: _date),
+      // The React root Activity never dismisses on a pop() request. Prevent
+      // closing its route instead of allowing a visible exit/re-entry cycle.
+      isDismissible: !rootActivity,
+      enableDrag: !rootActivity,
+      child: PopScope(
+        canPop: !rootActivity,
+        child: _WheelSheet(date: _date, rootActivity: rootActivity),
+      ),
     );
     if (!mounted) return;
     sheetOpened = false;
@@ -1072,8 +1079,9 @@ class _WheelDate {
 }
 
 class _WheelSheet extends StatefulWidget {
-  const _WheelSheet({required this.date});
+  const _WheelSheet({required this.date, required this.rootActivity});
   final _WheelDate date;
+  final bool rootActivity;
 
   @override
   State<_WheelSheet> createState() => _WheelSheetState();
@@ -1105,6 +1113,7 @@ class _WheelSheetState extends State<_WheelSheet> {
   Widget build(BuildContext context) => SeedBottomSheet(
     title: '날짜 선택',
     showHandle: true,
+    onClosePressed: widget.rootActivity ? () {} : null,
     content: Center(
       child: SizedBox(
         width: 360,
@@ -1175,7 +1184,10 @@ class _WheelSheetState extends State<_WheelSheet> {
     footer: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text('$year년 $month월 $day일'),
+        Text(
+          '$year년 $month월 $day일',
+          style: context.seedTypography.t5Regular,
+        ),
         const SizedBox(height: 12),
         SeedButton(
           label: '다음 날로 변경',
@@ -1190,7 +1202,9 @@ class _WheelSheetState extends State<_WheelSheet> {
           variant: SeedButtonVariant.neutralSolid,
           size: SeedButtonSize.large,
           isFullWidth: true,
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: widget.rootActivity
+              ? () {}
+              : () => Navigator.of(context).pop(),
         ),
       ],
     ),

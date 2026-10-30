@@ -196,6 +196,9 @@ class SeedBottomSheet extends StatefulWidget {
   final Widget? footer;
   final bool showHandle;
   final bool showCloseButton;
+  /// Overrides the close button action. When null, uses the standard overlay
+  /// or Navigator dismissal behavior.
+  final VoidCallback? onClosePressed;
   final EdgeInsetsGeometry contentPadding;
   final ScrollController? scrollController;
   final bool expand;
@@ -215,6 +218,7 @@ class SeedBottomSheet extends StatefulWidget {
     this.footer,
     this.showHandle = false,
     this.showCloseButton = true,
+    this.onClosePressed,
     this.scrollController,
     this.expand = false,
     this.maxHeight,
@@ -454,7 +458,9 @@ class _SeedBottomSheetState extends State<SeedBottomSheet> {
                           // The 44px touch target surrounds the 28px visual button.
                           top: 16,
                           right: 8,
-                          child: _SeedBottomSheetCloseButton(),
+                          child: _SeedBottomSheetCloseButton(
+                            onPressed: widget.onClosePressed,
+                          ),
                         ),
                     ],
                   ),
@@ -519,6 +525,10 @@ class _SeedBottomSheetHandleState extends State<_SeedBottomSheetHandle> {
 }
 
 class _SeedBottomSheetCloseButton extends StatelessWidget {
+  const _SeedBottomSheetCloseButton({this.onPressed});
+
+  final VoidCallback? onPressed;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.seedColor;
@@ -526,6 +536,10 @@ class _SeedBottomSheetCloseButton extends StatelessWidget {
       semanticsLabel: '닫기',
       enableScale: false,
       onTap: () {
+        if (onPressed != null) {
+          onPressed!();
+          return;
+        }
         final scope = SeedOverlayScope.maybeOf(context);
         if (scope != null) {
           scope.close(SeedOverlayDismissReason.closeButton);

@@ -1982,7 +1982,15 @@ class _MenuDemoPageState extends State<_MenuDemoPage> {
                 ],
                 variant: SeedButtonVariant.neutralWeak,
                 onOpenChange: (open, reason) {
-                  setState(() => _lastReason = reason.name);
+                  // The React example prints the originating DOM reason, not
+                  // the Flutter port's equivalent enum identifier.
+                  setState(
+                    () => _lastReason = switch (reason) {
+                      SeedOverlayDismissReason.outside => 'interactOutside',
+                      SeedOverlayDismissReason.escapeKey => 'escapeKeyDown',
+                      _ => reason.name,
+                    },
+                  );
                 },
               ),
               const SizedBox(width: 16),
@@ -2388,6 +2396,7 @@ class _PopoverDemoPageState extends State<_PopoverDemoPage> {
     bool closeOnFocusOut = true,
     bool? open,
     SeedOverlayOpenChanged? onOpenChange,
+    String footerLabel = '확인',
     double maxWidth = 360,
     double maxHeight = 420,
     WidgetBuilder? customBody,
@@ -2408,7 +2417,9 @@ class _PopoverDemoPageState extends State<_PopoverDemoPage> {
     triggerBuilder: (ctx, isOpen, toggle) =>
         _button(label, toggle, variant: SeedButtonVariant.neutralWeak),
     builder: (overlayContext) => SeedPopover(
-      titleText: title ?? label,
+      // An explicit empty title means the React sample omits the title slot.
+      // Supplying Text('') would still reserve an empty header row in Flutter.
+      titleText: title == '' ? null : title ?? label,
       descriptionText: description,
       showCloseButton: showCloseButton,
       maxWidth: maxWidth,
@@ -2420,7 +2431,7 @@ class _PopoverDemoPageState extends State<_PopoverDemoPage> {
       footer: Align(
         alignment: Alignment.centerRight,
         child: _button(
-          '확인',
+          footerLabel,
           () =>
               SeedOverlayScope.maybeOf(overlayContext)
                   ?.close(SeedOverlayDismissReason.action),
@@ -2562,6 +2573,7 @@ class _PopoverDemoPageState extends State<_PopoverDemoPage> {
               title: '',
               showCloseButton: false,
               bodyText: 'Header 슬롯 자체가 렌더되지 않습니다.',
+              footerLabel: '적용',
             ),
           ],
         ),

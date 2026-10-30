@@ -291,6 +291,30 @@ void main() {
     expect(find.byType(SeedBottomSheet), findsNothing);
   });
 
+  testWidgets('custom close callback overrides default route dismissal', (
+    tester,
+  ) async {
+    addTearDown(tester.view.reset);
+    var closeRequests = 0;
+    await openSheet(
+      tester,
+      sheet: SeedBottomSheet(
+        title: 'Keep open',
+        content: const SizedBox(height: 100),
+        onClosePressed: () => closeRequests++,
+      ),
+    );
+    final route = ModalRoute.of(tester.element(find.byType(SeedBottomSheet)));
+    await tester.tap(closeButton);
+    await tester.pumpAndSettle();
+    expect(closeRequests, 1);
+    expect(find.byType(SeedBottomSheet), findsOneWidget);
+    expect(
+      ModalRoute.of(tester.element(find.byType(SeedBottomSheet))),
+      same(route),
+    );
+  });
+
   testWidgets('route uses SEED transition timing and React snippet defaults', (
     tester,
   ) async {

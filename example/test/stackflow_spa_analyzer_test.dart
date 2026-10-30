@@ -33,6 +33,9 @@ void main() {
           await done.future;
           await tester.pumpAndSettle();
           expect(find.byType(SeedBottomSheet), findsOneWidget);
+          final originalSheetRoute = ModalRoute.of(
+            tester.element(find.byType(SeedWheelPicker)),
+          );
           await tester.tap(find.text('다음 날로 변경'));
           await tester.pumpAndSettle();
           expect(find.text('2026년 8월 21일'), findsOneWidget);
@@ -49,6 +52,13 @@ void main() {
           await tester.pumpAndSettle();
           expect(find.byType(SeedBottomSheet), findsOneWidget);
           expect(find.text('2026년 8월 21일'), findsOneWidget);
+          expect(
+            ModalRoute.of(tester.element(find.byType(SeedWheelPicker))),
+            same(originalSheetRoute),
+            reason:
+                'React root pop() is a no-op: keep the existing sheet '
+                'route, not a dismissed/reopened replacement',
+          );
         },
       );
     }
@@ -117,6 +127,12 @@ void main() {
         expect(find.byType(SeedBottomSheet), findsOneWidget);
         expect(find.text('2026년 8월 20일'), findsOneWidget);
 
+        // Official React <Text> defaults to t5Regular (16px/22px). The
+        // summary's 22px line box determines the sheet's intrinsic height.
+        final summary = tester.widget<Text>(find.text('2026년 8월 20일').first);
+        expect(summary.style?.fontSize, 16);
+        expect(summary.style?.height, closeTo(22 / 16, 0.001));
+
         // React WheelPicker CSS uses max-content column widths, not three
         // equally expanded thirds. CDP 390: year=118.73, month=83.09,
         // day=86.97, centered as a group in the 360px root.
@@ -153,7 +169,7 @@ void main() {
         // 220px wheel 70px below the sheet's top edge.
         expect(
           tester.getTopLeft(find.byType(SeedWheelPicker)).dy,
-          closeTo(width == 390 ? 446 : 402, 4),
+          closeTo(width == 390 ? 446 : 402, 1),
         );
         await tester.tap(find.text('다음 날로 변경'));
         await tester.pumpAndSettle();

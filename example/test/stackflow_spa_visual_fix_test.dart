@@ -289,6 +289,51 @@ void main() {
   );
 
   testWidgets(
+    'Menu onOpenChange reason labels match React outside and Escape',
+    (tester) async {
+      await open(tester, '/menu', width: 390);
+      final reasonTrigger = find.text('Reason 추적');
+      await tester.scrollUntilVisible(
+        reasonTrigger,
+        180,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(reasonTrigger);
+      await tester.pumpAndSettle();
+      expect(find.text('마지막: trigger'), findsOneWidget);
+      await tester.tapAt(const Offset(10, 95));
+      await tester.pumpAndSettle();
+      expect(find.text('마지막: interactOutside'), findsOneWidget);
+      await tester.tap(reasonTrigger);
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(find.text('마지막: escapeKeyDown'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('Popover headerless sample has no header and uses Apply', (
+    tester,
+  ) async {
+    await open(tester, '/popover', width: 390);
+    await tester.tap(find.text('헤더 없음'));
+    await tester.pumpAndSettle();
+    final visiblePopover = tester.widget<SeedPopover>(
+      find.byType(SeedPopover).last,
+    );
+    expect(visiblePopover.titleText, isNull);
+    expect(visiblePopover.descriptionText, isNull);
+    expect(visiblePopover.showCloseButton, isFalse);
+    expect(find.text('적용'), findsOneWidget);
+    await tester.tap(find.text('적용'));
+    await tester.pumpAndSettle();
+    expect(find.text('적용'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
     'Avatar ALL sizes fit in the 800px preview without artificial tile widths',
     (tester) async {
       await open(tester, '/avatar');
