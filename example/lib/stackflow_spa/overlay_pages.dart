@@ -413,23 +413,43 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
 
   Future<void> _openNameSheet() async {
     final nameController = TextEditingController();
+    // React drives this sheet with the activity's controlled isActive state.
+    // When opened as the root URL, Stackflow pop() has no predecessor and
+    // cannot dismiss the sheet on Escape, outside, drag, or submit.
+    final canPopActivity =
+        SpaHistoryDelegate.of(context).currentConfiguration.activities.length >
+        1;
     try {
       await showSeedBottomSheet<void>(
         context: context,
+        isDismissible: canPopActivity,
+        enableDrag: canPopActivity,
         child: Builder(
-          builder: (sheetContext) => SeedBottomSheet(
-            title: '이름 입력',
-            showHandle: true,
-            showCloseButton: false,
-            content: SeedTextField(
-              controller: nameController,
-              label: '이름',
-              placeholder: '이름을 입력하세요',
+          builder: (sheetContext) => SeedOverlayScope(
+            side: SeedOverlaySide.bottom,
+            close: (_) {
+              if (canPopActivity &&
+                  ModalRoute.of(sheetContext)?.isCurrent == true) {
+                Navigator.of(sheetContext).maybePop();
+              }
+            },
+            child: PopScope<void>(
+              canPop: canPopActivity,
+              child: SeedBottomSheet(
+                title: '이름 입력',
+                showHandle: true,
+                showCloseButton: false,
+                content: SeedTextField(
+                  controller: nameController,
+                  label: '이름',
+                  placeholder: '이름을 입력하세요',
+                ),
+                footer: _button('제출', () {
+                  _notify(context, '입력한 이름: ${nameController.text}');
+                  if (canPopActivity) Navigator.pop(sheetContext);
+                }),
+              ),
             ),
-            footer: _button('제출', () {
-              _notify(context, '입력한 이름: ${nameController.text}');
-              Navigator.pop(sheetContext);
-            }),
           ),
         ),
       );

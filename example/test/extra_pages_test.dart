@@ -39,6 +39,57 @@ Future<void> _direct(WidgetTester tester, String route) async {
 
 void main() {
   for (final width in [390.0, 800.0]) {
+    testWidgets(
+      'Root BottomSheetTextField preserves typed value after Escape $width',
+      (tester) async {
+        tester.view.physicalSize = Size(width, 844);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        await _direct(tester, '/bottom-sheet-text-field');
+        expect(find.byType(SeedBottomSheet), findsOneWidget);
+        final input = find.byType(EditableText).first;
+        await tester.enterText(input, 'RootName42');
+        await tester.pumpAndSettle();
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pumpAndSettle();
+        expect(
+          find.byType(SeedBottomSheet),
+          findsOneWidget,
+          reason: 'React root Stackflow pop() has no predecessor',
+        );
+        await tester.tapAt(Offset(width / 2, 18));
+        await tester.pumpAndSettle();
+        expect(find.byType(SeedBottomSheet), findsOneWidget);
+        expect(
+          tester.widget<EditableText>(find.byType(EditableText).first)
+              .controller.text,
+          'RootName42',
+        );
+        await tester.tap(find.widgetWithText(SeedButton, '제출'));
+        await tester.pumpAndSettle();
+        expect(find.byType(SeedBottomSheet), findsOneWidget);
+        expect(
+          tester.widget<EditableText>(find.byType(EditableText).first)
+              .controller.text,
+          'RootName42',
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+    testWidgets(
+      'Pushed BottomSheetTextField allows Escape to pop activity $width',
+      (tester) async {
+        tester.view.physicalSize = Size(width, 844);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        await _route(tester, '/bottom-sheet-text-field');
+        expect(find.byType(SeedBottomSheet), findsOneWidget);
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pumpAndSettle();
+        expect(find.byType(SeedBottomSheet), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+    );
     testWidgets('direct URL app-bar-slot has no back $width', (tester) async {
       tester.view.physicalSize = Size(width, 844);
       tester.view.devicePixelRatio = 1;
