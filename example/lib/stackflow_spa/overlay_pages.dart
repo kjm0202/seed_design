@@ -1366,6 +1366,9 @@ class _StepHistoryPageState extends State<_StepHistoryPage> {
   // The React AlertDialog Step footer calls setOpen(false) directly, so the
   // modal closes while its `alert-dialog=open` URL parameter is retained.
   bool _alertClosedLocally = false;
+  // Menu Sheet actions call React's setOpen(false) directly, preserving the
+  // query Step until a separate user-originated onOpenChange(false) occurs.
+  bool _menuClosedLocally = false;
   Route<dynamic>? _modalRoute;
   Map<String, String>? _pendingDetail;
 
@@ -1397,13 +1400,22 @@ class _StepHistoryPageState extends State<_StepHistoryPage> {
     SpaHistoryDelegate.of(context).popStep(_stepKey);
   }
 
+  void _closeMenuLocally() {
+    _menuClosedLocally = true;
+    final route = _modalRoute;
+    if (route != null && route.isActive) {
+      Navigator.of(context, rootNavigator: true).removeRoute(route);
+    }
+  }
+
   void _openStep(SpaHistoryDelegate history) {
-    if (widget.kind == _StepKind.alert &&
-        _alertClosedLocally &&
+    if ((widget.kind == _StepKind.alert && _alertClosedLocally ||
+            widget.kind == _StepKind.menu && _menuClosedLocally) &&
         history.isStepOpen(_stepKey)) {
       // React's controlled trigger calls setOpen(true) without pushing a new
       // Step if the old URL still contains `alert-dialog=open`.
       _alertClosedLocally = false;
+      _menuClosedLocally = false;
       if (!_showing) _openModal(history);
       return;
     }
@@ -1412,7 +1424,11 @@ class _StepHistoryPageState extends State<_StepHistoryPage> {
 
   void _pushDetail(String title, String body) {
     _pendingDetail = {'title': title, 'body': body};
-    _close();
+    if (widget.kind == _StepKind.menu) {
+      _closeMenuLocally();
+    } else {
+      _close();
+    }
   }
 
   Future<void> _openModal(SpaHistoryDelegate history) async {
@@ -1527,7 +1543,7 @@ class _StepHistoryPageState extends State<_StepHistoryPage> {
                             isDestructive: action == 'delete',
                             onTap: () {
                               _notify(context, '선택한 액션: $action');
-                              _close();
+                              _closeMenuLocally();
                             },
                           ),
                       ],
@@ -1555,7 +1571,9 @@ class _StepHistoryPageState extends State<_StepHistoryPage> {
       if (mounted) {
         // Escape, drag or outside tap closes the unnamed modal first. Mirror
         // React onOpenChange(false) once that exact route has gone away.
-        if (history.isStepOpen(_stepKey) && !_alertClosedLocally) {
+        if (history.isStepOpen(_stepKey) &&
+            !_alertClosedLocally &&
+            !_menuClosedLocally) {
           history.popStep(_stepKey);
         }
         final pending = _pendingDetail;
@@ -1570,8 +1588,14 @@ class _StepHistoryPageState extends State<_StepHistoryPage> {
   void _reconcile(SpaHistoryDelegate history) {
     if (!mounted) return;
     final shouldOpen = history.isStepOpen(_stepKey);
-    if (!shouldOpen) _alertClosedLocally = false;
-    if (shouldOpen && !_showing && !_alertClosedLocally) {
+    if (!shouldOpen) {
+      _alertClosedLocally = false;
+      _menuClosedLocally = false;
+    }
+    if (shouldOpen &&
+        !_showing &&
+        !_alertClosedLocally &&
+        !_menuClosedLocally) {
       _openModal(history);
     } else if (!shouldOpen && _showing) {
       final route = _modalRoute;

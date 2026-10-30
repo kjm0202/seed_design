@@ -501,6 +501,65 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  for (final width in [390.0, 800.0]) {
+    testWidgets('ListRadio ArrowDown chooses next enabled item at $width', (
+      tester,
+    ) async {
+      await open(tester, '/list-item-radio', width: width);
+      const second = 'prefix-title-unchecked-suffix-icon-info';
+      const third = 'prefix-title-unchecked-suffix-icon-chevron';
+      final secondRow = find.text(second);
+      await tester.ensureVisible(secondRow);
+      await tester.pumpAndSettle();
+      await tester.tap(secondRow);
+      await tester.pumpAndSettle();
+      Semantics radio(String label) => tester.widget<Semantics>(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Semantics &&
+              (widget.properties.label == label ||
+                  widget.properties.label?.startsWith('$label\n') == true),
+        ),
+      );
+      expect(radio(second).properties.checked, isTrue);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+      expect(radio(second).properties.checked, isFalse);
+      expect(radio(third).properties.checked, isTrue);
+      expect(
+        FocusManager.instance.primaryFocus?.debugLabel,
+        'ListRadio $third',
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      await tester.pumpAndSettle();
+      expect(radio(second).properties.checked, isTrue);
+      expect(radio(third).properties.checked, isFalse);
+      expect(
+        FocusManager.instance.primaryFocus?.debugLabel,
+        'ListRadio $second',
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pumpAndSettle();
+      expect(radio(third).properties.checked, isTrue);
+      // Three consecutive disabled radio rows must be skipped as one group.
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+      const following = 'prefix-title-detail-unchecked-suffix-none';
+      await tester.scrollUntilVisible(
+        find.text(following),
+        80,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.pumpAndSettle();
+      expect(radio(following).properties.checked, isTrue);
+      expect(
+        FocusManager.instance.primaryFocus?.debugLabel,
+        'ListRadio $following',
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets(
     'Avatar ALL sizes fit in the 800px preview without artificial tile widths',
     (tester) async {

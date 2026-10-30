@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui' show SemanticsRole;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:seed_design/seed_design.dart';
@@ -82,6 +83,7 @@ class _NavigationPageState extends State<_NavigationPage> {
   int _swipeTab = 0;
   final PageController _swipePages = PageController();
   String _radioSelection = 'prefix-title-unchecked-suffix-none';
+  final Map<String, FocusNode> _radioFocusNodes = {};
   final Map<String, bool> _checks = {};
   bool _feedDialogShowing = false;
   bool _feedDialogClosedLocally = false;
@@ -114,7 +116,38 @@ class _NavigationPageState extends State<_NavigationPage> {
   void dispose() {
     _tabTwoTimer?.cancel();
     _swipePages.dispose();
+    for (final node in _radioFocusNodes.values) {
+      node.dispose();
+    }
     super.dispose();
+  }
+
+  KeyEventResult _onRadioArrow(KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+    final direction = switch (event.logicalKey) {
+      LogicalKeyboardKey.arrowDown || LogicalKeyboardKey.arrowRight => 1,
+      LogicalKeyboardKey.arrowUp || LogicalKeyboardKey.arrowLeft => -1,
+      _ => 0,
+    };
+    if (direction == 0) return KeyEventResult.ignored;
+
+    // React's List.RadioRoot uses roving keyboard selection. Move over the
+    // complete variant order, skipping disabled rows, without scrolling the
+    // surrounding list in response to an arrow key.
+    final enabled = _variants().where((entry) => !entry.disabled).toList();
+    if (enabled.isEmpty) return KeyEventResult.handled;
+    final current = enabled.indexWhere((entry) => entry.key == _radioSelection);
+    final index = current < 0
+        ? 0
+        : (current + direction + enabled.length) % enabled.length;
+    final next = enabled[index].key;
+    setState(() => _radioSelection = next);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _radioFocusNodes[next]?.requestFocus();
+    });
+    return KeyEventResult.handled;
   }
 
   @override
@@ -1116,6 +1149,7 @@ class _NavigationPageState extends State<_NavigationPage> {
       onTap: selectable
           ? () => setState(() {
               if (radio) {
+                _radioFocusNodes[entry.key]?.requestFocus();
                 _radioSelection = entry.key;
               } else {
                 _checks[entry.key] = !value;
@@ -1130,14 +1164,23 @@ class _NavigationPageState extends State<_NavigationPage> {
       // SeedListItem's generic checked semantics would otherwise expose a
       // checkbox. Provide the mutually-exclusive radio semantics here without
       // creating a second 44px SeedRadio touch/focus target or changing layout.
-      return Semantics(
-        label: detail == null ? entry.key : '${entry.key}\n$detail',
-        checked: marked,
-        inMutuallyExclusiveGroup: true,
-        enabled: !entry.disabled,
-        focusable: !entry.disabled,
-        onTap: entry.disabled ? null : row.onTap,
-        child: ExcludeSemantics(child: row),
+      return Focus(
+        key: ValueKey('radio-focus-${entry.key}'),
+        focusNode: _radioFocusNodes.putIfAbsent(
+          entry.key,
+          () => FocusNode(debugLabel: 'ListRadio ${entry.key}'),
+        ),
+        canRequestFocus: !entry.disabled,
+        onKeyEvent: (_, event) => _onRadioArrow(event),
+        child: Semantics(
+          label: detail == null ? entry.key : '${entry.key}\n$detail',
+          checked: marked,
+          inMutuallyExclusiveGroup: true,
+          enabled: !entry.disabled,
+          focusable: !entry.disabled,
+          onTap: entry.disabled ? null : row.onTap,
+          child: ExcludeSemantics(child: row),
+        ),
       );
     }
     return row;

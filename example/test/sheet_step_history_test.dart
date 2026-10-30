@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:seed_design/seed_design.dart';
 import 'package:seed_design_example/stackflow_spa/stackflow_spa.dart';
+import 'package:seed_design_example/stackflow_spa/spa_history.dart';
 
 const _steps = <(String, String, String, String)>[
   ('/alert-dialog-step', 'alert-dialog', 'Alert Dialog 열기', 'SeedAlertDialog'),
@@ -30,6 +31,50 @@ Future<void> _revisit(WidgetTester tester, Map<dynamic, dynamic> state) async {
 }
 
 void main() {
+  for (final width in [390.0, 800.0]) {
+    testWidgets(
+      'Menu Sheet Step action closes locally but retains query at $width',
+      (tester) async {
+        tester.view.physicalSize = Size(width, 844);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        await tester.pumpWidget(const StackflowSpaApp());
+        await tester.pumpAndSettle();
+        tester
+            .state<NavigatorState>(find.byType(Navigator))
+            .pushNamed('/menu-sheet-step');
+        await tester.pumpAndSettle();
+        final opener = find.widgetWithText(SeedButton, 'Menu Sheet 열기');
+        await tester.tap(opener);
+        await tester.pumpAndSettle();
+        expect(find.byType(SeedMenuSheet), findsOneWidget);
+        expect(
+          SpaHistoryDelegate.of(tester.element(opener))
+              .isStepOpen('menu-sheet'),
+          isTrue,
+        );
+        await tester.tap(find.text('추가'));
+        await tester.pumpAndSettle();
+        expect(find.byType(SeedMenuSheet), findsNothing);
+        expect(
+          SpaHistoryDelegate.of(tester.element(opener))
+              .isStepOpen('menu-sheet'),
+          isTrue,
+          reason: 'React handleAction setOpen(false) does not call popStep',
+        );
+        // A later trigger may reopen without adding an extra query Step.
+        await tester.tap(opener);
+        await tester.pumpAndSettle();
+        expect(find.byType(SeedMenuSheet), findsOneWidget);
+        expect(
+          SpaHistoryDelegate.of(tester.element(opener))
+              .isStepOpen('menu-sheet'),
+          isTrue,
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
   for (final width in [390.0, 800.0]) {
     for (final (route, key, opener, overlay) in _steps) {
       testWidgets('$route open/close uses query step history at $width', (
@@ -195,7 +240,9 @@ void main() {
         }
         await tester.pumpAndSettle();
         expect(Uri.parse(updates.last['uri'] as String).path, route);
-        if (overlay == 'SeedAlertDialog') {
+        if (overlay == 'SeedAlertDialog' || overlay == 'SeedMenuSheet') {
+          // Menu Sheet's "수정" action and Alert footer both invoke React
+          // setOpen(false) without emitting onOpenChange(false)/popStep.
           expect(
             Uri.parse(updates.last['uri'] as String).queryParameters[key],
             'open',
@@ -256,8 +303,9 @@ void main() {
         expect(find.byType(SeedBottomSheet), findsNothing);
         expect(find.byType(SeedMenuSheet), findsNothing);
         expect(Uri.parse(updates.last['uri'] as String).path, route);
-        if (overlay == 'SeedAlertDialog') {
-          // React Push closes controlled dialog, but does not clear Step.
+        if (overlay == 'SeedAlertDialog' || overlay == 'SeedMenuSheet') {
+          // React Push closes either controlled overlay locally, but does not
+          // call popStep on its previous Activity's query.
           expect(
             Uri.parse(updates.last['uri'] as String).queryParameters[key],
             'open',
