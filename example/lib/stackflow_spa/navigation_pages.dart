@@ -593,11 +593,12 @@ class _NavigationPageState extends State<_NavigationPage> {
   }
 
   Widget _pagination() => ListView(
-    padding: const EdgeInsets.all(16),
+    // Official ActivityPagination uses px=x4 (16) and py=x6 (24).
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
     children: [
-      const Text(
+      Text(
         'Pagination',
-        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        style: context.seedTypography.t5Bold,
       ),
       const SizedBox(height: 12),
       Center(
@@ -611,9 +612,9 @@ class _NavigationPageState extends State<_NavigationPage> {
       const SizedBox(height: 12),
       Text('현재 페이지: $_page'),
       const SizedBox(height: 32),
-      const Text(
+      Text(
         'Table Pagination',
-        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        style: context.seedTypography.t5Bold,
       ),
       const SizedBox(height: 12),
       SingleChildScrollView(
@@ -631,9 +632,9 @@ class _NavigationPageState extends State<_NavigationPage> {
       const SizedBox(height: 12),
       Text('${_table.page}페이지 · 페이지당 ${_table.pageSize}개'),
       const SizedBox(height: 32),
-      const Text(
+      Text(
         'Unknown Total',
-        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        style: context.seedTypography.t5Bold,
       ),
       const SizedBox(height: 12),
       SingleChildScrollView(

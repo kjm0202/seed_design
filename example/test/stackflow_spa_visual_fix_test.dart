@@ -24,6 +24,35 @@ Future<void> open(
 void main() {
   for (final width in [390.0, 800.0]) {
     testWidgets(
+      'Pagination official React content inset, heading tokens and nav Y $width',
+      (tester) async {
+        await open(tester, '/pagination', width: width);
+        final heading = tester.widget<Text>(
+          find
+              .descendant(
+                of: find.byType(ListView),
+                matching: find.text('Pagination'),
+              )
+              .first,
+        );
+        expect(heading.style?.fontSize, 16);
+        expect(heading.style?.height, closeTo(22 / 16, 0.001));
+        expect(
+          tester.getTopLeft(find.byType(SeedPagination)).dy,
+          closeTo(114, 0.1),
+          reason: 'React py24 + t5Bold line-height22 + x3 gap12 after 56px bar',
+        );
+        for (final title in ['Table Pagination', 'Unknown Total']) {
+          final text = tester.widget<Text>(find.text(title).last);
+          expect(text.style?.fontSize, 16);
+          expect(text.style?.height, closeTo(22 / 16, 0.001));
+        }
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+  for (final width in [390.0, 800.0]) {
+    testWidgets(
       'Accordion inline content shares React trigger left inset $width',
       (tester) async {
         await open(tester, '/accordion', width: width);
