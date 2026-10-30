@@ -148,6 +148,26 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(SeedDialog), findsOneWidget);
     });
+    testWidgets(
+      'ActivityAlertDialog keepMounted switch uses React neutral 16px $width',
+      (tester) async {
+        tester.view.physicalSize = Size(width, 844);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        await _route(tester, '/alert-dialog');
+        expect(find.byType(SeedAlertDialog), findsOneWidget);
+        final toggleFinder = find.byType(SeedSwitch);
+        expect(toggleFinder, findsOneWidget);
+        final toggle = tester.widget<SeedSwitch>(toggleFinder);
+        expect(toggle.size, SeedSwitchSize.size16);
+        expect(toggle.tone, SeedControlTone.neutral);
+        expect(toggle.checked, false);
+        expect(
+          find.text('Push 이후에도 AlertDialog 마운트 유지'),
+          findsOneWidget,
+        );
+      },
+    );
   }
 
   testWidgets(

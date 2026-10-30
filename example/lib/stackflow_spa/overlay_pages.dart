@@ -1202,6 +1202,8 @@ class _ActivityAlertDialogState extends State<_ActivityAlertDialog> {
           ),
           SeedSwitch(
             label: 'Push 이후에도 AlertDialog 마운트 유지',
+            tone: SeedControlTone.neutral,
+            size: SeedSwitchSize.size16,
             checked: keepMounted,
             onCheckedChange: (value) => setState(() => keepMounted = value),
           ),
