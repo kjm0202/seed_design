@@ -630,11 +630,12 @@ class _SelectPageState extends State<_SelectPage> {
     Widget Function(double width) control,
     String explanation, {
     double minimumControlWidth = 150,
+    double widthFraction = .44,
     }
   ) => LayoutBuilder(
     builder: (context, constraints) {
       // React's flex row retains the text alongside the Select even at 390px.
-      final controlWidth = min(220.0, max(minimumControlWidth, (constraints.maxWidth - 16) * .44));
+      final controlWidth = min(220.0, max(minimumControlWidth, (constraints.maxWidth - 16) * widthFraction));
       return Row(
         children: [
           control(controlWidth),
@@ -946,7 +947,12 @@ class _SelectPageState extends State<_SelectPage> {
       ),
       _selectSection(
         'Max Height',
-        select(groups: many, menuHeight: 160, placeholder: '트랙 선택', width: 220),
+        _selectExplanationRow(
+          (width) => select(groups: many, menuHeight: 160, placeholder: '트랙 선택', width: width),
+          '--seed-select-max-height로 기본 480px 대신 160px까지만 열립니다 · 화면에 남은 공간이 더 좁으면 그쪽을 따릅니다',
+          minimumControlWidth: 120,
+          widthFraction: .36,
+        ),
       ),
       _selectSection('Typeahead', select(groups: english, width: 220)),
       _selectSection(
@@ -994,7 +1000,7 @@ class _SelectPageState extends State<_SelectPage> {
       ),
       _selectSection(
         'Select in BottomSheet',
-        SeedButton(
+        SizedBox(width: double.infinity, child: SeedButton(
           label: 'BottomSheet 열기',
           onPressed: () {
             showSeedBottomSheet<void>(
@@ -1017,7 +1023,7 @@ class _SelectPageState extends State<_SelectPage> {
               ),
             );
           },
-        ),
+        )),
       ),
     ]);
   }

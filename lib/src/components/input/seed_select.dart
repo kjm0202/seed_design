@@ -1,4 +1,3 @@
-import '../chip/seed_chip.dart';
 import 'seed_field.dart';
 import '../overlay/seed_anchored_overlay.dart';
 
@@ -573,28 +572,10 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
           ? (widget.formatValue?.call(_selectedItems) ??
                 _selectedItems.map((item) => item.label).join(', '))
           : _selectedItem?.label,
-      valueChild:
-          widget.valueBuilder?.call(context, _selectedItems) ??
-          (widget.multiple &&
-                  _selectedItems.isNotEmpty &&
-                  widget.formatValue == null
-              ? Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Wrap(
-                    spacing: 4,
-                    runSpacing: 4,
-                    children: [
-                      for (final item in _selectedItems)
-                        SeedChip(
-                          label: item.label,
-                          onDeleted: widget.enabled && !widget.readOnly
-                              ? () => _select(item.value)
-                              : null,
-                        ),
-                    ],
-                  ),
-                )
-              : null),
+      // React SelectValue displays the selected labels joined by ", " for
+      // both single and multiple selections. Chip-like custom rendering is
+      // still available explicitly through valueBuilder, never by default.
+      valueChild: widget.valueBuilder?.call(context, _selectedItems),
       readOnly: widget.readOnly,
       showClear: widget.showClear,
       onClear: () {

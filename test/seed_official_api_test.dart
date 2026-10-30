@@ -87,6 +87,11 @@ void main() {
       final trigger = tester.widget<SeedInputButton>(
         find.byType(SeedInputButton),
       );
+      // Official React SelectValue uses item text joined by ', ' even when
+      // multiple=true. Unlike a tag editor, its trigger never adds Chips.
+      expect(trigger.value, 'Apple');
+      expect(trigger.valueChild, isNull);
+      expect(find.byType(SeedChip), findsNothing);
       trigger.onPressed!();
       await tester.pumpAndSettle();
       await tester.tap(
@@ -96,6 +101,11 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      expect(
+        tester.widget<SeedInputButton>(find.byType(SeedInputButton)).value,
+        'Apple, Pear',
+      );
+      expect(find.byType(SeedChip), findsNothing);
       await tester.tap(
         find.descendant(
           of: find.byType(MenuItemButton).first,
@@ -107,6 +117,10 @@ void main() {
         [1, 2],
         [2],
       ]);
+      expect(
+        tester.widget<SeedInputButton>(find.byType(SeedInputButton)).value,
+        'Pear',
+      );
     },
   );
 

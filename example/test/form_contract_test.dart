@@ -195,6 +195,25 @@ void main() {
     );
   });
 
+  for (final width in [390.0, 800.0]) {
+    testWidgets(
+      'EX-11 Select max-height explanation and sheet CTA match React at $width',
+      (tester) async {
+        await _open(tester, '/select', width: width);
+        expect(
+          find.text(
+            '--seed-select-max-height로 기본 480px 대신 160px까지만 열립니다 · 화면에 남은 공간이 더 좁으면 그쪽을 따릅니다',
+          ),
+          findsOneWidget,
+        );
+        final cta = find.widgetWithText(SeedButton, 'BottomSheet 열기');
+        await tester.ensureVisible(cta);
+        expect(tester.getRect(cta).width, closeTo(width - 32, 1));
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   testWidgets(
     'MIX-02 Attachment display integration opts into invalid and required APIs',
     (tester) async {
