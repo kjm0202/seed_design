@@ -48,9 +48,38 @@ Widget? buildFormsPage(
       return const _AttachmentPage(display: true);
     case 'ActivityForm':
       return const _FormPage();
+    case 'ActivityE2ETextareaAutoresizeScroll':
+      return const _E2ETextareaAutoresizeScrollPage();
     default:
       return null;
   }
+}
+
+/// Official E2E textarea fixture: a 40-line uncontrolled defaultValue, an
+/// auto-resizing textarea, and the submit action inside the same scroll view.
+class _E2ETextareaAutoresizeScrollPage extends StatelessWidget {
+  const _E2ETextareaAutoresizeScrollPage();
+
+  static final String _longValue = List.generate(
+    40,
+    (index) => '${index + 1}번째 줄',
+  ).join('\n');
+
+  @override
+  Widget build(BuildContext context) => ListView(
+    padding: const EdgeInsets.all(20),
+    children: [
+      SeedTextField.textarea(label: '본문', defaultValue: _longValue),
+      const SizedBox(height: SeedDimension.x4),
+      SeedButton(
+        label: '게시',
+        size: SeedButtonSize.large,
+        variant: SeedButtonVariant.neutralSolid,
+        isFullWidth: true,
+        onPressed: () {},
+      ),
+    ],
+  );
 }
 
 Widget _scroll(List<Widget> children, {double itemSpacing = 24, double verticalPadding = 20}) => SingleChildScrollView(

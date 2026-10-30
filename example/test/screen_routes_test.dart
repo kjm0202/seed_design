@@ -79,6 +79,34 @@ void main() {
 
   for (final width in [390.0, 800.0]) {
     testWidgets(
+      'E2E textarea autoresize scroll renders official React 40 lines $width',
+      (tester) async {
+        await _open(tester, '/e2e/textarea-autoresize-scroll', width);
+        expect(find.text('E2E Textarea Autoresize Scroll'), findsOneWidget);
+        expect(find.text('구현되지 않은 예제입니다.'), findsNothing);
+        final field = tester.widget<SeedTextField>(find.byType(SeedTextField));
+        expect(field.autoResize, isTrue);
+        expect(field.maxLines, isNull);
+        expect(field.label, '본문');
+        final input = tester.widget<EditableText>(find.byType(EditableText));
+        expect(input.controller.text.split('\n'), hasLength(40));
+        expect(input.controller.text, startsWith('1번째 줄'));
+        expect(input.controller.text, endsWith('40번째 줄'));
+        await tester.scrollUntilVisible(
+          find.text('게시'),
+          300,
+          scrollable: find
+              .descendant(
+                of: find.byType(ListView),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
+        expect(find.widgetWithText(SeedButton, '게시'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+    testWidgets(
       'INC article pull has selectable protected origin and separate plain outside $width',
       (tester) async {
         await _open(tester, '/article-prevent-pull', width);

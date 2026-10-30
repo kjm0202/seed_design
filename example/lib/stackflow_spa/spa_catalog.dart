@@ -148,6 +148,7 @@ const spaSections = <SpaSection>[
 
 String spaActivityTitle(String activity) {
   const titles = {
+    'ActivityE2ETextareaAutoresizeScroll': 'E2E Textarea Autoresize Scroll',
     'ActivityPullToRefreshPreview': 'Pull To Refresh',
     'ActivityPullToRefreshTabs': 'Pull To Refresh',
     'ActivityPullToRefreshPreventPull': 'Pull To Refresh',
