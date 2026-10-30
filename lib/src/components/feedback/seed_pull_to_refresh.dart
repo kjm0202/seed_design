@@ -324,9 +324,7 @@ class _SeedPullToRefreshState extends State<SeedPullToRefresh> {
                   },
                   physics: _PullScrollPhysics(
                     hold: () => _offset > 0 && _dragging,
-                    parent: const AlwaysScrollableScrollPhysics(
-                      parent: ClampingScrollPhysics(),
-                    ),
+                    parent: const ClampingScrollPhysics(),
                   ),
                 ),
                 child: NotificationListener<ScrollNotification>(
