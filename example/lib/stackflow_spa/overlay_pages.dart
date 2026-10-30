@@ -1025,7 +1025,9 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
                   child: SeedBottomSheet(
                     title: 'Responsive Dialog',
                     description: 'md 이상에서는 Dialog, sm 이하에서는 Bottom Sheet로 표시됩니다. 뷰포트를 줄여서 자동 전환을 확인해보세요.',
-                    showHandle: true,
+                    // React ResponsiveDialogContent renders no
+                    // ResponsiveDialogHandle unless explicitly composed.
+                    showHandle: false,
                     content: content,
                     footer: footer,
                   ),
@@ -1543,24 +1545,19 @@ class _ActivityLaunchPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.all(20),
-    child: Center(
-      child: _column([
-        _button(
-          '$overlayActivity${overlayActivity == 'ActivityAlertDialog' ? '를' : '을'} Push',
-          () => navigate(overlayActivity),
-        ),
-        _button(
-          '지금 열린 이 Activity를 Push',
-          () => navigate(activity),
-          variant: SeedButtonVariant.neutralWeak,
-        ),
-        _button(
-          'Home',
-          () => navigate('ActivityHome'),
-          variant: SeedButtonVariant.neutralWeak,
-        ),
-      ], gap: 16),
-    ),
+    // React Activity{AlertDialog,BottomSheet,SidePanel}Activity uses a
+    // top-aligned VStack with two actions; the AppBar owns the Home action.
+    child: _column([
+      _button(
+        '$overlayActivity${overlayActivity == 'ActivityAlertDialog' ? '를' : '을'} Push',
+        () => navigate(overlayActivity),
+      ),
+      _button(
+        '지금 열린 이 Activity를 Push',
+        () => navigate(activity),
+        variant: SeedButtonVariant.neutralWeak,
+      ),
+    ], gap: 16),
   );
 }
 

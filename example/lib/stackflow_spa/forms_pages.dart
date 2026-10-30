@@ -33,7 +33,15 @@ Widget? buildFormsPage(
     case 'ActivityTimePicker':
       return const _TimePage();
     case 'ActivityWheelPicker':
-      return _WheelPage(goBack: goBack);
+      // The official ActivityWheelPicker is a sheet-only activity, not a
+      // page with an AppBar behind its scrim. Own the blank host surface so
+      // the SPA shell does not insert its generic navigation bar.
+      return SpaOwnScaffold(
+        child: Scaffold(
+          backgroundColor: context.seedColor.bg.layerDefault,
+          body: _WheelPage(goBack: goBack),
+        ),
+      );
     case 'ActivityAttachmentField':
       return const _AttachmentPage(display: false);
     case 'ActivityAttachmentDisplayField':
@@ -990,14 +998,11 @@ class _TimePageState extends State<_TimePage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(
-            width: 220,
-            child: SeedTimePicker(
-              value: time,
-              minuteStep: 10,
-              semanticsLabel: '약속 시간',
-              onValueChange: (next) => setState(() => time = next),
-            ),
+          SeedTimePicker(
+            value: time,
+            minuteStep: 10,
+            semanticsLabel: '약속 시간',
+            onValueChange: (next) => setState(() => time = next),
           ),
           const SizedBox(height: 16),
           Text(
@@ -1084,7 +1089,16 @@ class _WheelSheetState extends State<_WheelSheet> {
               semanticsLabel: '연도',
               semanticsValueFormatter: (value) => '$value년',
               onValueChange: (value, details) => updateYear(value),
-              itemBuilder: (_, item, selected) => Center(child: Text('$item년')),
+              itemBuilder: (context, item, selected) => Center(
+                child: Text(
+                  '$item년',
+                  style: context.seedTypography.t10Medium.copyWith(
+                    color: selected
+                        ? context.seedColor.fg.neutral
+                        : context.seedColor.fg.disabled,
+                  ),
+                ),
+              ),
             ),
             SeedWheelColumn.value<int>(
               items: [for (var m = 1; m <= 12; m++) m],
@@ -1093,7 +1107,16 @@ class _WheelSheetState extends State<_WheelSheet> {
               semanticsLabel: '월',
               semanticsValueFormatter: (value) => '$value월',
               onValueChange: (value, details) => updateMonth(value),
-              itemBuilder: (_, item, selected) => Center(child: Text('$item월')),
+              itemBuilder: (context, item, selected) => Center(
+                child: Text(
+                  '$item월',
+                  style: context.seedTypography.t10Medium.copyWith(
+                    color: selected
+                        ? context.seedColor.fg.neutral
+                        : context.seedColor.fg.disabled,
+                  ),
+                ),
+              ),
             ),
             SeedWheelColumn.value<int>(
               items: [for (var d = 1; d <= lastDay; d++) d],
@@ -1102,36 +1125,42 @@ class _WheelSheetState extends State<_WheelSheet> {
               semanticsLabel: '일',
               semanticsValueFormatter: (value) => '$value일',
               onValueChange: (value, details) => setState(() => day = value),
-              itemBuilder: (_, item, selected) => Center(child: Text('$item일')),
+              itemBuilder: (context, item, selected) => Center(
+                child: Text(
+                  '$item일',
+                  style: context.seedTypography.t10Medium.copyWith(
+                    color: selected
+                        ? context.seedColor.fg.neutral
+                        : context.seedColor.fg.disabled,
+                  ),
+                ),
+              ),
             ),
           ],
         ),
       ),
     ),
-    footer: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text('$year년 $month월 $day일'),
-          const SizedBox(height: 12),
-          SeedButton(
-            label: '다음 날로 변경',
-            variant: SeedButtonVariant.neutralWeak,
-            size: SeedButtonSize.large,
-            isFullWidth: true,
-            onPressed: nextDay,
-          ),
-          const SizedBox(height: 12),
-          SeedButton(
-            label: '완료',
-            variant: SeedButtonVariant.neutralSolid,
-            size: SeedButtonSize.large,
-            isFullWidth: true,
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-        ],
-      ),
+    footer: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text('$year년 $month월 $day일'),
+        const SizedBox(height: 12),
+        SeedButton(
+          label: '다음 날로 변경',
+          variant: SeedButtonVariant.neutralWeak,
+          size: SeedButtonSize.large,
+          isFullWidth: true,
+          onPressed: nextDay,
+        ),
+        const SizedBox(height: 12),
+        SeedButton(
+          label: '완료',
+          variant: SeedButtonVariant.neutralSolid,
+          size: SeedButtonSize.large,
+          isFullWidth: true,
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ],
     ),
   );
 }

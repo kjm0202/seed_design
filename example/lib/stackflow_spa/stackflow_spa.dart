@@ -358,6 +358,13 @@ class _SpaActivityPage extends StatelessWidget {
             ? 'Random Long Title Hello World'
             : activity == 'ActivityAvatarStack'
             ? 'Avatar'
+            : activity == 'ActivityTimePicker'
+            ? 'TimePicker'
+            : activity == 'ActivityAlertDialogActivity' ||
+                  activity == 'ActivityBottomSheetActivity'
+            ? 'Activity'
+            : activity == 'ActivitySidePanelActivity'
+            ? 'Side Panel Activity'
             : activity == 'ActivityForm'
             ? 'Form Components'
             : activity == 'ActivityPartialDarkMode'

@@ -510,6 +510,9 @@ class _SeedWheelPickerState extends State<SeedWheelPicker> {
               child: IgnorePointer(
                 ignoring: !widget.enabled,
                 child: Row(
+                  // CSS wheel-picker__columns uses `justify-content: center`.
+                  // This matters when TimePicker supplies intrinsic widths.
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: List.generate(widget.columns.length, (colIdx) {
                     final col = widget.columns[colIdx];
                     final enabled = widget.enabled && col.enabled;
@@ -793,7 +796,14 @@ class _SeedWheelPickerState extends State<SeedWheelPicker> {
                       ),
                     );
                     if (col.width != null) {
-                      return SizedBox(width: col.width, child: columnChild);
+                      // Keep the intrinsic CSS-style column width at normal
+                      // sizes, but shrink proportionally on constrained hosts
+                      // instead of overflowing a narrow picker container.
+                      return Flexible(
+                        fit: FlexFit.loose,
+                        flex: (col.width! * 100).round().clamp(1, 1000000),
+                        child: SizedBox(width: col.width, child: columnChild),
+                      );
                     }
                     return Expanded(flex: col.flex, child: columnChild);
                   }),

@@ -91,8 +91,10 @@ Widget _stage(BuildContext context, Widget child) => Container(
 Widget _scaleStage(
   BuildContext context,
   Widget child, {
+  Key? key,
   bool failure = false,
 }) => Container(
+  key: key,
   width: double.infinity,
   padding: const EdgeInsets.all(16),
   decoration: BoxDecoration(
@@ -1269,25 +1271,70 @@ class _ScaleFeedbackPageState extends State<_ScaleFeedbackPage> {
     super.dispose();
   }
 
+  // ScaleFeedbackPlayground.css.ts: page x12, group x8. Do not use the
+  // shared _section helper: its padding/bottom gap belong to other pages.
+  Widget _group(String title, List<Widget> sections) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        children: [
+          Text(
+            title,
+            style: context.seedTypography.t1Regular.copyWith(
+              color: context.seedColor.fg.neutralMuted,
+              fontFamily: 'monospace',
+              letterSpacing: 0.08,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Divider(
+              height: 1,
+              thickness: 1,
+              color: context.seedColor.stroke.neutralMuted,
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: SeedDimension.x8),
+      for (var i = 0; i < sections.length; i++) ...[
+        if (i > 0) const SizedBox(height: SeedDimension.x8),
+        sections[i],
+      ],
+    ],
+  );
+
   Widget _demo(
     String title,
     String description,
     Widget child, {
     bool highlighted = false,
-  }) => Padding(
-    padding: const EdgeInsets.only(bottom: 18),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _heading(context, title),
-        _subheading(context, description),
-        _scaleStage(
-          context,
-          SizedBox(width: double.infinity, child: child),
-          failure: highlighted,
+    Widget? footer,
+  }) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        title,
+        style: context.seedTypography.t5Bold.copyWith(
+          color: context.seedColor.fg.neutral,
         ),
-      ],
-    ),
+      ),
+      const SizedBox(height: SeedDimension.x1),
+      Text(
+        description,
+        style: context.seedTypography.t3Regular.copyWith(
+          color: context.seedColor.fg.neutralSubtle,
+        ),
+      ),
+      const SizedBox(height: SeedDimension.x3),
+      _scaleStage(
+        context,
+        SizedBox(width: double.infinity, child: child),
+        key: ValueKey('scale-feedback-panel:$title'),
+        failure: highlighted,
+      ),
+      if (footer != null) ...[const SizedBox(height: SeedDimension.x3), footer],
+    ],
   );
 
   Widget _pressable(
@@ -1334,286 +1381,259 @@ class _ScaleFeedbackPageState extends State<_ScaleFeedbackPage> {
           '요소를 누르는 동안 축소가 유지됩니다. 각 섹션의 설명이 그 패널에서 무엇을 확인할 수 있는지 알려줍니다.',
           style: context.seedTypography.t3Regular,
         ),
-        const SizedBox(height: 20),
-        _section(
-          context,
-          'SEED 컴포넌트',
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _demo(
-                'ActionButton — size',
-                'size가 달라도 세로로 줄어드는 거리는 같습니다.',
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final size in SeedButtonSize.values)
-                      SeedButton(
-                        label: size.name,
-                        size: size,
-                        onPressed: () {},
-                      ),
-                  ],
+        const SizedBox(height: SeedDimension.x12),
+        _group('SEED 컴포넌트', [
+          _demo(
+            'ActionButton — size',
+            'size가 달라도 세로로 줄어드는 거리는 같습니다.',
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final size in SeedButtonSize.values)
+                  SeedButton(label: size.name, size: size, onPressed: () {}),
+              ],
+            ),
+          ),
+          _demo(
+            'ActionButton — 폭',
+            '배율의 기준은 max(높이, 폭 / 4, 24)입니다. 폭이 긴 요소는 세로로 덜 줄고 가로로 더 줄어듭니다.',
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SeedButton.iconOnly(
+                  icon: const Icon(Icons.add),
+                  semanticsLabel: '아이콘 전용 정사각 버튼',
+                  onPressed: () {},
                 ),
-              ),
-              _demo(
-                'ActionButton — 폭',
-                '배율의 기준은 max(높이, 폭 / 4, 24)입니다. 폭이 긴 요소는 세로로 덜 줄고 가로로 더 줄어듭니다.',
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SeedButton.iconOnly(
-                      icon: const Icon(Icons.add),
-                      semanticsLabel: '아이콘 전용 정사각 버튼',
-                      onPressed: () {},
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: SeedButton(
-                        isFullWidth: true,
-                        label: '화면 폭을 채우는 버튼',
-                        onPressed: () {},
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: SeedButton(
+                    isFullWidth: true,
+                    label: '화면 폭을 채우는 버튼',
+                    onPressed: () {},
+                  ),
                 ),
-              ),
-              _demo(
-                'Checkbox / RadioGroup — 단독',
-                '마크가 줄어듭니다.',
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              ],
+            ),
+          ),
+          _demo(
+            'Checkbox / RadioGroup — 단독',
+            '마크가 줄어듭니다.',
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SeedCheckbox(
+                  label: 'Checkbox',
+                  checked: check,
+                  onCheckedChange: (value) => setState(() => check = value),
+                ),
+                const SizedBox(height: 8),
+                Text('RadioGroup', style: context.seedTypography.t3Medium),
+                SeedRadio<String>(
+                  value: 'first',
+                  groupValue: radio,
+                  onChanged: (value) =>
+                      setState(() => radio = value ?? 'first'),
+                  label: 'RadioGroupItem',
+                ),
+              ],
+            ),
+          ),
+          _demo(
+            'Checkbox / RadioGroup — ListItem 안',
+            '행 배경만 바뀌고 마크는 줄지 않습니다.',
+            Column(
+              children: [
+                SeedList(
                   children: [
-                    SeedCheckbox(
-                      label: 'Checkbox',
-                      checked: check,
-                      onCheckedChange: (value) => setState(() => check = value),
+                    SeedListItem(
+                      titleText: 'prefix Checkmark',
+                      prefix: Icon(
+                        checkInList
+                            ? Icons.check_box
+                            : Icons.check_box_outline_blank,
+                      ),
+                      checked: checkInList,
+                      onTap: () => setState(() => checkInList = !checkInList),
                     ),
-                    const SizedBox(height: 8),
-                    Text('RadioGroup', style: context.seedTypography.t3Medium),
-                    SeedRadio<String>(
-                      value: 'first',
-                      groupValue: radio,
+                    SeedCheckListItem(
+                      title: 'suffix Checkmark',
+                      value: !checkInList,
                       onChanged: (value) =>
-                          setState(() => radio = value ?? 'first'),
-                      label: 'RadioGroupItem',
+                          setState(() => checkInList = !value),
                     ),
                   ],
                 ),
-              ),
-              _demo(
-                'Checkbox / RadioGroup — ListItem 안',
-                '행 배경만 바뀌고 마크는 줄지 않습니다.',
-                Column(
+                const SizedBox(height: 8),
+                SeedList(
                   children: [
-                    SeedList(
-                      children: [
-                        SeedListItem(
-                          titleText: 'prefix Checkmark',
-                          prefix: Icon(
-                            checkInList
-                                ? Icons.check_box
-                                : Icons.check_box_outline_blank,
-                          ),
-                          checked: checkInList,
-                          onTap: () =>
-                              setState(() => checkInList = !checkInList),
-                        ),
-                        SeedCheckListItem(
-                          title: 'suffix Checkmark',
-                          value: !checkInList,
-                          onChanged: (value) =>
-                              setState(() => checkInList = !value),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    SeedList(
-                      children: [
-                        for (final value in ['first', 'second'])
-                          SeedRadioListItem<String>(
-                            title: value == 'first'
-                                ? 'Radiomark 1'
-                                : 'Radiomark 2',
-                            value: value,
-                            groupValue: radio,
-                            onChanged: (next) =>
-                                setState(() => radio = next ?? 'first'),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              _demo(
-                'Callout — 루트 전체',
-                '누를 수 있는 Callout만 전체가 줄어듭니다.',
-                Column(
-                  children: [
-                    SeedCallout(
-                      title: 'asChild button',
-                      description: '루트 전체가 줄어듭니다.',
-                      onTap: () {},
-                    ),
-                    const SizedBox(height: 12),
-                    SeedCallout(
-                      title: 'asChild anchor',
-                      description: '링크처럼 동작해도 같습니다.',
-                      onTap: () {},
-                    ),
-                  ],
-                ),
-              ),
-              _demo(
-                '닫기 버튼',
-                '닫기 버튼만 줄어듭니다. 반복해서 눌러볼 수 있도록 열린 상태로 고정했습니다.',
-                Column(
-                  children: [
-                    SeedCallout(
-                      open: true,
-                      title: 'Callout',
-                      description: '닫기 버튼만 줄어듭니다.',
-                      onDismiss: () {},
-                    ),
-                    const SizedBox(height: 12),
-                    SeedPageBanner(
-                      open: true,
-                      dismissible: true,
-                      title: 'PageBanner',
-                      description: '닫기 버튼만 줄어듭니다.',
-                      onDismiss: () {},
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        _section(
-          context,
-          '커스텀 구현',
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _demo(
-                '적용 방법 세 가지',
-                '직접 계산, ScaleFeedback 콘텐츠 스케일, SeedPressable 래퍼의 세 구현을 비교합니다.',
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    const _ManualScalePressable(label: '순수 CSS'),
-                    SeedPressable(
-                      enableScale: false,
-                      onTap: () {},
-                      builder: (ctx, pressed) => SeedContentScale(
-                        pressed: pressed,
-                        child: _scaleLabel(ctx, 'scale-feedback 상수'),
+                    for (final value in ['first', 'second'])
+                      SeedRadioListItem<String>(
+                        title: value == 'first' ? 'Radiomark 1' : 'Radiomark 2',
+                        value: value,
+                        groupValue: radio,
+                        onChanged: (next) =>
+                            setState(() => radio = next ?? 'first'),
                       ),
-                    ),
-                    _pressable('ScaleFeedback', focusNode: _focusNode),
                   ],
                 ),
-              ),
-              SeedButton(
-                size: SeedButtonSize.xsmall,
-                variant: SeedButtonVariant.neutralWeak,
-                label: '자식에 단 ref로 포커스 이동',
-                onPressed: () => _focusNode.requestFocus(),
-              ),
-              const SizedBox(height: 16),
-              _demo(
-                '불안정한 ref',
-                '누르는 대상 자체가 다시 빌드되어도 축소 피드백을 유지합니다.',
-                _pressable(
-                  '리렌더 $rerenderCount회',
-                  onTap: () => setState(() => rerenderCount++),
-                ),
-              ),
-              _demo(
-                '크기 대비',
-                '24px 정사각은 2px, 300×44 바는 가로로 8px 줄어듭니다.',
-                Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: [
-                    _pressable('+', width: 24, height: 24),
-                    _pressable('300px 바', width: 300, height: 44),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        _section(
-          context,
-          '간섭·실패 케이스',
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _demo(
-                'ref와 클래스 중 하나만',
-                '축소만 일어나지 않고 배경색은 바뀝니다.',
-                Wrap(
-                  spacing: 8,
-                  children: [
-                    SeedPressable(
-                      enableScale: false,
-                      onTap: () {},
-                      builder: (ctx, pressed) => Container(
-                        height: 38,
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                        alignment: Alignment.center,
-                        color: pressed
-                            ? ctx.seedColor.bg.neutralWeakPressed
-                            : ctx.seedColor.bg.neutralWeak,
-                        child: const Text('클래스만'),
-                      ),
-                    ),
-                    const _MeasureOnlyPressable(),
-                  ],
+          _demo(
+            'Callout — 루트 전체',
+            '누를 수 있는 Callout만 전체가 줄어듭니다.',
+            Column(
+              children: [
+                SeedCallout(
+                  title: 'asChild button',
+                  description: '루트 전체가 줄어듭니다.',
+                  onTap: () {},
                 ),
-                highlighted: true,
-              ),
-              _demo(
-                '커스텀 래퍼 안의 SEED 마크',
-                '래퍼와 마크를 함께 축소하는 경우와 마크의 축소를 끈 경우입니다.',
-                Column(
-                  children: [
-                    for (final optOut in [false, true])
-                      SeedPressable(
-                        onTap: () {},
-                        builder: (ctx, pressed) => Container(
-                          padding: const EdgeInsets.all(16),
-                          color: pressed
-                              ? ctx.seedColor.bg.neutralWeakPressed
-                              : ctx.seedColor.bg.neutralWeak,
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: SeedContentScale(
-                                  pressed: !optOut && pressed,
-                                  child: SeedCheckbox(
-                                    label: optOut ? '마크 축소 끔' : '이중 축소',
-                                    checked: nestedCheck,
-                                    onCheckedChange: (value) =>
-                                        setState(() => nestedCheck = value),
-                                  ),
-                                ),
+                const SizedBox(height: 12),
+                SeedCallout(
+                  title: 'asChild anchor',
+                  description: '링크처럼 동작해도 같습니다.',
+                  onTap: () {},
+                ),
+              ],
+            ),
+          ),
+          _demo(
+            '닫기 버튼',
+            '닫기 버튼만 줄어듭니다. 반복해서 눌러볼 수 있도록 열린 상태로 고정했습니다.',
+            Column(
+              children: [
+                SeedCallout(
+                  open: true,
+                  title: 'Callout',
+                  description: '닫기 버튼만 줄어듭니다.',
+                  onDismiss: () {},
+                ),
+                const SizedBox(height: 12),
+                SeedPageBanner(
+                  open: true,
+                  dismissible: true,
+                  title: 'PageBanner',
+                  description: '닫기 버튼만 줄어듭니다.',
+                  onDismiss: () {},
+                ),
+              ],
+            ),
+          ),
+        ]),
+        const SizedBox(height: SeedDimension.x12),
+        _group('커스텀 구현', [
+          _demo(
+            '적용 방법 세 가지',
+            '직접 계산, ScaleFeedback 콘텐츠 스케일, SeedPressable 래퍼의 세 구현을 비교합니다.',
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                const _ManualScalePressable(label: '순수 CSS'),
+                SeedPressable(
+                  enableScale: false,
+                  onTap: () {},
+                  builder: (ctx, pressed) => SeedContentScale(
+                    pressed: pressed,
+                    child: _scaleLabel(ctx, 'scale-feedback 상수'),
+                  ),
+                ),
+                _pressable('ScaleFeedback', focusNode: _focusNode),
+              ],
+            ),
+            footer: SeedButton(
+              size: SeedButtonSize.xsmall,
+              variant: SeedButtonVariant.neutralWeak,
+              label: '자식에 단 ref로 포커스 이동',
+              onPressed: () => _focusNode.requestFocus(),
+            ),
+          ),
+          _demo(
+            '불안정한 ref',
+            '누르는 대상 자체가 다시 빌드되어도 축소 피드백을 유지합니다.',
+            _pressable(
+              '리렌더 $rerenderCount회',
+              onTap: () => setState(() => rerenderCount++),
+            ),
+          ),
+          _demo(
+            '크기 대비',
+            '24px 정사각은 2px, 300×44 바는 가로로 8px 줄어듭니다.',
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                _pressable('+', width: 24, height: 24),
+                _pressable('300px 바', width: 300, height: 44),
+              ],
+            ),
+          ),
+        ]),
+        const SizedBox(height: SeedDimension.x12),
+        _group('간섭·실패 케이스', [
+          _demo(
+            'ref와 클래스 중 하나만',
+            '축소만 일어나지 않고 배경색은 바뀝니다.',
+            Wrap(
+              spacing: 8,
+              children: [
+                SeedPressable(
+                  enableScale: false,
+                  onTap: () {},
+                  builder: (ctx, pressed) => Container(
+                    height: 38,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    alignment: Alignment.center,
+                    color: pressed
+                        ? ctx.seedColor.bg.neutralWeakPressed
+                        : ctx.seedColor.bg.neutralWeak,
+                    child: const Text('클래스만'),
+                  ),
+                ),
+                const _MeasureOnlyPressable(),
+              ],
+            ),
+            highlighted: true,
+          ),
+          _demo(
+            '커스텀 래퍼 안의 SEED 마크',
+            '래퍼와 마크를 함께 축소하는 경우와 마크의 축소를 끈 경우입니다.',
+            Column(
+              children: [
+                for (final optOut in [false, true])
+                  SeedPressable(
+                    onTap: () {},
+                    builder: (ctx, pressed) => Container(
+                      padding: const EdgeInsets.all(16),
+                      color: pressed
+                          ? ctx.seedColor.bg.neutralWeakPressed
+                          : ctx.seedColor.bg.neutralWeak,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: SeedContentScale(
+                              pressed: !optOut && pressed,
+                              child: SeedCheckbox(
+                                label: optOut ? '마크 축소 끔' : '이중 축소',
+                                checked: nestedCheck,
+                                onCheckedChange: (value) =>
+                                    setState(() => nestedCheck = value),
                               ),
-                            ],
+                            ),
                           ),
-                        ),
+                        ],
                       ),
-                  ],
-                ),
-              ),
-            ],
+                    ),
+                  ),
+              ],
+            ),
           ),
-        ),
+        ]),
       ],
     ),
   );

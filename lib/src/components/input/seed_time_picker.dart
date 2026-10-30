@@ -200,6 +200,41 @@ class _SeedTimePickerState extends State<SeedTimePicker> {
       fontFeatures: const [FontFeature.tabularFigures()],
     );
 
+    // React's time-picker columns are `flex: 0 0 auto` / `width: max-content`,
+    // while the root and selection indicator still fill 100% of the parent.
+    // Measure the widest localized value instead of distributing three equal
+    // fractions of the available width (which separates labels on desktop).
+    double intrinsicColumnWidth(
+      Iterable<String> labels, {
+      required double minimumGlyphWidthRatio,
+    }) {
+      var widest = 0.0;
+      for (final label in labels) {
+        final painter = TextPainter(
+          text: TextSpan(text: label, style: itemStyle(true)),
+          textDirection: Directionality.of(context),
+          textScaler: TextScaler.noScaling,
+          maxLines: 1,
+        )..layout();
+        if (painter.width > widest) widest = painter.width;
+        // On Flutter Web a downloadable font may not be ready during the
+        // first build. Its initial fallback glyph advances are often narrower
+        // than the final font, leaving a one-character wheel label wrapped.
+        // A script-aware floor preserves the CSS max-content intent until the
+        // actual font finishes loading, without expanding all three columns.
+        final textFloor =
+            label.runes.length *
+            (itemStyle(true).fontSize ?? 26.0) *
+            minimumGlyphWidthRatio;
+        if (textFloor > widest) widest = textFloor;
+      }
+      return widest + SeedDimension.x4 * 2;
+    }
+
+    final periodFormatter = DateFormat('a', locale);
+    final hourFormatter = NumberFormat('0', locale);
+    final minuteFormatter = NumberFormat('00', locale);
+
     final periodColumn = SeedWheelColumn.typed<SeedTimePeriod>(
       items: SeedTimePeriod.values,
       semanticsLabel: widget.periodSemanticsLabel ?? defaultPeriodLabel,
@@ -209,7 +244,12 @@ class _SeedTimePickerState extends State<SeedTimePicker> {
       ).format(DateTime(2020, 1, 1, item == SeedTimePeriod.am ? 0 : 12)),
       initialIndex: periodIndex,
       index: widget.value == null ? null : periodIndex,
-      flex: 2,
+      width: intrinsicColumnWidth([
+        for (final period in SeedTimePeriod.values)
+          periodFormatter.format(
+            DateTime(2020, 1, 1, period == SeedTimePeriod.am ? 0 : 12),
+          ),
+      ], minimumGlyphWidthRatio: korean || japanese ? 1.0 : 0.65),
       onChanged: (idx) {
         setState(() {
           _period = SeedTimePeriod.values[idx];
@@ -225,6 +265,8 @@ class _SeedTimePickerState extends State<SeedTimePicker> {
               locale,
             ).format(DateTime(2020, 1, 1, item == SeedTimePeriod.am ? 0 : 12)),
             textScaler: TextScaler.noScaling,
+            maxLines: 1,
+            softWrap: false,
             style: itemStyle(isSelected),
           ),
         );
@@ -237,7 +279,9 @@ class _SeedTimePickerState extends State<SeedTimePicker> {
       initialIndex: hourIndex,
       index: widget.value == null ? null : hourIndex,
       looping: true,
-      flex: 2,
+      width: intrinsicColumnWidth([
+        for (var hour = 1; hour <= 12; hour++) hourFormatter.format(hour),
+      ], minimumGlyphWidthRatio: 0.65),
       onStepChanged: (idx, stepDelta) {
         final prevHourIdx = _hour % 12;
         final newScrollIndex = prevHourIdx + stepDelta;
@@ -258,6 +302,8 @@ class _SeedTimePickerState extends State<SeedTimePicker> {
           child: Text(
             NumberFormat('0', locale).format(item),
             textScaler: TextScaler.noScaling,
+            maxLines: 1,
+            softWrap: false,
             style: itemStyle(isSelected),
           ),
         );
@@ -270,7 +316,9 @@ class _SeedTimePickerState extends State<SeedTimePicker> {
       initialIndex: minuteIndex,
       index: widget.value == null ? null : minuteIndex,
       looping: _minutes.length > 1,
-      flex: 2,
+      width: intrinsicColumnWidth([
+        for (final minute in _minutes) minuteFormatter.format(minute),
+      ], minimumGlyphWidthRatio: 0.65),
       onChanged: (idx) {
         setState(() {
           _minute = _minutes[idx];
@@ -283,6 +331,8 @@ class _SeedTimePickerState extends State<SeedTimePicker> {
           child: Text(
             NumberFormat('00', locale).format(item),
             textScaler: TextScaler.noScaling,
+            maxLines: 1,
+            softWrap: false,
             style: itemStyle(isSelected),
           ),
         );

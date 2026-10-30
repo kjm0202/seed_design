@@ -21,6 +21,43 @@ Future<void> open(
 }
 
 void main() {
+  testWidgets('TimePicker keeps the official React AppBar title', (
+    tester,
+  ) async {
+    await open(tester, '/time-picker', width: 390);
+    expect(find.text('TimePicker'), findsOneWidget);
+    expect(find.text('Time Picker'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final (route, launch, title) in [
+    ('/alert-dialog-activity', 'ActivityAlertDialog를 Push', 'Activity'),
+    ('/bottom-sheet-activity', 'ActivityBottomSheet을 Push', 'Activity'),
+    ('/side-panel-activity', 'ActivitySidePanel을 Push', 'Side Panel Activity'),
+  ]) {
+    testWidgets('$route places exactly two actions below its React AppBar', (
+      tester,
+    ) async {
+      await open(tester, route, width: 390);
+      expect(tester.getTopLeft(find.widgetWithText(SeedButton, launch)).dy, 76);
+      expect(find.byType(SeedButton), findsNWidgets(2));
+      expect(find.text(title), findsWidgets);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets(
+    'ResponsiveDialog mobile matches React sheet without a drag handle',
+    (tester) async {
+      await open(tester, '/responsive-dialog', width: 390);
+      final sheet = tester.widget<SeedBottomSheet>(
+        find.byType(SeedBottomSheet),
+      );
+      expect(sheet.showHandle, isFalse);
+      expect(find.text('Responsive Dialog'), findsWidgets);
+    },
+  );
+
   for (final width in [390.0, 800.0]) {
     for (final (route, title) in [
       ('/form', 'Form Components'),

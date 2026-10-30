@@ -42,6 +42,41 @@ Future<void> _visitBrowserHistory(
 }
 
 void main() {
+  testWidgets('Scale Feedback desktop panel rows match React x12/x8 gaps', (
+    tester,
+  ) async {
+    await _open(tester, '/scale-feedback', 800);
+    final first = find.byKey(
+      const ValueKey('scale-feedback-panel:ActionButton — size'),
+    );
+    final third = find.byKey(
+      const ValueKey('scale-feedback-panel:Checkbox / RadioGroup — 단독'),
+    );
+    expect(first, findsOneWidget);
+    expect(third, findsOneWidget);
+    final intro = find.textContaining('요소를 누르는 동안 축소가 유지됩니다.');
+    final group = find.text('SEED 컴포넌트');
+    final firstTitle = find.text('ActionButton — size');
+    final firstDescription = find.text('size가 달라도 세로로 줄어드는 거리는 같습니다.');
+    final secondTitle = find.text('ActionButton — 폭');
+    double gap(Finder before, Finder after) =>
+        tester.getTopLeft(after).dy - tester.getBottomLeft(before).dy;
+
+    // CSS source: page x12=48, group x8=32, sectionHeader x1=4,
+    // section x3=12. Measure layout gaps, not browser-dependent text pixels.
+    expect(gap(intro, group), closeTo(SeedDimension.x12, 1));
+    expect(gap(group, firstTitle), closeTo(SeedDimension.x8, 1));
+    expect(gap(firstTitle, firstDescription), closeTo(SeedDimension.x1, 1));
+    expect(gap(firstDescription, first), closeTo(SeedDimension.x3, 1));
+    expect(gap(first, secondTitle), closeTo(SeedDimension.x8, 1));
+    // The two original stage Y offsets were 212 / 590 in WidgetTester;
+    // applying the official row gap must add 32px between each section.
+    expect(
+      tester.getTopLeft(third).dy - tester.getTopLeft(first).dy,
+      greaterThan(400),
+    );
+  });
+
   for (final width in [390.0, 800.0]) {
     testWidgets(
       'INC article pull has selectable protected origin and separate plain outside $width',

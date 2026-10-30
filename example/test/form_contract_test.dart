@@ -77,16 +77,20 @@ void main() {
     },
   );
 
-  testWidgets('EX-11 TimePicker is centered at React compact wheel width', (
-    tester,
-  ) async {
-    await _open(tester, '/time-picker', width: 800);
-    expect(
-      tester.getSize(find.byType(SeedTimePicker)).width,
-      lessThanOrEqualTo(260),
-    );
-    expect(find.text('선택한 시간: 13:10'), findsOneWidget);
-  });
+  for (final width in [390.0, 800.0]) {
+    testWidgets('EX-11 TimePicker matches React full content width at $width', (
+      tester,
+    ) async {
+      await _open(tester, '/time-picker', width: width);
+      final pickerRect = tester.getRect(find.byType(SeedTimePicker));
+      // React ActivityTimePicker fills AppScreenContent with 16px gutters.
+      // A former hard-coded 220px box clipped 오전/오후 wheel labels on phones.
+      expect(pickerRect.width, closeTo(width - 32, 1));
+      expect(pickerRect.left, closeTo(16, 1));
+      expect(find.text('선택한 시간: 13:10'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets('EX-11 Quantity Form owns FormField state', (tester) async {
     await _open(tester, '/quantity-picker');
