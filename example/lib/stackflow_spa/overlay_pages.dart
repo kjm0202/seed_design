@@ -859,6 +859,15 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
               final description = responsive
                   ? 'md 이상에서는 Side Panel, sm 이하에서는 Bottom Sheet로 표시됩니다. 뷰포트를 줄여서 자동 전환을 확인해보세요.'
                   : 'Side Panel 컴포넌트 데모입니다.';
+              final sizeControl = SeedSegmentedControl<String>(
+                segments: const [
+                  SeedSegment(value: 'small', label: 'Small'),
+                  SeedSegment(value: 'medium', label: 'Medium'),
+                  SeedSegment(value: 'large', label: 'Large'),
+                ],
+                value: size,
+                onValueChange: (next) => refresh(() => size = next),
+              );
               final body = _column([
                 if (!responsive)
                   Text(
@@ -876,18 +885,14 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
                       (next) => refresh(() => direction = next),
                     ),
                   ),
-                _section(
-                  '패널 크기',
-                  SeedSegmentedControl<String>(
-                    segments: const [
-                      SeedSegment(value: 'small', label: 'Small'),
-                      SeedSegment(value: 'medium', label: 'Medium'),
-                      SeedSegment(value: 'large', label: 'Large'),
-                    ],
-                    value: size,
-                    onValueChange: (next) => refresh(() => size = next),
-                  ),
-                ),
+                if (responsive)
+                  Semantics(
+                    label: '패널 크기',
+                    explicitChildNodes: true,
+                    child: sizeControl,
+                  )
+                else
+                  _section('패널 크기', sizeControl),
                 if (!responsive) ...[
                   SeedSwitch(
                     label: '제목 표시',
@@ -911,28 +916,43 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
                   ),
                 ],
               ]);
+              void closePanel() {
+                // A directly loaded React Activity has no predecessor;
+                // useFlow().pop() leaves that root panel open.
+                if (responsive &&
+                    SpaHistoryDelegate.of(ctx)
+                            .currentConfiguration
+                            .activities
+                            .length <=
+                        1) {
+                  return;
+                }
+                Navigator.pop(ctx);
+              }
+
               final footer = showFooter || responsive
-                  ? _column([
-                      _button('닫기', () {
-                        // React ActivityResponsiveSidePanel's footer calls
-                        // useFlow().pop(). A directly loaded root Activity
-                        // has no predecessor, so that pop leaves the panel
-                        // open with its current size. An Activity pushed
-                        // from Home still closes normally.
-                        if (responsive) {
-                          final activityCount = SpaHistoryDelegate.of(ctx)
-                              .currentConfiguration
-                              .activities
-                              .length;
-                          if (activityCount <= 1) return;
-                        }
-                        Navigator.pop(ctx);
-                      }, variant: SeedButtonVariant.neutralWeak),
-                      _button(
-                        '확인',
-                        responsive ? () {} : () => Navigator.pop(ctx),
-                      ),
-                    ], gap: 8)
+                  ? responsive
+                        ? Row(
+                            children: [
+                              Expanded(
+                                child: _button(
+                                  '닫기',
+                                  closePanel,
+                                  variant: SeedButtonVariant.neutralWeak,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(child: _button('확인', () {})),
+                            ],
+                          )
+                        : _column([
+                            _button(
+                              '닫기',
+                              closePanel,
+                              variant: SeedButtonVariant.neutralWeak,
+                            ),
+                            _button('확인', () => Navigator.pop(ctx)),
+                          ], gap: 8)
                   : null;
               if (compact) {
                 return Align(
@@ -940,7 +960,8 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
                   child: SeedBottomSheet(
                     title: title,
                     description: description,
-                    showHandle: true,
+                    // ResponsiveSidePanelContent does not compose a handle.
+                    showHandle: false,
                     content: body,
                     footer: footer,
                   ),

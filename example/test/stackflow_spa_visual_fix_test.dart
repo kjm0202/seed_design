@@ -60,6 +60,47 @@ void main() {
   );
 
   testWidgets(
+    'ResponsiveSidePanel 767/768 retains React compact layout on resize',
+    (tester) async {
+      await open(tester, '/responsive-side-panel', width: 767);
+      final sheet = tester.widget<SeedBottomSheet>(
+        find.byType(SeedBottomSheet),
+      );
+      expect(sheet.showHandle, isFalse);
+      expect(find.text('패널 크기'), findsNothing);
+      final cancel = find.widgetWithText(SeedButton, '닫기');
+      final confirm = find.widgetWithText(SeedButton, '확인');
+      expect(tester.getTopLeft(cancel).dy, tester.getTopLeft(confirm).dy);
+      expect(
+        tester.getTopLeft(cancel).dx,
+        lessThan(tester.getTopLeft(confirm).dx),
+      );
+
+      await tester.tap(find.text('Large'));
+      await tester.pumpAndSettle();
+      tester.view.physicalSize = const Size(768, 800);
+      await tester.pumpAndSettle();
+      expect(find.byType(SeedBottomSheet), findsNothing);
+      expect(find.byType(SeedSidePanel), findsOneWidget);
+      expect(
+        tester
+            .widget<SeedSegmentedControl<String>>(
+              find.byType(SeedSegmentedControl<String>),
+            )
+            .value,
+        'large',
+      );
+      expect(find.text('패널 크기'), findsNothing);
+      expect(tester.getTopLeft(cancel).dy, tester.getTopLeft(confirm).dy);
+      expect(
+        tester.getTopLeft(cancel).dx,
+        lessThan(tester.getTopLeft(confirm).dx),
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'ResponsiveDialog entered as root retains open selected size on Escape',
     (tester) async {
       tester.view.physicalSize = const Size(390, 844);
