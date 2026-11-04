@@ -321,22 +321,23 @@ void main() {
     },
   );
 
-  testWidgets('SideNavigation collapses and expands without layout overflow', (
-    tester,
-  ) async {
-    await open(tester, '/side-navigation');
-    expect(tester.getTopLeft(find.byType(SeedSideNavigation)).dy, 0);
-    await tester.tap(find.byTooltip('접기'));
-    await tester.pump(const Duration(milliseconds: 100));
-    expect(tester.takeException(), isNull);
-    await tester.pumpAndSettle();
-    expect(tester.getSize(find.byType(SeedSideNavigation)).width, 56);
-    await tester.tap(find.byTooltip('펼치기'));
-    await tester.pump(const Duration(milliseconds: 100));
-    expect(tester.takeException(), isNull);
-    await tester.pumpAndSettle();
-    expect(tester.getSize(find.byType(SeedSideNavigation)).width, 240);
-  });
+  testWidgets(
+      'SideNavigation collapses and expands without layout overflow',
+      (tester) async {
+        await open(tester, '/side-navigation');
+        expect(tester.getTopLeft(find.byType(SeedSideNavigation)).dy, 0);
+        await tester.tap(find.byTooltip('사이드바 닫기'));
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(tester.takeException(), isNull);
+        await tester.pumpAndSettle();
+        expect(tester.getSize(find.byType(SeedSideNavigation)).width, 56);
+        await tester.tap(find.byTooltip('사이드바 열기'));
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(tester.takeException(), isNull);
+        await tester.pumpAndSettle();
+        expect(tester.getSize(find.byType(SeedSideNavigation)).width, 240);
+      },
+    );
 
   for (final route in ['/side-panel', '/responsive-side-panel']) {
     testWidgets('$route keeps the default 80% panel cap at desktop width', (

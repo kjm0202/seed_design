@@ -159,6 +159,31 @@ void main() {
       expect(rows.single.flagsCollection.isButton, isFalse);
       handle.dispose();
     });
+
+    testWidgets('SideNavigation trigger uses the official sidebar label', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('ko'),
+          supportedLocales: const [Locale('ko')],
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
+          theme: SeedThemeData.light(fontFamily: seedTestFontFamily)
+              .toThemeData(),
+          home: Scaffold(
+            body: SeedSideNavigation(
+              showCollapseButton: true,
+              groups: const [
+                SeedSideNavGroup(
+                  items: [SeedSideNavItem(id: 'home', label: '홈')],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      expect(find.byTooltip('사이드바 닫기'), findsOneWidget);
+    });
   });
   group('overlay roles', () {
     setUpAll(loadSeedTestFonts);

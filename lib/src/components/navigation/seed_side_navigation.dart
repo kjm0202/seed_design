@@ -1,3 +1,5 @@
+import '../../localization/seed_localizations.dart';
+
 import 'dart:async';
 import 'dart:ui' show SemanticsRole;
 
@@ -8,15 +10,21 @@ import 'package:material_ui/material_ui.dart';
 import '../../foundations/colors/seed_color_scheme.dart';
 import '../../foundations/colors/seed_palette.dart';
 import '../../foundations/dimensions/seed_dimension.dart';
+import '../../foundations/feedback/seed_scale_feedback.dart';
 import '../../foundations/radius/seed_radius.dart';
 import '../../foundations/typography/seed_typography.dart';
 import '../../theme/seed_theme.dart';
+import '../feedback/seed_help_bubble.dart';
+import '../overlay/seed_anchored_overlay.dart';
 import '../badge/seed_badge.dart';
 import '../layout/seed_divider.dart';
 import '../layout/seed_scroll_fog.dart';
 
 /// Surface tone for [SeedSideNavigation].
-enum SeedSideNavTone { neutral, transparent }
+enum SeedSideNavTone {
+  neutral,
+  transparent,
+}
 
 /// A 2nd-level sub item in [SeedSideNavigation].
 class SeedSideNavSubItem {
@@ -179,7 +187,9 @@ class _SeedSideNavigationState extends State<SeedSideNavigation> {
   @override
   void didUpdateWidget(SeedSideNavigation oldWidget) {
     super.didUpdateWidget(oldWidget);
-    _expandSelectedParent();
+    // Only a newly selected item reveals its parent. Rebuilds must not reopen a
+    // parent the user closed.
+    if (oldWidget.selectedId != widget.selectedId) _expandSelectedParent();
   }
 
   @override
@@ -285,40 +295,74 @@ class _SeedSideNavigationState extends State<SeedSideNavigation> {
               children: [
                 // Header & Collapse trigger
                 if (widget.header != null || hasCollapseTrigger)
-                  Padding(
-                    padding: const EdgeInsets.all(SeedDimension.x2),
-                    child: Row(
-                      mainAxisAlignment: _collapsed
-                          ? MainAxisAlignment.center
-                          : MainAxisAlignment.end,
-                      children: [
-                        if (!_collapsed && widget.header != null)
-                          Expanded(child: widget.header!),
-                        if (hasCollapseTrigger)
-                          SizedBox(
-                            width: 39,
-                            height: 40,
-                            child: IconButton(
-                              tooltip: _collapsed ? '펼치기' : '접기',
-                              constraints: const BoxConstraints.tightFor(
-                                width: 39,
-                                height: 40,
-                              ),
-                              padding: EdgeInsets.zero,
-                              icon: Icon(
-                                _collapsed ? Icons.menu : Icons.menu_open,
-                                color: colors.fg.neutralSubtle,
-                                size: 20,
-                              ),
-                              onPressed: _handleToggleCollapse,
-                              splashRadius: 18,
+                  // The official trigger floats over a 64px header.
+                  Stack(
+                    children: [
+                      SizedBox(
+                        width: double.infinity,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(minHeight: 64),
+                          child: Padding(
+                            padding: EdgeInsetsDirectional.only(
+                              start: SeedDimension.x2,
+                              top: SeedDimension.x2,
+                              bottom: SeedDimension.x2,
+                              end: hasCollapseTrigger
+                                  ? SeedDimension.x13
+                                  : SeedDimension.x2,
+                            ),
+                            child: Align(
+                              alignment: AlignmentDirectional.centerStart,
+                              child: !_collapsed && widget.header != null
+                                  ? widget.header!
+                                  : const SizedBox.shrink(),
                             ),
                           ),
-                      ],
-                    ),
+                        ),
+                      ),
+                      if (hasCollapseTrigger)
+                        PositionedDirectional(
+                          top: SeedDimension.x3,
+                          end: _collapsed ? SeedDimension.x2 : SeedDimension.x3,
+                          child: Tooltip(
+                            message: SeedLocalizations.label(
+                              context,
+                              _collapsed
+                                  ? SeedLabel.openSideNavigation
+                                  : SeedLabel.closeSideNavigation,
+                            ),
+                            child: SeedPressable(
+                              enableScale: false,
+                              focusRingInside: true,
+                              focusBorderRadius: SeedBorderRadius.r2,
+                              semanticsLabel: SeedLocalizations.label(
+                                context,
+                                _collapsed
+                                    ? SeedLabel.openSideNavigation
+                                    : SeedLabel.closeSideNavigation,
+                              ),
+                              onTap: _handleToggleCollapse,
+                              builder: (context, isEngaged) => Container(
+                                width: SeedDimension.x10,
+                                height: SeedDimension.x10,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: isEngaged
+                                      ? colors.bg.transparentPressed
+                                      : colors.bg.transparent,
+                                  borderRadius: SeedBorderRadius.r2,
+                                ),
+                                child: Icon(
+                                  _collapsed ? Icons.menu : Icons.menu_open,
+                                  color: colors.fg.neutralSubtle,
+                                  size: 18,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
-
-                if (widget.header != null) const SeedDivider(),
 
                 // Scrollable navigation content
                 Expanded(
@@ -329,22 +373,28 @@ class _SeedSideNavigationState extends State<SeedSideNavigation> {
                         padding: const EdgeInsets.fromLTRB(0, 8, 0, 24),
                         itemCount: widget.groups.length,
                         separatorBuilder: (_, _) =>
-                            const SizedBox(height: SeedDimension.x2),
+                            SizedBox(height: _collapsed ? 0 : SeedDimension.x2),
                         itemBuilder: (context, groupIndex) {
                           final group = widget.groups[groupIndex];
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              if (!_collapsed && group.label != null)
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: SeedDimension.x4,
-                                    vertical: SeedDimension.x1,
-                                  ),
-                                  child: Text(
-                                    group.label!,
-                                    style: typography.t4Bold.copyWith(
-                                      color: colors.fg.neutralMuted,
+                              if (group.label != null)
+                                _SeedSideNavPanel(
+                                  expanded: !_collapsed,
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: SeedDimension.x1_5,
+                                    ),
+                                    child: Text(
+                                      group.label!,
+                                      maxLines: 1,
+                                      softWrap: false,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: typography.t4Bold.copyWith(
+                                        color: colors.fg.neutralMuted,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -386,13 +436,11 @@ class _SeedSideNavigationState extends State<SeedSideNavigation> {
                 ),
 
                 // Footer
-                if (widget.footer != null) ...[
-                  const SeedDivider(),
+                if (widget.footer != null)
                   Padding(
                     padding: const EdgeInsets.all(SeedDimension.x2),
                     child: widget.footer!,
                   ),
-                ],
               ],
             ),
           ),
@@ -411,33 +459,51 @@ class _SeedSideNavigationState extends State<SeedSideNavigation> {
     final hasSubItems = item.subItems != null && item.subItems!.isNotEmpty;
     final isExpanded = _isItemExpanded(item);
     final isItemEnabled = item.isEnabled;
+    final inactiveIconColor = colors.isDark
+        ? SeedPalette.gray600Dark
+        : SeedPalette.gray600Light;
 
     if (_collapsed) {
-      final icon = SizedBox(
-        height: 44,
-        width: widget.collapsedWidth,
+      // React marks a collapsed parent as current when a child is selected.
+      final isCurrent =
+          isSelected ||
+          (item.subItems?.any((sub) => sub.id == widget.selectedId) ?? false);
+      Widget surface(bool isEngaged) => _SeedSideNavItemSurface(
+        selected: isCurrent,
+        engaged: isEngaged,
+        alignment: Alignment.center,
         child: Icon(
           item.icon ?? Icons.circle_outlined,
           size: 20,
-          color: !isItemEnabled ? colors.fg.disabled : colors.fg.neutral,
+          color: !isItemEnabled
+              ? colors.fg.disabled
+              : (isCurrent ? colors.fg.neutral : inactiveIconColor),
         ),
       );
       if (hasSubItems && isItemEnabled) {
         return _SeedCollapsedSubmenu(
           item: item,
+          selected: isCurrent,
           selectedId: widget.selectedId,
           collapsedWidth: widget.collapsedWidth,
-          child: icon,
+          surfaceBuilder: surface,
         );
       }
-      return Semantics(
-        container: true,
-        button: true,
-        selected: isSelected,
-        enabled: isItemEnabled,
-        child: Tooltip(
-          message: item.label,
-          child: InkWell(onTap: isItemEnabled ? item.onTap : null, child: icon),
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: SeedDimension.x2),
+        child: SeedHelpBubbleTooltip(
+          title: item.label,
+          side: SeedOverlaySide.right,
+          child: SeedPressable(
+            enabled: isItemEnabled,
+            enableScale: false,
+            selected: isCurrent,
+            semanticsLabel: item.label,
+            focusRingInside: true,
+            focusBorderRadius: SeedBorderRadius.r2_5,
+            onTap: item.onTap ?? () {},
+            builder: (context, isEngaged) => surface(isEngaged),
+          ),
         ),
       );
     }
@@ -445,50 +511,32 @@ class _SeedSideNavigationState extends State<SeedSideNavigation> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Semantics(
-          container: true,
-          button: true,
-          selected: isSelected,
-          enabled: isItemEnabled,
-          expanded: hasSubItems ? isExpanded : null,
-          child: InkWell(
-            borderRadius: SeedBorderRadius.r2_5,
-            overlayColor: WidgetStatePropertyAll(
-              isSelected
-                  ? colors.bg.transparentSelectedPressed
-                  : colors.bg.transparentPressed,
-            ),
-            onTap: isItemEnabled
-                ? () {
-                    if (hasSubItems) {
-                      _toggleExpand(item);
-                    } else {
-                      item.onTap?.call();
-                    }
-                  }
-                : null,
-            child: Container(
-              constraints: const BoxConstraints(minHeight: 44),
-              margin: const EdgeInsets.symmetric(
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: SeedDimension.x2),
+          child: SeedPressable(
+            enabled: isItemEnabled,
+            enableScale: false,
+            selected: isSelected,
+            expanded: hasSubItems ? isExpanded : null,
+            focusRingInside: true,
+            focusBorderRadius: SeedBorderRadius.r2_5,
+            onTap: () {
+              if (hasSubItems) {
+                _toggleExpand(item);
+              } else {
+                item.onTap?.call();
+              }
+            },
+            builder: (context, isEngaged) => _SeedSideNavItemSurface(
+              selected: isSelected,
+              engaged: isEngaged,
+              padding: const EdgeInsets.symmetric(
                 horizontal: SeedDimension.x2,
-                vertical: 0,
-              ),
-              padding: EdgeInsets.symmetric(
-                horizontal: _collapsed ? 10 : 8,
                 vertical: SeedDimension.x3,
               ),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? colors.bg.transparentSelected
-                    : Colors.transparent,
-                borderRadius: SeedBorderRadius.r2_5,
-              ),
               child: Row(
-                mainAxisAlignment: _collapsed
-                    ? MainAxisAlignment.center
-                    : MainAxisAlignment.start,
                 children: [
-                  if (item.icon != null)
+                  if (item.icon != null) ...[
                     Icon(
                       item.icon,
                       size: 20,
@@ -496,45 +544,49 @@ class _SeedSideNavigationState extends State<SeedSideNavigation> {
                           ? colors.fg.disabled
                           : (isSelected
                                 ? colors.fg.neutral
-                                : (colors.isDark
-                                      ? SeedPalette.gray600Dark
-                                      : SeedPalette.gray600Light)),
+                                : inactiveIconColor),
                     ),
-                  if (!_collapsed) ...[
-                    if (item.icon != null)
-                      const SizedBox(width: SeedDimension.x3),
-                    Expanded(
-                      child: Text(
-                        item.label,
-                        style: typography.t4Medium.copyWith(
-                          color: !isItemEnabled
-                              ? colors.fg.disabled
-                              : (isSelected
-                                    ? colors.fg.neutral
-                                    : colors.fg.neutralMuted),
-                        ),
+                    const SizedBox(width: SeedDimension.x3),
+                  ] else
+                    // React's label always reserves the icon column and gap.
+                    const SizedBox(width: SeedDimension.x8),
+                  Expanded(
+                    child: Text(
+                      item.label,
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                      style: typography.t4Medium.copyWith(
+                        color: !isItemEnabled
+                            ? colors.fg.disabled
+                            : (isSelected
+                                  ? colors.fg.neutral
+                                  : colors.fg.neutralMuted),
                       ),
                     ),
-                    if (item.badge != null) ...[
-                      SeedBadge(
-                        label: item.badge!,
-                        tone: isSelected
-                            ? SeedBadgeTone.brand
-                            : SeedBadgeTone.neutral,
-                      ),
-                      const SizedBox(width: SeedDimension.x1),
-                    ],
-                    if (hasSubItems)
-                      Icon(
-                        isExpanded
-                            ? Icons.keyboard_arrow_up
-                            : Icons.keyboard_arrow_down,
+                  ),
+                  if (item.badge != null) ...[
+                    SeedBadge(
+                      label: item.badge!,
+                      tone: isSelected
+                          ? SeedBadgeTone.brand
+                          : SeedBadgeTone.neutral,
+                    ),
+                    const SizedBox(width: SeedDimension.x1),
+                  ],
+                  if (hasSubItems)
+                    AnimatedRotation(
+                      turns: isExpanded ? 0.5 : 0,
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeInOut,
+                      child: Icon(
+                        Icons.keyboard_arrow_down,
                         size: 16,
                         color: !isItemEnabled
                             ? colors.fg.disabled
                             : colors.fg.neutralSubtle,
                       ),
-                  ],
+                    ),
                 ],
               ),
             ),
@@ -542,69 +594,155 @@ class _SeedSideNavigationState extends State<SeedSideNavigation> {
         ),
 
         // Sub items
-        if (!_collapsed && hasSubItems && isExpanded)
-          ...item.subItems!.map((sub) {
-            final isSubSelected = sub.id == widget.selectedId;
-            final isSubEnabled = isItemEnabled && sub.isEnabled;
-            return Semantics(
-              container: true,
-              button: true,
-              selected: isSubSelected,
-              enabled: isSubEnabled,
-              child: InkWell(
-                borderRadius: SeedBorderRadius.r2_5,
-                overlayColor: WidgetStatePropertyAll(
-                  isSubSelected
-                      ? colors.bg.transparentSelectedPressed
-                      : colors.bg.transparentPressed,
-                ),
-                onTap: isSubEnabled ? sub.onTap : null,
-                child: Container(
-                  constraints: const BoxConstraints(minHeight: 44),
-                  margin: const EdgeInsets.symmetric(
+        if (hasSubItems)
+          _SeedSideNavPanel(
+            expanded: isExpanded,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: item.subItems!.map((sub) {
+                final isSubSelected = sub.id == widget.selectedId;
+                final isSubEnabled = isItemEnabled && sub.isEnabled;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(
                     horizontal: SeedDimension.x2,
-                    vertical: 0,
                   ),
-                  padding: const EdgeInsets.only(
-                    left: SeedDimension.x10,
-                    right: SeedDimension.x3,
-                    top: SeedDimension.x1_5,
-                    bottom: SeedDimension.x1_5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isSubSelected
-                        ? colors.bg.transparentSelected
-                        : Colors.transparent,
-                    borderRadius: SeedBorderRadius.r2_5,
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          sub.label,
-                          style: typography.t4Medium.copyWith(
-                            color: !isSubEnabled
-                                ? colors.fg.disabled
-                                : (isSubSelected
-                                      ? colors.fg.neutral
-                                      : colors.fg.neutralMuted),
-                          ),
-                        ),
+                  child: SeedPressable(
+                    enabled: isSubEnabled,
+                    enableScale: false,
+                    selected: isSubSelected,
+                    focusRingInside: true,
+                    focusBorderRadius: SeedBorderRadius.r2_5,
+                    onTap: sub.onTap ?? () {},
+                    builder: (context, isEngaged) => _SeedSideNavItemSurface(
+                      selected: isSubSelected,
+                      engaged: isEngaged,
+                      padding: const EdgeInsets.only(
+                        left: SeedDimension.x10,
+                        right: SeedDimension.x3,
+                        top: SeedDimension.x1_5,
+                        bottom: SeedDimension.x1_5,
                       ),
-                      if (sub.badge != null)
-                        SeedBadge(
-                          label: sub.badge!,
-                          tone: isSubSelected
-                              ? SeedBadgeTone.brand
-                              : SeedBadgeTone.neutral,
-                        ),
-                    ],
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              sub.label,
+                              maxLines: 1,
+                              softWrap: false,
+                              overflow: TextOverflow.ellipsis,
+                              style: typography.t4Medium.copyWith(
+                                color: !isSubEnabled
+                                    ? colors.fg.disabled
+                                    : (isSubSelected
+                                          ? colors.fg.neutral
+                                          : colors.fg.neutralMuted),
+                              ),
+                            ),
+                          ),
+                          if (sub.badge != null)
+                            SeedBadge(
+                              label: sub.badge!,
+                              tone: isSubSelected
+                                  ? SeedBadgeTone.brand
+                                  : SeedBadgeTone.neutral,
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            );
-          }),
+                );
+              }).toList(),
+            ),
+          ),
       ],
+    );
+  }
+}
+
+class _SeedSideNavPanel extends StatefulWidget {
+  const _SeedSideNavPanel({required this.expanded, required this.child});
+  final bool expanded;
+  final Widget child;
+
+  @override
+  State<_SeedSideNavPanel> createState() => _SeedSideNavPanelState();
+}
+
+class _SeedSideNavPanelState extends State<_SeedSideNavPanel>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 200),
+    value: widget.expanded ? 1 : 0,
+  );
+  late final Animation<double> _size = CurvedAnimation(
+    parent: _controller,
+    curve: Curves.easeInOut,
+  );
+
+  @override
+  void didUpdateWidget(_SeedSideNavPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.expanded == oldWidget.expanded) return;
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _controller.value = widget.expanded ? 1 : 0;
+    } else if (widget.expanded) {
+      _controller.forward();
+    } else {
+      _controller.reverse();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: _controller,
+    builder: (context, child) => _controller.isDismissed
+        ? const SizedBox.shrink()
+        : SizeTransition(
+            sizeFactor: _size,
+            alignment: AlignmentDirectional.topStart,
+            child: child,
+          ),
+    child: widget.child,
+  );
+}
+
+class _SeedSideNavItemSurface extends StatelessWidget {
+  const _SeedSideNavItemSurface({
+    required this.selected,
+    required this.engaged,
+    required this.child,
+    this.padding,
+    this.alignment,
+  });
+  final bool selected, engaged;
+  final Widget child;
+  final EdgeInsetsGeometry? padding;
+  final AlignmentGeometry? alignment;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.seedColor;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      constraints: const BoxConstraints(minHeight: 44),
+      padding: padding,
+      alignment: alignment,
+      decoration: BoxDecoration(
+        color: selected
+            ? (engaged
+                  ? colors.bg.transparentSelectedPressed
+                  : colors.bg.transparentSelected)
+            : (engaged ? colors.bg.transparentPressed : colors.bg.transparent),
+        borderRadius: SeedBorderRadius.r2_5,
+      ),
+      child: child,
     );
   }
 }
@@ -612,14 +750,16 @@ class _SeedSideNavigationState extends State<SeedSideNavigation> {
 class _SeedCollapsedSubmenu extends StatefulWidget {
   const _SeedCollapsedSubmenu({
     required this.item,
+    required this.selected,
     required this.selectedId,
     required this.collapsedWidth,
-    required this.child,
+    required this.surfaceBuilder,
   });
   final SeedSideNavItem item;
+  final bool selected;
   final String? selectedId;
   final double collapsedWidth;
-  final Widget child;
+  final Widget Function(bool isEngaged) surfaceBuilder;
   @override
   State<_SeedCollapsedSubmenu> createState() => _SeedCollapsedSubmenuState();
 }
@@ -665,52 +805,118 @@ class _SeedCollapsedSubmenuState extends State<_SeedCollapsedSubmenu> {
   }
 
   @override
-  Widget build(BuildContext context) => MenuAnchor(
-    controller: _menu,
-    childFocusNode: _trigger,
-    onClose: () {
-      _restoring = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _restoring = false);
-    },
-    alignmentOffset: Offset(widget.collapsedWidth, -44),
-    menuChildren: [
-      for (final sub in widget.item.subItems!)
+  Widget build(BuildContext context) {
+    final colors = context.seedColor;
+    final typography = context.seedTypography;
+    return MenuAnchor(
+      controller: _menu,
+      childFocusNode: _trigger,
+      crossAxisUnconstrained: false,
+      style: MenuStyle(
+        visualDensity: VisualDensity.standard,
+        backgroundColor: WidgetStatePropertyAll(colors.bg.layerFloating),
+        surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+        minimumSize: const WidgetStatePropertyAll(Size(240, 0)),
+        padding: const WidgetStatePropertyAll(
+          EdgeInsets.symmetric(vertical: SeedDimension.x2),
+        ),
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(borderRadius: SeedBorderRadius.r5),
+        ),
+      ),
+      onClose: () {
+        _restoring = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) => _restoring = false);
+      },
+      alignmentOffset: Offset(widget.collapsedWidth, -44),
+      menuChildren: [
         _region(
-          MenuItemButton(
-            focusNode: _items.putIfAbsent(sub.id, FocusNode.new),
-            leadingIcon: sub.id == widget.selectedId
-                ? const Icon(Icons.check)
-                : null,
-            onPressed: sub.isEnabled ? sub.onTap : null,
-            child: Text(sub.label),
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: SeedDimension.x4,
+              vertical: SeedDimension.x2_5,
+            ),
+            child: Text(
+              widget.item.label,
+              style: typography.t4Medium.copyWith(
+                color: colors.fg.neutralSubtle,
+              ),
+            ),
           ),
         ),
-    ],
-    builder: (context, controller, child) => _region(
-      Focus(
-        canRequestFocus: false,
-        onKeyEvent: (_, event) {
-          if (event is KeyDownEvent &&
-              event.logicalKey == LogicalKeyboardKey.arrowDown) {
-            _focusFirst();
-            return KeyEventResult.handled;
-          }
-          return KeyEventResult.ignored;
-        },
-        onFocusChange: (focused) {
-          if (focused && !_restoring) {
-            _enter();
-          }
-        },
-        child: Tooltip(
-          message: widget.item.label,
-          child: InkWell(
-            focusNode: _trigger,
-            onTap: _focusFirst,
-            child: widget.child,
+        for (final sub in widget.item.subItems!)
+          _region(
+            Semantics(
+              selected: sub.id == widget.selectedId,
+              child: MenuItemButton(
+                focusNode: _items.putIfAbsent(sub.id, FocusNode.new),
+                style: ButtonStyle(
+                  visualDensity: VisualDensity.standard,
+                  padding: const WidgetStatePropertyAll(
+                    EdgeInsets.symmetric(
+                      horizontal: SeedDimension.x4,
+                      vertical: SeedDimension.x3,
+                    ),
+                  ),
+                  minimumSize: const WidgetStatePropertyAll(Size.zero),
+                  backgroundColor: WidgetStatePropertyAll(
+                    sub.id == widget.selectedId
+                        ? colors.bg.transparentSelected
+                        : colors.bg.transparent,
+                  ),
+                  overlayColor: WidgetStatePropertyAll(
+                    colors.bg.transparentPressed,
+                  ),
+                  shape: const WidgetStatePropertyAll(
+                    RoundedRectangleBorder(borderRadius: SeedBorderRadius.r3),
+                  ),
+                ),
+                onPressed: sub.isEnabled ? sub.onTap : null,
+                child: Text(
+                  sub.label,
+                  style: typography.t5Regular.copyWith(
+                    color: sub.isEnabled
+                        ? colors.fg.neutral
+                        : colors.fg.disabled,
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+      builder: (context, controller, child) => _region(
+        Focus(
+          canRequestFocus: false,
+          onKeyEvent: (_, event) {
+            if (event is KeyDownEvent &&
+                event.logicalKey == LogicalKeyboardKey.arrowDown) {
+              _focusFirst();
+              return KeyEventResult.handled;
+            }
+            return KeyEventResult.ignored;
+          },
+          onFocusChange: (focused) {
+            if (focused && !_restoring) {
+              _enter();
+            }
+          },
+          // React sets disableTooltip here: the flyout already shows the label.
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: SeedDimension.x2),
+            child: SeedPressable(
+              focusNode: _trigger,
+              enableScale: false,
+              selected: widget.selected,
+              semanticsLabel: widget.item.label,
+              expanded: _menu.isOpen,
+              focusRingInside: true,
+              focusBorderRadius: SeedBorderRadius.r2_5,
+              onTap: _focusFirst,
+              builder: (context, isEngaged) => widget.surfaceBuilder(isEngaged),
+            ),
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }

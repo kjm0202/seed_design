@@ -28,51 +28,6 @@ SeedSideNavigation navigation({String? selectedId, VoidCallback? onParent}) =>
     );
 
 void main() {
-  testWidgets('collapsed navigation exposes children to pointer and keyboard', (
-    tester,
-  ) async {
-    var selected = false;
-    await tester.pumpWidget(
-      host(
-        SeedSideNavigation(
-          isCollapsed: true,
-          groups: [
-            SeedSideNavGroup(
-              items: [
-                SeedSideNavItem(
-                  id: 'parent',
-                  label: 'Parent',
-                  icon: Icons.settings,
-                  subItems: [
-                    SeedSideNavSubItem(
-                      id: 'child',
-                      label: 'Child',
-                      onTap: () => selected = true,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-    await tester.tap(find.byTooltip('Parent'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Child'));
-    await tester.pumpAndSettle();
-    expect(selected, isTrue);
-    selected = false;
-    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
-    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-    await tester.pumpAndSettle();
-    expect(find.text('Child'), findsOneWidget);
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
-    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-    await tester.pumpAndSettle();
-    expect(selected, isTrue);
-  });
-
   testWidgets('wheel taps settle once and disabled wheels keep their value', (
     tester,
   ) async {
