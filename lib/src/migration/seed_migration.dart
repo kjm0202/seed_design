@@ -29,20 +29,25 @@ class SeedMaterialBridge extends StatelessWidget {
   final Widget child;
   final SeedThemeData? theme;
   final Brightness? brightness;
+  final bool preserveComponentThemes;
 
   const SeedMaterialBridge({
     super.key,
     required this.child,
     this.theme,
     this.brightness,
+    this.preserveComponentThemes = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final effectiveBrightness = brightness ?? Theme.of(context).brightness;
     return Theme(
-      data: Theme.of(context)
-          .withSeedDesign(seedTheme: theme, brightness: effectiveBrightness),
+      data: Theme.of(context).withSeedDesign(
+        seedTheme: theme,
+        brightness: effectiveBrightness,
+        preserveComponentThemes: preserveComponentThemes,
+      ),
       child: child,
     );
   }
@@ -74,7 +79,10 @@ class SeedMigration {
     'Checkbox': 'SeedCheckbox',
     'Radio': 'SeedRadio',
     'SegmentedButton': 'SeedSegmentedControl',
-    'TabBar': 'SeedTabs',
+    'TabBar': 'SeedTabBar (with TabController / DefaultTabController)',
+    'TabBar / TabBarView': 'SeedTabBar + TabBarView / SeedTabsView',
+    'DropdownButton': 'SeedSelect',
+    'DropdownButtonFormField': 'SeedSelectFormField',
     'NavigationBar / BottomNavigationBar': 'SeedBottomNavigation',
     'NavigationDrawer': 'SeedSideNavigation / SeedSidePanel',
     'Dialog / AlertDialog': 'SeedDialog / SeedAlertDialog / showSeedDialog',

@@ -411,6 +411,7 @@ extension SeedMaterialThemeExtension on ThemeData {
     SeedThemeData? seedTheme,
     Brightness? brightness,
     String? fontFamily,
+    bool preserveComponentThemes = false,
   }) {
     final effectiveBrightness = brightness ?? this.brightness;
     final inheritedFont = textTheme.bodyMedium;
@@ -444,7 +445,7 @@ extension SeedMaterialThemeExtension on ThemeData {
     }
 
     final migratedText = seedThemeData.textTheme;
-    return copyWith(
+    final migrated = copyWith(
       // ThemeData.copyWith is required to retain app-specific configuration.
       // ignore: deprecated_member_use
       useMaterial3: true,
@@ -526,6 +527,214 @@ extension SeedMaterialThemeExtension on ThemeData {
       chipTheme: seedThemeData.chipTheme,
       snackBarTheme: seedThemeData.snackBarTheme,
       progressIndicatorTheme: seedThemeData.progressIndicatorTheme,
+    );
+    if (!preserveComponentThemes) return migrated;
+
+    // Host values win field by field; SEED fills only the fields the host left
+    // null. Keep these lists in sync with the component themes in toThemeData.
+    ButtonStyle? mergeButton(ButtonStyle? host, ButtonStyle? seed) {
+      if (host == null) return seed;
+      // styleFrom wraps an omitted textStyle as WidgetStatePropertyAll(null).
+      final hostText = host.textStyle;
+      final omitsText =
+          hostText is WidgetStatePropertyAll<TextStyle?> &&
+          hostText.value == null;
+      return (omitsText ? host.copyWith(textStyle: seed?.textStyle) : host)
+          .merge(seed);
+    }
+
+    final seedAppBar = migrated.appBarTheme;
+    final seedFab = migrated.floatingActionButtonTheme;
+    final seedSwitch = migrated.switchTheme;
+    final seedCheckbox = migrated.checkboxTheme;
+    final seedDialog = migrated.dialogTheme;
+    final seedSheet = migrated.bottomSheetTheme;
+    final seedNavBar = migrated.navigationBarTheme;
+    final seedBottomNav = migrated.bottomNavigationBarTheme;
+    final seedTabBar = migrated.tabBarTheme;
+    final seedCard = migrated.cardTheme;
+    final seedDivider = migrated.dividerTheme;
+    final seedListTile = migrated.listTileTheme;
+    final seedChip = migrated.chipTheme;
+    final seedSnackBar = migrated.snackBarTheme;
+    final seedProgress = migrated.progressIndicatorTheme;
+    return migrated.copyWith(
+      inputDecorationTheme: inputDecorationTheme.merge(
+        migrated.inputDecorationTheme,
+      ),
+      appBarTheme: appBarTheme.copyWith(
+        backgroundColor:
+            appBarTheme.backgroundColor ?? seedAppBar.backgroundColor,
+        foregroundColor:
+            appBarTheme.foregroundColor ?? seedAppBar.foregroundColor,
+        elevation: appBarTheme.elevation ?? seedAppBar.elevation,
+        scrolledUnderElevation:
+            appBarTheme.scrolledUnderElevation ??
+            seedAppBar.scrolledUnderElevation,
+        surfaceTintColor:
+            appBarTheme.surfaceTintColor ?? seedAppBar.surfaceTintColor,
+        centerTitle: appBarTheme.centerTitle ?? seedAppBar.centerTitle,
+        titleTextStyle: appBarTheme.titleTextStyle ?? seedAppBar.titleTextStyle,
+        iconTheme: appBarTheme.iconTheme ?? seedAppBar.iconTheme,
+        actionsIconTheme:
+            appBarTheme.actionsIconTheme ?? seedAppBar.actionsIconTheme,
+      ),
+      floatingActionButtonTheme: floatingActionButtonTheme.copyWith(
+        backgroundColor:
+            floatingActionButtonTheme.backgroundColor ??
+            seedFab.backgroundColor,
+        foregroundColor:
+            floatingActionButtonTheme.foregroundColor ??
+            seedFab.foregroundColor,
+        elevation: floatingActionButtonTheme.elevation ?? seedFab.elevation,
+        shape: floatingActionButtonTheme.shape ?? seedFab.shape,
+      ),
+      switchTheme: switchTheme.copyWith(
+        trackColor: switchTheme.trackColor ?? seedSwitch.trackColor,
+        thumbColor: switchTheme.thumbColor ?? seedSwitch.thumbColor,
+        trackOutlineColor:
+            switchTheme.trackOutlineColor ?? seedSwitch.trackOutlineColor,
+      ),
+      checkboxTheme: checkboxTheme.copyWith(
+        fillColor: checkboxTheme.fillColor ?? seedCheckbox.fillColor,
+        checkColor: checkboxTheme.checkColor ?? seedCheckbox.checkColor,
+        side: checkboxTheme.side ?? seedCheckbox.side,
+        shape: checkboxTheme.shape ?? seedCheckbox.shape,
+      ),
+      radioTheme: radioTheme.copyWith(
+        fillColor: radioTheme.fillColor ?? migrated.radioTheme.fillColor,
+      ),
+      dialogTheme: dialogTheme.copyWith(
+        backgroundColor:
+            dialogTheme.backgroundColor ?? seedDialog.backgroundColor,
+        surfaceTintColor:
+            dialogTheme.surfaceTintColor ?? seedDialog.surfaceTintColor,
+        elevation: dialogTheme.elevation ?? seedDialog.elevation,
+        shape: dialogTheme.shape ?? seedDialog.shape,
+        titleTextStyle: dialogTheme.titleTextStyle ?? seedDialog.titleTextStyle,
+        contentTextStyle:
+            dialogTheme.contentTextStyle ?? seedDialog.contentTextStyle,
+      ),
+      bottomSheetTheme: bottomSheetTheme.copyWith(
+        backgroundColor:
+            bottomSheetTheme.backgroundColor ?? seedSheet.backgroundColor,
+        surfaceTintColor:
+            bottomSheetTheme.surfaceTintColor ?? seedSheet.surfaceTintColor,
+        elevation: bottomSheetTheme.elevation ?? seedSheet.elevation,
+        shape: bottomSheetTheme.shape ?? seedSheet.shape,
+        dragHandleColor:
+            bottomSheetTheme.dragHandleColor ?? seedSheet.dragHandleColor,
+        showDragHandle:
+            bottomSheetTheme.showDragHandle ?? seedSheet.showDragHandle,
+      ),
+      navigationBarTheme: navigationBarTheme.copyWith(
+        backgroundColor:
+            navigationBarTheme.backgroundColor ?? seedNavBar.backgroundColor,
+        surfaceTintColor:
+            navigationBarTheme.surfaceTintColor ?? seedNavBar.surfaceTintColor,
+        indicatorColor:
+            navigationBarTheme.indicatorColor ?? seedNavBar.indicatorColor,
+        elevation: navigationBarTheme.elevation ?? seedNavBar.elevation,
+      ),
+      bottomNavigationBarTheme: bottomNavigationBarTheme.copyWith(
+        backgroundColor:
+            bottomNavigationBarTheme.backgroundColor ??
+            seedBottomNav.backgroundColor,
+        selectedItemColor:
+            bottomNavigationBarTheme.selectedItemColor ??
+            seedBottomNav.selectedItemColor,
+        unselectedItemColor:
+            bottomNavigationBarTheme.unselectedItemColor ??
+            seedBottomNav.unselectedItemColor,
+        elevation:
+            bottomNavigationBarTheme.elevation ?? seedBottomNav.elevation,
+      ),
+      tabBarTheme: tabBarTheme.copyWith(
+        indicatorColor: tabBarTheme.indicatorColor ?? seedTabBar.indicatorColor,
+        labelColor: tabBarTheme.labelColor ?? seedTabBar.labelColor,
+        unselectedLabelColor:
+            tabBarTheme.unselectedLabelColor ?? seedTabBar.unselectedLabelColor,
+        labelStyle: tabBarTheme.labelStyle ?? seedTabBar.labelStyle,
+        unselectedLabelStyle:
+            tabBarTheme.unselectedLabelStyle ?? seedTabBar.unselectedLabelStyle,
+        dividerColor: tabBarTheme.dividerColor ?? seedTabBar.dividerColor,
+      ),
+      cardTheme: cardTheme.copyWith(
+        color: cardTheme.color ?? seedCard.color,
+        surfaceTintColor:
+            cardTheme.surfaceTintColor ?? seedCard.surfaceTintColor,
+        elevation: cardTheme.elevation ?? seedCard.elevation,
+        shape: cardTheme.shape ?? seedCard.shape,
+      ),
+      dividerTheme: dividerTheme.copyWith(
+        color: dividerTheme.color ?? seedDivider.color,
+        thickness: dividerTheme.thickness ?? seedDivider.thickness,
+        space: dividerTheme.space ?? seedDivider.space,
+      ),
+      listTileTheme: listTileTheme.copyWith(
+        contentPadding:
+            listTileTheme.contentPadding ?? seedListTile.contentPadding,
+        titleTextStyle:
+            listTileTheme.titleTextStyle ?? seedListTile.titleTextStyle,
+        subtitleTextStyle:
+            listTileTheme.subtitleTextStyle ?? seedListTile.subtitleTextStyle,
+        leadingAndTrailingTextStyle:
+            listTileTheme.leadingAndTrailingTextStyle ??
+            seedListTile.leadingAndTrailingTextStyle,
+        iconColor: listTileTheme.iconColor ?? seedListTile.iconColor,
+      ),
+      chipTheme: chipTheme.copyWith(
+        backgroundColor: chipTheme.backgroundColor ?? seedChip.backgroundColor,
+        selectedColor: chipTheme.selectedColor ?? seedChip.selectedColor,
+        shape: chipTheme.shape ?? seedChip.shape,
+        side: chipTheme.side ?? seedChip.side,
+        labelStyle: chipTheme.labelStyle ?? seedChip.labelStyle,
+        padding: chipTheme.padding ?? seedChip.padding,
+      ),
+      snackBarTheme: snackBarTheme.copyWith(
+        backgroundColor:
+            snackBarTheme.backgroundColor ?? seedSnackBar.backgroundColor,
+        actionTextColor:
+            snackBarTheme.actionTextColor ?? seedSnackBar.actionTextColor,
+        behavior: snackBarTheme.behavior ?? seedSnackBar.behavior,
+        elevation: snackBarTheme.elevation ?? seedSnackBar.elevation,
+        shape: snackBarTheme.shape ?? seedSnackBar.shape,
+        contentTextStyle:
+            snackBarTheme.contentTextStyle ?? seedSnackBar.contentTextStyle,
+      ),
+      progressIndicatorTheme: progressIndicatorTheme.copyWith(
+        color: progressIndicatorTheme.color ?? seedProgress.color,
+        circularTrackColor:
+            progressIndicatorTheme.circularTrackColor ??
+            seedProgress.circularTrackColor,
+        linearTrackColor:
+            progressIndicatorTheme.linearTrackColor ??
+            seedProgress.linearTrackColor,
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: mergeButton(
+          filledButtonTheme.style,
+          migrated.filledButtonTheme.style,
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: mergeButton(
+          elevatedButtonTheme.style,
+          migrated.elevatedButtonTheme.style,
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: mergeButton(
+          outlinedButtonTheme.style,
+          migrated.outlinedButtonTheme.style,
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: mergeButton(
+          textButtonTheme.style,
+          migrated.textButtonTheme.style,
+        ),
+      ),
     );
   }
 }

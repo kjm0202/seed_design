@@ -5,6 +5,9 @@
 - Preserve Drawer/back navigation and AppBar bottom content; support optional FAB Hero tags and tooltips.
 - Add route builders, Navigator selection, route settings and focus options to dialog/sheet helpers; allow sheet constraint overrides.
 - Fix Material Snackbar action close reasons and duplicate action execution. Action snackbars now persist by default; use `persist: false` to retain a timeout. The SEED Provider timer contract is unchanged.
+- **Breaking migration:** Direct SeedBgColors constructor calls must supply neutralSolidMuted and neutralSolidMutedPressed.
+- `preserveComponentThemes: true` now merges component themes field by field: app-set button padding, shape and colors win over SEED values, and a partial override such as a dialog's `insetPadding` keeps the remaining SEED fields instead of dropping the whole SEED theme.
+- Add `preserveComponentThemes` and locale-aware, overridable SEED labels. Explicit labels and official React value/default/callback contracts remain supported.
 
 ## 1.0.0
 
