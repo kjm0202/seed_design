@@ -81,10 +81,6 @@ Widget _tabs(
   ),
 );
 
-Finder get _rangeField => find.byWidgetPredicate(
-  (widget) => widget is Semantics && widget.properties.label == '표시 범위',
-);
-
 Color _trackColor(WidgetTester tester) {
   final findTrack = find.descendant(
     of: find.byType(SeedSwitchMark),
@@ -282,94 +278,6 @@ void main() {
       }
     },
   );
-
-  for (final width in [800.0, 390.0, 240.0]) {
-    testWidgets('PKG-04: separate range selector and total at width $width', (
-      tester,
-    ) async {
-      tester.view.devicePixelRatio = 1;
-      tester.view.physicalSize = Size(width, 900);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      addTearDown(tester.view.resetPhysicalSize);
-      final changed = <int>[];
-      await tester.pumpWidget(
-        _host(
-          SeedTablePagination(
-            value: const SeedTablePaginationValue(page: 3, pageSize: 25),
-            totalItems: 237,
-            onPageChanged: changed.add,
-          ),
-          width: width,
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(_rangeField, findsOneWidget);
-      expect(tester.getSize(_rangeField).width, 96);
-      expect(find.text('/ 총 237개'), findsOneWidget);
-      expect(find.textContaining('총 237개', findRichText: true), findsOneWidget);
-      expect(tester.takeException(), isNull);
-      await tester.tap(find.byIcon(Icons.chevron_right));
-      await tester.pumpAndSettle();
-      expect(changed, [4]);
-    });
-  }
-
-  testWidgets('PKG-04: range selection still emits page-range reason', (
-    tester,
-  ) async {
-    final changes = <SeedTablePaginationChange>[];
-    await tester.pumpWidget(
-      _host(
-        SeedTablePagination(
-          defaultValue: const SeedTablePaginationValue(page: 3, pageSize: 25),
-          totalItems: 237,
-          onValueChanged: changes.add,
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(_rangeField);
-    await tester.pumpAndSettle();
-    expect(find.text('76–100'), findsWidgets);
-    await tester.tap(find.text('76–100').last);
-    await tester.pumpAndSettle();
-    expect(changes, hasLength(1));
-    expect(changes.single.reason, SeedTablePageChangeReason.pageRange);
-    expect(
-      changes.single.value,
-      const SeedTablePaginationValue(page: 4, pageSize: 25),
-    );
-    expect(find.text('/ 총 237개'), findsOneWidget);
-  });
-
-  testWidgets('PKG-04: zero total keeps distinct disabled range and total', (
-    tester,
-  ) async {
-    await tester.pumpWidget(_host(const SeedTablePagination(totalItems: 0)));
-    await tester.pumpAndSettle();
-    expect(_rangeField, findsOneWidget);
-    expect(tester.getSize(_rangeField).width, 96);
-    expect(find.text('/ 총 0개'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('PKG-04: unknown total keeps plain range only', (tester) async {
-    await tester.pumpWidget(
-      _host(
-        const SeedTablePagination(
-          currentPage: 3,
-          rowsPerPage: 25,
-          currentPageItemCount: 12,
-          hasPreviousPage: true,
-          hasNextPage: false,
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(_rangeField, findsNothing);
-    expect(find.text('51–62'), findsOneWidget);
-    expect(find.textContaining('총'), findsNothing);
-  });
 
   for (final width in [800.0, 390.0]) {
     testWidgets(

@@ -1,12 +1,14 @@
+import '../../localization/seed_localizations.dart';
+
 import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 
 import '../../foundations/dimensions/seed_dimension.dart';
-import '../../foundations/radius/seed_radius.dart';
 import '../../theme/seed_theme.dart';
 import '../input/seed_input_button.dart';
 import '../input/seed_select.dart';
+import 'seed_pagination_controls.dart';
 
 enum SeedTablePageChangeReason {
   previous,
@@ -74,8 +76,11 @@ class SeedTablePagination extends StatefulWidget {
     this.currentPageItemCount,
     this.showRangeSelect = true,
     this.disabled = false,
-    this.semanticsLabel = '표 페이지 탐색',
-  }) : assert(value == null || (currentPage == null && rowsPerPage == null)),
+    String? semanticsLabel,
+    // Preserve the public named parameter and getter.
+    // ignore: prefer_initializing_formals
+  }) : _semanticsLabel = semanticsLabel,
+       assert(value == null || (currentPage == null && rowsPerPage == null)),
        assert(currentPage == null || currentPage >= 1),
        assert(defaultPage >= 1),
        assert(totalItems == null || totalItems >= 0),
@@ -130,7 +135,8 @@ class SeedTablePagination extends StatefulWidget {
 
   final bool showRangeSelect;
   final bool disabled;
-  final String semanticsLabel;
+  final String? _semanticsLabel;
+  String get semanticsLabel => _semanticsLabel ?? '표 페이지 탐색';
 
   @override
   State<SeedTablePagination> createState() => _SeedTablePaginationState();
@@ -248,10 +254,10 @@ class _SeedTablePaginationState extends State<SeedTablePagination> {
 
   List<int> get _resolvedPageOptions {
     final total = _totalPages;
-    if (widget.totalItems == null || total == null || total <= 0) {
-      return const <int>[];
-    }
+    if (widget.totalItems == null || total == null) return const <int>[];
     final page = _effectivePage;
+    // React keeps the current page as the single 0-0 option when empty.
+    if (total <= 0) return <int>[page];
     final candidates = widget.pageOptions ?? _buildAutoPageOptions(page, total);
     final pages = <int>{
       ...candidates.where((opt) => opt >= 1 && opt <= total),
@@ -356,204 +362,277 @@ class _SeedTablePaginationState extends State<SeedTablePagination> {
               : widget.currentPageItemCount! >= rows);
     }
 
+    final totalText = SeedLocalizations.label(
+      context,
+      SeedLabel.paginationTotal,
+    ).replaceAll('{total}', '$total');
     final rangeText = total != null
-        ? '$startItem–$endItem / 총 $total개'
-        : '$startItem–$endItem';
+        ? '$startItem-$endItem $totalText'
+        : '$startItem-$endItem';
 
     final pageOptions = _resolvedPageOptions;
+    String rangeLabel(int page) => total == 0
+        ? '0-0'
+        : '${(page - 1) * rows + 1}-${(page * rows).clamp(0, total!)}';
+    final rowsLabel = Localizations.maybeLocaleOf(context)?.languageCode == 'ko'
+        ? '$rows개'
+        : '$rows';
+    // React's triggers are `min-width: 96px; width: max-content`.
+    double selectWidth(Iterable<String> labels) {
+      final painter = TextPainter(
+        textDirection: Directionality.of(context),
+        textScaler: MediaQuery.textScalerOf(context),
+        maxLines: 1,
+      );
+      var widest = 0.0;
+      for (final label in labels) {
+        painter.text = TextSpan(text: label, style: typography.t4Regular);
+        painter.layout();
+        widest = math.max(widest, painter.width);
+      }
+      painter.dispose();
+      // Padding, the gap and the chevron of a medium InputButton.
+      return math.max(96.0, (widest + 14 * 2 + 8 + 16).ceilToDouble());
+    }
+
     final prevEnabled = !widget.disabled && canGoPrev;
     final nextEnabled = !widget.disabled && canGoNext;
 
     return Semantics(
       container: true,
       enabled: !widget.disabled,
-      label: widget.semanticsLabel,
+      label:
+          widget._semanticsLabel ??
+          SeedLocalizations.label(context, SeedLabel.tablePagination),
       child: LayoutBuilder(
         builder: (context, constraints) => SizedBox(
           width: constraints.hasBoundedWidth ? constraints.maxWidth : null,
-          child: Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: SeedDimension.x4,
-            runSpacing: SeedDimension.x3,
-            children: [
-              // Left: Rows per page selector
-              Wrap(
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: SeedDimension.x2,
-                runSpacing: SeedDimension.x2,
-                children: [
-                  SizedBox(
-                    width: 96,
-                    child: Semantics(
-                      label: '페이지당 표시 개수',
-                      child: SeedSelect<int>(
-                        size: SeedInputButtonSize.medium,
-                        enabled: !widget.disabled,
-                        value: [rows],
-                        groups: [
-                          SeedSelectGroup<int>(
-                            items: _resolvedRowsPerPageOptions.map((opt) {
-                              return SeedSelectItem<int>(
-                                value: opt,
-                                label: '$opt개',
-                              );
-                            }).toList(),
-                          ),
-                        ],
-                        onChanged: _changeRowsPerPage,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    '씩 보기',
-                    style: typography.t4Regular.copyWith(
-                      color: widget.disabled
-                          ? colors.fg.disabled
-                          : colors.fg.neutral,
-                    ),
-                  ),
-                ],
+          height: 40,
+          // A normal Row forced into the narrow viewport would overflow and
+          // lose the next/previous controls. React's enclosing demo uses
+          // overflowX:auto while TablePagination itself keeps max-content
+          // width, so expose the same horizontal scroll contract to standalone
+          // Flutter consumers instead of wrapping controls onto new lines.
+          child: SingleChildScrollView(
+            key: const ValueKey('seed-table-pagination-horizontal-scroll'),
+            scrollDirection: Axis.horizontal,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minWidth: constraints.hasBoundedWidth
+                    ? constraints.maxWidth
+                    : 0,
               ),
-
-              // Right: Range display & Next/Prev buttons
-              Wrap(
-                alignment: WrapAlignment.end,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: SeedDimension.x4,
-                runSpacing: SeedDimension.x2,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  if (total != null && widget.showRangeSelect)
-                    Wrap(
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      spacing: SeedDimension.x2,
-                      runSpacing: SeedDimension.x2,
-                      children: [
-                        SizedBox(
-                          width: 96,
-                          child: Semantics(
-                            label: '표시 범위',
-                            child: SeedSelect<int>(
-                              size: SeedInputButtonSize.medium,
-                              enabled:
-                                  !widget.disabled && pageOptions.length > 1,
-                              value: [page],
-                              groups: [
-                                SeedSelectGroup(
-                                  items: [
-                                    for (final p in pageOptions)
-                                      SeedSelectItem(
-                                        value: p,
-                                        label:
-                                            '${(p - 1) * rows + 1}–${(p * rows).clamp(0, total)}',
-                                      ),
-                                  ],
-                                ),
-                              ],
-                              onChanged: (p) => _changePage(
-                                p,
-                                SeedTablePageChangeReason.pageRange,
-                              ),
-                            ),
-                          ),
-                        ),
-                        Text(
-                          '/ 총 $total개',
-                          style: typography.t4Regular.copyWith(
-                            color: widget.disabled
-                                ? colors.fg.disabled
-                                : colors.fg.neutral,
-                          ),
-                        ),
-                      ],
-                    )
-                  else
-                    Text(
-                      rangeText,
-                      style: typography.t4Regular.copyWith(
-                        color: widget.disabled
-                            ? colors.fg.disabled
-                            : colors.fg.neutral,
-                      ),
-                    ),
+                  // Left: Rows per page selector
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Semantics(
-                        button: true,
-                        enabled: prevEnabled,
-                        label: '이전 페이지',
-                        excludeSemantics: true,
-                        onTap: prevEnabled
-                            ? () => _changePage(
-                                page - 1,
-                                SeedTablePageChangeReason.previous,
-                              )
-                            : null,
-                        child: InkWell(
-                          onTap: prevEnabled
-                              ? () => _changePage(
-                                  page - 1,
-                                  SeedTablePageChangeReason.previous,
-                                )
-                              : null,
-                          borderRadius: SeedBorderRadius.r2,
-                          child: Container(
-                            width: 40,
-                            height: 40,
-                            alignment: Alignment.center,
-                            child: Icon(
-                              Icons.chevron_left,
-                              size: 16,
-                              color: prevEnabled
-                                  ? colors.fg.neutral
-                                  : colors.fg.disabled,
+                      _TablePaginationFocusReveal(
+                        alignment: 0,
+                        child: SizedBox(
+                          width: selectWidth([rowsLabel]),
+                          child: Semantics(
+                            label: SeedLocalizations.label(
+                              context,
+                              SeedLabel.rowsPerPage,
+                            ),
+                            child: SeedSelect<int>(
+                              size: SeedInputButtonSize.medium,
+                              enabled: !widget.disabled,
+                              value: [rows],
+                              groups: [
+                                SeedSelectGroup<int>(
+                                  items: _resolvedRowsPerPageOptions.map((opt) {
+                                    return SeedSelectItem<int>(
+                                      value: opt,
+                                      label:
+                                          Localizations.maybeLocaleOf(context)
+                                                  ?.languageCode ==
+                                              'ko'
+                                          ? '$opt개'
+                                          : '$opt',
+                                    );
+                                  }).toList(),
+                                ),
+                              ],
+                              onChanged: _changeRowsPerPage,
                             ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: SeedDimension.x1),
-                      Semantics(
-                        button: true,
-                        enabled: nextEnabled,
-                        label: '다음 페이지',
-                        excludeSemantics: true,
-                        onTap: nextEnabled
-                            ? () => _changePage(
-                                page + 1,
-                                SeedTablePageChangeReason.next,
-                              )
-                            : null,
-                        child: InkWell(
-                          onTap: nextEnabled
-                              ? () => _changePage(
-                                  page + 1,
-                                  SeedTablePageChangeReason.next,
-                                )
-                              : null,
-                          borderRadius: SeedBorderRadius.r2,
-                          child: Container(
-                            width: 40,
-                            height: 40,
-                            alignment: Alignment.center,
-                            child: Icon(
-                              Icons.chevron_right,
-                              size: 16,
-                              color: nextEnabled
-                                  ? colors.fg.neutral
-                                  : colors.fg.disabled,
-                            ),
-                          ),
+                      const SizedBox(width: SeedDimension.x2),
+                      Text(
+                        SeedLocalizations.label(
+                          context,
+                          SeedLabel.rowsPerPageSuffix,
+                        ),
+                        style: typography.t4Regular.copyWith(
+                          color: widget.disabled
+                              ? colors.fg.disabled
+                              : colors.fg.neutral,
                         ),
                       ),
                     ],
                   ),
+
+                  // Right: Range display & Next/Prev buttons
+                  Padding(
+                    padding: const EdgeInsets.only(left: SeedDimension.x4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (total != null && widget.showRangeSelect)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _TablePaginationFocusReveal(
+                                alignment: 1,
+                                child: SizedBox(
+                                  width: selectWidth([rangeLabel(page)]),
+                                  child: Semantics(
+                                    label: SeedLocalizations.label(
+                                      context,
+                                      SeedLabel.range,
+                                    ),
+                                    child: SeedSelect<int>(
+                                      size: SeedInputButtonSize.medium,
+                                      maxMenuHeight: 240,
+                                      enabled:
+                                          !widget.disabled &&
+                                          pageOptions.length > 1,
+                                      value: [page],
+                                      groups: [
+                                        SeedSelectGroup(
+                                          items: [
+                                            for (final p in pageOptions)
+                                              SeedSelectItem(
+                                                value: p,
+                                                label: rangeLabel(p),
+                                              ),
+                                          ],
+                                        ),
+                                      ],
+                                      onChanged: (p) => _changePage(
+                                        p,
+                                        SeedTablePageChangeReason.pageRange,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: SeedDimension.x2),
+                              Text(
+                                totalText,
+                                style: typography.t4Regular.copyWith(
+                                  color: widget.disabled
+                                      ? colors.fg.disabled
+                                      : colors.fg.neutral,
+                                ),
+                              ),
+                            ],
+                          )
+                        else
+                          Text(
+                            rangeText,
+                            style: typography.t4Regular.copyWith(
+                              color: widget.disabled
+                                  ? colors.fg.disabled
+                                  : colors.fg.neutral,
+                            ),
+                          ),
+                        const SizedBox(width: SeedDimension.x4),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _TablePaginationFocusReveal(
+                              alignment: 1,
+                              child: SeedPaginationNavButton(
+                                icon: Icons.chevron_left,
+                                semanticsLabel: SeedLocalizations.label(
+                                  context,
+                                  SeedLabel.previousPage,
+                                ),
+                                enabled: prevEnabled,
+                                onTap: () => _changePage(
+                                  page - 1,
+                                  SeedTablePageChangeReason.previous,
+                                ),
+                              ),
+                            ),
+                            _TablePaginationFocusReveal(
+                              alignment: 1,
+                              child: SeedPaginationNavButton(
+                                icon: Icons.chevron_right,
+                                semanticsLabel: SeedLocalizations.label(
+                                  context,
+                                  SeedLabel.nextPage,
+                                ),
+                                enabled: nextEnabled,
+                                onTap: () => _changePage(
+                                  page + 1,
+                                  SeedTablePageChangeReason.next,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
+}
+
+class _TablePaginationFocusReveal extends StatefulWidget {
+  const _TablePaginationFocusReveal({
+    required this.child,
+    required this.alignment,
+  });
+
+  final Widget child;
+  final double alignment;
+
+  @override
+  State<_TablePaginationFocusReveal> createState() =>
+      _TablePaginationFocusRevealState();
+}
+
+class _TablePaginationFocusRevealState
+    extends State<_TablePaginationFocusReveal> {
+  void _onFocusChange(bool hasFocus) {
+    if (!hasFocus) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Scrollable.ensureVisible(
+        context,
+        alignment: widget.alignment,
+        alignmentPolicy: widget.alignment == 0
+            ? ScrollPositionAlignmentPolicy.keepVisibleAtStart
+            : ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+        // Keyboard focus is an accessibility state change, not a carousel
+        // transition. Reveal immediately rather than animating a hidden
+        // control while the next key may already be arriving.
+        duration: Duration.zero,
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => Focus(
+    canRequestFocus: false,
+    skipTraversal: true,
+    includeSemantics: false,
+    onFocusChange: _onFocusChange,
+    child: widget.child,
+  );
 }

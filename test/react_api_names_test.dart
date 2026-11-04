@@ -301,4 +301,54 @@ void main() {
       expect(tooltip, [true, false]);
     },
   );
+
+  testWidgets('React table pagination keeps page and pageSize in one value', (
+    tester,
+  ) async {
+    final proposals = <SeedTablePaginationValue>[];
+    final reasons = <SeedTablePageChangeReason>[];
+    await tester.pumpWidget(
+      host(
+        SeedTablePagination(
+          value: const SeedTablePaginationValue(page: 3, pageSize: 10),
+          totalItems: 100,
+          onValueChange: (value, details) {
+            proposals.add(value);
+            reasons.add(details.reason);
+          },
+        ),
+      ),
+    );
+    for (var i = 0; i < 2; i++) {
+      // A single CSS-nowrap row can extend beyond this host's 360px width.
+      // Ensure the accessible navigation action is revealed by scrolling.
+      final next = find.bySemanticsLabel('다음 페이지');
+      await tester.ensureVisible(next);
+      await tester.pumpAndSettle();
+      await tester.tap(next);
+      await tester.pumpAndSettle();
+    }
+    expect(proposals, const [
+      SeedTablePaginationValue(page: 4, pageSize: 10),
+      SeedTablePaginationValue(page: 4, pageSize: 10),
+    ]);
+    expect(reasons, [
+      SeedTablePageChangeReason.next,
+      SeedTablePageChangeReason.next,
+    ]);
+    await tester.pumpWidget(
+      host(
+        const SeedTablePagination(
+          key: ValueKey('uncontrolled'),
+          defaultValue: SeedTablePaginationValue(page: 3, pageSize: 10),
+          totalItems: 100,
+        ),
+      ),
+    );
+    final selects = tester
+        .widgetList<SeedSelect<int>>(find.byType(SeedSelect<int>))
+        .toList();
+    expect(selects.first.value, [10]);
+    expect(selects.last.value, [3]);
+  });
 }

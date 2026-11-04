@@ -352,49 +352,4 @@ void main() {
     expect(changes, ['first']);
     expect(find.text('Page A').hitTestable(), findsOneWidget);
   });
-
-  testWidgets('React table pagination keeps page and pageSize in one value', (
-    tester,
-  ) async {
-    final proposals = <SeedTablePaginationValue>[];
-    final reasons = <SeedTablePageChangeReason>[];
-    await tester.pumpWidget(
-      host(
-        SeedTablePagination(
-          value: const SeedTablePaginationValue(page: 3, pageSize: 10),
-          totalItems: 100,
-          onValueChange: (value, details) {
-            proposals.add(value);
-            reasons.add(details.reason);
-          },
-        ),
-      ),
-    );
-    for (var i = 0; i < 2; i++) {
-      await tester.tap(find.bySemanticsLabel('다음 페이지'));
-      await tester.pumpAndSettle();
-    }
-    expect(proposals, const [
-      SeedTablePaginationValue(page: 4, pageSize: 10),
-      SeedTablePaginationValue(page: 4, pageSize: 10),
-    ]);
-    expect(reasons, [
-      SeedTablePageChangeReason.next,
-      SeedTablePageChangeReason.next,
-    ]);
-    await tester.pumpWidget(
-      host(
-        const SeedTablePagination(
-          key: ValueKey('uncontrolled'),
-          defaultValue: SeedTablePaginationValue(page: 3, pageSize: 10),
-          totalItems: 100,
-        ),
-      ),
-    );
-    final selects = tester
-        .widgetList<SeedSelect<int>>(find.byType(SeedSelect<int>))
-        .toList();
-    expect(selects.first.value, [10]);
-    expect(selects.last.value, [3]);
-  });
 }

@@ -1,11 +1,19 @@
+import '../../localization/seed_localizations.dart';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/semantics.dart' show SemanticsRole;
 
 import '../../foundations/dimensions/seed_dimension.dart';
 import '../../foundations/radius/seed_radius.dart';
 import '../../theme/seed_theme.dart';
+import 'seed_pagination_controls.dart';
 
-enum SeedPageChangeReason { pageItem, previous, next, constraint }
+enum SeedPageChangeReason {
+  pageItem,
+  previous,
+  next,
+  constraint,
+}
 
 class SeedPageChange {
   const SeedPageChange({
@@ -26,13 +34,23 @@ class SeedPagination extends StatefulWidget {
     required this.totalPages,
     this.onPageChanged,
     this.onPageChange,
+    this.visibleItemCount,
     this.maxVisibleSlots,
-    this.semanticsLabel = '페이지 탐색',
+    String? semanticsLabel,
     this.pageLabelBuilder,
     this.numberFormatter,
     this.disabled = false,
-  }) : currentPage = page ?? currentPage,
+    // Preserve the public named parameter and getter.
+    // ignore: prefer_initializing_formals
+  }) : _semanticsLabel = semanticsLabel,
+       currentPage = page ?? currentPage,
        assert(page == null || currentPage == null),
+       assert(
+         visibleItemCount == null ||
+             visibleItemCount == 7 ||
+             visibleItemCount == 9,
+       ),
+       assert(visibleItemCount == null || maxVisibleSlots == null),
        assert(totalPages >= 0),
        assert(maxVisibleSlots == null || maxVisibleSlots > 0);
   @Deprecated('Use page instead.')
@@ -41,8 +59,12 @@ class SeedPagination extends StatefulWidget {
   final int defaultPage, totalPages;
   final ValueChanged<int>? onPageChanged;
   final ValueChanged<SeedPageChange>? onPageChange;
+
+  final int? visibleItemCount;
+
   final int? maxVisibleSlots;
-  final String semanticsLabel;
+  final String? _semanticsLabel;
+  String get semanticsLabel => _semanticsLabel ?? '페이지 탐색';
   final bool disabled;
   final String Function(int)? pageLabelBuilder, numberFormatter;
   @override
@@ -50,7 +72,7 @@ class SeedPagination extends StatefulWidget {
 }
 
 class _SeedPaginationState extends State<SeedPagination> {
-  static const double _controlSize = 40, _numberPadding = 2;
+  static const double _controlSize = 40;
   late int _page = widget.defaultPage;
   int get totalPages => widget.totalPages;
   int get currentPage =>
@@ -161,15 +183,19 @@ class _SeedPaginationState extends State<SeedPagination> {
     final typography = context.seedTypography;
     return Semantics(
       role: SemanticsRole.navigation,
-      label: widget.semanticsLabel,
+      label:
+          widget._semanticsLabel ??
+          SeedLocalizations.label(context, SeedLabel.pagination),
       container: true,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          // Count conservatively for ellipses, whose slots have no padding.
-          const navigationWidth = 2 * (_controlSize + SeedDimension.x1);
-          const slotWidth = _controlSize + 2 * _numberPadding;
+          const navigationWidth = 2 * _controlSize;
+          const slotWidth = _controlSize;
           final maxVisibleSlots =
-              widget.maxVisibleSlots ?? (constraints.maxWidth >= 480 ? 7 : 5);
+              widget.maxVisibleSlots ??
+              (widget.visibleItemCount == null
+                  ? (constraints.maxWidth >= 480 ? 7 : 5)
+                  : widget.visibleItemCount! - 2);
           final slots = constraints.hasBoundedWidth
               ? ((constraints.maxWidth - navigationWidth) / slotWidth)
                     .floor()
@@ -184,69 +210,52 @@ class _SeedPaginationState extends State<SeedPagination> {
               _buildNavButton(
                 context,
                 icon: Icons.chevron_left,
-                label: '이전 페이지',
+                label: SeedLocalizations.label(context, SeedLabel.previousPage),
                 enabled: currentPage > 1,
                 onTap: () =>
                     _change(currentPage - 1, SeedPageChangeReason.previous),
               ),
-              const SizedBox(width: SeedDimension.x1),
-
               // Page buttons and ellipses
               ...pageItems.map((item) {
                 if (item is int) {
                   final isCurrent = item == currentPage;
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: _numberPadding,
-                    ),
-                    child: Semantics(
-                      button: true,
-                      enabled: !widget.disabled,
-                      selected: isCurrent,
-                      label:
-                          widget.pageLabelBuilder?.call(item) ??
-                          '${widget.numberFormatter?.call(item) ?? item}페이지',
-                      excludeSemantics: true,
-                      onTap: widget.disabled
-                          ? null
-                          : () => _change(item, SeedPageChangeReason.pageItem),
-                      child: InkWell(
-                        onTap: widget.disabled
-                            ? null
-                            : () =>
-                                  _change(item, SeedPageChangeReason.pageItem),
-                        overlayColor: WidgetStateProperty.resolveWith((states) {
-                          if (states.contains(WidgetState.pressed) ||
-                              states.contains(WidgetState.hovered)) {
-                            return isCurrent
-                                ? colors.bg.neutralSolidPressed
-                                : colors.bg.transparentPressed;
-                          }
-                          return null;
-                        }),
+                  return SeedPaginationPressable(
+                    enabled: !widget.disabled,
+                    selected: isCurrent,
+                    semanticsLabel:
+                        widget.pageLabelBuilder?.call(item) ??
+                        SeedLocalizations.label(
+                          context,
+                          SeedLabel.pageNumber,
+                        ).replaceAll(
+                          '{page}',
+                          '${widget.numberFormatter?.call(item) ?? item}',
+                        ),
+                    onTap: () => _change(item, SeedPageChangeReason.pageItem),
+                    builder: (context, isEngaged) => Container(
+                      width: _controlSize,
+                      height: _controlSize,
+                      decoration: BoxDecoration(
+                        color: isCurrent
+                            ? (widget.disabled
+                                  ? colors.bg.disabled
+                                  : isEngaged
+                                  ? colors.bg.neutralSolidPressed
+                                  : colors.bg.neutralSolid)
+                            : isEngaged
+                            ? colors.bg.transparentPressed
+                            : colors.bg.transparent,
                         borderRadius: SeedBorderRadius.r2,
-                        child: Container(
-                          width: _controlSize,
-                          height: _controlSize,
-                          decoration: BoxDecoration(
-                            color: isCurrent
-                                ? (widget.disabled
-                                      ? colors.bg.disabled
-                                      : colors.bg.neutralSolid)
-                                : Colors.transparent,
-                            borderRadius: SeedBorderRadius.r2,
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            widget.numberFormatter?.call(item) ?? '$item',
-                            style: typography.t4Bold.copyWith(
-                              color: widget.disabled
-                                  ? colors.fg.disabled
-                                  : isCurrent
-                                  ? colors.fg.onNeutralSolid
-                                  : colors.fg.neutral,
-                            ),
-                          ),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        widget.numberFormatter?.call(item) ?? '$item',
+                        style: typography.t4Bold.copyWith(
+                          color: widget.disabled
+                              ? colors.fg.disabled
+                              : isCurrent
+                              ? colors.fg.onNeutralSolid
+                              : colors.fg.neutral,
                         ),
                       ),
                     ),
@@ -257,11 +266,10 @@ class _SeedPaginationState extends State<SeedPagination> {
                       width: _controlSize,
                       height: _controlSize,
                       child: Center(
-                        child: Text(
-                          '...',
-                          style: typography.t4Regular.copyWith(
-                            color: colors.fg.neutralSubtle,
-                          ),
+                        child: Icon(
+                          Icons.more_horiz,
+                          size: SeedDimension.x4,
+                          color: colors.fg.neutral,
                         ),
                       ),
                     ),
@@ -269,12 +277,11 @@ class _SeedPaginationState extends State<SeedPagination> {
                 }
               }),
 
-              const SizedBox(width: SeedDimension.x1),
               // Next button
               _buildNavButton(
                 context,
                 icon: Icons.chevron_right,
-                label: '다음 페이지',
+                label: SeedLocalizations.label(context, SeedLabel.nextPage),
                 enabled: currentPage < totalPages,
                 onTap: () =>
                     _change(currentPage + 1, SeedPageChangeReason.next),
@@ -302,32 +309,16 @@ class _SeedPaginationState extends State<SeedPagination> {
     required bool enabled,
     required VoidCallback onTap,
   }) {
-    final colors = context.seedColor;
     return Visibility(
       visible: enabled,
       maintainSize: true,
       maintainAnimation: true,
       maintainState: true,
-      child: Semantics(
-        button: true,
-        enabled: !widget.disabled,
-        label: label,
-        excludeSemantics: true,
-        onTap: widget.disabled ? null : onTap,
-        child: InkWell(
-          onTap: enabled && !widget.disabled ? onTap : null,
-          borderRadius: SeedBorderRadius.r2,
-          child: Container(
-            width: _controlSize,
-            height: _controlSize,
-            alignment: Alignment.center,
-            child: Icon(
-              icon,
-              size: 16,
-              color: !widget.disabled ? colors.fg.neutral : colors.fg.disabled,
-            ),
-          ),
-        ),
+      child: SeedPaginationNavButton(
+        icon: icon,
+        semanticsLabel: label,
+        enabled: enabled && !widget.disabled,
+        onTap: onTap,
       ),
     );
   }

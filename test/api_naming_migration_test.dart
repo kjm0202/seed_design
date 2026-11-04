@@ -543,4 +543,24 @@ void main() {
       expect(() => slider.values!.add(0), throwsUnsupportedError);
     },
   );
+
+  testWidgets('pagination page remains owned by a rejecting parent', (
+    tester,
+  ) async {
+    final changes = <int>[];
+    await tester.pumpWidget(
+      host(
+        SeedPagination(
+          page: 2,
+          totalPages: 10,
+          onPageChange: (change) => changes.add(change.page),
+        ),
+      ),
+    );
+    for (var i = 0; i < 2; i++) {
+      await tester.tap(find.bySemanticsLabel('다음 페이지'));
+      await tester.pumpAndSettle();
+    }
+    expect(changes, [3, 3]);
+  });
 }
