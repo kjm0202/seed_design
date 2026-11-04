@@ -9,6 +9,7 @@ import 'package:mime/mime.dart';
 import 'package:material_ui/material_ui.dart' as mui;
 import 'package:seed_design/seed_design.dart';
 
+import 'spa_routes.dart' show spaIsRootRoute;
 import 'spa_types.dart';
 
 /// Returns the body for a form activity. The SPA shell owns its navigation bar.
@@ -82,15 +83,33 @@ class _E2ETextareaAutoresizeScrollPage extends StatelessWidget {
   );
 }
 
-Widget _scroll(List<Widget> children, {double itemSpacing = 24, double verticalPadding = 20}) => SingleChildScrollView(
-  padding: EdgeInsets.symmetric(horizontal: 16, vertical: verticalPadding),
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      for (final child in children) ...[child, SizedBox(height: itemSpacing)],
-    ],
-  ),
-);
+Widget _scroll(
+  List<Widget> children, {
+  double itemSpacing = 24,
+  double verticalPadding = 20,
+  bool bottomScrollFog = false,
+}) {
+  final scroll = SingleChildScrollView(
+    padding: EdgeInsets.symmetric(horizontal: 16, vertical: verticalPadding),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var index = 0; index < children.length; index++) ...[
+          if (index > 0) SizedBox(height: itemSpacing),
+          children[index],
+        ],
+      ],
+    ),
+  );
+  // React ActivityForm applies ScrollFog only to this scrollport, not its
+  // banner, surface or pinned submit bar. Other form demos retain no fog.
+  return bottomScrollFog
+      ? SeedScrollFogMask(
+          placement: const {SeedScrollFogPlacement.bottom},
+          child: scroll,
+        )
+      : scroll;
+}
 
 Widget _section(String title, String description, Widget content) => Builder(
   builder: (context) => Column(
@@ -100,9 +119,8 @@ Widget _section(String title, String description, Widget content) => Builder(
       const SizedBox(height: 2),
       Text(
         description,
-        style: context.seedTypography.t5Regular.copyWith(
-          color: context.seedColor.fg.neutralMuted,
-        ),
+        // The official fg.neutralWeak token no longer exists: it inherits.
+        style: context.seedTypography.t5Regular,
       ),
       const SizedBox(height: 8),
       content,
@@ -233,6 +251,7 @@ class _AnalyzerPageState extends State<_AnalyzerPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           for (var i = 0; i < 3; i++) ...[
+            if (i > 0) const SizedBox(height: 12),
             SeedRadio<String>(
               value: ['a', 'b', 'c'][i],
               label: _radioLabels[i],
@@ -243,7 +262,6 @@ class _AnalyzerPageState extends State<_AnalyzerPage> {
               tone: tone,
               enabled: !disabled,
             ),
-            const SizedBox(height: 12),
           ],
         ],
       ),
@@ -254,92 +272,126 @@ class _AnalyzerPageState extends State<_AnalyzerPage> {
   Widget build(BuildContext context) {
     final variants = combinations;
     final columns = gridColumns;
-    final cellWidth = widget.activity == 'ActivityRadioGroup' ? 350.0 : 310.0;
-    return Column(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: CustomPaint(
-                painter: showGrid ? const _AnalyzerGridPainter() : null,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      for (
-                        var start = 0;
-                        start < variants.length;
-                        start += columns
-                      )
-                        Row(
+    // React uses repeat(N, 1fr) inside a 16px inset with N-1 16px gaps.
+    // The parent may be narrower than MediaQuery in an embedded host.
+    return LayoutBuilder(
+      builder: (context, viewport) {
+        final cellWidth = max(
+          0.0,
+          (viewport.maxWidth - 32 - (columns - 1) * 16) / columns,
+        );
+        return Column(
+          children: [
+            Expanded(
+              child: Stack(
+                children: [
+                  if (showGrid)
+                    const Positioned.fill(
+                      child: CustomPaint(painter: _AnalyzerGridPainter()),
+                    ),
+                  SingleChildScrollView(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             for (
-                              var index = start;
-                              index < min(start + columns, variants.length);
-                              index++
-                            )
-                              SizedBox(
-                                width: cellWidth,
-                                child: Padding(
-                                  padding: const EdgeInsets.only(
-                                    right: 16,
-                                    bottom: 16,
-                                  ),
-                                  child: renderVariant(variants[index]),
-                                ),
+                              var start = 0;
+                              start < variants.length;
+                              start += columns
+                            ) ...[
+                              if (start > 0) const SizedBox(height: 16),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  for (
+                                    var index = start;
+                                    index <
+                                        min(start + columns, variants.length);
+                                    index++
+                                  ) ...[
+                                    if (index > start)
+                                      const SizedBox(width: 16),
+                                    // ComponentShowcase grid uses
+                                    // justify-items: start, so a variant
+                                    // keeps its intrinsic width up to the
+                                    // cell instead of being stretched.
+                                    SizedBox(
+                                      width: cellWidth,
+                                      child: Align(
+                                        alignment:
+                                            AlignmentDirectional.topStart,
+                                        child: renderVariant(variants[index]),
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
+                            ],
                           ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            // Only short viewports constrain the panel; a 6-row Checkbox
+            // panel remains its natural 6×52px + 1px border height.
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: max(0, viewport.maxHeight - 40),
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border(
+                    top: BorderSide(color: Theme.of(context).dividerColor),
+                  ),
+                ),
+                padding: const EdgeInsets.only(top: 1),
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      _controlRow(
+                        '그리드 표시',
+                        SeedSwitch(
+                          size: SeedSwitchSize.size24,
+                          checked: showGrid,
+                          onCheckedChange: (checked) =>
+                              setState(() => showGrid = checked),
+                        ),
+                      ),
+                      for (final entry in variantsMap.entries)
+                        _controlRow(
+                          entry.key,
+                          DropdownButton<String>(
+                            key: ValueKey(entry.key),
+                            value: selections[entry.key],
+                            onChanged: (value) {
+                              if (value != null) {
+                                setState(() => selections[entry.key] = value);
+                              }
+                            },
+                            items: [
+                              for (final value in [...entry.value, 'ALL'])
+                                DropdownMenuItem<String>(
+                                  value: value,
+                                  child: Text(value == 'ALL' ? 'All' : value),
+                                ),
+                            ],
+                          ),
                         ),
                     ],
                   ),
                 ),
               ),
             ),
-          ),
-        ),
-        const Divider(height: 1),
-        ConstrainedBox(
-          constraints: const BoxConstraints(maxHeight: 300),
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                _controlRow(
-                  '그리드 표시',
-                  SeedSwitch(
-                    size: SeedSwitchSize.size24,
-                    checked: showGrid,
-                    onCheckedChange: (checked) =>
-                        setState(() => showGrid = checked),
-                  ),
-                ),
-                for (final entry in variantsMap.entries)
-                  _controlRow(
-                    entry.key,
-                    DropdownButton<String>(
-                      key: ValueKey(entry.key),
-                      value: selections[entry.key],
-                      onChanged: (value) {
-                        if (value != null) {
-                          setState(() => selections[entry.key] = value);
-                        }
-                      },
-                      items: [
-                        for (final value in [...entry.value, 'ALL'])
-                          DropdownMenuItem<String>(
-                            value: value,
-                            child: Text(value == 'ALL' ? 'All' : value),
-                          ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 
@@ -577,6 +629,7 @@ class _SegmentsPage extends StatelessWidget {
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 424),
                 child: SeedSegmentedControl<String>(
+                  semanticsLabel: 'Sort options',
                   segments: items,
                   defaultValue: '1',
                 ),
@@ -598,6 +651,7 @@ class _SegmentsPage extends StatelessWidget {
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 424),
                 child: SeedSegmentedControl<String>(
+                  semanticsLabel: 'Sort options',
                   segments: items,
                   defaultValue: '1',
                 ),
@@ -636,14 +690,6 @@ class _SelectPageState extends State<_SelectPage> {
   String? formFruit;
   final formKey = GlobalKey<FormState>();
 
-  Widget _selectRow(List<Widget> children) => SingleChildScrollView(
-    scrollDirection: Axis.horizontal,
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: children,
-    ),
-  );
-
   // React HStack lets fixed-width Select wrappers shrink as flex items at
   // phone widths. A horizontal scroller here clips the second field entirely.
   Widget _selectPairRow(Widget first, Widget second, {double gap = 12}) => Row(
@@ -658,16 +704,18 @@ class _SelectPageState extends State<_SelectPage> {
   Widget _selectExplanationRow(
     Widget Function(double width) control,
     String explanation, {
-    double minimumControlWidth = 150,
-    double widthFraction = .44,
-    }
-  ) => LayoutBuilder(
+    double controlWidth = 220,
+  }) => LayoutBuilder(
     builder: (context, constraints) {
-      // React's flex row retains the text alongside the Select even at 390px.
-      final controlWidth = min(220.0, max(minimumControlWidth, (constraints.maxWidth - 16) * widthFraction));
+      // The React HStack keeps the declared 200/220px control width when it
+      // fits; only shrink it to keep the adjacent explanation readable.
+      final resolvedWidth = min(
+        controlWidth,
+        max(0.0, constraints.maxWidth - 16 - 80),
+      );
       return Row(
         children: [
-          control(controlWidth),
+          control(resolvedWidth),
           const SizedBox(width: 16),
           Expanded(
             child: Text(
@@ -699,7 +747,8 @@ class _SelectPageState extends State<_SelectPage> {
     List<String>? initial,
     List<String>? selected,
     ValueChanged<List<String>>? onValueChange,
-    SeedInputButtonSize size = SeedInputButtonSize.medium,
+    SeedInputButtonSize size = SeedInputButtonSize.large,
+    String? semanticsLabel,
     String? label,
     String? description,
     String? errorMessage,
@@ -717,6 +766,7 @@ class _SelectPageState extends State<_SelectPage> {
     child: Builder(
       builder: (context) {
         final control = SeedSelect<String>(
+          semanticsLabel: semanticsLabel,
           groups: groups,
           defaultValue: initial,
           value: selected,
@@ -811,7 +861,8 @@ class _SelectPageState extends State<_SelectPage> {
         'Size',
         _selectPairRow(
           select(
-            size: SeedInputButtonSize.medium,
+            semanticsLabel: '과일 large',
+            size: SeedInputButtonSize.large,
             initial: const ['apple'],
             groups: const [
               SeedSelectGroup(
@@ -827,7 +878,11 @@ class _SelectPageState extends State<_SelectPage> {
               ),
             ],
           ),
-          select(size: SeedInputButtonSize.medium, initial: const ['apple']),
+          select(
+            semanticsLabel: '과일 medium',
+            size: SeedInputButtonSize.medium,
+            initial: const ['apple'],
+          ),
         ),
       ),
       _selectSection(
@@ -861,6 +916,7 @@ class _SelectPageState extends State<_SelectPage> {
       _selectSection(
         'With Description & Groups & Disabled',
         select(
+          semanticsLabel: '배송',
           groups: deliveries,
           initial: const ['standard'],
           placeholder: '배송 방법',
@@ -877,10 +933,12 @@ class _SelectPageState extends State<_SelectPage> {
       ),
       _selectSection(
         'Controlled + onValueChange',
-        _selectRow([
-          select(
+        _selectExplanationRow(
+          (width) => select(
+            semanticsLabel: '과일 제어',
             selected: value,
             onValueChange: (next) => setState(() => value = next),
+            width: width,
             groups: const [
               SeedSelectGroup(
                 items: [
@@ -895,73 +953,83 @@ class _SelectPageState extends State<_SelectPage> {
               ),
             ],
           ),
-          const SizedBox(width: 16),
-          Text('값: ${value.isEmpty ? '없음' : value.join(', ')}'),
-        ]),
+          '값: ${value.isEmpty ? '없음' : value.join(', ')}',
+          controlWidth: 200,
+        ),
       ),
       _selectSection(
         'Prefix Icon 우선순위 (static vs 선택 item)',
-        _selectExplanationRow((width) => select(
-          prefix: const Icon(Icons.star_outline),
-          width: width,
-          groups: const [
-            SeedSelectGroup(
-              items: [
-                SeedSelectItem(
-                  value: 'apple',
-                  label: '사과',
-                  prefixIcon: Icon(Icons.favorite_outline),
-                ),
-                SeedSelectItem(
-                  value: 'banana',
-                  label: '바나나',
-                  prefixIcon: Icon(Icons.diamond_outlined),
-                ),
-                SeedSelectItem(value: 'cherry', label: '체리'),
-              ],
-            ),
-          ],
-        ), '미선택: star · 사과/바나나: 각 item 아이콘이 star를 이김 · 체리(무아이콘): static star로 fallback'),
+        _selectExplanationRow(
+          (width) => select(
+            semanticsLabel: 'prefix 우선순위',
+            prefix: const Icon(Icons.star_outline),
+            width: width,
+            groups: const [
+              SeedSelectGroup(
+                items: [
+                  SeedSelectItem(
+                    value: 'apple',
+                    label: '사과',
+                    prefixIcon: Icon(Icons.favorite_outline),
+                  ),
+                  SeedSelectItem(
+                    value: 'banana',
+                    label: '바나나',
+                    prefixIcon: Icon(Icons.diamond_outlined),
+                  ),
+                  SeedSelectItem(value: 'cherry', label: '체리'),
+                ],
+              ),
+            ],
+          ),
+          '미선택: star · 사과/바나나: 각 item 아이콘이 star를 이김 · 체리(무아이콘): static star로 fallback',
+        ),
       ),
       _selectSection(
         'Multiple × Prefix Icon',
-        _selectExplanationRow((width) => select(
-          multiple: true,
-          initial: const ['apple'],
-          prefix: const Icon(Icons.star_outline),
-          width: width,
-          groups: const [
-            SeedSelectGroup(
-              items: [
-                SeedSelectItem(
-                  value: 'apple',
-                  label: '사과',
-                  prefixIcon: Icon(Icons.favorite_outline),
-                ),
-                SeedSelectItem(
-                  value: 'banana',
-                  label: '바나나',
-                  prefixIcon: Icon(Icons.diamond_outlined),
-                ),
-                SeedSelectItem(
-                  value: 'cherry',
-                  label: '체리',
-                  prefixIcon: Icon(Icons.add),
-                ),
-              ],
-            ),
-          ],
-        ), '1개 선택: 그 item 아이콘 미러 · 2개 이상: static star로 복귀', minimumControlWidth: 200),
+        _selectExplanationRow(
+          (width) => select(
+            semanticsLabel: '다중 아이콘',
+            multiple: true,
+            initial: const ['apple'],
+            prefix: const Icon(Icons.star_outline),
+            width: width,
+            groups: const [
+              SeedSelectGroup(
+                items: [
+                  SeedSelectItem(
+                    value: 'apple',
+                    label: '사과',
+                    prefixIcon: Icon(Icons.favorite_outline),
+                  ),
+                  SeedSelectItem(
+                    value: 'banana',
+                    label: '바나나',
+                    prefixIcon: Icon(Icons.diamond_outlined),
+                  ),
+                  SeedSelectItem(
+                    value: 'cherry',
+                    label: '체리',
+                    prefixIcon: Icon(Icons.add),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          '1개 선택: 그 item 아이콘 미러 · 2개 이상: static star로 복귀',
+        ),
       ),
       _selectSection(
         'Multiple',
         _selectPairRow(
           select(
+            semanticsLabel: '과일 다중',
             multiple: true,
             selected: multiValue,
             onValueChange: (next) => setState(() => multiValue = next),
           ),
           select(
+            semanticsLabel: '과일 다중 포맷',
             multiple: true,
             selected: multiValue,
             onValueChange: (next) => setState(() => multiValue = next),
@@ -972,18 +1040,30 @@ class _SelectPageState extends State<_SelectPage> {
       ),
       _selectSection(
         'Many Items (Scroll)',
-        select(groups: many, placeholder: '트랙 선택', width: 220),
+        select(
+          semanticsLabel: '트랙',
+          groups: many,
+          placeholder: '트랙 선택',
+          width: 220,
+        ),
       ),
       _selectSection(
         'Max Height',
         _selectExplanationRow(
-          (width) => select(groups: many, menuHeight: 160, placeholder: '트랙 선택', width: width),
+          (width) => select(
+            semanticsLabel: '트랙 높이 제한',
+            groups: many,
+            menuHeight: 160,
+            placeholder: '트랙 선택',
+            width: width,
+          ),
           '--seed-select-max-height로 기본 480px 대신 160px까지만 열립니다 · 화면에 남은 공간이 더 좁으면 그쪽을 따릅니다',
-          minimumControlWidth: 120,
-          widthFraction: .36,
         ),
       ),
-      _selectSection('Typeahead', select(groups: english, width: 220)),
+      _selectSection(
+        'Typeahead',
+        select(semanticsLabel: '타입어헤드', groups: english, width: 220),
+      ),
       _selectSection(
         'Form Integration',
         SizedBox(
@@ -999,12 +1079,14 @@ class _SelectPageState extends State<_SelectPage> {
                     identifier: 'fruit',
                     isRequired: true,
                     child: select(
+                      semanticsLabel: '과일 폼',
                       width: 220,
                       errorMessage: field.errorText,
                       selected: formFruit == null ? const [] : [formFruit!],
                       onValueChange: (next) => setState(() {
                         formFruit = next.firstOrNull;
                         field.didChange(formFruit);
+                        if (field.hasError) field.validate();
                       }),
                     ),
                   ),
@@ -1029,32 +1111,30 @@ class _SelectPageState extends State<_SelectPage> {
       ),
       _selectSection(
         'Select in BottomSheet',
-        SizedBox(width: double.infinity, child: SeedButton(
-          label: 'BottomSheet 열기',
-          onPressed: () {
-            showSeedBottomSheet<void>(
-              context: context,
-              child: SeedBottomSheet(
-                title: 'Select in BottomSheet',
-                showHandle: true,
-                content: const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  child: Text('BottomSheet 내부에서 Select를 열 수 있습니다.'),
-                ),
-                footer: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                  child: SeedSelect<String>(
+        SizedBox(
+          width: double.infinity,
+          child: SeedButton(
+            label: 'BottomSheet 열기',
+            onPressed: () {
+              showSeedBottomSheet<void>(
+                context: context,
+                child: SeedBottomSheet(
+                  title: 'Select in BottomSheet',
+                  showHandle: true,
+                  content: const Text('BottomSheet 내부에서 Select를 열 수 있습니다.'),
+                  footer: SeedSelect<String>(
+                    semanticsLabel: '과일 시트',
                     groups: _fruitGroups,
                     defaultValue: const ['apple'],
                     placeholder: '과일 선택',
                   ),
                 ),
-              ),
-            );
-          },
-        )),
+              );
+            },
+          ),
+        ),
       ),
-    ]);
+    ], verticalPadding: 16);
   }
 }
 
@@ -1117,7 +1197,7 @@ class _WheelPageState extends State<_WheelPage> {
     // Stackflow's root Activity has no predecessor: useFlow().pop() is a
     // no-op, so Done/Close/Escape/scrim must leave its sheet active.
     // A pushed Activity *does* have a predecessor and must return to it.
-    final rootActivity = !Navigator.of(context).canPop();
+    final rootActivity = spaIsRootRoute(context);
     sheetOpened = true;
     await showSeedBottomSheet<void>(
       context: context,
@@ -1143,10 +1223,10 @@ class _WheelPageState extends State<_WheelPage> {
     }
   }
 
+  // ActivityWheelPicker renders only its sheet; the page behind the
+  // backdrop is empty (the sheet reopens itself on the root Activity).
   @override
-  Widget build(BuildContext context) => Center(
-    child: SeedButton(label: '날짜 선택', onPressed: openSheet),
-  );
+  Widget build(BuildContext context) => const SizedBox.expand();
 }
 
 /// The React activity is a sheet route; Flutter's page route opens a matching
@@ -1267,10 +1347,7 @@ class _WheelSheetState extends State<_WheelSheet> {
     footer: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          '$year년 $month월 $day일',
-          style: context.seedTypography.t5Regular,
-        ),
+        Text('$year년 $month월 $day일', style: context.seedTypography.t5Regular),
         const SizedBox(height: 12),
         SeedButton(
           label: '다음 날로 변경',
@@ -1304,35 +1381,38 @@ class _AttachmentPage extends StatelessWidget {
         ? const [
             _AttachmentDemo(
               title: 'AttachmentDisplay',
-              description: '트리거를 누르면 외부 미디어 피커와 업로드를 시뮬레이션합니다.',
+              description: 'trigger 클릭 시 외부 피커 호출 시뮬레이션 (50% 확률로 실패)',
               display: true,
             ),
             _AttachmentDemo(
               title: 'AttachmentDisplayReorderable',
-              description: '항목을 드래그해서 순서를 변경합니다.',
+              description: '드래그로 순서 변경 가능',
               display: true,
               reorderable: true,
             ),
             _AttachmentDemo(
               title: 'Customizing Items (대표사진 배지)',
-              description: '첫 번째 항목이 대표 사진으로 표시됩니다.',
+              description: '첫 번째 이미지에 ItemBadge 표시',
               display: true,
               initialCount: 2,
               featured: true,
+              presetPrefix: 'customizing',
             ),
             _AttachmentDemo(
               title: 'Disabled',
-              description: '트리거는 비활성화되지만 항목을 제거할 수 있습니다.',
+              description: 'trigger는 비활성, 제거는 가능',
               display: true,
               initialCount: 2,
               enabled: false,
+              presetPrefix: 'disabled',
             ),
             _AttachmentDemo(
               title: 'Read Only',
-              description: '추가·제거·순서 변경이 불가능합니다.',
+              description: 'trigger·제거·순서 변경 모두 비활성',
               display: true,
               initialCount: 3,
               readOnly: true,
+              presetPrefix: 'readonly',
             ),
             _AttachmentDemo(
               title: 'Field Integration',
@@ -1341,54 +1421,57 @@ class _AttachmentPage extends StatelessWidget {
               invalid: true,
               showRequiredIndicator: true,
               errorMessage: '사진을 1장 이상 등록해 주세요.',
+              showDivider: false,
             ),
           ]
         : const [
             _AttachmentDemo(
               title: 'AttachmentInput (image/*)',
-              description: '사진을 추가하면 업로드 상태가 변합니다. 최대 5개.',
+              description: '업로드 상태 시뮬레이션 (50% 확률로 실패)',
               imagesOnly: true,
             ),
             _AttachmentDemo(
               title: 'AttachmentInput (all files)',
-              description: '모든 파일 형식의 업로드 상태를 시뮬레이션합니다.',
+              description: '업로드 상태 시뮬레이션 (50% 확률로 실패)',
             ),
             _AttachmentDemo(
               title: 'AttachmentDropzone (image/*)',
-              description: '드롭존 트리거로 이미지 항목을 추가합니다.',
+              description: '업로드 상태 시뮬레이션 (50% 확률로 실패)',
               imagesOnly: true,
               dropzone: true,
             ),
             _AttachmentDemo(
               title: 'AttachmentDropzone (all files)',
-              description: '드롭존 트리거로 파일 항목을 추가합니다.',
+              description: '업로드 상태 시뮬레이션 (50% 확률로 실패)',
               dropzone: true,
             ),
             _AttachmentDemo(
               title: 'AttachmentInputReorderable (image/*)',
-              description: '이미지를 추가하고 드래그해 정렬합니다.',
+              description: '업로드 상태 시뮬레이션 (50% 확률로 실패)',
               imagesOnly: true,
               reorderable: true,
             ),
             _AttachmentDemo(
               title: 'AttachmentInputReorderable (all files)',
-              description: '모든 파일 형식에서 순서 변경을 확인합니다.',
+              description: '업로드 상태 시뮬레이션 (50% 확률로 실패)',
               reorderable: true,
             ),
             _AttachmentDemo(
               title: 'AttachmentDropzoneReorderable (image/*)',
-              description: '드롭존과 순서 변경',
+              description: '업로드 상태 시뮬레이션 (50% 확률로 실패)',
               imagesOnly: true,
               dropzone: true,
               reorderable: true,
             ),
             _AttachmentDemo(
               title: 'AttachmentDropzoneReorderable (all files)',
-              description: '드롭존과 순서 변경',
+              description: '업로드 상태 시뮬레이션 (50% 확률로 실패)',
               dropzone: true,
               reorderable: true,
+              showDivider: false,
             ),
           ],
+    verticalPadding: 16,
   );
 }
 
@@ -1405,12 +1488,16 @@ class _AttachmentDemo extends StatefulWidget {
     this.enabled = true,
     this.readOnly = false,
     this.initialCount = 0,
+    this.presetPrefix,
     this.featured = false,
     this.maxCount = 5,
     this.errorMessage,
     this.invalid,
     this.showRequiredIndicator = false,
+    this.labelWeight = SeedFieldLabelWeight.medium,
+    this.indicator,
     this.onEntriesChanged,
+    this.showDivider = true,
   });
 
   final String title;
@@ -1422,12 +1509,16 @@ class _AttachmentDemo extends StatefulWidget {
   final bool enabled;
   final bool readOnly;
   final int initialCount;
+  final String? presetPrefix;
   final bool featured;
   final int maxCount;
   final String? errorMessage;
   final bool? invalid;
   final bool showRequiredIndicator;
+  final SeedFieldLabelWeight labelWeight;
+  final String? indicator;
   final ValueChanged<List<SeedAttachmentItem>>? onEntriesChanged;
+  final bool showDivider;
 
   @override
   State<_AttachmentDemo> createState() => _AttachmentDemoState();
@@ -1442,7 +1533,9 @@ class _AttachmentDemoState extends State<_AttachmentDemo> {
 
   SeedAttachmentItem newItem({bool completed = false}) {
     counter++;
-    final id = '${widget.title.replaceAll(' ', '-')}-$counter';
+    final id = completed && widget.presetPrefix != null
+        ? '${widget.presetPrefix}-${counter - 1}'
+        : '${widget.title.replaceAll(' ', '-')}-$counter';
     return SeedAttachmentItem(
       id: id,
       name: widget.imagesOnly || widget.display
@@ -1458,7 +1551,7 @@ class _AttachmentDemoState extends State<_AttachmentDemo> {
       status: completed
           ? SeedAttachmentStatus.success
           : SeedAttachmentStatus.uploading,
-      progress: completed ? 100 : 0,
+      progress: completed ? 1 : 0,
       isRepresentative: widget.featured && counter == 1,
     );
   }
@@ -1588,18 +1681,130 @@ class _AttachmentDemoState extends State<_AttachmentDemo> {
           random.nextBool()
               ? SeedAttachmentStatus.success
               : SeedAttachmentStatus.error,
-          progress: 100,
+          progress: 1,
         );
       } else {
         target.updateStatus(
           id,
           SeedAttachmentStatus.uploading,
-          progress: step * 20.0,
+          progress: step * .2,
         );
       }
     });
     timers.add(timer);
   }
+
+  double _attachmentItemsHeight(
+    BuildContext context,
+    SeedAttachmentController target,
+  ) {
+    if (widget.dropzone && target.items.isEmpty) return 0;
+    final typography = context.seedTypography;
+    final textDirection = Directionality.of(context);
+    final textScaler = MediaQuery.textScalerOf(context);
+
+    double measure(String text, TextStyle style) {
+      final painter = TextPainter(
+        text: TextSpan(
+          text: text,
+          style: DefaultTextStyle.of(context).style.merge(style),
+        ),
+        textDirection: textDirection,
+        textScaler: textScaler,
+        locale: Localizations.maybeLocaleOf(context),
+      )..layout();
+      final height = painter.height;
+      painter.dispose();
+      return height;
+    }
+
+    final triggerHeight = widget.dropzone
+        ? 0.0
+        : max(
+            80.0,
+            24 +
+                4 +
+                measure(
+                  '${target.items.length}/${widget.maxCount}',
+                  typography.t2Regular,
+                ) +
+                16,
+          );
+    final hasFiles = target.items.any(
+      (item) => item.type == SeedAttachmentType.file,
+    );
+    final fileHeight = hasFiles
+        ? max(
+            80.0,
+            measure('Ag\nAg', typography.t2Medium) +
+                measure('Ag', typography.t1Regular) +
+                16,
+          )
+        : 0.0;
+    return max(triggerHeight, max(fileHeight, target.items.isEmpty ? 0 : 80));
+  }
+
+  // Official attachment-input.css: the horizontal strip escapes the page's
+  // 16px gutter, but its first/last items retain 16px content insets.
+  // Keep the package's item rendering and remove/retry interactions intact.
+  Widget _bleedingItems(
+    BuildContext context,
+    SeedAttachmentController target,
+  ) => LayoutBuilder(
+    builder: (context, constraints) {
+      final child = SeedAttachmentInput(
+        items: target.items,
+        maxCount: widget.maxCount,
+        enabled: widget.enabled,
+        readOnly: widget.readOnly,
+        representativeLabel: widget.featured ? '대표사진' : '대표',
+        showTrigger: !widget.dropzone,
+        triggerIcon: Icon(
+          widget.imagesOnly || widget.display
+              ? Icons.camera_alt_outlined
+              : Icons.attach_file,
+        ),
+        onAdd: widget.display ? () => add(target) : pickFiles,
+        onRemove: (item) => target.remove(item.id),
+        onRetry: (item) => upload(item.id, target),
+        onReorder: widget.reorderable ? target.reorder : null,
+        scrollPadding: widget.reorderable
+            ? const EdgeInsets.symmetric(horizontal: SeedDimension.x4)
+            : EdgeInsets.zero,
+      );
+      final pageGutter = SeedDimension.x4;
+      final width = constraints.maxWidth;
+      final height = _attachmentItemsHeight(context, target);
+      return SizedBox(
+        width: width,
+        height: height,
+        child: OverflowBox(
+          alignment: Alignment.center,
+          minWidth: width + pageGutter * 2,
+          maxWidth: width + pageGutter * 2,
+          minHeight: height,
+          maxHeight: height,
+          child: SizedBox(
+            width: width + pageGutter * 2,
+            child: widget.reorderable
+                // The ListView itself owns the full bleed viewport and uses
+                // internal scrollPadding for the CSS 16px content inset.
+                ? child
+                : SingleChildScrollView(
+                    key: ValueKey(
+                      'forms-attachment-edge-scroll-${widget.title}',
+                    ),
+                    scrollDirection: Axis.horizontal,
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: pageGutter),
+                      child: child,
+                    ),
+                  ),
+          ),
+        ),
+      );
+    },
+  );
 
   @override
   void dispose() {
@@ -1626,6 +1831,7 @@ class _AttachmentDemoState extends State<_AttachmentDemo> {
             reorderable: widget.reorderable,
             enabled: widget.enabled,
             readOnly: widget.readOnly,
+            itemBuilder: _bleedingItems,
             onTrigger: add,
             onRetry: (item, target) => upload(item.id, target),
           )
@@ -1637,6 +1843,8 @@ class _AttachmentDemoState extends State<_AttachmentDemo> {
             errorMessage: widget.errorMessage,
             invalid: widget.invalid,
             showRequiredIndicator: widget.showRequiredIndicator,
+            labelWeight: widget.labelWeight,
+            indicator: widget.indicator,
             showDropzone: widget.dropzone,
             triggerIcon: Icon(
               widget.imagesOnly ? Icons.camera_alt_outlined : Icons.attach_file,
@@ -1644,27 +1852,28 @@ class _AttachmentDemoState extends State<_AttachmentDemo> {
             reorderable: widget.reorderable,
             enabled: widget.enabled,
             readOnly: widget.readOnly,
+            itemBuilder: _bleedingItems,
             onAdd: pickFiles,
             onRetry: (item, target) => upload(item.id, target),
           );
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (widget.dropzone && !widget.display)
-            DropTarget(
-              enable:
-                  controller.canAdd &&
-                  (ModalRoute.of(context)?.isCurrent ?? true),
-              onDragDone: (details) => receiveFiles(details.files),
-              child: field,
-            )
-          else
-            field,
-          const Divider(height: 32),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (widget.dropzone && !widget.display)
+          DropTarget(
+            enable:
+                controller.canAdd &&
+                (ModalRoute.of(context)?.isCurrent ?? true),
+            onDragDone: (details) => receiveFiles(details.files),
+            child: field,
+          )
+        else
+          field,
+        if (widget.showDivider) ...[
+          const SizedBox(height: 24),
+          const SeedDivider(),
         ],
-      ),
+      ],
     );
   }
 }
@@ -1822,13 +2031,14 @@ class _FormPageState extends State<_FormPage> {
               const SeedPageBanner(
                 tone: SeedPageBannerTone.warning,
                 variant: SeedPageBannerVariant.solid,
-                prefixIcon: Icon(Icons.error_outline),
+                prefixIcon: Icon(Icons.error),
                 description: '입력된 정보는 브라우저에 의해 자동완성될 수 있지만 다른 곳에 저장되지 않습니다. 그럼에도 실제 정보는 입력하지 마세요.',
               ),
               const SizedBox(height: 8),
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 260),
                 child: SeedSegmentedControl<String>(
+                  semanticsLabel: '배경색 선택',
                   segments: const [
                     SeedSegment(value: 'default', label: 'Default'),
                     SeedSegment(value: 'basement', label: 'Basement'),
@@ -1844,207 +2054,235 @@ class _FormPageState extends State<_FormPage> {
         Expanded(
           child: ColoredBox(
             color: backgroundColor,
-            child: _scroll([
-              SeedTextField(
-                label: '이름',
-                required: true,
-                placeholder: '김하늘',
-                variant: SeedTextInputVariant.underline,
-                description: '이름을 입력해주세요.',
-                onChanged: (value) => name = value,
-              ),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: SeedTextField(
-                      label: '이메일',
-                      placeholder: 'foo@bar.baz',
-                      prefixIcon: const Icon(Icons.mail_outline),
-                      keyboardType: TextInputType.emailAddress,
-                      description: '이메일 형식으로 입력해주세요.',
-                      onChanged: (value) => email = value,
+            child: _scroll(
+              [
+                SeedTextField(
+                  label: '이름',
+                  labelWeight: SeedFieldLabelWeight.bold,
+                  required: true,
+                  placeholder: '김하늘',
+                  variant: SeedTextInputVariant.underline,
+                  description: '이름을 입력해주세요.',
+                  onChanged: (value) => name = value,
+                ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: SeedTextField(
+                        label: '이메일',
+                        indicator: '필수',
+                        placeholder: 'foo@bar.baz',
+                        prefixIcon: const Icon(Icons.mail_outline),
+                        keyboardType: TextInputType.emailAddress,
+                        description: '이메일 형식으로 입력해주세요.',
+                        onChanged: (value) => email = value,
+                      ),
                     ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: SeedTextField(
+                        label: '주소',
+                        placeholder: '대한민국 …',
+                        description: '상세 주소까지 입력해주세요.',
+                        maxGraphemeCount: 100,
+                        onChanged: (value) => address = value,
+                      ),
+                    ),
+                  ],
+                ),
+                const Divider(),
+                SeedFieldButton(
+                  label: '카테고리 선택',
+                  labelWeight: SeedFieldLabelWeight.bold,
+                  required: true,
+                  description: '원하는 카테고리를 선택해주세요.',
+                  placeholder: '카테고리를 선택해주세요',
+                  showValueChips: false,
+                  values: category == null
+                      ? const []
+                      : [categoryLabel(category!)],
+                  onPressed: chooseCategory,
+                ),
+                SeedField(
+                  label: '배송 방법 선택',
+                  labelWeight: SeedFieldLabelWeight.bold,
+                  required: true,
+                  helperText: '원하는 배송 방법을 선택해주세요.',
+                  child: SeedSelectBoxGroup(
+                    semanticsLabel: '배송 방법 선택',
+                    value: shipping,
+                    columns: 2,
+                    onValueChange: (next) =>
+                        setState(() => shipping = next as String),
+                    children: const [
+                      SeedSelectBox(
+                        value: 'express',
+                        title: '빠른 배송 (1-2일)',
+                        prefix: Icon(Icons.local_fire_department_outlined),
+                        control: SeedSelectBoxControl.radiomark,
+                      ),
+                      SeedSelectBox(
+                        value: 'standard',
+                        title: '일반 배송 (3-5일)',
+                        prefix: Icon(Icons.local_shipping_outlined),
+                        control: SeedSelectBoxControl.radiomark,
+                      ),
+                      SeedSelectBox(
+                        value: 'drone',
+                        title: '드론 배송 (당일)',
+                        prefix: Icon(Icons.send_outlined),
+                        control: SeedSelectBoxControl.radiomark,
+                      ),
+                      SeedSelectBox(
+                        value: 'pickup',
+                        title: '직접 수령',
+                        prefix: Icon(Icons.directions_walk_outlined),
+                        control: SeedSelectBoxControl.radiomark,
+                        enabled: false,
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: SeedTextField(
-                      label: '주소',
-                      placeholder: '대한민국 …',
-                      description: '상세 주소까지 입력해주세요.',
-                      maxGraphemeCount: 100,
-                      onChanged: (value) => address = value,
-                    ),
+                ),
+                _AttachmentDemo(
+                  title: '첨부 파일',
+                  labelWeight: SeedFieldLabelWeight.bold,
+                  indicator: '선택',
+                  description: '사진, 영수증 등을 첨부해주세요. (최대 3장)',
+                  imagesOnly: true,
+                  maxCount: 3,
+                  showDivider: false,
+                  onEntriesChanged: (next) => attachments = next,
+                ),
+                const Divider(),
+                SeedField(
+                  label: '추가 서비스',
+                  labelWeight: SeedFieldLabelWeight.bold,
+                  indicatorText: '선택',
+                  helperText: '원하는 추가 서비스를 선택해주세요.',
+                  child: Column(
+                    children: [
+                      extraBox(
+                        'gift-wrap',
+                        '선물 포장',
+                        '고급 포장지로 선물 포장해 드립니다.',
+                        '+3,000원이 추가됩니다.',
+                        Icons.card_giftcard,
+                      ),
+                      extraBox(
+                        'insurance',
+                        '보험 가입',
+                        '배송 중 파손 시 100% 보상',
+                        '+5,000원이 추가됩니다.',
+                        Icons.shield_outlined,
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              const Divider(),
-              SeedFieldButton(
-                label: '카테고리 선택',
-                required: true,
-                description: '원하는 카테고리를 선택해주세요.',
-                placeholder: '카테고리를 선택해주세요.',
-                values: category == null
-                    ? const []
-                    : [categoryLabel(category!)],
-                onPressed: chooseCategory,
-              ),
-              SeedField(
-                label: '배송 방법 선택',
-                required: true,
-                helperText: '원하는 배송 방법을 선택해주세요.',
-                child: SeedSelectBoxGroup(
-                  value: shipping,
-                  columns: 2,
-                  onValueChange: (next) =>
-                      setState(() => shipping = next as String),
-                  children: const [
-                    SeedSelectBox(
-                      value: 'express',
-                      title: '빠른 배송 (1-2일)',
-                      prefix: Icon(Icons.local_fire_department_outlined),
-                      control: SeedSelectBoxControl.radiomark,
-                    ),
-                    SeedSelectBox(
-                      value: 'standard',
-                      title: '일반 배송 (3-5일)',
-                      prefix: Icon(Icons.local_shipping_outlined),
-                      control: SeedSelectBoxControl.radiomark,
-                    ),
-                    SeedSelectBox(
-                      value: 'drone',
-                      title: '드론 배송 (당일)',
-                      prefix: Icon(Icons.send_outlined),
-                      control: SeedSelectBoxControl.radiomark,
-                    ),
-                    SeedSelectBox(
-                      value: 'pickup',
-                      title: '직접 수령',
-                      prefix: Icon(Icons.directions_walk_outlined),
-                      control: SeedSelectBoxControl.radiomark,
-                      enabled: false,
-                    ),
+                ),
+                const Divider(),
+                SeedField(
+                  label: '좋아하는 과일',
+                  labelWeight: SeedFieldLabelWeight.bold,
+                  indicatorText: '선택',
+                  helperText: '좋아하는 과일을 모두 선택해주세요.',
+                  // Official CheckboxGroup root: column with gapY x1.
+                  child: Column(
+                    spacing: SeedDimension.x1,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      check('apple', '사과', fruits),
+                      check('banana', '바나나', fruits),
+                      check('orange', '오렌지', fruits),
+                    ],
+                  ),
+                ),
+                SeedSlider(
+                  values: [like],
+                  min: 0,
+                  max: 10,
+                  ticks: const [2, 4, 6, 8],
+                  markers: const [
+                    SeedSliderMarker(0, '별로'),
+                    SeedSliderMarker(10, '최고'),
                   ],
+                  fieldLabel: '얼마나 좋아하시나요?',
+                  labelWeight: SeedFieldLabelWeight.bold,
+                  description: '좋아하는 정도를 0~10 사이로 선택해주세요.',
+                  onValuesChange: (values) =>
+                      setState(() => like = values.first),
                 ),
-              ),
-              _AttachmentDemo(
-                title: '첨부 파일',
-                description: '사진, 영수증 등을 첨부해주세요. (최대 3장)',
-                imagesOnly: true,
-                maxCount: 3,
-                onEntriesChanged: (next) => attachments = next,
-              ),
-              const Divider(),
-              SeedField(
-                label: '추가 서비스',
-                helperText: '원하는 추가 서비스를 선택해주세요.',
-                child: Column(
-                  children: [
-                    extraBox(
-                      'gift-wrap',
-                      '선물 포장',
-                      '고급 포장지로 선물 포장해 드립니다.',
-                      '+3,000원이 추가됩니다.',
-                      Icons.card_giftcard,
-                    ),
-                    extraBox(
-                      'insurance',
-                      '보험 가입',
-                      '배송 중 파손 시 100% 보상',
-                      '+5,000원이 추가됩니다.',
-                      Icons.shield_outlined,
-                    ),
-                  ],
+                const Divider(),
+                SeedSlider.range(
+                  values: budget,
+                  min: 0,
+                  max: 1000000,
+                  step: 50000,
+                  fieldLabel: '예산 범위',
+                  indicator: '선택',
+                  description: '원하는 예산 범위를 선택해주세요.',
+                  invalid: true,
+                  errorMessage: 'Fugiat nisi exercitation incididunt qui incididunt in id laborum voluptate.',
+                  valueFormatter: (value) =>
+                      '₩${value.round().toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (_) => ',')}',
+                  onValuesChange: (values) => setState(
+                    () => budget = mui.RangeValues(values.first, values.last),
+                  ),
                 ),
-              ),
-              const Divider(),
-              SeedField(
-                label: '좋아하는 과일',
-                helperText: '좋아하는 과일을 모두 선택해주세요.',
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    check('apple', '사과', fruits),
-                    check('banana', '바나나', fruits),
-                    check('orange', '오렌지', fruits),
-                  ],
+                const Divider(),
+                SeedRadioGroup<String>(
+                  label: '선호하는 연락 방법',
+                  labelWeight: SeedFieldLabelWeight.bold,
+                  showRequiredIndicator: true,
+                  description: '연락 받고 싶은 방법을 선택해주세요.',
+                  value: contact,
+                  onValueChange: (next) {
+                    if (next != null) setState(() => contact = next);
+                  },
+                  // Official RadioGroup root: column with gapY x1.
+                  child: const Column(
+                    spacing: SeedDimension.x1,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SeedRadio<String>(
+                        value: 'email',
+                        label: '이메일',
+                        size: SeedRadioSize.large,
+                        tone: SeedControlTone.neutral,
+                      ),
+                      SeedRadio<String>(
+                        value: 'phone',
+                        label: '전화',
+                        size: SeedRadioSize.large,
+                        tone: SeedControlTone.neutral,
+                      ),
+                      SeedRadio<String>(
+                        value: 'sms',
+                        label: '문자',
+                        size: SeedRadioSize.large,
+                        tone: SeedControlTone.neutral,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              SeedSlider(
-                values: [like],
-                min: 0,
-                max: 10,
-                ticks: const [2, 4, 6, 8],
-                markers: const [
-                  SeedSliderMarker(0, '별로'),
-                  SeedSliderMarker(10, '최고'),
-                ],
-                fieldLabel: '얼마나 좋아하시나요?',
-                description: '좋아하는 정도를 0~10 사이로 선택해주세요.',
-                onValuesChange: (values) => setState(() => like = values.first),
-              ),
-              const Divider(),
-              SeedSlider.range(
-                values: budget,
-                min: 0,
-                max: 1000000,
-                step: 50000,
-                fieldLabel: '예산 범위',
-                description: '원하는 예산 범위를 선택해주세요.',
-                invalid: true,
-                errorMessage: 'Fugiat nisi exercitation incididunt qui incididunt in id laborum voluptate.',
-                valueFormatter: (value) =>
-                    '₩${value.round().toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (_) => ',')}',
-                onValuesChange: (values) => setState(
-                  () => budget = mui.RangeValues(values.first, values.last),
+                SeedField(
+                  label: '약관 동의',
+                  required: true,
+                  helperText: '서비스 이용을 위해 약관에 동의해주세요.',
+                  child: Column(
+                    spacing: SeedDimension.x1,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      check('terms', '이용약관 동의 (필수)', agreements),
+                      check('privacy', '개인정보 처리방침 동의 (필수)', agreements),
+                      check('marketing', '마케팅 수신 동의 (선택)', agreements),
+                    ],
+                  ),
                 ),
-              ),
-              const Divider(),
-              SeedRadioGroup<String>(
-                label: '선호하는 연락 방법',
-                description: '연락 받고 싶은 방법을 선택해주세요.',
-                value: contact,
-                onValueChange: (next) {
-                  if (next != null) setState(() => contact = next);
-                },
-                child: const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SeedRadio<String>(
-                      value: 'email',
-                      label: '이메일',
-                      size: SeedRadioSize.large,
-                      tone: SeedControlTone.neutral,
-                    ),
-                    SeedRadio<String>(
-                      value: 'phone',
-                      label: '전화',
-                      size: SeedRadioSize.large,
-                      tone: SeedControlTone.neutral,
-                    ),
-                    SeedRadio<String>(
-                      value: 'sms',
-                      label: '문자',
-                      size: SeedRadioSize.large,
-                      tone: SeedControlTone.neutral,
-                    ),
-                  ],
-                ),
-              ),
-              SeedField(
-                label: '약관 동의',
-                required: true,
-                helperText: '서비스 이용을 위해 약관에 동의해주세요.',
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    check('terms', '이용약관 동의 (필수)', agreements),
-                    check('privacy', '개인정보 처리방침 동의 (필수)', agreements),
-                    check('marketing', '마케팅 수신 동의 (선택)', agreements),
-                  ],
-                ),
-              ),
-            ], itemSpacing: 16, verticalPadding: 16),
+              ],
+              itemSpacing: 16,
+              verticalPadding: 16,
+              bottomScrollFog: true,
+            ),
           ),
         ),
         SeedSnackbarAvoidOverlap(
