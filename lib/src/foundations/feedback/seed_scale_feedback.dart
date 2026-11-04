@@ -21,6 +21,9 @@ import '../colors/seed_color_scheme.dart';
 class SeedScaleCalculator {
   const SeedScaleCalculator._();
 
+  /// Calculates pressed scale from [width] and [height] using max(height, width / 4, 24).
+  ///
+  /// [disableAnimations] defaults to false; when true the scale is exactly 1.
   static double calculateScale({
     required double width,
     required double height,
@@ -34,28 +37,87 @@ class SeedScaleCalculator {
 
 /// Actual press and hover are separate so hover changes colors without scaling.
 class SeedInteractionState extends InheritedWidget {
+  /// Shares [pressed], [hovered], and [focused] interaction state with descendants.
+  ///
+  /// [focusVisible] defaults to false and follows keyboard focus visibility rather than pointer focus.
   const SeedInteractionState({
     super.key,
     required this.pressed,
     required this.hovered,
     required this.focused,
+    this.focusVisible = false,
     required super.child,
   });
+  /// True during pointer or keyboard press; hover does not imply press.
   final bool pressed, hovered, focused;
+
+  /// Keyboard focus, as CSS `:focus-visible`.
+  final bool focusVisible;
+  /// Returns the nearest inherited interaction state or null if outside a [SeedPressable].
   static SeedInteractionState? maybeOf(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<SeedInteractionState>();
+  /// Notifies dependents when press, hover, focus, or focus visibility changes.
   @override
   bool updateShouldNotify(SeedInteractionState oldWidget) =>
       pressed != oldWidget.pressed ||
       hovered != oldWidget.hovered ||
-      focused != oldWidget.focused;
+      focused != oldWidget.focused ||
+      focusVisible != oldWidget.focusVisible;
+}
+
+/// Draws the official outside focus ring around a control inside a
+/// [SeedPressable] whose own ring is disabled with `paintFocusRing: false`.
+class SeedControlFocusRing extends StatelessWidget {
+  /// Draws an outer 2 px focus ring around [child], clipped to [borderRadius], while the nearest
+  /// [SeedInteractionState] indicates visible focus.
+  const SeedControlFocusRing({
+    super.key,
+    required this.borderRadius,
+    required this.child,
+  });
+  /// Corner shape of the focus ring, matching the control surface.
+  final BorderRadius borderRadius;
+  /// Control subtree that receives the focus decoration.
+  final Widget child;
+
+  /// Paints the focus ring for keyboard focus using the SEED stroke.focusRing token.
+  @override
+  Widget build(BuildContext context) {
+    final visible =
+        SeedInteractionState.maybeOf(context)?.focusVisible ?? false;
+    return DecoratedBox(
+      position: DecorationPosition.foreground,
+      decoration: BoxDecoration(
+        borderRadius: borderRadius,
+        border: visible
+            ? Border.all(
+                color:
+                    Theme.of(context)
+                        .extension<SeedColorScheme>()
+                        ?.stroke
+                        .focusRing ??
+                    Theme.of(context).colorScheme.primary,
+                width: 2,
+                strokeAlign: 3,
+              )
+            : null,
+      ),
+      child: child,
+    );
+  }
 }
 
 /// Scales just the content of a SeedPressable, leaving its surface fixed.
 class SeedContentScale extends StatefulWidget {
+  /// Scales [child] according to [SeedScaleCalculator] on press.
+  ///
+  /// Null [pressed] reads the nearest [SeedInteractionState]; a specified value overrides it.
   const SeedContentScale({super.key, required this.child, this.pressed});
+  /// Content to scale independently from the pressable surface.
   final Widget child;
+  /// Optional controlled pressed state; null follows the closest [SeedInteractionState].
   final bool? pressed;
+  /// Creates the state that measures child size and animates content scale.
   @override
   State<SeedContentScale> createState() => _SeedContentScaleState();
 }
@@ -89,20 +151,39 @@ class _SeedContentScaleState extends State<SeedContentScale> {
 /// Automatically measures the child dimensions and applies the standard SEED formula:
 /// `basis = max(height, width / 4, 24)` and `scale = (basis - 2) / basis`.
 class SeedPressable extends StatefulWidget {
+  /// Optional fixed content. Either [child] or [builder] must be non-null.
   final Widget? child;
+  /// Optional content callback receiving context and the pressed-or-hovered visual state.
   final Widget Function(BuildContext context, bool isPressed)? builder;
+  /// Activation callback for taps and supported keyboard/semantics actions; null disables tap activation.
   final VoidCallback? onTap;
+  /// Callback for long press when enabled; null disables long-press activation.
   final VoidCallback? onLongPress;
+  /// Master interaction switch. Defaults to true; callbacks must also be present for an interactive target.
   final bool enabled;
+  /// Whether press feedback scales the child.
+  ///
+  /// Defaults to true; reduced-motion settings still suppress scaling.
   final bool enableScale;
+  /// GestureDetector hit-testing behavior. Defaults to [HitTestBehavior.opaque].
   final HitTestBehavior behavior;
+  /// Optional externally owned focus node. A private node is used when null.
   final FocusNode? focusNode;
+  /// Whether to request initial keyboard focus. Defaults to false.
   final bool autofocus;
+  /// Accessible name for the composite control; when specified, descendant semantics are excluded.
   final String? semanticsLabel;
+  /// Optional accessible value announced for the control.
   final String? semanticsValue;
+  /// Optional [SemanticsRole] override; null uses the generic role.
   final SemanticsRole? semanticsRole;
+  /// Optional accessible heading level; a non-null value exposes header semantics.
   final int? headingLevel;
+  /// Whether to expose button semantics. Defaults to true; link targets can customize it.
   final bool semanticButton;
+
+  /// Exposes this target as a single link node instead of a button.
+  final Uri? semanticsLinkUrl;
 
   /// Retain Enter for button-like targets, but allow native checkbox/switch
   /// parity (Space-only) for controls built on this pressable.
@@ -111,14 +192,40 @@ class SeedPressable extends StatefulWidget {
   /// Disabled native selection rows blur the previously focused input on a
   /// physical pointer tap, without enabling the disabled control itself.
   final bool unfocusOnDisabledTap;
+  /// Optional checked semantics state for checkbox-like controls.
   final bool? checked;
+  /// Optional indeterminate/mixed semantics state for checkable controls.
   final bool? mixed;
+  /// Optional toggled state for switch-like controls.
   final bool? toggled;
+  /// Optional selected state of this accessible choice.
   final bool? selected;
+  /// Optional expanded/collapsed state of expandable controls.
   final bool? expanded;
+  /// Whether this is a mutually exclusive option such as a radio choice.
   final bool? inMutuallyExclusiveGroup;
+  /// Focus ring corners. Defaults to a uniform 4 px radius.
   final BorderRadius focusBorderRadius;
 
+  /// Draws the focus ring inside the bounds, for targets whose official recipe
+  /// uses `position: "inside"` or that sit against a clipping edge. Otherwise
+  /// the ring sits outside the bounds with the official 2px offset.
+  final bool focusRingInside;
+
+  /// False when the builder places a [SeedControlFocusRing] itself.
+  final bool paintFocusRing;
+
+  /// Creates a pressable control.
+  ///
+  /// Supply [child] or [builder]; both may be supplied but [builder] takes precedence.
+  /// [onTap]/[onLongPress] enable activation when [enabled] is true.
+  ///
+  /// [enableScale], [semanticButton], and [activateOnEnter] default to true.
+  /// [behavior] defaults to opaque; [autofocus] and [unfocusOnDisabledTap] default to false.
+  /// [focusBorderRadius] defaults to a 4 px radius; [focusRingInside] defaults to false and
+  /// [paintFocusRing] to true.
+  ///
+  /// Additional semantics flags expose the corresponding control state.
   const SeedPressable({
     super.key,
     this.child,
@@ -135,6 +242,7 @@ class SeedPressable extends StatefulWidget {
     this.semanticsRole,
     this.headingLevel,
     this.semanticButton = true,
+    this.semanticsLinkUrl,
     this.activateOnEnter = true,
     this.unfocusOnDisabledTap = false,
     this.checked,
@@ -144,17 +252,23 @@ class SeedPressable extends StatefulWidget {
     this.expanded,
     this.inMutuallyExclusiveGroup,
     this.focusBorderRadius = const BorderRadius.all(Radius.circular(4)),
+    this.focusRingInside = false,
+    this.paintFocusRing = true,
   }) : assert(
          child != null || builder != null,
          'Either child or builder must be provided.',
        );
 
+  /// Creates the state that handles tap, keyboard, focus, hover, and press-scale animation.
   @override
   State<SeedPressable> createState() => _SeedPressableState();
 }
 
 // Focus can be restored after a route or overlay closes. Track input modality
 // across controls so restoring focus does not turn a mouse click into a ring.
+/// Whether the most recent input was a pointer rather than a key.
+bool get seedLastInputWasPointer => _SeedFocusHighlight.instance.usingPointer;
+
 class _SeedFocusHighlight extends ChangeNotifier {
   static final instance = _SeedFocusHighlight();
   bool usingPointer = false;
@@ -304,6 +418,14 @@ class _SeedPressableState extends State<SeedPressable>
     widget.onTap!();
   }
 
+  void _activateSemantically() {
+    // A web accessibility click bypasses pointer dispatch. Like a React click
+    // without a preceding keydown, it must not seed a keyboard-open menu.
+    // ActivateIntent still uses _activate and preserves keyboard modality.
+    _SeedFocusHighlight.instance._setUsingPointer(true);
+    _activate();
+  }
+
   @override
   Widget build(BuildContext context) {
     final disableAnimations =
@@ -312,6 +434,10 @@ class _SeedPressableState extends State<SeedPressable>
       pressed: _isPressed,
       hovered: _interactive && _isHovered,
       focused: _hasFocus,
+      focusVisible:
+          _showFocus &&
+          !_SeedFocusHighlight.instance.usingPointer &&
+          _interactive,
       child: Builder(
         builder: (context) => widget.builder != null
             ? widget.builder!(
@@ -328,6 +454,8 @@ class _SeedPressableState extends State<SeedPressable>
       header: widget.headingLevel != null,
       headingLevel: widget.headingLevel,
       button: widget.semanticButton,
+      link: widget.semanticsLinkUrl != null,
+      linkUrl: widget.semanticsLinkUrl,
       enabled: _interactive,
       focusable: _interactive,
       focused: _interactive ? _hasFocus : null,
@@ -343,7 +471,9 @@ class _SeedPressableState extends State<SeedPressable>
       selected: widget.selected,
       expanded: widget.expanded,
       inMutuallyExclusiveGroup: widget.inMutuallyExclusiveGroup,
-      onTap: _interactive && widget.onTap != null ? _activate : null,
+      onTap: _interactive && widget.onTap != null
+          ? _activateSemantically
+          : null,
       onLongPress: _interactive ? widget.onLongPress : null,
       child: MouseRegion(
         onEnter: (event) {
@@ -403,7 +533,8 @@ class _SeedPressableState extends State<SeedPressable>
             decoration: BoxDecoration(
               borderRadius: widget.focusBorderRadius,
               border:
-                  _showFocus &&
+                  widget.paintFocusRing &&
+                      _showFocus &&
                       !_SeedFocusHighlight.instance.usingPointer &&
                       _interactive
                   ? Border.all(
@@ -414,6 +545,10 @@ class _SeedPressableState extends State<SeedPressable>
                               .focusRing ??
                           Theme.of(context).colorScheme.primary,
                       width: 2,
+                      // A 2px stroke with align 3 spans 2..4px outside the bounds.
+                      strokeAlign: widget.focusRingInside
+                          ? BorderSide.strokeAlignInside
+                          : 3,
                     )
                   : null,
             ),

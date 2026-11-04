@@ -668,4 +668,38 @@ void main() {
       });
     });
   });
+
+  group('scale feedback', () {
+    test('Calculates exact scale as defined in SEED documentation', () {
+      // 32 x 32 icon button: basis = 32, scale = (32 - 2)/32 = 0.9375
+      final scale32 = SeedScaleCalculator.calculateScale(width: 32, height: 32);
+      expect(scale32, closeTo(0.9375, 0.001));
+
+      // 120 x 48 text button: basis = 48, scale = (48 - 2)/48 = 0.9583
+      final scale120 = SeedScaleCalculator.calculateScale(
+        width: 120,
+        height: 48,
+      );
+      expect(scale120, closeTo(0.9583, 0.001));
+
+      // 343 x 48 full-width button: basis = 343/4 = 85.75, scale = (85.75 - 2)/85.75 = 0.9766
+      final scale343 = SeedScaleCalculator.calculateScale(
+        width: 343,
+        height: 48,
+      );
+      expect(scale343, closeTo(0.9766, 0.001));
+
+      // 22 x 22 small button: basis = min 24, scale = (24 - 2)/24 = 0.9166
+      final scale22 = SeedScaleCalculator.calculateScale(width: 22, height: 22);
+      expect(scale22, closeTo(0.9166, 0.001));
+
+      // Reduce Motion disabled animations
+      final scaleReduceMotion = SeedScaleCalculator.calculateScale(
+        width: 120,
+        height: 48,
+        disableAnimations: true,
+      );
+      expect(scaleReduceMotion, 1.0);
+    });
+  });
 }

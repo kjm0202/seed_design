@@ -27,7 +27,8 @@ export 'src/foundations/motion/seed_motion.dart';
 export 'src/foundations/elevation/seed_shadow.dart';
 
 // Foundations - Feedback
-export 'src/foundations/feedback/seed_scale_feedback.dart';
+export 'src/foundations/feedback/seed_scale_feedback.dart'
+    hide seedLastInputWasPointer;
 export 'src/foundations/feedback/seed_control.dart';
 
 // Localization

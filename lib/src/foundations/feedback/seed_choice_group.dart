@@ -8,6 +8,8 @@ class SeedChoiceGroup extends StatefulWidget {
   final int selectedIndex;
   final List<bool> enabled;
   final ValueChanged<int> onSelected;
+
+  final bool revealOnMove;
   final Widget Function(BuildContext, List<FocusNode>) builder;
   final Axis? axis;
 
@@ -16,6 +18,7 @@ class SeedChoiceGroup extends StatefulWidget {
     required this.selectedIndex,
     required this.enabled,
     required this.onSelected,
+    this.revealOnMove = true,
     required this.builder,
     this.axis,
   });
@@ -76,7 +79,9 @@ class _SeedChoiceGroupState extends State<SeedChoiceGroup> {
       next = (next + direction) % _nodes.length;
       if (widget.enabled[next]) {
         _nodes[next].requestFocus();
-        Scrollable.ensureVisible(_nodes[next].context!);
+        if (widget.revealOnMove) {
+          Scrollable.ensureVisible(_nodes[next].context!);
+        }
         widget.onSelected(next);
         break;
       }
