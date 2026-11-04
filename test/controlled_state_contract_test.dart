@@ -202,6 +202,30 @@ void main() {
     expect(proposals, ['b', 'b', 'b']);
   });
 
+  testWidgets('segmented control supports an authoritative empty selection', (
+    tester,
+  ) async {
+    final proposals = <String>[];
+    await tester.pumpWidget(
+      host(
+        SeedSegmentedControl<String>(
+          controlled: true,
+          defaultValue: 'a',
+          segments: const [
+            SeedSegment(value: 'a', label: 'Alpha'),
+            SeedSegment(value: 'b', label: 'Beta'),
+          ],
+          onValueChanged: proposals.add,
+        ),
+      ),
+    );
+    for (var i = 0; i < 2; i++) {
+      await tester.tap(find.text('Beta'));
+      await tester.pumpAndSettle();
+    }
+    expect(proposals, ['b', 'b']);
+  });
+
   for (final mode in SeedDatePickerMode.values) {
     testWidgets('calendar $mode rejects proposals while controlled and empty', (
       tester,

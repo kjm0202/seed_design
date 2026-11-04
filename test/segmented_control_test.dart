@@ -1,6 +1,7 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
 Widget _host(Widget child, {TextDirection direction = TextDirection.ltr}) {
@@ -13,6 +14,39 @@ Widget _host(Widget child, {TextDirection direction = TextDirection.ltr}) {
     ),
   );
 }
+
+Widget host(Widget child) => MaterialApp(
+  supportedLocales: const [Locale('en'), Locale('ko')],
+  locale: const Locale('ko'),
+  localizationsDelegates: GlobalMaterialLocalizations.delegates,
+  theme: SeedThemeData.light().toThemeData(),
+  home: Scaffold(body: Center(child: child)),
+);
+
+Widget hostComponentBehaviorRegress(Widget child) => MaterialApp(
+  locale: const Locale('ko'),
+  supportedLocales: const [Locale('en'), Locale('ko')],
+  localizationsDelegates: GlobalMaterialLocalizations.delegates,
+  theme: SeedThemeData.light().toThemeData(),
+  home: Scaffold(body: Center(child: child)),
+);
+
+SeedSideNavigation navigation({String? selectedId, VoidCallback? onParent}) =>
+    SeedSideNavigation(
+      selectedId: selectedId,
+      groups: [
+        SeedSideNavGroup(
+          items: [
+            SeedSideNavItem(
+              id: 'parent',
+              label: 'Parent',
+              onTap: onParent,
+              subItems: const [SeedSideNavSubItem(id: 'child', label: 'Child')],
+            ),
+          ],
+        ),
+      ],
+    );
 
 void main() {
   testWidgets('four segments retain 86px minimum and scroll at 240px', (
@@ -261,5 +295,115 @@ void main() {
       matching: find.byType(IconTheme),
     );
     expect(tester.widget<IconTheme>(icon.last).data.color, disabled);
+  });
+  group('label wrapping', () {
+    testWidgets(
+      'long labels wrap fully and remain selectable at phone widths and text scales',
+      (tester) async {
+        for (final scale in [1.0, 1.5, 2.0]) {
+          String? selected;
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: SeedThemeData.light().toThemeData(),
+              home: Scaffold(
+                body: Center(
+                  child: MediaQuery(
+                    data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+                    child: SizedBox(
+                      width: 358,
+                      child: SeedSegmentedControl<String>(
+                        key: ValueKey(scale),
+                        defaultValue: '1',
+                        onValueChange: (value) => selected = value,
+                        segments: const [
+                          SeedSegment(value: '1', label: '가격 높은 순'),
+                          SeedSegment(value: '2', label: '할인율 높은 순'),
+                          SeedSegment(value: '3', label: '인기 많은 순'),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          for (final label in ['가격 높은 순', '할인율 높은 순', '인기 많은 순']) {
+            final paragraph = tester.renderObject<RenderParagraph>(
+              find.text(label),
+            );
+            expect(paragraph.didExceedMaxLines, false);
+            expect(
+              tester
+                  .getRect(find.byType(SeedSegmentedControl<String>))
+                  .contains(tester.getCenter(find.text(label))),
+              true,
+            );
+          }
+          await tester.tap(find.text('할인율 높은 순'));
+          await tester.pumpAndSettle();
+          expect(selected, '2');
+          expect(tester.takeException(), isNull);
+        }
+      },
+    );
+  });
+
+  group('RTL keyboard', () {
+    testWidgets('RTL segments move in reading order', (tester) async {
+      var selected = 0;
+      await tester.pumpWidget(
+        host(
+          Directionality(
+            textDirection: TextDirection.rtl,
+            child: StatefulBuilder(
+              builder: (context, setState) => SizedBox(
+                width: 280,
+                child: SeedSegmentedControl<int>(
+                  selectedValue: selected,
+                  onValueChanged: (value) => setState(() => selected = value),
+                  segments: const [
+                    SeedSegment(value: 0, label: 'One'),
+                    SeedSegment(value: 1, label: 'Two'),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.pumpAndSettle();
+      expect(selected, 1);
+    });
+  });
+
+  group('disabled indicator', () {
+    testWidgets('selected disabled segment has a disabled indicator', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        hostComponentBehaviorRegress(
+          SeedSegmentedControl(
+            segments: const [
+              SeedSegment(value: 1, label: 'One', enabled: false),
+              SeedSegment(value: 2, label: 'Two'),
+            ],
+            selectedValue: 1,
+            onValueChanged: (_) {},
+          ),
+        ),
+      );
+      final indicator = find.descendant(
+        of: find.byType(AnimatedPositioned),
+        matching: find.byType(Container),
+      );
+      expect(
+        (tester.widget<Container>(indicator).decoration! as BoxDecoration)
+            .color,
+        SeedThemeData.light().colorScheme.bg.disabled,
+      );
+    });
   });
 }

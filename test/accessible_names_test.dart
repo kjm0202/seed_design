@@ -15,6 +15,28 @@ void main() {
   setUpAll(loadSeedTestFonts);
 
   group('Accessible names match official ARIA', () {
+    testWidgets('SegmentedControl semanticsLabel names its radiogroup', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(
+        _app(
+          SizedBox(
+            width: 300,
+            child: SeedSegmentedControl<int>(
+              semanticsLabel: 'Sort options',
+              segments: const [
+                SeedSegment(value: 1, label: 'A'),
+                SeedSegment(value: 2, label: 'B'),
+              ],
+            ),
+          ),
+        ),
+      );
+      final node = tester.getSemantics(find.bySemanticsLabel('Sort options'));
+      expect(node.role, SemanticsRole.radioGroup);
+      handle.dispose();
+    });
 
     testWidgets('RadioGroup and Chip.RadioRoot expose radiogroup roles', (
       tester,

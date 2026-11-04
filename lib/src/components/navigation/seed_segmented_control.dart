@@ -51,6 +51,8 @@ class SeedSegmentedControl<T> extends StatefulWidget {
   /// Keeps [selectedValue], including null, under parent control.
   final bool controlled;
 
+  final String? semanticsLabel;
+
   const SeedSegmentedControl({
     super.key,
     required this.segments,
@@ -61,6 +63,7 @@ class SeedSegmentedControl<T> extends StatefulWidget {
     @Deprecated('Use onValueChange instead.') ValueChanged<T>? onValueChanged,
     this.enabled = true,
     this.controlled = false,
+    this.semanticsLabel,
   }) : selectedValue = value ?? selectedValue,
        assert(value == null || selectedValue == null),
        onValueChanged = onValueChange ?? onValueChanged,
@@ -132,6 +135,7 @@ class _SeedSegmentedControlState<T> extends State<SeedSegmentedControl<T>> {
         return Semantics(
           container: true,
           role: SemanticsRole.radioGroup,
+          label: widget.semanticsLabel,
           child: SeedChoiceGroup(
             selectedIndex: selectedIndex,
             enabled: segments.map((s) => enabled && s.enabled).toList(),
