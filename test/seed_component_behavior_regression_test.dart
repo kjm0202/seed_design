@@ -4,6 +4,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
 Widget host(Widget child) => MaterialApp(
+locale: const Locale('ko'), supportedLocales: const [Locale('ko'), Locale('en')], localizationsDelegates: GlobalMaterialLocalizations.delegates,
+
   theme: SeedThemeData.light().toThemeData(),
   home: Scaffold(body: Center(child: child)),
 );
@@ -427,34 +429,34 @@ void main() {
   });
 
   testWidgets('file upload loading and failure expose progress and retry', (
-    tester,
-  ) async {
-    SeedAttachmentItem? retried;
-    const failed = SeedAttachmentItem(
-      id: 'failed',
-      type: SeedAttachmentType.file,
-      name: 'file.pdf',
-      status: SeedAttachmentStatus.error,
-    );
-    await tester.pumpWidget(
-      host(
-        SeedAttachmentInput(
-          items: const [
-            SeedAttachmentItem(
-              id: 'loading',
-              type: SeedAttachmentType.file,
-              status: SeedAttachmentStatus.loading,
-            ),
-            failed,
-          ],
-          onRetry: (item) => retried = item,
+      tester,
+    ) async {
+      SeedAttachmentItem? retried;
+      const failed = SeedAttachmentItem(
+        id: 'failed',
+        type: SeedAttachmentType.file,
+        name: 'file.pdf',
+        status: SeedAttachmentStatus.error,
+      );
+      await tester.pumpWidget(
+        host(
+          SeedAttachmentInput(
+            items: const [
+              SeedAttachmentItem(
+                id: 'loading',
+                type: SeedAttachmentType.file,
+                status: SeedAttachmentStatus.loading,
+              ),
+              failed,
+            ],
+            onRetry: (item) => retried = item,
+          ),
         ),
-      ),
-    );
-    expect(find.byType(SeedProgressCircle), findsOneWidget);
-    await tester.tap(find.byTooltip('첨부 파일 업로드 재시도'));
-    expect(retried, same(failed));
-  });
+      );
+      expect(find.byType(SeedProgressCircle), findsOneWidget);
+      await tester.tap(find.byTooltip('재시도'));
+      expect(retried, same(failed));
+    });
 
   testWidgets('disabled image upload cannot retry', (tester) async {
     var calls = 0;

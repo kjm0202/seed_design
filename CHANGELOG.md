@@ -18,6 +18,7 @@
 - `SeedMenu` stays on its requested side when its content fits there, even with less than 200px of room, like the official size-then-flip order.
 - `SeedPopover` with plain text now hugs that text within `minWidth`/`maxWidth` like the official `width: auto`, and reserves its 48px scroll fade only while the body overflows. Custom widgets keep `maxWidth`.
 - **Breaking migration:** InputButton medium is 40px; use large for 52px. TextInput/TextField clearable defaults to false.
+- **Breaking migration:** AttachmentInput maxCount defaults to 1.
 
 ## 1.0.0
 

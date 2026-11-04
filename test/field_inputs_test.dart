@@ -98,6 +98,17 @@ void main() {
       );
     });
 
+    testWidgets('AttachmentDisplayField shows its indicator text', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _app(
+          const SeedAttachmentDisplayField(label: 'Files', indicator: '(선택)'),
+        ),
+      );
+      expect(find.text('(선택)'), findsOneWidget);
+    });
+
     testWidgets('Space toggles a checkbox and Enter does not', (tester) async {
       var value = false;
       await tester.pumpWidget(
@@ -153,6 +164,29 @@ void main() {
         ),
       );
       expect(find.byIcon(Icons.error), findsOneWidget);
+    });
+
+    test('AttachmentController status updates replace progress', () {
+      final controller = SeedAttachmentController(
+        items: const [
+          SeedAttachmentItem(
+            id: '1',
+            name: 'x',
+            status: SeedAttachmentStatus.uploading,
+            progress: .5,
+          ),
+        ],
+        maxCount: 3,
+      );
+      addTearDown(controller.dispose);
+      controller.updateStatus('1', SeedAttachmentStatus.error);
+      expect(controller.items.single.progress, isNull);
+      controller.updateStatus(
+        '1',
+        SeedAttachmentStatus.uploading,
+        progress: .2,
+      );
+      expect(controller.items.single.progress, .2);
     });
   });
   group('controller ownership', () {

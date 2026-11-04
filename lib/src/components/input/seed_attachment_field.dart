@@ -51,7 +51,12 @@ class SeedAttachmentController extends ChangeNotifier {
   }) => replaceItems([
     for (final item in _items)
       if (item.id == id)
-        item.copyWith(status: status, progress: progress)
+        // React replaces the status details, so progress never outlives them.
+        item.copyWith(
+          status: status,
+          progress: progress,
+          clearProgress: progress == null,
+        )
       else
         item,
   ]);
@@ -104,14 +109,19 @@ class SeedAttachmentDisplayField extends StatefulWidget {
     this.errorMessage,
     this.invalid,
     this.showRequiredIndicator = false,
+    this.indicator,
+    this.labelWeight = SeedFieldLabelWeight.medium,
     this.itemBuilder,
     this.inset = EdgeInsets.zero,
     this.showDropzone = false,
     this.isDraggingOver = false,
     this.itemSize = 80,
     this.triggerIcon,
-    this.representativeLabel = '대표',
-  }) : onEntriesChanged = onEntriesChange ?? onEntriesChanged,
+    String? representativeLabel,
+    // Preserve the public named parameter and getter.
+    // ignore: prefer_initializing_formals
+  }) : _representativeLabel = representativeLabel,
+       onEntriesChanged = onEntriesChange ?? onEntriesChanged,
        assert(onEntriesChange == null || onEntriesChanged == null),
        initialEntries = defaultEntries ?? initialEntries ?? const [],
        assert(defaultEntries == null || initialEntries == null),
@@ -141,7 +151,8 @@ class SeedAttachmentDisplayField extends StatefulWidget {
   final Widget? triggerIcon;
 
   /// Badge text for the representative item. Existing callers retain '대표'.
-  final String representativeLabel;
+  final String? _representativeLabel;
+  String get representativeLabel => _representativeLabel ?? '대표';
   final String? label, description, errorMessage;
 
   /// Independent validation state. When omitted, a legacy [errorMessage]
@@ -150,6 +161,9 @@ class SeedAttachmentDisplayField extends StatefulWidget {
 
   /// Displays the required mark beside [label], as in React AttachmentDisplayField.
   final bool showRequiredIndicator;
+
+  final String? indicator;
+  final SeedFieldLabelWeight labelWeight;
   final Widget Function(BuildContext, SeedAttachmentController)? itemBuilder;
   final EdgeInsetsGeometry inset;
   @override
@@ -220,7 +234,9 @@ class _SeedAttachmentDisplayFieldState
     final invalid = widget.invalid ?? widget.errorMessage != null;
     return SeedField(
       label: widget.label,
+      labelWeight: widget.labelWeight,
       required: widget.showRequiredIndicator,
+      indicatorText: widget.indicator,
       isInvalid: invalid,
       helperText: widget.description,
       errorMessage: invalid ? widget.errorMessage : null,
@@ -245,7 +261,7 @@ class _SeedAttachmentDisplayFieldState
                   readOnly: widget.readOnly,
                   itemSize: widget.itemSize,
                   triggerIcon: widget.triggerIcon,
-                  representativeLabel: widget.representativeLabel,
+                  representativeLabel: widget._representativeLabel,
                   showTrigger: !widget.showDropzone,
                   onAdd: () => widget.onTrigger?.call(_controller),
                   onRemove: (item) => _controller.remove(item.id),
@@ -278,6 +294,8 @@ class SeedAttachmentField extends SeedAttachmentDisplayField {
     super.errorMessage,
     super.invalid,
     super.showRequiredIndicator,
+    super.indicator,
+    super.labelWeight,
     super.itemBuilder,
     super.inset,
     super.showDropzone,

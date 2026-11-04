@@ -438,29 +438,32 @@ void main() {
   );
 
   testWidgets(
-    'deleting the featured attachment promotes the current first entry',
-    (tester) async {
-      await open(tester, '/attachment-display-field');
-      final field = find.byWidgetPredicate(
-        (w) =>
-            w is SeedAttachmentDisplayField &&
-            w.label == 'Customizing Items (대표사진 배지)',
-      );
-      await tester.ensureVisible(field);
-      await tester.tap(
-        find
-            .descendant(of: field, matching: find.bySemanticsLabel('첨부 파일 삭제'))
-            .first,
-      );
-      await tester.pumpAndSettle();
-      final input = tester.widget<SeedAttachmentInput>(
-        find.descendant(of: field, matching: find.byType(SeedAttachmentInput)),
-      );
-      expect(input.items.length, 1);
-      expect(input.items.single.isRepresentative, isTrue);
-      expect(tester.takeException(), isNull);
-    },
-  );
+      'deleting the featured attachment promotes the current first entry',
+      (tester) async {
+        await open(tester, '/attachment-display-field');
+        final field = find.byWidgetPredicate(
+          (w) =>
+              w is SeedAttachmentDisplayField &&
+              w.label == 'Customizing Items (대표사진 배지)',
+        );
+        await tester.ensureVisible(field);
+        await tester.tap(
+          find
+              .descendant(of: field, matching: find.bySemanticsLabel('파일 제거'))
+              .first,
+        );
+        await tester.pumpAndSettle();
+        final input = tester.widget<SeedAttachmentInput>(
+          find.descendant(
+            of: field,
+            matching: find.byType(SeedAttachmentInput),
+          ),
+        );
+        expect(input.items.length, 1);
+        expect(input.items.single.isRepresentative, isTrue);
+        expect(tester.takeException(), isNull);
+      },
+    );
   for (final keep in [false, true]) {
     testWidgets(
       'BottomSheet keepMounted=$keep controls uncontrolled input lifetime',

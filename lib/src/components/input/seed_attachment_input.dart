@@ -1,3 +1,5 @@
+import '../../localization/seed_localizations.dart';
+
 import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
@@ -14,21 +16,45 @@ import '../button/seed_button.dart';
 
 /// Status of an individual attachment item.
 enum SeedAttachmentStatus {
+  /// Attachment is pending external processing.
   pending,
+  /// Attachment has completed its display processing.
   completed,
+  /// Success status retained for application compatibility.
   success,
+  /// Attachment is currently loading.
   loading,
+  /// Attachment is being uploaded by the application.
   uploading,
+  /// Attachment has failed and may expose retry.
   error;
 
+  /// True for [loading] or [uploading] status.
   bool get isLoading => this == loading || this == uploading;
 }
 
 /// Type of an individual attachment item as defined by SEED Design.
-enum SeedAttachmentType { image, file }
+/// Use [image] for image thumbnails and [file] for generic file tiles.
+enum SeedAttachmentType {
+  /// Image preview tile.
+  image,
+
+  /// Generic file preview tile.
+  file,
+}
+
+// The fixed-width file tile is part of the shared attachment layout contract.
+// Keep the sliver's horizontal extent estimate in sync with its actual tile.
+const double _attachmentFileTileWidth = 160.0;
 
 /// A model describing an attachment item.
 class SeedAttachmentItem {
+  /// Creates an immutable attachment presentation record.
+  /// [id] is its stable identity. [name], [sizeText], [thumbnailUrl] and
+  /// [imageProvider] are external display values. [type] defaults to image
+  /// and [status] to completed. [progress] is app-supplied upload progress.
+  /// [isRepresentative], [readOnly], [enabled], [isDragging] and
+  /// [removeEnabled] configure item badges and interaction.
   const SeedAttachmentItem({
     required this.id,
     this.name,
@@ -45,19 +71,34 @@ class SeedAttachmentItem {
     this.removeEnabled = true,
   });
 
+  /// Stable identifier used by controller updates and list keys.
   final String id;
+  /// Displayed attachment file name.
   final String? name;
+  /// Application-formatted file size; this model does not format bytes.
   final String? sizeText;
+  /// Which preview tile variant to render.
   final SeedAttachmentType type;
+  /// Flutter preview image; preferred over [thumbnailUrl].
   final ImageProvider? imageProvider;
+  /// Current app-reported item status (default completed).
   final SeedAttachmentStatus status;
+  /// Whether this thumbnail carries the representative badge.
   final bool isRepresentative;
+  /// Remote preview URL used when [imageProvider] is absent.
   final String? thumbnailUrl;
+  /// Optional application-supplied upload progress.
   final double? progress;
+  /// Item flags for read-only, enabled, dragging and removal permission.
+  /// Defaults: false, true, false and true, respectively.
   final bool readOnly, enabled, isDragging, removeEnabled;
+  /// Returns [imageProvider], a [NetworkImage] for [thumbnailUrl], or null.
   ImageProvider? get effectiveImageProvider =>
       imageProvider ??
       (thumbnailUrl == null ? null : NetworkImage(thumbnailUrl!));
+  /// Copies display values and status while preserving the original ID/type.
+  /// Null arguments keep existing values; [clearProgress] explicitly clears
+  /// [progress] instead of retaining its previous value.
   SeedAttachmentItem copyWith({
     String? name,
     String? sizeText,
@@ -90,20 +131,33 @@ class SeedAttachmentItem {
 
 /// A 120px dropzone component for file/attachment upload adhering to SEED Design.
 class SeedAttachmentDropzone extends StatelessWidget {
+  /// Select-files button callback; the dropzone surface itself is not clickable.
   final VoidCallback? onTap;
-  final String label;
+  final String? _label;
+  /// Custom hint or legacy Korean fallback label.
+  String get label => _label ?? '또는 여기로 드래그해서 업로드';
+  /// Icon for the internal select-files button.
   final Widget? icon;
+  /// Externally supplied drag-over state for border styling.
   final bool isDraggingOver;
+  /// Whether the select-files button is enabled (default true).
   final bool enabled;
 
+  /// Shows a dropzone area with a select-files button.
+  /// [onTap] requests a picker from the application; this widget handles
+  /// neither native drop events nor uploading. [label] overrides localized
+  /// helper text, [icon] replaces the button icon, [isDraggingOver] controls
+  /// highlight styling and [enabled] defaults to true.
   const SeedAttachmentDropzone({
     super.key,
     this.onTap,
-    this.label = '또는 여기로 드래그해서 업로드',
+    String? label,
     this.icon,
     this.isDraggingOver = false,
     this.enabled = true,
-  });
+    // Preserve the public named parameter and getter.
+    // ignore: prefer_initializing_formals
+  }) : _label = label;
 
   @override
   Widget build(BuildContext context) {
@@ -118,40 +172,42 @@ class SeedAttachmentDropzone extends StatelessWidget {
         ? colors.fg.disabled
         : colors.fg.neutralSubtle;
 
-    return SeedPressable(
-      enabled: enabled && onTap != null,
-      onTap: onTap,
-      focusBorderRadius: SeedBorderRadius.r3,
-      builder: (context, isPressed) => CustomPaint(
+    // The official Dropzone is a plain drop target; only its ActionButton
+    // opens the chooser, so the area itself is neither a tab stop nor a button.
+    // The official dropzone is a block-level flex item of the attachment
+    // root column, so it spans the available width rather than its content.
+    return LayoutBuilder(
+      builder: (context, constraints) => CustomPaint(
         foregroundPainter: _SeedDropzoneBorder(strokeColor, isDraggingOver),
         child: Container(
-          height: 120.0,
+          width: constraints.hasBoundedWidth ? constraints.maxWidth : null,
+          // The React recipe is 120px at its default text scale. Keep that
+          // minimum without clipping the button + helper label when Flutter
+          // accessibility text scaling makes them taller.
+          constraints: const BoxConstraints(minHeight: 120.0),
           padding: const EdgeInsets.symmetric(horizontal: SeedDimension.x4),
           decoration: BoxDecoration(
-            color: isPressed
-                ? colors.bg.transparentPressed
-                : colors.bg.transparent,
+            color: colors.bg.transparent,
             borderRadius: SeedBorderRadius.r3,
           ),
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SeedButton(
-                  label: '파일 선택',
-                  variant: SeedButtonVariant.neutralWeak,
-                  size: SeedButtonSize.small,
-                  prefixIcon: icon ?? const Icon(Icons.file_upload_outlined),
-                  onPressed: enabled ? onTap : null,
-                ),
-                const SizedBox(height: SeedDimension.x2),
-                Text(
-                  label,
-                  style: typography.t4Medium.copyWith(color: labelColor),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SeedButton(
+                label: SeedLocalizations.label(context, SeedLabel.selectFiles),
+                variant: SeedButtonVariant.neutralWeak,
+                size: SeedButtonSize.small,
+                prefixIcon: icon ?? const Icon(Icons.file_upload_outlined),
+                onPressed: enabled ? onTap : null,
+              ),
+              const SizedBox(height: SeedDimension.x2),
+              Text(
+                _label ?? SeedLocalizations.label(context, SeedLabel.dropFiles),
+                style: typography.t4Medium.copyWith(color: labelColor),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
         ),
       ),
@@ -197,21 +253,32 @@ class _SeedDropzoneBorder extends CustomPainter {
 ///
 /// Displays a trigger box with count and an optional horizontal row of preview items.
 class SeedAttachmentInput extends StatelessWidget {
+  /// Displays supplied [items] as a horizontal attachment preview list.
+  /// [maxCount] defaults to 1; [enabled] and [readOnly] control the add trigger
+  /// and item actions. [onAdd], [onRemove] and [onRetry] notify the caller without
+  /// mutating its item list. [onReorder] enables item dragging with Flutter index
+  /// semantics. [itemSize] defaults to 80 logical pixels. [triggerIcon] overrides
+  /// the default camera glyph; [showTrigger] hides the add tile for dropzones.
+  /// [representativeLabel] defaults to '대표'. [scrollPadding] is Flutter-only
+  /// internal scrollport padding and defaults to [EdgeInsets.zero].
   const SeedAttachmentInput({
     super.key,
     required this.items,
-    this.maxCount = 10,
+    this.maxCount = 1,
     this.onAdd,
     this.onRemove,
     this.onRetry,
     this.itemSize = 80.0,
-    this.representativeLabel = '대표',
+    String? representativeLabel,
     this.triggerIcon,
     this.showTrigger = true,
     this.readOnly = false,
     this.onReorder,
+    this.scrollPadding = EdgeInsets.zero,
     this.enabled = true,
-  });
+    // Preserve the public named parameter and getter.
+    // ignore: prefer_initializing_formals
+  }) : _representativeLabel = representativeLabel;
 
   /// The list of currently attached items.
   final List<SeedAttachmentItem> items;
@@ -232,7 +299,9 @@ class SeedAttachmentInput extends StatelessWidget {
   final double itemSize;
 
   /// Label for representative thumbnail (e.g. '대표').
-  final String representativeLabel;
+  final String? _representativeLabel;
+  /// Representative image badge text (default '대표').
+  String get representativeLabel => _representativeLabel ?? '대표';
 
   /// Flutter composition option for React's separate image/general TriggerIcon.
   /// Omitted values keep the existing camera trigger.
@@ -240,8 +309,20 @@ class SeedAttachmentInput extends StatelessWidget {
 
   /// Whether to include the tile trigger beside previews (false for dropzones).
   final bool showTrigger;
+  /// Whether the attachment list blocks add, remove and retry actions.
   final bool readOnly;
+  /// Reorder handler; null disables dragging.
+  /// The destination index follows ReorderableListView's before-removal convention.
   final ReorderCallback? onReorder;
+
+  /// Inset applied *inside* the attachment scrollport (both reorderable and
+  /// ordinary). The default remains zero for existing consumers.
+  ///
+  /// React's --seed-attachment-input-extend-x enlarges the viewport while
+  /// the scrollable container retains padding-inline. Use this when a parent
+  /// has extended the input's width, rather than padding the list's parent,
+  /// which would shorten the drag/scroll viewport.
+  final EdgeInsets scrollPadding;
 
   /// Whether the attachment input is enabled.
   final bool enabled;
@@ -267,6 +348,8 @@ class SeedAttachmentInput extends StatelessWidget {
 
     final trigger = SeedPressable(
       enabled: canAdd,
+      // Official Trigger aria-label; the count is visual only.
+      semanticsLabel: SeedLocalizations.label(context, SeedLabel.selectFiles),
       onTap: canAdd ? onAdd : null,
       builder: (context, isPressed) {
         return Container(
@@ -341,6 +424,18 @@ class SeedAttachmentInput extends StatelessWidget {
         child: ReorderableListView.builder(
           scrollDirection: Axis.horizontal,
           shrinkWrap: true,
+          clipBehavior: Clip.none,
+          padding: scrollPadding,
+          // File and image tiles have known horizontal extents even when
+          // filenames wrap or text scaling changes their height. Providing
+          // the actual extent prevents the lazily-built sliver from
+          // underestimating maxScrollExtent after dynamic add/remove and
+          // during edge auto-scrolling.
+          itemExtentBuilder: (index, _) =>
+              (items[index].type == SeedAttachmentType.file
+                  ? _attachmentFileTileWidth
+                  : itemSize) +
+              (showTrigger || index > 0 ? 8.0 : 0.0),
           buildDefaultDragHandles: false,
           header: showTrigger ? trigger : null,
           itemCount: items.length,
@@ -350,7 +445,11 @@ class SeedAttachmentInput extends StatelessWidget {
           itemBuilder: (context, index) {
             final item = items[index];
             final child = Padding(
-              padding: const EdgeInsetsDirectional.only(start: 8),
+              // CSS itemGroup gap is between siblings only. With no trigger
+              // (dropzone), the first preview starts at the scrollPadding.
+              padding: EdgeInsetsDirectional.only(
+                start: showTrigger || index > 0 ? 8 : 0,
+              ),
               child: preview(item),
             );
             return KeyedSubtree(
@@ -368,14 +467,19 @@ class SeedAttachmentInput extends StatelessWidget {
     }
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
+      padding: scrollPadding,
+      // The remove button overhangs the item's corner.
+      clipBehavior: Clip.none,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (showTrigger) trigger,
-          for (final item in items)
+          for (var index = 0; index < items.length; index++)
             Padding(
-              padding: const EdgeInsetsDirectional.only(start: 8),
-              child: preview(item),
+              padding: EdgeInsetsDirectional.only(
+                start: showTrigger || index > 0 ? 8 : 0,
+              ),
+              child: preview(items[index]),
             ),
         ],
       ),
@@ -389,7 +493,7 @@ class SeedAttachmentInput extends StatelessWidget {
     SeedTypography typography,
   ) {
     return SizedBox(
-      width: 160.0,
+      width: _attachmentFileTileWidth,
       height: _fileHeight(context, typography),
       child: DecoratedBox(
         decoration: BoxDecoration(
@@ -398,17 +502,21 @@ class SeedAttachmentInput extends StatelessWidget {
           border: Border.all(color: colors.stroke.neutralWeak, width: 1),
         ),
         child: Stack(
+          clipBehavior: Clip.none,
           fit: StackFit.expand,
           children: [
             if (item.status.isLoading)
               Center(
                 child: Semantics(
-                  label: '첨부 파일 업로드 중',
+                  label: SeedLocalizations.label(
+                    context,
+                    SeedLabel.uploadingFile,
+                  ),
                   child: SeedProgressCircle(size: 24, value: item.progress),
                 ),
               )
             else if (item.status == SeedAttachmentStatus.error)
-              _buildRetryAction(item, colors, typography)
+              _buildRetryAction(context, item, colors, typography)
             else
               Padding(
                 padding: const EdgeInsets.symmetric(
@@ -465,9 +573,9 @@ class SeedAttachmentInput extends StatelessWidget {
                 !item.isDragging &&
                 onRemove != null)
               Positioned(
-                top: SeedDimension.x1,
-                right: SeedDimension.x1,
-                child: _buildRemoveButton(item, colors),
+                top: -SeedDimension.x1,
+                right: -SeedDimension.x1,
+                child: _buildRemoveButton(context, item, colors),
               ),
           ],
         ),
@@ -476,6 +584,7 @@ class SeedAttachmentInput extends StatelessWidget {
   }
 
   Widget _buildRetryAction(
+    BuildContext context,
     SeedAttachmentItem item,
     SeedColorScheme colors,
     SeedTypography typography, {
@@ -489,10 +598,10 @@ class SeedAttachmentInput extends StatelessWidget {
         onRetry != null;
     final color = image ? const Color(0xFFFFFFFF) : colors.fg.neutralSubtle;
     return Tooltip(
-      message: '첨부 파일 업로드 재시도',
+      message: SeedLocalizations.label(context, SeedLabel.retryUpload),
       child: SeedPressable(
         enabled: canRetry,
-        semanticsLabel: '첨부 파일 업로드 재시도',
+        semanticsLabel: SeedLocalizations.label(context, SeedLabel.retryUpload),
         onTap: canRetry ? () => onRetry!(item) : null,
         focusBorderRadius: SeedBorderRadius.r3,
         builder: (context, isPressed) => ColoredBox(
@@ -505,7 +614,10 @@ class SeedAttachmentInput extends StatelessWidget {
               children: [
                 Icon(Icons.refresh, size: 24, color: color),
                 const SizedBox(height: SeedDimension.x1),
-                Text('재시도', style: typography.t2Medium.copyWith(color: color)),
+                Text(
+                  SeedLocalizations.label(context, SeedLabel.retry),
+                  style: typography.t2Medium.copyWith(color: color),
+                ),
               ],
             ),
           ),
@@ -521,35 +633,42 @@ class SeedAttachmentInput extends StatelessWidget {
     SeedTypography typography,
   ) {
     return Stack(
+      clipBehavior: Clip.none,
       children: [
         // Thumbnail square container
-        Container(
-          width: itemSize,
-          height: itemSize,
-          decoration: BoxDecoration(
-            color: colors.bg.neutralWeak,
-            borderRadius: SeedBorderRadius.r3,
-            border: Border.all(color: colors.stroke.neutralSubtle, width: 1.0),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: item.effectiveImageProvider != null
-              ? Image(
-                  image: item.effectiveImageProvider!,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Center(
+        ClipPath(
+          clipper: _showsRemove(item) ? const _RemoveButtonNotch() : null,
+          child: Container(
+            width: itemSize,
+            height: itemSize,
+            decoration: BoxDecoration(
+              color: colors.bg.neutralWeak,
+              borderRadius: SeedBorderRadius.r3,
+              border: Border.all(
+                color: colors.stroke.neutralSubtle,
+                width: 1.0,
+              ),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: item.effectiveImageProvider != null
+                ? Image(
+                    image: item.effectiveImageProvider!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Center(
+                      child: Icon(
+                        Icons.broken_image_outlined,
+                        color: colors.fg.neutralSubtle,
+                      ),
+                    ),
+                  )
+                : Center(
                     child: Icon(
-                      Icons.broken_image_outlined,
+                      Icons.insert_drive_file_outlined,
                       color: colors.fg.neutralSubtle,
+                      size: 24,
                     ),
                   ),
-                )
-              : Center(
-                  child: Icon(
-                    Icons.insert_drive_file_outlined,
-                    color: colors.fg.neutralSubtle,
-                    size: 24,
-                  ),
-                ),
+          ),
         ),
 
         // Representative badge at bottom
@@ -570,7 +689,8 @@ class SeedAttachmentInput extends StatelessWidget {
                 ),
               ),
               child: Text(
-                representativeLabel,
+                _representativeLabel ??
+                    SeedLocalizations.label(context, SeedLabel.representative),
                 textAlign: TextAlign.center,
                 style: typography.t2Medium.copyWith(
                   color: const Color(0xFFFFFFFF),
@@ -605,7 +725,13 @@ class SeedAttachmentInput extends StatelessWidget {
                 color: colors.bg.overlay,
                 borderRadius: SeedBorderRadius.r3,
               ),
-              child: _buildRetryAction(item, colors, typography, image: true),
+              child: _buildRetryAction(
+                context,
+                item,
+                colors,
+                typography,
+                image: true,
+              ),
             ),
           ),
 
@@ -617,9 +743,9 @@ class SeedAttachmentInput extends StatelessWidget {
             !item.isDragging &&
             onRemove != null)
           Positioned(
-            top: SeedDimension.x1,
-            right: SeedDimension.x1,
-            child: _buildRemoveButton(item, colors),
+            top: -SeedDimension.x1,
+            right: -SeedDimension.x1,
+            child: _buildRemoveButton(context, item, colors),
           ),
       ],
     );
@@ -649,9 +775,21 @@ class SeedAttachmentInput extends StatelessWidget {
     );
   }
 
-  Widget _buildRemoveButton(SeedAttachmentItem item, SeedColorScheme colors) {
+  bool _showsRemove(SeedAttachmentItem item) =>
+      !readOnly &&
+      item.enabled &&
+      !item.readOnly &&
+      item.removeEnabled &&
+      !item.isDragging &&
+      onRemove != null;
+
+  Widget _buildRemoveButton(
+    BuildContext context,
+    SeedAttachmentItem item,
+    SeedColorScheme colors,
+  ) {
     return SeedPressable(
-      semanticsLabel: '첨부 파일 삭제',
+      semanticsLabel: SeedLocalizations.label(context, SeedLabel.deleteFile),
       enableScale: true,
       onTap: () => onRemove?.call(item),
       builder: (context, isPressed) {
@@ -676,6 +814,24 @@ class SeedAttachmentInput extends StatelessWidget {
       },
     );
   }
+}
+
+/// The official removeButtonMask: a 24px hole, 6px past the top-right corner,
+/// so the gap around the button shows whatever lies behind the item.
+class _RemoveButtonNotch extends CustomClipper<Path> {
+  const _RemoveButtonNotch();
+
+  @override
+  Path getClip(Size size) => Path.combine(
+    PathOperation.difference,
+    Path()..addRect(Offset.zero & size),
+    Path()..addOval(
+      Rect.fromCircle(center: Offset(size.width + 6 - 12, -6 + 12), radius: 12),
+    ),
+  );
+
+  @override
+  bool shouldReclip(_RemoveButtonNotch oldClipper) => false;
 }
 
 /// Fits two lines while keeping the extension visible and the full spoken name.

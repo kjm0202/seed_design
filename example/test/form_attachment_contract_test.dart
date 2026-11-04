@@ -153,68 +153,68 @@ void main() {
   }
 
   testWidgets('attachment failed entry retry resets only its upload state', (
-    tester,
-  ) async {
-    final controller = SeedAttachmentController(
-      maxCount: 5,
-      items: [
-        const SeedAttachmentItem(
-          id: 'first',
-          name: 'image_1.png',
-          type: SeedAttachmentType.image,
-          status: SeedAttachmentStatus.error,
-        ),
-        const SeedAttachmentItem(
-          id: 'second',
-          name: 'image_2.png',
-          type: SeedAttachmentType.image,
-          status: SeedAttachmentStatus.success,
-        ),
-        const SeedAttachmentItem(
-          id: 'third',
-          name: 'image_3.png',
-          type: SeedAttachmentType.image,
-          status: SeedAttachmentStatus.success,
-        ),
-      ],
-    );
-    addTearDown(controller.dispose);
-    var retries = 0;
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: SeedAttachmentField(
-            controller: controller,
-            maxCount: 5,
-            label: 'AttachmentInput (image/*)',
-            onRetry: (item, target) {
-              retries++;
-              target.updateStatus(
-                item.id,
-                SeedAttachmentStatus.uploading,
-                progress: 0,
-              );
-            },
+      tester,
+    ) async {
+      final controller = SeedAttachmentController(
+        maxCount: 5,
+        items: [
+          const SeedAttachmentItem(
+            id: 'first',
+            name: 'image_1.png',
+            type: SeedAttachmentType.image,
+            status: SeedAttachmentStatus.error,
+          ),
+          const SeedAttachmentItem(
+            id: 'second',
+            name: 'image_2.png',
+            type: SeedAttachmentType.image,
+            status: SeedAttachmentStatus.success,
+          ),
+          const SeedAttachmentItem(
+            id: 'third',
+            name: 'image_3.png',
+            type: SeedAttachmentType.image,
+            status: SeedAttachmentStatus.success,
+          ),
+        ],
+      );
+      addTearDown(controller.dispose);
+      var retries = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SeedAttachmentField(
+              controller: controller,
+              maxCount: 5,
+              label: 'AttachmentInput (image/*)',
+              onRetry: (item, target) {
+                retries++;
+                target.updateStatus(
+                  item.id,
+                  SeedAttachmentStatus.uploading,
+                  progress: 0,
+                );
+              },
+            ),
           ),
         ),
-      ),
-    );
-    expect(find.text('재시도'), findsOneWidget);
-    await tester.tap(find.text('재시도'));
-    await tester.pump();
-    expect(retries, 1);
-    expect(find.text('재시도'), findsNothing);
-    expect(controller.items.map((item) => item.id), [
-      'first',
-      'second',
-      'third',
-    ]);
-    expect(controller.items.first.status, SeedAttachmentStatus.uploading);
-    expect(
-      controller.items
-          .skip(1)
-          .every((item) => item.status == SeedAttachmentStatus.success),
-      isTrue,
-    );
-  });
+      );
+      expect(find.text('Retry'), findsOneWidget);
+      await tester.tap(find.text('Retry'));
+      await tester.pump();
+      expect(retries, 1);
+      expect(find.text('Retry'), findsNothing);
+      expect(controller.items.map((item) => item.id), [
+        'first',
+        'second',
+        'third',
+      ]);
+      expect(controller.items.first.status, SeedAttachmentStatus.uploading);
+      expect(
+        controller.items
+            .skip(1)
+            .every((item) => item.status == SeedAttachmentStatus.success),
+        isTrue,
+      );
+    });
 }
