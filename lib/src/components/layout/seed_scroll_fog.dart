@@ -4,10 +4,17 @@ import '../../theme/seed_theme.dart';
 import '../../foundations/gradient/seed_gradient.dart';
 
 /// Placement of [SeedScrollFog].
+/// [SeedScrollFogPlacement.top] and [SeedScrollFogPlacement.bottom] use a vertical
+/// gradient; [SeedScrollFogPlacement.left] and
+/// [SeedScrollFogPlacement.right] use a horizontal gradient.
 enum SeedScrollFogPlacement {
+  /// Upper edge.
   top,
+  /// Lower edge.
   bottom,
+  /// Physical left edge.
   left,
+  /// Physical right edge.
   right,
 }
 
@@ -20,10 +27,14 @@ enum SeedScrollFogPlacement {
 /// padding at least as deep as [size] so endpoint items remain unobscured,
 /// and set [color] to match the surface behind the scrollable area.
 class SeedScrollFog extends StatelessWidget {
+  /// Edge at which fading begins.
   final SeedScrollFogPlacement placement;
+  /// Fade depth in logical pixels; null uses 20.
   final double? size;
+  /// Solid surface color to fade into; null uses the themed layer background.
   final Color? color;
 
+  /// Creates a noninteractive colored edge fade.
   const SeedScrollFog({
     super.key,
     required this.placement,
@@ -90,7 +101,10 @@ class SeedScrollFog extends StatelessWidget {
   }
 }
 
+/// Fades the edges of [child] itself, as React's ScrollFog mask does, so no
+/// surface color is needed and any background shows through.
 class SeedScrollFogMask extends StatelessWidget {
+  /// Masks [child] itself, allowing any background to show through.
   const SeedScrollFogMask({
     super.key,
     required this.child,
@@ -102,10 +116,14 @@ class SeedScrollFogMask extends StatelessWidget {
     this.sizes = const {},
   });
 
+  /// Content whose outer edges become transparent.
   final Widget child;
+  /// Edges to fade; defaults to top and bottom.
   final Set<SeedScrollFogPlacement> placement;
+  /// Default fade depth in logical pixels; defaults to 20.
   final double size;
 
+  /// Per-placement sizes that override [size].
   final Map<SeedScrollFogPlacement, double> sizes;
 
   @override

@@ -5,14 +5,20 @@ import 'package:material_ui/material_ui.dart';
 import '../../theme/seed_theme.dart';
 import '../../foundations/colors/seed_palette.dart';
 
+/// Artwork choices for [SeedIdentityPlaceholder].
+/// [SeedIdentityType.person] draws a silhouette; [SeedIdentityType.business]
+/// draws a storefront.
 enum SeedIdentityType {
+  /// Person silhouette artwork.
   person,
+  /// Business storefront artwork.
   business,
 }
 
 /// Original SEED identity artwork, filling its parent's bounded dimensions.
 /// Clipping belongs to the parent (for example, [SeedAvatar]).
 class SeedIdentityPlaceholder extends StatelessWidget {
+  /// Creates identity artwork with an optional fixed [size].
   const SeedIdentityPlaceholder({
     super.key,
     this.type = SeedIdentityType.person,
@@ -21,10 +27,13 @@ class SeedIdentityPlaceholder extends StatelessWidget {
     this.iconColor,
     this.semanticsLabel = 'Identity placeholder',
   });
+  /// Illustration category; defaults to [SeedIdentityType.person].
   final SeedIdentityType type;
 
   /// Explicit square size; unbounded axes fall back to 42 logical pixels.
   final double? size;
+  /// Optional overrides: [backgroundColor] replaces the neutral background,
+  /// while [iconColor] replaces the white-alpha illustration foreground.
   final Color? backgroundColor, iconColor;
 
   /// Set to null when the artwork is decorative.

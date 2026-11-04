@@ -8,6 +8,7 @@ import 'seed_select_box.dart';
 
 /// Internal inherited scope for [SeedSelectBoxGroup].
 class SeedSelectBoxGroupScope extends InheritedWidget {
+  /// Passes group configuration and focus coordination to descendant cards.
   const SeedSelectBoxGroupScope({
     super.key,
     required this.defaultLayout,
@@ -20,23 +21,32 @@ class SeedSelectBoxGroupScope extends InheritedWidget {
     required super.child,
   });
 
+  /// Default layout for descendant cards, if the card does not override it.
   final SeedSelectBoxLayout? defaultLayout;
 
+  /// Whether items use mutually exclusive radio semantics.
   final bool isRadioGroup;
 
+  /// Active card identifier, or null for no selection.
   final Object? selectedValue;
 
+  /// Whether interaction is allowed in the group.
   final bool enabled;
 
+  /// Whether the group permits focus but suppresses selection changes.
   final bool readOnly;
 
+  /// Called by a descendant when the user proposes another identifier.
   final ValueChanged<Object?> onSelect;
 
+  /// Optional keyboard coordinator for radio-style cards.
   final SeedSelectBoxFocusCoordinator? focusCoordinator;
 
+  /// Returns the nearest group scope, or null outside a group.
   static SeedSelectBoxGroupScope? maybeOf(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<SeedSelectBoxGroupScope>();
 
+  /// Notifies descendants when layout, selection or interaction policy changes.
   @override
   bool updateShouldNotify(SeedSelectBoxGroupScope oldWidget) =>
       defaultLayout != oldWidget.defaultLayout ||
@@ -50,9 +60,11 @@ class SeedSelectBoxGroupScope extends InheritedWidget {
 /// Internal radio focus policy. Cards register themselves so wrappers such as
 /// Padding do not break group keyboard navigation.
 class SeedSelectBoxFocusCoordinator {
+  /// Non-focusable root used to determine widget traversal order.
   final FocusNode root = FocusNode(canRequestFocus: false);
   final _items =
       <FocusNode, ({Object value, bool enabled, VoidCallback select})>{};
+  /// Currently selected identifier; influences the group's single Tab stop.
   Object? selectedValue;
   bool _scheduled = false;
   bool _disposed = false;
@@ -63,6 +75,10 @@ class SeedSelectBoxFocusCoordinator {
     return WidgetOrderTraversalPolicy().sortDescendants(nodes, root).toList();
   }
 
+  /// Registers a card's [node], its [value] and its activation callback.
+  ///
+  /// [enabled] excludes disabled entries from keyboard traversal, while
+  /// [select] is invoked after arrow/Home/End navigation changes focus.
   void register(
     FocusNode node,
     Object value,
@@ -73,11 +89,16 @@ class SeedSelectBoxFocusCoordinator {
     syncTraversal();
   }
 
+  /// Removes a card's focus node and recalculates the group's Tab stop.
   void unregister(FocusNode node) {
     _items.remove(node);
     syncTraversal();
   }
 
+  /// Schedules a post-frame update of eligible [FocusNode.skipTraversal] flags.
+  ///
+  /// Only the selected enabled item (or first enabled item) participates in
+  /// the Tab order. Arrow navigation can still move between registered items.
   void syncTraversal() {
     if (_scheduled || _disposed) return;
     _scheduled = true;
@@ -96,6 +117,10 @@ class SeedSelectBoxFocusCoordinator {
     });
   }
 
+  /// Handles arrow, Home and End keys for the registered [node].
+  ///
+  /// Horizontal arrows respect text direction. Returns handled only when an
+  /// eligible item is focused and a supported navigation key is pressed.
   KeyEventResult onKey(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
@@ -133,6 +158,7 @@ class SeedSelectBoxFocusCoordinator {
     return KeyEventResult.handled;
   }
 
+  /// Clears registered entries and disposes the coordinator-owned [root].
   void dispose() {
     _disposed = true;
     _items.clear();
@@ -148,31 +174,49 @@ class SeedSelectBoxFocusCoordinator {
 /// mutually exclusive radio selection for child [SeedSelectBox] items that
 /// specify a [SeedSelectBox.value].
 class SeedSelectBoxGroup extends StatefulWidget {
+  /// Cards or other widgets laid out by the group.
   final List<Widget> children;
 
+  /// Layout axis, vertical by default.
   final Axis direction;
 
+  /// Optional number of wrap columns.
   final int? columns;
 
+  /// Alignment of wrapped rows along their cross axis.
   final WrapCrossAlignment crossAxisAlignment;
 
+  /// Parent-controlled radio selection when non-null.
   final Object? value;
 
+  /// Initial radio selection when uncontrolled.
   final Object? defaultValue;
 
   /// Keeps [value], including null (no selection), under parent control.
   final bool controlled;
+  /// Deprecated spelling of [onValueChange].
   @Deprecated('Use onValueChange instead.')
   final ValueChanged<Object?>? onValueChanged;
 
+  /// Reports proposed radio selection changes.
   ValueChanged<Object?>? get onValueChange => onValueChanged;
 
+  /// Enables all descendant controls, true by default.
   final bool enabled;
 
+  /// Allows navigation while preventing selection changes.
   final bool readOnly;
 
+  /// Accessible name of the radio group, like the official Root `label`
+  /// when the visible label comes from a surrounding [SeedField].
   final String? semanticsLabel;
 
+  /// Creates a group, arranging [children] along [direction].
+  ///
+  /// [columns] sets a wrapped grid count when present. A non-null [value],
+  /// [defaultValue], [onValueChange] or explicit [controlled] enables radio
+  /// selection for cards carrying identifiers. The default is an ungrouped
+  /// selection layout. Use [controlled] to keep a null selection parent-owned.
   const SeedSelectBoxGroup({
     super.key,
     required this.children,
@@ -191,6 +235,7 @@ class SeedSelectBoxGroup extends StatefulWidget {
   }) : onValueChanged = onValueChange ?? onValueChanged,
        assert(onValueChange == null || onValueChanged == null);
 
+  /// Creates state for group selection and keyboard focus coordination.
   @override
   State<SeedSelectBoxGroup> createState() => _SeedSelectBoxGroupState();
 }

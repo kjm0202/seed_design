@@ -10,14 +10,32 @@ import 'seed_anchored_overlay.dart';
 import 'seed_bottom_sheet.dart';
 import 'seed_dialog.dart';
 
+/// Route surface selected by [SeedModalTrigger]: `dialog` is centered,
+/// `bottomSheet` opens from below, and `sidePanel` slides horizontally.
 enum SeedModalType {
+  /// Centered dialog route.
   dialog,
+  /// Bottom sheet route.
   bottomSheet,
+  /// Sliding edge panel.
   sidePanel,
 }
 
 /// Controlled modal lifecycle, shared by dialogs, sheets and panels.
+///
+/// `open` has precedence over [controller], followed by internal state
+/// initialized by [defaultOpen]. [onOpenChange] reports user requests and
+/// [SeedOverlayDismissReason]; controlled callers update `open` themselves.
+/// Modal variants use a Flutter popup route. Non-modal side panels use a
+/// persistent overlay and allow interaction with the background.
 class SeedModalTrigger extends StatefulWidget {
+  /// Creates a trigger whose [builder] supplies the modal content.
+  ///
+  /// [dismissible] controls default backdrop/Escape policies, independently
+  /// overridable by [closeOnInteractOutside] and [closeOnEscape]. [canClose]
+  /// may refuse an attempted dismissal. [responsive] uses a bottom sheet below
+  /// 768 logical pixels. Sheet-only [snapPoints], [snapController],
+  /// [initialSnapIndex], [fadeFromIndex], and [handleOnly] control snapping.
   const SeedModalTrigger({
     super.key,
     required this.triggerBuilder,
@@ -45,11 +63,21 @@ class SeedModalTrigger extends StatefulWidget {
     this.fadeFromIndex,
   }) : onOpenChanged = onOpenChange ?? onOpenChanged,
        assert(onOpenChange == null || onOpenChanged == null);
+  /// Builds the trigger from context, current open state, and toggle callback.
   final Widget Function(BuildContext, bool, VoidCallback) triggerBuilder;
+  /// Builds the dialog, sheet or panel contents in the overlay context.
   final WidgetBuilder builder;
+  /// Requested modal presentation type.
   final SeedModalType type;
+  /// Imperative open-state owner when [open] is absent.
   final SeedOverlayController? controller;
+  /// Parent-controlled open state, taking precedence over [controller].
   final bool? open;
+  /// Initial visibility and presentation/dismissal options.
+  ///
+  /// [defaultOpen] is initially false. [dismissible] defaults true;
+  /// [responsive] defaults false; [modal] defaults true; [fromRight] defaults
+  /// true; [skipAnimation] and [handleOnly] default false.
   final bool defaultOpen,
       dismissible,
       responsive,
@@ -57,21 +85,33 @@ class SeedModalTrigger extends StatefulWidget {
       fromRight,
       skipAnimation,
       handleOnly;
+  /// Deprecated compatibility spelling of [onOpenChange].
   @Deprecated('Use onOpenChange instead.')
   final SeedOverlayOpenChanged? onOpenChanged;
+  /// Visibility request callback including the dismissal cause.
   SeedOverlayOpenChanged? get onOpenChange => onOpenChanged;
+  /// Returns false to prevent dismissal for a particular reason.
   final bool Function(SeedOverlayDismissReason)? canClose;
+  /// Independent overrides for outside-tap and Escape dismissal; null uses
+  /// [dismissible].
   final bool? closeOnInteractOutside, closeOnEscape;
+  /// Optional fractional or pixel snap stops for a bottom sheet.
   final List<SeedSheetSnapPoint>? snapPoints;
+  /// Initial snap stop index, `0` by default.
   final int initialSnapIndex;
+  /// Snap stop where the modal backdrop reaches full opacity.
   final int? fadeFromIndex;
+  /// Programmatic snap controller, owned and disposed by its creator.
   final SeedSheetController? snapController;
+  /// Notified when a bottom sheet selects a new snap index.
   final ValueChanged<int>? onSnapChanged;
   @override
   State<SeedModalTrigger> createState() => _SeedModalTriggerState();
 }
 
+/// Trigger for a dialog, responsive to a bottom sheet below 768px by default.
 class SeedDialogTrigger extends SeedModalTrigger {
+  /// Creates a dialog trigger with `responsive: true` by default.
   const SeedDialogTrigger({
     super.key,
     required super.triggerBuilder,
@@ -90,7 +130,9 @@ class SeedDialogTrigger extends SeedModalTrigger {
   }) : super(type: SeedModalType.dialog);
 }
 
+/// Dialog trigger with an initially non-dismissible backdrop, suitable for alerts.
 class SeedAlertDialogTrigger extends SeedModalTrigger {
+  /// Creates an alert trigger (`dismissible: false`, `closeOnEscape: true`).
   const SeedAlertDialogTrigger({
     super.key,
     required super.triggerBuilder,
@@ -108,7 +150,9 @@ class SeedAlertDialogTrigger extends SeedModalTrigger {
   }) : super(type: SeedModalType.dialog);
 }
 
+/// Trigger for a bottom-sheet route with optional snap stops.
 class SeedBottomSheetTrigger extends SeedModalTrigger {
+  /// Creates a sheet trigger; snap behavior is enabled by [SeedModalTrigger.snapPoints].
   const SeedBottomSheetTrigger({
     super.key,
     required super.triggerBuilder,
@@ -132,7 +176,11 @@ class SeedBottomSheetTrigger extends SeedModalTrigger {
   }) : super(type: SeedModalType.bottomSheet);
 }
 
+/// Trigger for a side panel that adapts to a bottom sheet on narrow screens.
 class SeedSidePanelTrigger extends SeedModalTrigger {
+  /// Creates a panel trigger with `responsive: true` by default.
+  ///
+  /// Set `modal: false` to use a persistent panel without a backdrop.
   const SeedSidePanelTrigger({
     super.key,
     required super.triggerBuilder,
@@ -151,7 +199,9 @@ class SeedSidePanelTrigger extends SeedModalTrigger {
   }) : super(type: SeedModalType.sidePanel);
 }
 
+/// Trigger for a menu-sheet surface using bottom-sheet presentation.
 class SeedMenuSheetTrigger extends SeedModalTrigger {
+  /// Creates a menu-sheet trigger with normal modal dismissal policies.
   const SeedMenuSheetTrigger({
     super.key,
     required super.triggerBuilder,

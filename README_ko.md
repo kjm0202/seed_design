@@ -234,6 +234,20 @@ flutter pub get
 flutter run
 ```
 
+## Dart API 문서
+
+공개한 모든 타입·생성자·속성·콜백·메서드에 Dartdoc 주석을 작성했습니다.
+기본값, 상태 소유권, Flutter 전용 기능과 호환 별칭도 설명합니다.
+소스 저장소에서 HTML API 문서를 생성하고 확인하려면 다음 명령을 사용합니다.
+
+```sh
+dart analyze lib
+dart doc --validate-links .
+```
+
+출력 위치는 `doc/api/`입니다. 검색과 탐색 기능은 HTTP 서버로 해당 폴더를
+제공해야 동작합니다. 생성물은 Git에 추가되지 않습니다.
+
 ## 테스트
 
 소스 저장소를 내려받은 뒤 테스트를 실행합니다.
@@ -247,7 +261,7 @@ flutter test
 
 ## 라이선스
 
-이 패키지의 자체 구현에는 [MIT 라이선스](LICENSE)가 적용됩니다. SEED Design에서 가져오거나 수정한 부분에는 [Apache License 2.0](third_party/seed-design/LICENSE)이 적용되며, [원본 고지](third_party/seed-design/NOTICE)를 함께 제공합니다. 자세한 내용과 테스트용 글꼴의 출처는 [외부 자료 출처](THIRD_PARTY_NOTICES.md)에서 확인할 수 있습니다.
+이 패키지의 자체 구현에는 [MIT 라이선스](https://github.com/kjm0202/seed_design/blob/master/LICENSE)가 적용됩니다. SEED Design에서 가져오거나 수정한 부분에는 [Apache License 2.0](https://github.com/kjm0202/seed_design/blob/master/third_party/seed-design/LICENSE)이 적용되며, [원본 고지](https://github.com/kjm0202/seed_design/blob/master/third_party/seed-design/NOTICE)를 함께 제공합니다. 자세한 내용과 테스트용 글꼴의 출처는 [외부 자료 출처](https://github.com/kjm0202/seed_design/blob/master/THIRD_PARTY_NOTICES.md)에서 확인할 수 있습니다.
 
 ## 고지
 

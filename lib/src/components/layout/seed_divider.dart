@@ -6,20 +6,26 @@ import '../../theme/seed_theme.dart';
 ///
 /// Provides visual separation between content sections and list items.
 class SeedDivider extends StatelessWidget {
+  /// Line thickness in logical pixels; defaults to 1.
   final double thickness;
 
+  /// Explicit line color; null uses the themed muted stroke.
   final Color? color;
 
+  /// Empty space before the line along its cross-axis edge.
   final double? indent;
 
+  /// Empty space after the line along its cross-axis edge.
   final double? endIndent;
 
+  /// Horizontal by default, or vertical when created with [SeedDivider.vertical].
   final Axis direction;
 
   /// Optional announcement for a meaningful section boundary.
   /// Leave null for a purely decorative divider.
   final String? semanticsLabel;
 
+  /// Creates a horizontal separator by default.
   const SeedDivider({
     super.key,
     this.thickness = 1.0,
@@ -30,6 +36,7 @@ class SeedDivider extends StatelessWidget {
     this.direction = Axis.horizontal,
   });
 
+  /// Creates a vertical separator; [indent] and [endIndent] become top/bottom margins.
   const SeedDivider.vertical({
     super.key,
     this.thickness = 1.0,

@@ -4,15 +4,22 @@ import 'package:flutter/animation.dart';
 class SeedDuration {
   const SeedDuration._();
 
+  /// SEED motion duration d1: Duration(milliseconds: 50).
   static const Duration d1 = Duration(milliseconds: 50);
+  /// SEED motion duration d2: Duration(milliseconds: 100).
   static const Duration d2 = Duration(milliseconds: 100);
+  /// SEED motion duration d3: Duration(milliseconds: 150).
   static const Duration d3 = Duration(milliseconds: 150);
+  /// SEED motion duration d4: Duration(milliseconds: 200).
   static const Duration d4 = Duration(milliseconds: 200);
+  /// SEED motion duration d5: Duration(milliseconds: 250).
   static const Duration d5 = Duration(milliseconds: 250);
+  /// SEED motion duration d6: Duration(milliseconds: 300).
   static const Duration d6 = Duration(milliseconds: 300);
 
   /// Semantic duration tokens
   static const Duration colorTransition = d3; // 150ms
+  /// Scale-feedback animation duration, 150 milliseconds.
   static const Duration pressedScale = d3; // 150ms
 }
 

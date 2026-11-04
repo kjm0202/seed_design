@@ -3,15 +3,21 @@ import 'package:material_ui/material_ui.dart';
 import '../../foundations/radius/seed_radius.dart';
 import '../../theme/seed_theme.dart';
 
+/// Badge presentation sizing; small is a dot and large displays text.
 enum SeedNotificationBadgeSize {
+  /// Six-pixel notification dot.
   small,
 
+  /// Text or count pill (minimum 18 px).
   large,
 }
 
+/// Anchor kind used by [SeedNotificationBadgePositioner].
 enum SeedNotificationBadgeAttach {
+  /// Anchor at an icon corner.
   icon,
 
+  /// Anchor at the text line end.
   text,
 }
 
@@ -20,7 +26,10 @@ enum SeedNotificationBadgeAttach {
 /// Attached to icons, navigation tabs, or list items to notify users
 /// of unread counts or newly updated states.
 class SeedNotificationBadge extends StatelessWidget {
-  /// Unread count. If null or 0, this widget renders nothing unless [showDot] is true.
+  /// Unread count displayed when positive and the effective size is not small.
+  ///
+  /// With no [label] or positive count the badge is hidden unless a small
+  /// effective [size] is selected or [showDot] enables the default dot.
   final int? count;
 
   /// Explicit visual size. When omitted, count/showDot keep their original behavior.
@@ -29,10 +38,15 @@ class SeedNotificationBadge extends StatelessWidget {
   /// An explicit label, including "0" or a non-numeric status.
   final String? label;
 
-  /// If true and [count] is null or 0, renders a small dot badge.
+  /// Requests a small dot for a null or zero [count] when no size is specified.
+  ///
+  /// An explicit or inherited [size] takes precedence over this option.
   final bool showDot;
 
-  /// Maximum count before showing "+", e.g. 99 -> "99+".
+  /// Maximum count shown without a trailing plus sign.
+  ///
+  /// For example, with the default limit of 99, 99 displays as `99` and
+  /// 100 displays as `99+`.
   final int maxCount;
 
   /// Optional custom background color. Defaults to `colors.bg.brandSolid`.
@@ -41,6 +55,11 @@ class SeedNotificationBadge extends StatelessWidget {
   /// Optional custom text color. Defaults to `colors.fg.onBrandSolid`.
   final Color? textColor;
 
+  /// Creates a count, label, or dot notification badge.
+  ///
+  /// [size] can force the six-pixel dot independently of [label], [count],
+  /// and [showDot]. [label] takes precedence over numeric formatting.
+  /// Without visible content, a non-dot badge is empty.
   const SeedNotificationBadge({
     super.key,
     this.count,
@@ -52,7 +71,7 @@ class SeedNotificationBadge extends StatelessWidget {
     this.textColor,
   });
 
-  /// Factory for a simple unread dot.
+  /// Creates a six-pixel unread-status dot, optionally recolored with [color].
   const SeedNotificationBadge.dot({super.key, this.color})
     : count = null,
       size = SeedNotificationBadgeSize.small,
@@ -110,6 +129,8 @@ class SeedNotificationBadge extends StatelessWidget {
 /// Attaches a badge to an icon or text using the official inset/gap tokens.
 /// The anchor determines layout size; the badge may paint outside its bounds.
 class SeedNotificationBadgePositioner extends StatelessWidget {
+  /// Places [badge] at the appropriate corner of [child].
+  /// Its overlay may paint outside the child's layout bounds.
   const SeedNotificationBadgePositioner({
     super.key,
     required this.child,
@@ -117,9 +138,13 @@ class SeedNotificationBadgePositioner extends StatelessWidget {
     this.attach = SeedNotificationBadgeAttach.icon,
     this.size,
   });
+  /// Icon or text anchor that determines the layout footprint.
   final Widget child;
+  /// Badge rendered above and at the logical end of [child].
   final SeedNotificationBadge badge;
+  /// Positioning preset for an icon or text anchor (icon by default).
   final SeedNotificationBadgeAttach attach;
+  /// Optional size override; otherwise the badge's size or content decides.
   final SeedNotificationBadgeSize? size;
 
   @override

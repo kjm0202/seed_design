@@ -11,11 +11,16 @@ import '../foundations/elevation/seed_shadow.dart';
 /// This wrapper is useful for local overrides, which Flutter's inherited Theme
 /// capture also preserves in dialogs and modal bottom sheets.
 class SeedTheme extends StatelessWidget {
+  /// SEED theme token bundle to install under this subtree.
   final SeedThemeData data;
+  /// Descendant subtree receiving the SEED theme.
   final Widget child;
 
+  /// Installs [data] as SEED ThemeExtensions and matching Material widget themes around [child].
   const SeedTheme({super.key, required this.data, required this.child});
 
+  /// Resolves SEED ThemeExtensions in [context], falling back to light or dark defaults while preserving
+  /// the app font family and fallback fonts.
   static SeedThemeData of(BuildContext context) {
     final inherited = Theme.of(context);
     final existing = maybeOf(context);
@@ -36,6 +41,7 @@ class SeedTheme extends StatelessWidget {
     );
   }
 
+  /// Returns a SEED theme if all three ThemeExtensions are installed, or null otherwise.
   static SeedThemeData? maybeOf(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.extension<SeedColorScheme>();
@@ -50,6 +56,7 @@ class SeedTheme extends StatelessWidget {
     );
   }
 
+  /// Installs [data] into the nearest Material Theme while retaining other host configuration.
   @override
   Widget build(BuildContext context) => Theme(
     data: Theme.of(context).withSeedDesign(seedTheme: data),
@@ -59,9 +66,14 @@ class SeedTheme extends StatelessWidget {
 
 /// Convenience access to the nearest SEED ThemeExtensions.
 extension SeedThemeContextExtension on BuildContext {
+  /// Resolves the complete SEED theme from this BuildContext, creating defaults if none are installed.
   SeedThemeData get seedTheme => SeedTheme.of(this);
+  /// Foreground, background and stroke color roles for the current BuildContext.
   SeedColorScheme get seedColor => seedTheme.colorScheme;
+  /// SEED typography styles for the current BuildContext.
   SeedTypography get seedTypography => seedTheme.typography;
+  /// Elevation shadow tokens for the current BuildContext.
   SeedShadows get seedShadows => seedTheme.shadows;
+  /// Whether the resolved SEED theme is dark.
   bool get seedIsDark => seedTheme.isDark;
 }

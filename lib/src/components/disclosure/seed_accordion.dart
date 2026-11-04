@@ -10,18 +10,25 @@ import '../layout/seed_divider.dart';
 
 /// Variant of [SeedAccordionItem].
 enum SeedAccordionVariant {
+  /// Flush rows with optional dividers.
   inline,
 
+  /// Rounded bordered cards with spacing.
   separated,
 }
 
 /// Size of [SeedAccordionItem].
 enum SeedAccordionSize {
+  /// Compact header and 20 px chevron.
   medium,
+  /// Spacious header and 24 px chevron.
   large,
+  /// Resolves to medium below a 768 px viewport, large otherwise.
   responsive;
 
+  /// Chevron icon size (20 px for medium, 24 px otherwise).
   double get iconSize => this == SeedAccordionSize.medium ? 20.0 : 24.0;
+  /// Header insets (16 px or 20 px vertical, 16 px horizontal).
   EdgeInsets get padding => this == SeedAccordionSize.medium
       ? const EdgeInsets.symmetric(
           horizontal: SeedDimension.x4,
@@ -37,14 +44,17 @@ enum SeedAccordionSize {
 /// controls remain excluded from pointer, semantics and sequential traversal,
 /// but an already-open floating overlay can return focus to its trigger.
 class SeedAccordionContentFocusScope extends InheritedWidget {
+  /// Marks a collapsed Accordion subtree for overlay focus-return policy.
   const SeedAccordionContentFocusScope({
     super.key,
     required this.hidden,
     required super.child,
   });
 
+  /// Whether the associated content subtree is currently fully hidden.
   final bool hidden;
 
+  /// Returns the nearest Accordion content focus policy, or null outside one.
   static SeedAccordionContentFocusScope? maybeOf(BuildContext context) =>
       context
           .dependOnInheritedWidgetOfExactType<SeedAccordionContentFocusScope>();
@@ -59,21 +69,40 @@ class SeedAccordionContentFocusScope extends InheritedWidget {
 /// Features animated chevron rotation, trigger header with prefix/title/description,
 /// and smooth content expand/collapse.
 class SeedAccordionItem extends StatefulWidget {
+  /// Required header text.
   final String title;
+  /// Optional smaller text beneath [title].
   final String? description;
+  /// Optional leading header widget.
   final Widget? prefix;
+  /// Panel body, shown or hidden by the expansion state.
   final Widget content;
+  /// Initial expansion for standalone/uncontrolled use (default false).
   final bool initiallyExpanded;
+  /// Receives the proposed expansion state after activating the header.
   final ValueChanged<bool>? onExpansionChanged;
+  /// Row or card presentation, default [SeedAccordionVariant.inline].
   final SeedAccordionVariant variant;
+  /// Header dimensions, default [SeedAccordionSize.medium].
   final SeedAccordionSize size;
+  /// Whether users can expand/collapse this row (default true).
   final bool enabled;
+  /// Optional identifier when used in [SeedAccordion]; index used if null.
   final String? value;
+  /// Controlled expansion; null uses internally managed [initiallyExpanded].
   final bool? expanded;
+  /// Optional externally owned header focus node.
   final FocusNode? focusNode;
+  /// Displays a divider in inline mode when true (default true).
   final bool showDivider;
+  /// Semantic header level, restricted to 1 through 6 (default 3).
   final int headingLevel;
 
+  /// Creates one animated, keyboard-accessible Accordion row.
+  ///
+  /// [expanded] overrides internal expansion when non-null, so the parent
+  /// must update it after [onExpansionChanged]. When uncontrolled, expansion
+  /// starts at [initiallyExpanded] and toggles on activation.
   const SeedAccordionItem({
     super.key,
     required this.title,
@@ -367,6 +396,12 @@ class _SeedAccordionItemState extends State<SeedAccordionItem>
 
 /// Controlled or uncontrolled single/multiple accordion group.
 class SeedAccordion extends StatefulWidget {
+  /// Creates a single- or multi-expansion Accordion group.
+  ///
+  /// [values] controls the open item identifiers when non-null. Otherwise
+  /// internal state starts from [defaultValues]. [onValuesChange] receives an
+  /// unmodifiable set of proposed IDs. [onValuesChanged] is the deprecated
+  /// callback alias and cannot be specified alongside [onValuesChange].
   const SeedAccordion({
     super.key,
     required this.items,
@@ -382,16 +417,26 @@ class SeedAccordion extends StatefulWidget {
     this.size = SeedAccordionSize.medium,
   }) : onValuesChanged = onValuesChange ?? onValuesChanged,
        assert(onValuesChange == null || onValuesChanged == null);
+  /// Ordered rows; each [SeedAccordionItem.value] must be unique when present.
   final List<SeedAccordionItem> items;
+  /// Parent-controlled IDs of expanded items, or null for internal state.
   final Set<String>? values;
+  /// Initial expanded IDs in uncontrolled mode (empty by default).
   final Set<String> defaultValues;
+  /// Legacy alias of [onValuesChange].
   @Deprecated('Use onValuesChange instead.')
   final ValueChanged<Set<String>>? onValuesChanged;
+  /// Reports the proposed expanded IDs as an unmodifiable set.
   ValueChanged<Set<String>>? get onValuesChange => onValuesChanged;
+  /// Allows several items open at once when true (default false).
   final bool multiple;
+  /// Allows all items to be closed when true (default true).
   final bool collapsible;
+  /// Global interaction flag; combines with each item's [SeedAccordionItem.enabled].
   final bool enabled;
+  /// Group-wide row or separated-card presentation.
   final SeedAccordionVariant variant;
+  /// Group-wide dimension preset; responsive resolves at 768 px.
   final SeedAccordionSize size;
   @override
   State<SeedAccordion> createState() => _SeedAccordionState();

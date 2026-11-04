@@ -4,8 +4,11 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 
 /// Equal-width grid with intrinsic row heights and explicit row/column spans.
-/// Grid line indices are zero-based; omitted indices use the next free cell.
+/// Flutter [SeedGridItem.column] / [SeedGridItem.row] indices are zero-based;
+/// the React-compatible start/end grid lines are one-based. Omitted indices
+/// use the next free cell with CSS sparse auto-placement.
 class SeedGrid extends MultiChildRenderObjectWidget {
+  /// Creates a sparse, equal-column grid with optional fixed rows and spans.
   const SeedGrid({
     super.key,
     super.children,
@@ -18,7 +21,11 @@ class SeedGrid extends MultiChildRenderObjectWidget {
     this.fillHeight = false,
   }) : assert(columns == null || columns > 0),
        assert(rows == null || rows > 0);
+  /// [columns] fixes the column count; [rows] can fix the row count. Omitted
+  /// columns default to one for row flow, or are inferred from rows in column
+  /// flow. Both values, when supplied, must be positive.
   final int? columns, rows;
+  /// Auto-placement direction; [Axis.horizontal] means CSS row flow (default).
   final Axis autoFlow;
   int get _columnCount =>
       columns ??
@@ -26,8 +33,11 @@ class SeedGrid extends MultiChildRenderObjectWidget {
       (rows == null || autoFlow == Axis.horizontal
           ? 1
           : (children.length / rows!).ceil().clamp(1, 1000000));
+  /// Default spacing in logical pixels, used on both axes unless overridden.
   final double gap;
+  /// Axis-specific spacing overrides for [gap], in logical pixels.
   final double? rowGap, columnGap;
+  /// Distributes spare bounded height across rows when true; defaults to false.
   final bool fillHeight;
   @override
   RenderObject createRenderObject(BuildContext context) => RenderSeedGrid(
@@ -56,9 +66,15 @@ class SeedGrid extends MultiChildRenderObjectWidget {
   }
 }
 
+/// Assigns CSS-style grid start/end lines or Flutter-style indices and spans.
+/// The child must be placed directly under [SeedGrid].
 class SeedGridItem extends ParentDataWidget<SeedGridParentData> {
+  /// Span value for the whole grid, as React's `colSpan="full"`.
   static const int full = -1;
 
+  /// `colSpan`, `rowSpan`, `colStart`, `colEnd`, `rowStart` and `rowEnd` follow
+  /// React and CSS, with one-based grid lines. `column`, `row`, `columnSpan` and
+  /// `rowSpan` are the zero-based Flutter equivalents.
   const SeedGridItem({
     super.key,
     required super.child,
@@ -87,7 +103,10 @@ class SeedGridItem extends ParentDataWidget<SeedGridParentData> {
        rowSpan = rowStart != null && rowEnd != null
            ? rowEnd - rowStart
            : rowSpan ?? 1;
+  /// Zero-based [column] and [row] placement. Null leaves the axis to
+  /// automatic placement; the constructor translates CSS grid lines.
   final int? column, row;
+  /// Number of columns and rows occupied; [full] can indicate full span.
   final int columnSpan, rowSpan;
   @override
   void applyParentData(RenderObject renderObject) {
@@ -108,8 +127,11 @@ class SeedGridItem extends ParentDataWidget<SeedGridParentData> {
   Type get debugTypicalAncestorWidgetClass => SeedGrid;
 }
 
+/// Render-side grid placement information set by [SeedGridItem].
 class SeedGridParentData extends ContainerBoxParentData<RenderBox> {
+  /// Optional zero-based column and row indices, or null for auto-placement.
   int? column, row;
+  /// Column and row spans; each defaults to one.
   int columnSpan = 1, rowSpan = 1;
 }
 
@@ -125,10 +147,12 @@ class _SeedPlacement {
   final int row, column, rowSpan, columnSpan;
 }
 
+/// Render object implementing [SeedGrid] sparse placement and intrinsic row sizing.
 class RenderSeedGrid extends RenderBox
     with
         ContainerRenderObjectMixin<RenderBox, SeedGridParentData>,
         RenderBoxContainerDefaultsMixin<RenderBox, SeedGridParentData> {
+  /// Creates a grid renderer configured with resolved columns, gaps, and flow.
   RenderSeedGrid(
     this._columns,
     this._rowGap,
@@ -144,6 +168,7 @@ class RenderSeedGrid extends RenderBox
   double _rowGap, _columnGap;
   bool _fill;
   TextDirection _direction;
+  /// Updates layout configuration and marks the grid dirty when it changes.
   void configure(
     int columns,
     double rowGap,

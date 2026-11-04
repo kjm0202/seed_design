@@ -13,19 +13,26 @@ import '../../foundations/feedback/seed_control.dart';
 
 /// Variant options for [SeedChip].
 enum SeedChipVariant {
+  /// Filled selection styling.
   solid,
 
+  /// Strong outline when unselected.
   outlineStrong,
 
+  /// Subtle outline treatment.
   outlineWeak,
 }
 
 /// Size options for [SeedChip].
 enum SeedChipSize {
+  /// Compact 32 px chip.
   small,
+  /// Standard 36 px chip.
   medium,
+  /// Large 40 px chip.
   large;
 
+  /// Minimum height of this chip preset.
   double get height {
     switch (this) {
       case SeedChipSize.small:
@@ -37,6 +44,7 @@ enum SeedChipSize {
     }
   }
 
+  /// Recommended leading icon dimension.
   double get iconSize {
     switch (this) {
       case SeedChipSize.small:
@@ -48,6 +56,7 @@ enum SeedChipSize {
     }
   }
 
+  /// Recommended trailing or delete icon dimension.
   double get suffixIconSize {
     switch (this) {
       case SeedChipSize.small:
@@ -59,6 +68,7 @@ enum SeedChipSize {
     }
   }
 
+  /// Root's horizontal inset before slot-specific adjustments.
   double get rootPaddingX {
     switch (this) {
       case SeedChipSize.small:
@@ -70,6 +80,7 @@ enum SeedChipSize {
     }
   }
 
+  /// Legacy total horizontal content inset for this chip size.
   EdgeInsets get padding {
     switch (this) {
       case SeedChipSize.small:
@@ -81,37 +92,65 @@ enum SeedChipSize {
     }
   }
 
+  /// All chip sizes use a fully rounded pill.
   BorderRadius get borderRadius => SeedBorderRadius.full;
 }
 
 /// Button or checkbox-style toggle chip. Checked props opt into toggle mode.
 class SeedChip extends StatefulWidget {
+  /// Chip caption, or an empty string for [SeedChip.iconOnly].
   final String label;
+  /// Controlled checkbox state; null leaves selection internally managed.
+  /// Supplying any checked-related property activates toggle semantics.
   final bool? checked;
+  /// Initial checkbox state for an uncontrolled toggle; null means no toggle
+  /// mode unless another checked-related argument is supplied.
   final bool? defaultChecked;
+  /// Reports the proposed next checked state following activation.
   final ValueChanged<bool>? onCheckedChange;
+  /// Indicates a mixed checkbox state, independent of [checked].
   final bool indeterminate;
   final bool? _selected;
+  /// Deprecated selection alias; reflects initial/controlled configuration.
   @Deprecated('Use checked instead.')
   bool get selected => _selected ?? checked ?? defaultChecked ?? false;
+  /// Deprecated alias callback; use [onCheckedChange] for toggles.
   @Deprecated('Use onCheckedChange instead.')
   final ValueChanged<bool>? onSelected;
+  /// Ordinary button activation when no selection callback is provided.
   final VoidCallback? onPressed;
+  /// Shows a separate delete icon whose tap invokes this callback.
   final VoidCallback? onDeleted;
+  /// Prefix icon, suffix icon, avatar and image slots, respectively.
+  /// A [prefixAvatar] takes precedence over [prefixImage] and [prefix].
+  /// [prefixImage] takes precedence over [prefix]; [suffix] is hidden if
+  /// [onDeleted] supplies a deletion control.
   final Widget? prefix, suffix, prefixAvatar, prefixImage;
+  /// Styling recipe, default [SeedChipVariant.solid].
   final SeedChipVariant variant;
+  /// Size preset, default [SeedChipSize.medium].
   final SeedChipSize size;
+  /// User interaction availability, true by default.
   final bool enabled;
   final bool _iconOnly;
 
+  /// Set by [SeedChipRadioGroup]: role radio like the official Chip.RadioItem.
   final bool _radioItem;
+  /// Screen-reader name override, especially required for icon-only chips.
   final String? semanticsLabel;
+  /// External focus node used for keyboard navigation.
   final FocusNode? focusNode;
   bool get _toggle =>
       checked != null ||
       defaultChecked != null ||
       onCheckedChange != null ||
       indeterminate;
+  /// Creates a label chip corresponding to React `Chip.Button` or `Chip.Toggle`.
+  ///
+  /// With no checked-related inputs, [onPressed] makes it a button. Supplying
+  /// [checked], [defaultChecked], [onCheckedChange], or [indeterminate] enables
+  /// toggle mode. Legacy [selected]/[onSelected] must not be combined with
+  /// their respective official checked inputs.
   const SeedChip({
     super.key,
     required this.label,
@@ -166,6 +205,10 @@ class SeedChip extends StatefulWidget {
        _iconOnly = false,
        _radioItem = true;
 
+  /// Creates a square icon-only chip with a required [semanticsLabel].
+  ///
+  /// [icon] is the leading visual; this constructor omits the label, suffix,
+  /// avatar, image and delete action. Checked state follows [SeedChip].
   const SeedChip.iconOnly({
     super.key,
     required Widget icon,
@@ -263,6 +306,7 @@ class _SeedChipControl extends StatelessWidget {
   final bool indeterminate;
   final bool checkboxSemantics;
 
+  /// Chip.RadioItem: role radio in a mutually exclusive group.
   final bool radioSemantics;
   final ValueChanged<bool>? onSelected;
   final VoidCallback? onPressed;
@@ -530,21 +574,33 @@ class _SeedChipControl extends StatelessWidget {
   }
 }
 
+/// One selectable value and its presentation in [SeedChipRadioGroup].
 class SeedChipOption<T> {
+  /// Creates an option with a stable [value] and visible [label].
   const SeedChipOption({
     required this.value,
     required this.label,
     this.prefix,
     this.enabled = true,
   });
+  /// Unique selection identity compared using `==`.
   final T value;
+  /// Visible chip text.
   final String label;
+  /// Optional leading icon.
   final Widget? prefix;
+  /// Whether this particular option can receive interaction (default true).
   final bool enabled;
 }
 
 /// Single-selection chip group with roving Tab focus and arrow navigation.
 class SeedChipRadioGroup<T> extends StatefulWidget {
+  /// Creates a single-choice radio group of [options].
+  ///
+  /// [value] controls selection when non-null; [controlled] also makes a null
+  /// value mean no selection. Otherwise internal state begins at [defaultValue].
+  /// [onValueChange] is the React-aligned callback; [onChanged] is its
+  /// deprecated alias and cannot be supplied at the same time.
   const SeedChipRadioGroup({
     super.key,
     required this.options,
@@ -561,16 +617,27 @@ class SeedChipRadioGroup<T> extends StatefulWidget {
     this.semanticsLabel,
   }) : onChanged = onValueChange ?? onChanged,
        assert(onValueChange == null || onChanged == null);
+  /// Choice options displayed in a wrapped row with an 8 px gap.
   final List<SeedChipOption<T>> options;
 
+  /// Accessible name of the radio group, like the official `aria-label`.
   final String? semanticsLabel;
+  /// Controlled selection and initial uncontrolled selection, respectively.
+  /// Passing [value] null and [controlled] true represents no selection.
   final T? value, defaultValue;
+  /// Deprecated callback alias; use [onValueChange].
   @Deprecated('Use onValueChange instead.')
   final ValueChanged<T>? onChanged;
+  /// Called with the newly selected option value.
   ValueChanged<T>? get onValueChange => onChanged;
+  /// Global interaction flag and explicit parent-state ownership flag.
+  /// [enabled] defaults true; [controlled] defaults false.
   final bool enabled, controlled;
+  /// Visible group label and optional supporting description.
   final String? label, description;
+  /// Chip style applied to every radio option.
   final SeedChipVariant variant;
+  /// Chip size applied to every radio option.
   final SeedChipSize size;
   @override
   State<SeedChipRadioGroup<T>> createState() => _SeedChipRadioGroupState<T>();

@@ -11,6 +11,11 @@ import 'seed_progress_circle.dart';
 /// [displacementMultiplier] to the pointer movement. Only releasing a ready
 /// pull starts [onRefresh]; cancelling or retreating below the threshold does not.
 class SeedPullToRefresh extends StatefulWidget {
+  /// Wraps a scrollable [child] with a pointer-driven refresh indicator.
+  ///
+  /// [onRefresh] completes the loading state even when its future throws.
+  /// [onReady] corresponds to React's `onPtrReady`; [onRefresh] corresponds
+  /// to `onPtrRefresh`. [enabled] reverses React's `disabled` input.
   const SeedPullToRefresh({
     super.key,
     required this.child,
@@ -26,12 +31,19 @@ class SeedPullToRefresh extends StatefulWidget {
   }) : assert(threshold > 0),
        assert(displacementMultiplier > 0);
 
+  /// Scrollable content whose top-edge pull gesture can trigger refresh.
   final Widget child;
 
+  /// Invoked once when a ready pull is released; may return a future.
   final Future<void> Function() onRefresh;
 
+  /// Called on entering the ready state after crossing [threshold].
   final VoidCallback? onReady;
 
+  /// [enabled] gates refresh; [preventPull] excludes the entire subtree.
+  ///
+  /// To exclude only a nested interactive region use
+  /// [SeedPullToRefreshPreventPull].
   final bool enabled, preventPull;
 
   /// Distance in logical pixels required to become ready. React defaults to 88.
@@ -43,8 +55,10 @@ class SeedPullToRefresh extends StatefulWidget {
   /// Flutter layout options: resting indicator center and top inset.
   /// These do not change the gesture's [threshold].
   final double displacement, edgeOffset;
+  /// Optional Flutter notification filter for the scrollable being observed.
   final ScrollNotificationPredicate? notificationPredicate;
 
+  /// Creates the state that tracks pointer, scroll and refresh lifecycle.
   @override
   State<SeedPullToRefresh> createState() => _SeedPullToRefreshState();
 }
@@ -384,8 +398,10 @@ class _PullScrollPhysics extends ScrollPhysics {
 /// Excludes gestures starting in this subtree from pull-to-refresh while leaving
 /// scrolling and text selection available, like React's prevent-pull marker.
 class SeedPullToRefreshPreventPull extends StatelessWidget {
+  /// Marks [child] as a region whose pointer-down cannot start a refresh.
   const SeedPullToRefreshPreventPull({super.key, required this.child});
 
+  /// Interactive subtree, which retains ordinary scrolling and selection.
   final Widget child;
 
   @override

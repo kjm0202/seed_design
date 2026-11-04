@@ -8,33 +8,45 @@ import '../../theme/seed_theme.dart';
 
 /// Tone options for [SeedBadge].
 enum SeedBadgeTone {
+  /// Neutral status.
   neutral,
 
+  /// Brand emphasis.
   brand,
 
+  /// Informational status.
   informative,
 
+  /// Successful status.
   positive,
 
+  /// Cautionary status.
   warning,
 
+  /// Error or danger status.
   critical,
 }
 
 /// Visual variant options for [SeedBadge].
 enum SeedBadgeVariant {
+  /// Opaque filled background.
   solid,
 
+  /// Transparent fill with a stroke.
   outline,
 
+  /// Muted tonal background.
   weak,
 }
 
 /// Size options for [SeedBadge].
 enum SeedBadgeSize {
+  /// 20 px high badge.
   medium,
+  /// 24 px high badge.
   large;
 
+  /// Minimum height for the size.
   double get height {
     switch (this) {
       case SeedBadgeSize.medium:
@@ -44,6 +56,7 @@ enum SeedBadgeSize {
     }
   }
 
+  /// Prefix and action icon dimension for the size.
   double get iconSize {
     switch (this) {
       case SeedBadgeSize.medium:
@@ -53,6 +66,7 @@ enum SeedBadgeSize {
     }
   }
 
+  /// Content padding for the size.
   EdgeInsets get padding {
     switch (this) {
       case SeedBadgeSize.medium:
@@ -62,6 +76,7 @@ enum SeedBadgeSize {
     }
   }
 
+  /// Rounded corner shape for the size.
   BorderRadius get borderRadius {
     switch (this) {
       case SeedBadgeSize.medium:
@@ -77,14 +92,23 @@ enum SeedBadgeSize {
 /// Communicates entity attributes, categories, and concise states.
 /// Supports prefix icons, label, and action buttons.
 class SeedBadge extends StatelessWidget {
+  /// Required short status or category text, truncated to one line.
   final String label;
+  /// Optional leading icon, sized by [size].
   final Widget? prefix;
+  /// Optional trailing action, typically a [SeedBadgeAction].
   final Widget? action;
+  /// Semantic color intent; defaults to [SeedBadgeTone.neutral].
   final SeedBadgeTone tone;
+  /// Fill treatment; defaults to [SeedBadgeVariant.solid].
   final SeedBadgeVariant variant;
+  /// Badge dimension preset; defaults to [SeedBadgeSize.medium].
   final SeedBadgeSize size;
+  /// Optional maximum width; long labels ellipsize at this boundary.
   final double? maxWidth;
 
+  /// Creates a passive status badge with optional leading and action widgets.
+  /// Use [SeedBadgeAction] to supply keyboard and screen-reader activation.
   const SeedBadge({
     super.key,
     required this.label,
@@ -269,6 +293,8 @@ class SeedBadge extends StatelessWidget {
 /// Supply a label describing the action, such as 'Remove category'. The badge
 /// supplies the icon dimensions and colors.
 class SeedBadgeAction extends StatelessWidget {
+  /// Creates a focusable action for placement in [SeedBadge.action].
+  /// A null [onPressed] disables the action without removing its content.
   const SeedBadgeAction({
     super.key,
     required this.child,
@@ -277,9 +303,13 @@ class SeedBadgeAction extends StatelessWidget {
     this.focusNode,
   });
 
+  /// Icon or other action content sized by the parent badge.
   final Widget child;
+  /// Callback for activation; null disables interaction.
   final VoidCallback? onPressed;
+  /// Required spoken label describing this action.
   final String semanticsLabel;
+  /// Optional externally owned focus node for keyboard navigation.
   final FocusNode? focusNode;
 
   @override

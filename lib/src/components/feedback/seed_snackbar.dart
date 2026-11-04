@@ -10,26 +10,39 @@ import '../../foundations/radius/seed_radius.dart';
 import '../../theme/seed_theme.dart';
 import '../../foundations/feedback/seed_scale_feedback.dart';
 
+/// Visual emphasis of a snackbar message.
 enum SeedSnackbarVariant {
+  /// Informational message, without a default leading icon.
   neutral,
 
-/// Standalone Snackbar component of SEED Design System.
+  /// Success message, with a check icon by default.
   positive,
 
+  /// Error message, with an error icon by default.
   critical,
 }
 
+/// Standalone Snackbar content styled according to SEED Design.
+///
+/// Wrap with [SeedSnackbarProvider] for queued/controlled presentation, or
+/// use [showSeedSnackbar] for Flutter's [ScaffoldMessenger] presentation.
 class SeedSnackbar extends StatelessWidget {
+  /// Text shown in the snackbar.
   final String message;
 
+  /// Action text; renders an action only together with [onAction].
   final String? actionLabel;
 
+  /// Called when the action is pressed; managed entries also dismiss after it.
   final VoidCallback? onAction;
 
+  /// Optional leading widget; overrides the variant's built-in icon.
   final Widget? prefixIcon;
 
+  /// Determines the default icon and message emphasis.
   final SeedSnackbarVariant variant;
 
+  /// Creates snackbar content; the default [variant] is neutral.
   const SeedSnackbar({
     super.key,
     required this.message,
@@ -125,7 +138,18 @@ class SeedSnackbar extends StatelessWidget {
   }
 }
 
-/// Shows a standard SEED Snackbar at the bottom of the screen.
+/// Shows a SEED snackbar through the nearest [ScaffoldMessenger].
+///
+/// [context] supplies the messenger; [message] is required. An action is
+/// interactive only when both [actionLabel] and [onAction] are present.
+/// The [duration] defaults to four seconds. [persist] defaults to true
+/// when an action is available, following Flutter's snackbar behavior.
+/// [onVisible] runs when the scaffold reveals the snackbar, [prefixIcon]
+/// overrides the [variant]'s icon, and [variant] defaults to neutral.
+///
+/// Returns Flutter's feature controller for dismissal and closed-state
+/// observation. This helper uses [ScaffoldMessenger], independently of
+/// [SeedSnackbarController] and [SeedSnackbarProvider].
 ScaffoldFeatureController<SnackBar, SnackBarClosedReason> showSeedSnackbar({
   required BuildContext context,
   required String message,
@@ -170,9 +194,12 @@ ScaffoldFeatureController<SnackBar, SnackBarClosedReason> showSeedSnackbar({
   );
 }
 
+/// How an incoming snackbar relates to an already displayed entry.
 enum SeedSnackbarStrategy {
+  /// Show the next entry after the current one is removed.
   queued,
 
+  /// Dismiss the current entry and display the incoming entry next.
   immediate,
 }
 
@@ -183,14 +210,26 @@ class _SeedSnackbarEntry {
   final VoidCallback? onClose;
 }
 
-/// Queue and timeout state independent of a page's ScaffoldMessenger.
+/// Manages snackbar entries and their timers without [ScaffoldMessenger].
+///
+/// Attach it to a [SeedSnackbarProvider]. The provider may create and own a
+/// controller if none is provided; externally created controllers must be
+/// disposed by their owner after use.
 class SeedSnackbarController extends ChangeNotifier {
+  /// Creates a controller with immediate replacement and interaction pausing.
+  ///
+  /// [strategy] defaults to [SeedSnackbarStrategy.immediate], matching the
+  /// React snackbar adapter. [pauseOnInteraction] defaults to true.
   SeedSnackbarController({
     this.strategy = SeedSnackbarStrategy.immediate,
     this.pauseOnInteraction = true,
   });
+  /// Default strategy for new entries; individual [show] calls may override it.
   SeedSnackbarStrategy strategy;
 
+  /// Whether hover, press or focus suspends the current entry's timeout.
+  ///
+  /// Resuming from interaction starts a fresh full-duration timeout.
   bool pauseOnInteraction;
   bool _disposed = false;
   bool _attached = false;
@@ -207,6 +246,12 @@ class SeedSnackbarController extends ChangeNotifier {
   _SeedSnackbarEntry? get _current => _dismissing ? null : _queue.firstOrNull;
 
   /// Returns a dismiss callback for this entry, including when it is queued.
+  ///
+  /// [removeDelay] keeps a dismissed snackbar alive for its exit transition.
+  /// [onClose] runs once it has been removed, as in React.
+  /// [child] is the displayed content, [duration] defaults to four seconds,
+  /// and [strategy] overrides this controller's strategy for this entry.
+  /// The callback is safe to call while the entry is waiting in the queue.
   VoidCallback show({
     required Widget child,
     Duration duration = const Duration(seconds: 4),
@@ -228,6 +273,7 @@ class SeedSnackbarController extends ChangeNotifier {
     return () => _dismiss(entry);
   }
 
+  /// Begins dismissal of the currently visible snackbar, if any.
   void close() {
     if (_current != null) _dismiss(_current!);
   }
@@ -324,6 +370,7 @@ class SeedSnackbarController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Cancels outstanding timers and releases notifier listeners.
   @override
   void dispose() {
     _disposed = true;
@@ -352,7 +399,15 @@ class _SeedSnackbarEntryScope extends InheritedWidget {
       dismiss != oldWidget.dismiss;
 }
 
+/// Places a [SeedSnackbarController] in the widget tree and renders its entries.
+///
+/// Descendants retrieve the controller through [of] or [maybeOf].
+/// If no [controller] is supplied, the provider owns and disposes one.
 class SeedSnackbarProvider extends StatefulWidget {
+  /// Wraps [child] with snackbar presentation and a controller scope.
+  ///
+  /// [strategy] and [pauseOnInteraction] configure the internally created
+  /// controller; a supplied [controller] retains its own configuration.
   const SeedSnackbarProvider({
     super.key,
     required this.child,
@@ -360,20 +415,27 @@ class SeedSnackbarProvider extends StatefulWidget {
     this.strategy = SeedSnackbarStrategy.immediate,
     this.pauseOnInteraction = true,
   });
+  /// Application subtree that may display snackbars.
   final Widget child;
 
+  /// Optional externally owned snackbar controller.
   final SeedSnackbarController? controller;
 
+  /// Default entry strategy when the provider creates its controller.
   final SeedSnackbarStrategy strategy;
 
+  /// Whether interaction pauses timeouts on a provider-owned controller.
   final bool pauseOnInteraction;
 
+  /// Looks up the nearest provider; requires one above [context].
   static SeedSnackbarController of(BuildContext context) => context
       .dependOnInheritedWidgetOfExactType<_SeedSnackbarScope>()!
       .controller;
+  /// Returns the nearest controller, or null outside a provider.
   static SeedSnackbarController? maybeOf(BuildContext context) => context
       .dependOnInheritedWidgetOfExactType<_SeedSnackbarScope>()
       ?.controller;
+  /// Creates state that attaches and detaches the snackbar controller.
   @override
   State<SeedSnackbarProvider> createState() => _SeedSnackbarProviderState();
 }
@@ -498,11 +560,17 @@ class _SeedSnackbarProviderState extends State<SeedSnackbarProvider> {
 }
 
 /// Reserves the measured height of a floating action region above the snackbar.
+///
+/// Must be inside [SeedSnackbarProvider], which receives size-change and
+/// disposal notifications so the snackbar can avoid covering [child].
 class SeedSnackbarAvoidOverlap extends StatefulWidget {
+  /// Watches the size of the floating [child].
   const SeedSnackbarAvoidOverlap({super.key, required this.child});
 
+  /// Floating region whose height the provider should avoid.
   final Widget child;
 
+  /// Creates state that registers and unregisters the measured height.
   @override
   State<SeedSnackbarAvoidOverlap> createState() =>
       _SeedSnackbarAvoidOverlapState();

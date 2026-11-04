@@ -2,12 +2,17 @@ import 'package:material_ui/material_ui.dart';
 
 /// Elevation shadow tokens defined by SEED Design System.
 class SeedShadows extends ThemeExtension<SeedShadows> {
+  /// Elevation level 1 BoxShadow layers for the configured light or dark theme.
   final List<BoxShadow> s1;
+  /// Elevation level 2 BoxShadow layers for the configured light or dark theme.
   final List<BoxShadow> s2;
+  /// Elevation level 3 BoxShadow layers for the configured light or dark theme.
   final List<BoxShadow> s3;
 
+  /// Creates custom elevation shadows for [s1], [s2], and [s3].
   const SeedShadows({required this.s1, required this.s2, required this.s3});
 
+  /// Creates light-theme elevation shadows: offsets 1, 2, and 4 px with blur radii 4, 10, and 16 px.
   const SeedShadows.light()
     : s1 = const [
         BoxShadow(
@@ -34,6 +39,7 @@ class SeedShadows extends ThemeExtension<SeedShadows> {
         ),
       ];
 
+  /// Creates dark-theme elevation shadows with the same geometry and greater opacity.
   const SeedShadows.dark()
     : s1 = const [
         BoxShadow(
@@ -60,6 +66,7 @@ class SeedShadows extends ThemeExtension<SeedShadows> {
         ),
       ];
 
+  /// Returns a shadow theme with any specified elevation lists replaced; null leaves each level unchanged.
   @override
   SeedShadows copyWith({
     List<BoxShadow>? s1,
@@ -69,6 +76,7 @@ class SeedShadows extends ThemeExtension<SeedShadows> {
     return SeedShadows(s1: s1 ?? this.s1, s2: s2 ?? this.s2, s3: s3 ?? this.s3);
   }
 
+  /// Interpolates the three shadow lists toward [other] by [t]; returns this if [other] is not [SeedShadows].
   @override
   SeedShadows lerp(ThemeExtension<SeedShadows>? other, double t) {
     if (other is! SeedShadows) return this;

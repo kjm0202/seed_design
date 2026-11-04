@@ -10,39 +10,58 @@ import '../input/seed_input_button.dart';
 import '../input/seed_select.dart';
 import 'seed_pagination_controls.dart';
 
+/// Source of a [SeedTablePagination] value transition.
 enum SeedTablePageChangeReason {
+  /// User requested the preceding page.
   previous,
+  /// User requested the following page.
   next,
+  /// User selected a page through the range selector.
   pageRange,
+  /// User changed the number of rows displayed per page.
   pageSize,
+  /// Current page was clamped after inputs or total count changed.
   constraint,
 }
 
+/// Immutable pair of one-based page number and positive page size.
+///
+/// Matches the React Table Pagination `value: {page, pageSize}` shape.
 class SeedTablePaginationValue {
+  /// Creates a value with [page] and [pageSize] greater than or equal to one.
   const SeedTablePaginationValue({required this.page, required this.pageSize})
     : assert(page >= 1),
       assert(pageSize >= 1);
+  /// One-based current page.
   final int page;
+  /// Number of items per page.
   final int pageSize;
 
   @override
+  /// Compares both [page] and [pageSize] for value equality.
   bool operator ==(Object other) =>
       other is SeedTablePaginationValue &&
       other.page == page &&
       other.pageSize == pageSize;
 
   @override
+  /// Hash of the [page] and [pageSize] pair.
   int get hashCode => Object.hash(page, pageSize);
 }
 
+/// Previous and next values, with the reason for a table page change.
 class SeedTablePaginationChange {
+  /// Creates a change record containing [value], [previousValue], and [reason].
   const SeedTablePaginationChange({
     required this.value,
     required this.previousValue,
     required this.reason,
   });
+  /// Requested page and page size after the change.
   final SeedTablePaginationValue value;
+  /// Page and page size before the change.
   final SeedTablePaginationValue previousValue;
+  /// Describes whether navigation, page size, or a constraint caused it.
   final SeedTablePageChangeReason reason;
 }
 
@@ -50,12 +69,31 @@ class SeedTablePaginationChange {
 ///
 /// Designed for data tables:
 /// - Rows per page dropdown selector (`{n}개 씩 보기`)
-/// - Page range label (`1–10 / 총 320개` or unknown total mode)
+/// - Page range label (`1-10 / 총 320개` or unknown total mode)
 /// - Previous and Next navigation buttons
-/// - Responsive layout wrapping cleanly at narrow widths
+/// - A single non-wrapping 40px row with horizontal overflow at narrow widths.
+///   This matches the React root's `height=40px; minWidth=max-content;
+///   wrap=nowrap`; its children are not allowed to move to a second line.
 class SeedTablePagination extends StatefulWidget {
+  /// Upper limit on automatically offered page-range options (200).
+  ///
+  /// Large tables show the first, last, and a window around the current page.
   static const int maxAutoPageOptions = 200;
 
+  /// Creates a table footer for [totalItems] or an unknown total.
+  ///
+  /// [value] and [defaultValue] use the React `{page, pageSize}` model;
+  /// [onValueChange] receives the next value and its change details. Legacy
+  /// [currentPage], [rowsPerPage], [defaultPage], [defaultRowsPerPage],
+  /// [onPageChanged], [onRowsPerPageChanged], and [onValueChanged] support
+  /// Flutter callers with separate page fields. [value] cannot be combined
+  /// with [currentPage] or [rowsPerPage]. Page numbers start at one.
+  /// [rowsPerPageOptions] defaults to 10, 25, 50; [pageOptions] optionally
+  /// overrides page-range choices. For an unknown [totalItems], use
+  /// [hasPreviousPage], [hasNextPage], and [currentPageItemCount] to describe
+  /// available data. [showRangeSelect] controls the range menu when total is
+  /// known, [disabled] gates interaction, and [semanticsLabel] names the footer.
+  /// An optional `key` preserves Flutter widget identity.
   const SeedTablePagination({
     super.key,
     this.value,
@@ -88,25 +126,38 @@ class SeedTablePagination extends StatefulWidget {
        assert(defaultRowsPerPage >= 1),
        assert(currentPageItemCount == null || currentPageItemCount >= 0);
 
-  /// 1-indexed current page. If null, operates in uncontrolled mode starting at [defaultPage].
+  /// Flutter-style one-based current page, used when [value] is absent.
+  ///
+  /// When null, page state starts from [defaultValue] or [defaultPage].
+  /// [currentPage] and [value] cannot be supplied together.
   final int? currentPage;
+  /// React-style page and page-size pair.
+  ///
+  /// [value] controls both values when non-null. [defaultValue] initializes
+  /// internally managed page and size, before the scalar defaults.
+  /// Both hold a one-based page and a positive page size.
   final SeedTablePaginationValue? value, defaultValue;
+  /// React-style change callback receiving the next [SeedTablePaginationValue]
+  /// and [SeedTablePaginationChange] with its previous value and reason.
   final void Function(
     SeedTablePaginationValue value,
     SeedTablePaginationChange details,
   )?
   onValueChange;
 
-  /// Initial 1-indexed page when [currentPage] is null.
+  /// Fallback initial one-based page when [defaultValue] is absent.
   final int defaultPage;
 
   /// Total count of items across all pages. If null, operates in unknown total mode.
   final int? totalItems;
 
-  /// Number of rows displayed per page. If null, uses [defaultRowsPerPage].
+  /// Flutter-style controlled page size when [value] is absent.
+  ///
+  /// When null, page size starts from [defaultValue] or [defaultRowsPerPage].
+  /// [rowsPerPage] and [value] cannot be supplied together.
   final int? rowsPerPage;
 
-  /// Initial rows per page when [rowsPerPage] is null.
+  /// Fallback initial rows per page when [defaultValue] is absent.
   final int defaultRowsPerPage;
 
   /// Selectable options for rows per page.
@@ -133,12 +184,17 @@ class SeedTablePagination extends StatefulWidget {
   /// Actual number of items on the current page in unknown total mode.
   final int? currentPageItemCount;
 
+  /// Shows the page-range selector for a known total; defaults to true.
   final bool showRangeSelect;
+  /// Disables selectors and navigation buttons; defaults to false.
   final bool disabled;
   final String? _semanticsLabel;
+  /// Accessible footer name; defaults to "표 페이지 탐색" on the getter.
+  /// Rendered semantics localize this label when the argument is absent.
   String get semanticsLabel => _semanticsLabel ?? '표 페이지 탐색';
 
   @override
+  /// Creates state to manage pages, page sizes, and constraint changes.
   State<SeedTablePagination> createState() => _SeedTablePaginationState();
 }
 
@@ -593,6 +649,10 @@ class _SeedTablePaginationState extends State<SeedTablePagination> {
   }
 }
 
+/// When keyboard traversal focuses a control beyond the horizontal clip,
+/// reveal that control just as a browser scrolls focused elements into view.
+/// Keeping the focus wrapper separate from the selectable/pressable child
+/// preserves its real focus node, semantics and activation shortcuts.
 class _TablePaginationFocusReveal extends StatefulWidget {
   const _TablePaginationFocusReveal({
     required this.child,

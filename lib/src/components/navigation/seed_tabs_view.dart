@@ -5,10 +5,20 @@ import 'package:flutter/rendering.dart';
 import '../../foundations/motion/seed_motion.dart';
 import 'seed_tabs.dart';
 
+/// Flutter controller for a [SeedTabsView] selected index.
+///
+/// This is a lightweight index notifier, distinct from Material's
+/// [TabController] and React's string-valued controlled `TabsRoot`.
 class SeedTabsController extends ChangeNotifier {
+  /// Creates an index controller starting at [initialIndex] (default zero).
   SeedTabsController({int initialIndex = 0}) : _index = initialIndex;
   int _index;
+  /// Current zero-based selected tab index.
   int get index => _index;
+  /// Updates [index] and notifies listeners only if it changed.
+  ///
+  /// The name preserves the Flutter controller API; it does not itself run a
+  /// page animation. A subscribed [SeedTabsView] animates its content.
   void animateTo(int index) {
     if (index != _index) {
       _index = index;
@@ -19,6 +29,23 @@ class SeedTabsController extends ChangeNotifier {
 
 /// Tab headers with content, optional swipe carousel and measured dynamic height.
 class SeedTabsView extends StatefulWidget {
+  /// Creates a combined SEED tab header and content view.
+  ///
+  /// [items] and [children] must be nonempty and have equal lengths, and
+  /// every effective tab value must be unique. React-style [value] controls
+  /// selection by string, [defaultValue] initializes an unmanaged view, and
+  /// [onValueChange] reports the selected string. [selectedIndex] and
+  /// [onTabSelected] are Flutter index APIs; [controller] is a Flutter index
+  /// notifier, and [initialIndex] is the index fallback (zero by default).
+  /// [variant], [size], [fill], [showScrollFog], and [chipListPadding] configure
+  /// the header. [carousel] enables swipeable pages; [swipeable] gates drag;
+  /// [dynamicHeight] measures page height, starting from [height] if given.
+  /// [keepAlive], [lazyMount], and [unmountOnExit] control page lifetime;
+  /// [duration] controls programmatic transitions and [onSwipeStart],
+  /// [onSwipeEnd], and [onSettle] report carousel interactions.
+  /// [scrollToTopOnChange] optionally resets the selected page's controller
+  /// from [contentScrollControllers] after a user tab change. An optional
+  /// `key` preserves Flutter widget identity.
   const SeedTabsView({
     super.key,
     required this.items,
@@ -50,10 +77,17 @@ class SeedTabsView extends StatefulWidget {
     this.contentScrollControllers = const [],
   }) : keepAlive = (keepAlive ?? true) && !unmountOnExit,
        assert(value == null || selectedIndex == null);
+  /// Header items; must align one to one with [children].
   final List<SeedTabItem> items;
+  /// Page content in the same order as [items].
   final List<Widget> children;
+  /// Flutter-controlled selected index; mutually exclusive with [value].
   final int? selectedIndex;
+  /// [value] controls selection by React-style tab ID; [defaultValue] supplies
+  /// the initial ID of an uncontrolled view. IDs come from [SeedTabItem.value]
+  /// or the zero-based index formatted as a string.
   final String? value, defaultValue;
+  /// Reports a requested React-style tab ID after header selection or swiping.
   final ValueChanged<String>? onValueChange;
   String _valueAt(int index) => items[index].value ?? '$index';
   int _indexOf(String value) {
@@ -65,17 +99,30 @@ class SeedTabsView extends StatefulWidget {
   }
 
   int? get _controlledIndex => value == null ? selectedIndex : _indexOf(value!);
+  /// Initial zero-based selection when no value/controller is supplied.
   final int initialIndex;
+  /// Flutter callback for a requested zero-based tab index.
   final ValueChanged<int>? onTabSelected;
+  /// Optional external index notifier, listened to but not disposed by the view.
   final SeedTabsController? controller;
+  /// Tab header style, line by default.
   final SeedTabsVariant variant;
+  /// Optional tab header size; follows [variant] when null.
   final SeedTabsSize? size;
+  /// Whether to fade chip-tab scroll edges, false by default.
   final bool showScrollFog;
 
   /// Optional inset for the chip tab strip. Null preserves [SeedTabs]' default
   /// inset; this value is forwarded directly to the tab header.
   final EdgeInsetsGeometry? chipListPadding;
 
+  /// [fill] stretches tab labels across the header (default true).
+  /// [carousel] enables page transitions (default false); [swipeable] enables
+  /// drag gestures within that carousel (default true). [dynamicHeight]
+  /// animates measured page heights (default false). [keepAlive] preserves
+  /// inactive page state (default true unless [unmountOnExit] is true), while
+  /// [lazyMount] defers unvisited content creation (default false) and
+  /// [unmountOnExit] removes content after leaving a tab (default false).
   final bool fill,
       carousel,
       swipeable,
@@ -86,16 +133,35 @@ class SeedTabsView extends StatefulWidget {
 
   /// Fixed carousel height, or its initial height when [dynamicHeight] is true.
   final double? height;
+  /// Duration of programmatic page animations; defaults to [SeedDuration.d4].
   final Duration duration;
+  /// [onSwipeStart] runs when a page drag begins, and [onSwipeEnd] when it
+  /// ends; these callbacks apply to the carousel interaction.
   final VoidCallback? onSwipeStart, onSwipeEnd;
+  /// Reports the zero-based page index when a swipe settles.
   final ValueChanged<int>? onSettle;
+  /// Scrolls newly selected content to offset zero when enabled.
   final bool scrollToTopOnChange;
+  /// Per-page scroll controllers used by [scrollToTopOnChange]; entries may
+  /// be null and the list may be shorter than [items].
   final List<ScrollController?> contentScrollControllers;
   @override
+  /// Creates the tab-header and page-transition state.
   State<SeedTabsView> createState() => _SeedTabsViewState();
 }
 
+/// Convenience chip variant of [SeedTabsView].
+///
+/// Defaults to solid chip headers and non-filling layout, while retaining all
+/// index/string selection, carousel, lifecycle, and callback options.
 class SeedChipTabsView extends SeedTabsView {
+  /// Creates a chip tab view with [variant] defaulting to chip-solid.
+  ///
+  /// Inherits [SeedTabsView] parameters including React-style `value`,
+  /// `defaultValue`, `onValueChange`, Flutter controller/index options,
+  /// carousel behavior, dynamic height, scroll state, and mount policy.
+  /// [fill] defaults to false, unlike [SeedTabsView]. The optional `key`
+  /// preserves Flutter widget identity.
   const SeedChipTabsView({
     super.key,
     required super.items,
@@ -458,9 +524,16 @@ class _SeedKeptAliveTabPageState extends State<_SeedKeptAliveTabPage>
 
 /// Stops a carousel's horizontal recognizer while allowing nested scrollables to win.
 class SeedCarouselPreventDrag extends StatelessWidget {
+  /// Wraps [child] to claim horizontal drags before the outer carousel.
+  ///
+  /// Useful around nested interactive surfaces such as horizontal carousels.
+  /// The wrapper retains the child's vertical and other gesture interactions.
+  /// An optional `key` preserves Flutter widget identity.
   const SeedCarouselPreventDrag({super.key, required this.child});
+  /// Interactive content whose horizontal drags must not switch tabs.
   final Widget child;
   @override
+  /// Wraps [child] in a horizontal-drag gesture recognizer.
   Widget build(BuildContext context) => GestureDetector(
     onHorizontalDragStart: (_) {},
     onHorizontalDragUpdate: (_) {},
@@ -503,6 +576,11 @@ class _SeedPageMeasureRender extends RenderProxyBox {
 
 /// A pinned tab list for CustomScrollView/NestedScrollView's sliver headers.
 class SeedStickyTabsHeader extends StatelessWidget {
+  /// Creates a sliver header containing [child] at a fixed [height].
+  ///
+  /// [height] defaults to 44 logical pixels. [floating] defaults to false,
+  /// and [pinned] defaults to true so the header stays visible on scroll.
+  /// An optional `key` preserves Flutter widget identity.
   const SeedStickyTabsHeader({
     super.key,
     required this.child,
@@ -510,10 +588,15 @@ class SeedStickyTabsHeader extends StatelessWidget {
     this.floating = false,
     this.pinned = true,
   });
+  /// Tab strip or other widget displayed in the sliver header.
   final Widget child;
+  /// Fixed minimum and maximum header extent; defaults to 44.
   final double height;
+  /// [floating] lets the header reappear as scrolling reverses (default false);
+  /// [pinned] keeps it attached to the viewport top (default true).
   final bool floating, pinned;
   @override
+  /// Builds a [SliverPersistentHeader] with the configured scroll behavior.
   Widget build(BuildContext context) => SliverPersistentHeader(
     floating: floating,
     pinned: pinned,

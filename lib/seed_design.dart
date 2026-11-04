@@ -1,7 +1,61 @@
-/// Flutter implementation of SEED Design System (당근 디자인 시스템).
+/// SEED Design의 디자인 토큰과 UI 컴포넌트를 Flutter에서 사용하는 공개 라이브러리.
 ///
-/// Provides design tokens, theme system, physical scale feedback,
-/// and UI components based on SEED Design specifications.
+/// 당근의 [SEED Design](https://seed-design.io/)을 기반으로 한 **비공식 Flutter
+/// 포트**다. 공식 React 컴포넌트의 개념과 상태 API를 가능한 한 유지하면서,
+/// Flutter의 위젯 트리, 포커스, `Form`, `Navigator` 및 컨트롤러 모델에 맞춰
+/// 구현한다. 공식 구현과 Flutter 확장은 각 클래스 및 멤버 문서를 참고한다.
+///
+/// 이 파일은 애플리케이션에서 지원하는 단일 공개 진입점이다.
+///
+/// ```dart
+/// import 'package:material_ui/material_ui.dart';
+/// import 'package:seed_design/seed_design.dart';
+///
+/// MaterialApp(
+///   theme: SeedThemeData.light().toThemeData(),
+///   darkTheme: SeedThemeData.dark().toThemeData(),
+///   home: Scaffold(
+///     body: Center(
+///       child: SeedButton(
+///         label: '확인',
+///         onPressed: () {},
+///       ),
+///     ),
+///   ),
+/// );
+/// ```
+///
+/// `material_ui`의 Material 위젯을 사용한다. 기존 Material 테마에 SEED 토큰을
+/// 추가하려면 [SeedMaterialBridge] 또는 [SeedThemeData]를 참고한다.
+///
+/// ## API 구성
+///
+/// - **디자인 토큰과 테마:** [SeedPalette], [SeedColorScheme], [SeedTypography],
+///   [SeedThemeData], [SeedTheme], [SeedThemeContextExtension].
+/// - **입력과 선택:** [SeedTextInput], [SeedTextField], [SeedSelect],
+///   [SeedDatePicker], [SeedCheckbox], [SeedSwitch].
+/// - **탐색과 오버레이:** [SeedTabsView], [SeedPagination],
+///   [SeedTopNavigation], [SeedPopoverTrigger], [SeedDialog].
+/// - **레이아웃과 피드백:** [SeedGrid], [SeedScrollArea],
+///   [SeedSnackbarProvider], [SeedHelpBubble].
+///
+/// ## 상태 소유권
+///
+/// React와 마찬가지로 값이 전달된 컴포넌트는 대체로 부모가 상태를 소유한다.
+/// `value`/`checked`/`open`은 현재 상태를 제공하고, `onValueChange`/
+/// `onCheckedChange`/`onOpenChange`는 사용자 변경을 **제안**한다.
+/// `defaultValue`/`defaultChecked`/`defaultOpen`은 내부 상태를 시작할 때 한 번
+/// 사용한다. 다만 정확한 prop 이름, null 의미 및 콜백 타입은 컴포넌트마다
+/// 다르므로 해당 API 문서를 확인한다. Flutter의 컨트롤러, 포커스 객체와
+/// deprecated 호환 별칭도 별도로 설명한다.
+///
+/// ## 공식 자료
+///
+/// - [SEED Design React v3](https://v3.seed-design.io/react)
+/// - [SEED Design 공식 소스](https://github.com/daangn/seed-design)
+/// - [Dart API 문서 작성 지침](https://dart.dev/effective-dart/documentation)
+///
+/// 이 패키지의 API 참조는 공개 라이브러리를 대상으로 `dart doc .`으로 생성한다.
 library;
 
 // Foundations - Colors

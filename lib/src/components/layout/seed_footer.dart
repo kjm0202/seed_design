@@ -6,8 +6,12 @@ import 'seed_divider.dart';
 import '../../foundations/feedback/seed_scale_feedback.dart';
 import '../../foundations/motion/seed_motion.dart';
 
+/// Typography sizes for [SeedFooterLinkText]: [SeedFooterLinkTextSize.medium]
+/// uses the smaller link style and [SeedFooterLinkTextSize.large] the larger.
 enum SeedFooterLinkTextSize {
+  /// Smaller t4 link text.
   medium,
+  /// Larger t5 link text.
   large,
 }
 
@@ -15,6 +19,7 @@ enum SeedFooterLinkTextSize {
 /// The caller handles navigation in [onTap]; [uri] exposes the link destination
 /// to accessibility services without imposing a URL launcher dependency.
 class SeedFooterLinkText extends StatelessWidget {
+  /// Creates a footer link label with optional suffix and URI semantics.
   const SeedFooterLinkText({
     super.key,
     required this.label,
@@ -23,10 +28,15 @@ class SeedFooterLinkText extends StatelessWidget {
     this.suffixIcon,
     this.size = SeedFooterLinkTextSize.medium,
   });
+  /// Visible link text and its accessible label.
   final String label;
+  /// Application-provided navigation callback; omitted when noninteractive.
   final VoidCallback? onTap;
+  /// Destination exposed in link semantics; no navigation occurs automatically.
   final Uri? uri;
+  /// Optional icon after the link text.
   final Widget? suffixIcon;
+  /// Link typography variant, defaulting to [SeedFooterLinkTextSize.medium].
   final SeedFooterLinkTextSize size;
 
   @override
@@ -79,19 +89,26 @@ class SeedFooterLinkText extends StatelessWidget {
 
 /// A link item in [SeedFooter].
 class SeedFooterLink {
+  /// Creates link data for policy, contact, or sitemap sections.
   const SeedFooterLink({required this.label, this.onTap, this.uri});
 
+  /// Text shown for the link.
   final String label;
+  /// Called when the link is activated; navigation is the caller's responsibility.
   final VoidCallback? onTap;
 
+  /// Link destination exposed to accessibility services.
   final Uri? uri;
 }
 
 /// A sitemap column of links in [SeedFooter].
 class SeedFooterColumn {
+  /// Creates a titled group of footer navigation links.
   const SeedFooterColumn({required this.title, required this.links});
 
+  /// Section heading.
   final String title;
+  /// Ordered links belonging to this section.
   final List<SeedFooterLink> links;
 }
 
@@ -99,7 +116,10 @@ class SeedFooterColumn {
 ///
 /// Organized into an optional top navigation/sitemap area and a bottom
 /// notice/company information area separated by a divider.
+/// This full-page layout and its link data models are Flutter composition
+/// helpers; official React exposes the standalone Footer.LinkText primitive.
 class SeedFooter extends StatelessWidget {
+  /// Creates an optional-brand, sitemap, policy, and company footer.
   const SeedFooter({
     super.key,
     this.brandLogo,
@@ -130,7 +150,9 @@ class SeedFooter extends StatelessWidget {
 
   /// Copyright statement text.
   final String? copyright;
+  /// Custom selector shown alongside brand information when provided.
   final Widget? countrySelector;
+  /// Contact navigation links in the footer bottom area.
   final List<SeedFooterLink>? contactLinks;
 
   /// Optional row of social/SNS link icon buttons.

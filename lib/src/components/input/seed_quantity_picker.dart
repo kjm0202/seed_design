@@ -13,12 +13,16 @@ import '../../theme/seed_theme.dart';
 
 /// Size options for [SeedQuantityPicker].
 enum SeedQuantityPickerSize {
+  /// Compact picker: 36px tall with 16px icons.
   small,
 
+  /// Standard picker: 40px tall with 18px icons.
   medium,
 
+  /// Spacious picker: 52px tall with 22px icons.
   large;
 
+  /// Height of the picker and the width of each action button, in pixels.
   double get height {
     switch (this) {
       case SeedQuantityPickerSize.small:
@@ -30,8 +34,10 @@ enum SeedQuantityPickerSize {
     }
   }
 
+  /// Width of an increment or decrement button, equal to [height].
   double get buttonWidth => height;
 
+  /// Size of the add and subtract icons, in pixels.
   double get iconSize => switch (this) {
     SeedQuantityPickerSize.small => 16,
     SeedQuantityPickerSize.medium => 18,
@@ -39,55 +45,93 @@ enum SeedQuantityPickerSize {
   };
 }
 
+/// Layout width policy for [SeedQuantityPicker].
 enum SeedQuantityPickerLayout {
+  /// Use the width required by the controls and quantity display.
   hug,
 
+  /// Expand the picker to fill its available horizontal space.
   fill,
 }
 
 /// Quantity picker component of SEED Design System.
 ///
 /// Increments or decrements numerical values step by step with boundary constraints.
+/// React's `value`, `defaultValue`, and `onValueChange` are available.
+/// The Flutter widget exposes `onChanged` as a deprecated callback alias.
 class SeedQuantityPicker extends StatelessWidget {
+  /// Current externally supplied quantity; null uses [defaultValue] or [min].
   final int? value;
 
+  /// Initial uncontrolled value. Omitted values start at [min], as in React.
   final int? defaultValue;
 
+  /// Previous name for [onValueChange], invoked with the proposed new quantity.
   @Deprecated('Use onValueChange instead.')
   final ValueChanged<int>? onChanged;
 
+  /// Called with the next value after an increment or decrement.
+  ///
+  /// The next value is clamped to [min] and [max].
   ValueChanged<int>? get onValueChange => onChanged;
 
+  /// Minimum quantity, inclusive (default 1).
   final int min;
 
+  /// Maximum quantity, inclusive (default 99).
   final int max;
 
+  /// Quantity added or subtracted per action (default 1; must be positive).
   final int step;
 
+  /// Visual size of the controls (default [SeedQuantityPickerSize.medium]).
   final SeedQuantityPickerSize size;
 
+  /// Whether interactions are enabled (default true).
   final bool enabled;
 
+  /// Display the quantity without allowing changes (default false).
   final bool readOnly;
 
+  /// Legacy error indicator; use [invalid] (default false).
   @Deprecated('Use invalid instead.')
   final bool hasError;
 
+  /// Whether the value is in an invalid state.
   bool get invalid => hasError;
 
+  /// Enables a remove action at [min]; [loading] blocks all actions, while
+  /// [decrementLoading] and [incrementLoading] block only the named action.
+  ///
+  /// All four flags default to false.
   final bool removable, loading, decrementLoading, incrementLoading;
 
+  /// Called when the decrement control is a remove control at [min].
   final VoidCallback? onRemove;
 
+  /// Horizontal sizing strategy, defaulting to [SeedQuantityPickerLayout.hug].
   final SeedQuantityPickerLayout layout;
 
+  /// Formats the quantity for display, for example with a unit suffix.
   final String Function(int)? valueFormatter;
 
+  /// Flutter-specific widget to render instead of the formatted value text.
   final Widget? valueChild;
   final String? _removeSemanticsLabel;
 
+  /// Accessibility label of the remove control (default `상품 삭제`).
   String get removeSemanticsLabel => _removeSemanticsLabel ?? '상품 삭제';
 
+  /// Creates a quantity picker with inclusive bounds [min] and [max].
+  ///
+  /// [value] has priority over [defaultValue]; when both are absent the
+  /// quantity begins at [min]. [onValueChange] reports increments and
+  /// decrements; the deprecated [onChanged] is an alternative name.
+  /// Use [invalid] instead of the deprecated [hasError].
+  ///
+  /// [min] must not exceed [max], [step] must be positive, and a supplied
+  /// [value] must lie within the bounds. [removeSemanticsLabel] configures
+  /// the removal button when [removable] and [onRemove] are set.
   const SeedQuantityPicker({
     super.key,
     this.value,

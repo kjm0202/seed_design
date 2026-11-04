@@ -6,21 +6,30 @@ import '../../foundations/motion/seed_motion.dart';
 import '../../foundations/colors/seed_palette.dart';
 import '../../theme/seed_theme.dart';
 
+/// Skeleton shimmer color palette.
 enum SeedSkeletonTone {
+  /// Neutral loading placeholder.
   neutral,
 
+  /// Highlighted magic-color loading placeholder.
   magic,
 }
 
+/// Preset rounding of a rectangular skeleton.
 enum SeedSkeletonRadius {
+  /// Square corners.
   r0,
 
+  /// Eight-pixel radius.
   r8,
 
+  /// Sixteen-pixel radius.
   r16,
 
+  /// Fully rounded corners.
   full;
 
+  /// Converts the preset to the theme's [BorderRadius].
   BorderRadius get borderRadius => switch (this) {
     SeedSkeletonRadius.r0 => BorderRadius.zero,
     SeedSkeletonRadius.r8 => SeedBorderRadius.r2,
@@ -33,18 +42,27 @@ enum SeedSkeletonRadius {
 ///
 /// Provides animated shimmer placeholders while content is loading.
 class SeedSkeleton extends StatefulWidget {
+  /// Optional width in logical pixels; null uses the parent's constraints.
   final double? width;
 
+  /// Optional height in logical pixels; null uses the parent's constraints.
   final double? height;
 
+  /// Preset rounding (8 pixels by default).
   final SeedSkeletonRadius radius;
 
+  /// Custom rounding that takes precedence over [radius].
   final BorderRadius? borderRadius;
 
+  /// Placeholder geometry, rectangular by default.
   final BoxShape shape;
 
+  /// Neutral or magic shimmer palette.
   final SeedSkeletonTone tone;
 
+  /// Builds a rectangular shimmer placeholder.
+  ///
+  /// Animation pauses when [MediaQuery.disableAnimationsOf] reports true.
   const SeedSkeleton({
     super.key,
     this.width,
@@ -55,6 +73,9 @@ class SeedSkeleton extends StatefulWidget {
     this.tone = SeedSkeletonTone.neutral,
   });
 
+  /// Builds a circle whose width and height both equal [size].
+  ///
+  /// [size] is in logical pixels.
   const SeedSkeleton.circle({
     super.key,
     required double size,
@@ -65,6 +86,7 @@ class SeedSkeleton extends StatefulWidget {
        borderRadius = null,
        shape = BoxShape.circle;
 
+  /// Creates the state that owns and disposes the shimmer animation.
   @override
   State<SeedSkeleton> createState() => _SeedSkeletonState();
 }

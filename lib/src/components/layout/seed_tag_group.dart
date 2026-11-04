@@ -9,30 +9,48 @@ import '../../foundations/colors/seed_palette.dart';
 
 /// Size of [SeedTagItem] and [SeedTagGroup].
 enum SeedTagGroupSize {
+  /// Twelve-point tag typography.
   t2, // 12pt
+  /// Thirteen-point tag typography.
   t3, // 13pt
+  /// Fourteen-point tag typography.
   t4, // 14pt
 }
 
 /// Tone of [SeedTagItem].
+/// [SeedTagTone.neutralSubtle] uses a muted neutral, [SeedTagTone.neutral] a
+/// primary neutral, and [SeedTagTone.brand] a brand foreground color.
 enum SeedTagTone {
+  /// Muted neutral text.
   neutralSubtle,
+  /// Primary neutral text.
   neutral,
+  /// Brand-colored text.
   brand,
 }
 
 /// An individual tag item in a [SeedTagGroup].
 class SeedTagItem {
+  /// Text used for display and default accessibility semantics.
   final String label;
+  /// Optional icon before [label], sized according to [size].
   final Widget? icon;
+  /// Optional trailing icon/element.
   final Widget? suffix;
+  /// Custom label widget replacing the standard text display.
   final Widget? labelWidget;
+  /// Relative shrinking weight when [SeedTagGroup.truncate] is enabled.
   final double flexShrink;
+  /// Size override; null inherits [SeedTagGroup.size].
   final SeedTagGroupSize? size;
+  /// Foreground tone override; null inherits [SeedTagGroup.tone].
   final SeedTagTone? tone;
+  /// Boldness override; null inherits [SeedTagGroup.bold].
   final bool? bold;
+  /// Accessible label; null falls back to [label] for standard text.
   final String? semanticsLabel;
 
+  /// Creates the text and optional adornments of one metadata tag.
   const SeedTagItem({
     required this.label,
     this.icon,
@@ -51,14 +69,23 @@ class SeedTagItem {
 /// Displays metadata, summary tags, or entity attributes horizontally
 /// separated by a bullet dot (`·`).
 class SeedTagGroup extends StatelessWidget {
+  /// Tags rendered in order.
   final List<SeedTagItem> items;
+  /// Default text size for each item; defaults to [SeedTagGroupSize.t2].
   final SeedTagGroupSize size;
+  /// Default text tone for each item; defaults to [SeedTagTone.neutralSubtle].
   final SeedTagTone tone;
+  /// Default boldness of labels, initially false.
   final bool bold;
+  /// Text between adjacent tags; defaults to the centered dot.
   final String separator;
+  /// Optional separator widget replacing [separator].
   final Widget? separatorWidget;
+  /// Restricts labels to one line and shrinks them according to
+  /// [SeedTagItem.flexShrink] in the width available to the group.
   final bool truncate;
 
+  /// Creates a sequence of tag items separated by decorative markers.
   const SeedTagGroup({
     super.key,
     required this.items,

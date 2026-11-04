@@ -15,11 +15,16 @@ import 'seed_content_placeholder.dart';
 
 /// Predefined aspect ratios for [SeedImageFrame].
 enum SeedImageRatio {
+  /// Square image frame (1:1).
   square(1.0),
+  /// Standard image frame (4:3); the default.
   standard(4.0 / 3.0),
+  /// Widescreen image frame (16:9).
   wide(16.0 / 9.0);
 
+  /// Creates a preset with the given width-to-height ratio.
   const SeedImageRatio(this.aspectRatio);
+  /// Width divided by height for the preset.
   final double aspectRatio;
 }
 
@@ -31,6 +36,7 @@ enum SeedImageRatio {
 /// - Built-in fallback placeholder if image is null or fails to load
 /// - Overlay support (representative badge, number badge, close button)
 class SeedImageFrame extends StatelessWidget {
+  /// Creates a clipped image frame with placeholders and optional adornments.
   const SeedImageFrame({
     super.key,
     this.imageProvider,
@@ -62,6 +68,7 @@ class SeedImageFrame extends StatelessWidget {
   /// Called once if the current provider fails to load.
   final void Function(Object error, StackTrace? stackTrace)? onError;
 
+  /// Image description passed to Flutter's accessible image semantics.
   final String? semanticLabel;
 
   /// Aspect ratio preset (square 1:1, standard 4:3, wide 16:9).
@@ -88,8 +95,12 @@ class SeedImageFrame extends StatelessWidget {
   /// Fallback widget when image is absent. Defaults to [SeedContentPlaceholder].
   final Widget? fallback;
 
+  /// [loading] displays while image bytes arrive; [topLeading], [topTrailing],
+  /// [bottomLeading], and [bottomTrailing] place custom widgets six logical
+  /// pixels inward from their named frame corners.
   final Widget? loading, topLeading, topTrailing, bottomLeading, bottomTrailing;
 
+  /// Draws an additional subtle stroke around the frame when true.
   final bool stroke;
 
   @override
@@ -278,6 +289,7 @@ class _SeedFrameImageState extends State<_SeedFrameImage> {
 /// An overlay slot with nine placements and independent inward offsets.
 /// Use inside [SeedImageFrame.overlay], or compose multiple floaters in a Stack.
 class SeedImageFrameFloater extends StatelessWidget {
+  /// Creates a floating slot with optional inward offsets.
   const SeedImageFrameFloater({
     super.key,
     required this.child,
@@ -285,8 +297,11 @@ class SeedImageFrameFloater extends StatelessWidget {
     this.offsetX = 6,
     this.offsetY = 6,
   });
+  /// Overlay content.
   final Widget child;
+  /// Alignment inside the frame, defaulting to the top trailing corner.
   final AlignmentGeometry alignment;
+  /// Horizontal and vertical inward offsets, both defaulting to six pixels.
   final double offsetX, offsetY;
 
   @override
@@ -307,6 +322,12 @@ class SeedImageFrameFloater extends StatelessWidget {
 
 /// A heart toggle with controlled or local state and accessible pressed feedback.
 class SeedImageFrameReactionButton extends StatefulWidget {
+  /// Creates a like toggle with parent-controlled [pressed] or local state
+  /// initialized from [defaultPressed].
+  ///
+  /// The legacy [selected], [defaultSelected], and [onChanged] arguments
+  /// remain accepted as compatibility aliases and cannot be mixed with the
+  /// corresponding official React names.
   const SeedImageFrameReactionButton({
     super.key,
     bool? pressed,
@@ -326,17 +347,26 @@ class SeedImageFrameReactionButton extends StatefulWidget {
        assert(pressed == null || selected == null),
        assert(defaultPressed == null || defaultSelected == null),
        assert(onPressedChange == null || onChanged == null);
+  /// Deprecated Flutter alias of [pressed]. Null delegates state to this widget.
   @Deprecated('Use pressed instead.')
   final bool? selected;
+  /// Current parent-provided pressed state, or null for internal state.
   bool? get pressed => selected;
+  /// Deprecated Flutter alias for [defaultPressed].
   @Deprecated('Use defaultPressed instead.')
   final bool defaultSelected;
+  /// Initial local pressed state; defaults to false.
   bool get defaultPressed => defaultSelected;
+  /// Deprecated Flutter alias for [onPressedChange].
   @Deprecated('Use onPressedChange instead.')
   final ValueChanged<bool>? onChanged;
+  /// Notifies the parent of the proposed next pressed value.
   ValueChanged<bool>? get onPressedChange => onChanged;
+  /// Enables pointer and semantic activation when true; defaults to true.
   final bool enabled;
   final String? _semanticsLabel;
+  /// Accessible label. Defaults to a Korean 'like' label when unspecified;
+  /// painting resolves the actual localization from [BuildContext].
   String get semanticsLabel => _semanticsLabel ?? '좋아요';
 
   @override

@@ -8,12 +8,17 @@ import '../../theme/seed_theme.dart';
 import '../layout/seed_divider.dart';
 import 'seed_top_navigation_button.dart';
 
+/// Selects how [SeedTopNavigation] aligns its title by default.
 enum SeedTopNavigationPlatform {
+  /// Centers titles on iOS and left-aligns them on other platforms.
   adaptive,
+  /// Uses centered iOS-style title alignment regardless of host platform.
   cupertino,
+  /// Uses left-aligned Android-style titles regardless of host platform.
   android,
 }
 
+/// Compatibility name for [SeedTopNavigationButtonTone].
 typedef SeedTopNavigationTone = SeedTopNavigationButtonTone;
 
 /// Top navigation bar component of SEED Design System.
@@ -21,25 +26,55 @@ typedef SeedTopNavigationTone = SeedTopNavigationButtonTone;
 /// Implements [PreferredSizeWidget] so it can be passed directly as
 /// `appBar: SeedTopNavigation(...)` into Flutter [Scaffold].
 class SeedTopNavigation extends StatelessWidget implements PreferredSizeWidget {
+  /// Custom title widget, mutually exclusive with [titleText] and [slot].
   final Widget? title;
 
+  /// A custom, growing AppBar.Slot between the leading and trailing areas.
+  /// Unlike [title], [slot] uses the official Stackflow AppBar flex geometry
+  /// rather than the centered-title NavigationToolbar geometry.
   final Widget? slot;
+  /// Text title rendered in SEED typography; mutually exclusive with [title].
   final String? titleText;
+  /// Leading action; overrides automatic drawer and back actions.
   final Widget? leading;
+  /// Trailing actions; null permits an automatic end-drawer action.
   final List<Widget>? actions;
+  /// Title alignment override; null follows the selected [platform].
   final bool? centerTitle;
+  /// Infers a drawer, back, or end-drawer button when possible; defaults true.
   final bool automaticallyImplyLeading;
+  /// Additional preferred-size widget placed below the 56-pixel bar.
   final PreferredSizeWidget? bottom;
+  /// Text-scaling override for [titleText] and [subtitle].
   final TextScaler? titleTextScaler;
+  /// Draws a bottom divider inside the 56-pixel bar; defaults false.
   final bool showBottomDivider;
+  /// Explicit bar background color, used when no gradient takes priority.
   final Color? backgroundColor;
+  /// Optional text subtitle, mutually exclusive with [slot].
   final String? subtitle;
+  /// Custom subtitle content, used before [subtitle] when both are supplied.
   final Widget? subtitleWidget;
+  /// Explicit background gradient, overriding the optional tone gradient.
   final Gradient? backgroundGradient;
+  /// Adaptive title-layout policy; defaults to [SeedTopNavigationPlatform.adaptive].
   final SeedTopNavigationPlatform platform;
+  /// Surface/foreground tone inherited by top-navigation buttons.
   final SeedTopNavigationButtonTone tone;
+  /// Enables the built-in fade gradient in transparent tone; defaults false.
   final bool gradient;
 
+  /// Constructs a SEED top navigation bar suitable for `Scaffold.appBar`.
+  ///
+  /// [title] and [titleText] cannot be provided together. [slot] implements
+  /// the React Stackflow `AppBar.Slot` flex region and cannot be combined with
+  /// either title or [subtitle]/[subtitleWidget]. [leading] and [actions] take
+  /// precedence over automatically inferred actions. [bottom] contributes to
+  /// [preferredSize]; [showBottomDivider] adds a visible hairline divider.
+  /// [platform], [centerTitle], and [titleTextScaler] control title layout;
+  /// [tone], [backgroundColor], [backgroundGradient], and [gradient] control
+  /// the bar's background and action colors. An optional `key` preserves
+  /// Flutter widget identity.
   const SeedTopNavigation({
     super.key,
     this.title,
@@ -73,10 +108,12 @@ class SeedTopNavigation extends StatelessWidget implements PreferredSizeWidget {
        );
 
   @override
+  /// Bar height (56 logical pixels) plus the optional [bottom] height.
   Size get preferredSize =>
       Size.fromHeight(56.0 + (bottom?.preferredSize.height ?? 0));
 
   @override
+  /// Builds the bar using the inherited theme and current Navigator state.
   Widget build(BuildContext context) {
     final colors = context.seedColor;
     final typography = context.seedTypography;
@@ -233,6 +270,10 @@ class SeedTopNavigation extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
+/// The 44px React AppBarIconButton's first/last -10px margins overlap the
+/// custom slot. Give the buttons a full-width Stack hit-test parent, not the
+/// reduced 24/68px CSS layout extent: an OverflowBox inside a narrow Row
+/// paints those buttons correctly but drops pointer hits on the overhang.
 class _SeedAppBarSlotLayout extends StatelessWidget {
   const _SeedAppBarSlotLayout({
     required this.slot,

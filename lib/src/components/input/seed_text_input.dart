@@ -15,8 +15,10 @@ import '../../foundations/feedback/seed_scale_feedback.dart';
 
 /// Variant options for [SeedTextInput].
 enum SeedTextInputVariant {
+  /// Bordered text input.
   outline,
 
+  /// Input with an underline instead of a surrounding border.
   underline,
 }
 
@@ -24,12 +26,21 @@ enum SeedTextInputVariant {
 ///
 /// [large] is the default for all viewports. [medium] is a compact desktop size.
 enum SeedTextInputSize {
+  /// Compact desktop-sized text input.
   medium,
 
+  /// Standard text input size, used by default.
   large,
 }
 
+/// Original and optionally sliced Unicode graphemes sent to onValueChange.
+///
+/// Mirrors the React TextField grapheme change payload without truncating
+/// [value] when a maximum grapheme count is supplied.
 class SeedTextValueChange {
+  /// Creates the React-style grapheme change payload for [value].
+  /// [maxGraphemeCount] limits only [slicedGraphemes] and [slicedValue]; it
+  /// does not truncate the original value or the full [graphemes] list.
   SeedTextValueChange(this.value, {int? maxGraphemeCount})
     : graphemes = List.unmodifiable(value.characters),
       slicedGraphemes = List.unmodifiable(
@@ -37,9 +48,13 @@ class SeedTextValueChange {
             ? value.characters
             : value.characters.take(maxGraphemeCount),
       );
+  /// Full untruncated proposed input string.
   final String value;
+  /// Immutable list of Unicode grapheme clusters in [value].
   final List<String> graphemes;
+  /// Immutable prefix of [graphemes] limited by the optional grapheme count.
   final List<String> slicedGraphemes;
+  /// String formed by joining [slicedGraphemes].
   String get slicedValue => slicedGraphemes.join();
 }
 
@@ -48,6 +63,7 @@ class SeedTextValueChange {
 /// Supports single-line and multi-line modes, outline/underline styles,
 /// clear button, prefix/suffix items, and stateful focus & error highlights.
 class SeedTextInput extends StatefulWidget {
+  /// Material's native context menu policy; explicit null disables the menu.
   static Widget defaultContextMenuBuilder(
     BuildContext context,
     EditableTextState state,
@@ -58,72 +74,144 @@ class SeedTextInput extends StatefulWidget {
     return AdaptiveTextSelectionToolbar.editableText(editableTextState: state);
   }
 
+  /// Optional externally owned editing controller.
+  /// Cannot be combined with [value], [defaultValue] or [initialValue].
   final TextEditingController? controller;
+  /// Controlled input value; parent remains authoritative after edits.
   final String? value;
 
+  /// React's `placeholder`; [hintText] is the Material-style alias.
   final String? hintText;
+  /// React placeholder getter alias for [hintText].
   String? get placeholder => hintText;
 
   /// One-time seed; prefer [defaultValue] in new code.
   @Deprecated('Use defaultValue instead.')
+  /// Deprecated one-time input seed; use [defaultValue].
   final String? initialValue;
+  /// Official one-time value seed, stored through [initialValue].
   String? get defaultValue => initialValue;
+  /// Plain-string change callback, invoked for user edits.
   final ValueChanged<String>? onChanged;
+  /// Callback for the editing action that submits text.
   final ValueChanged<String>? onSubmitted;
+  /// Optional externally owned focus node, otherwise one is created internally.
   final FocusNode? focusNode;
+  /// Whether editing is enabled (default true); Field disabled also applies.
   final bool enabled;
+  /// Whether text is read-only (default false); an enclosing Field can override.
   final bool readOnly;
+  /// Required accessibility state; does not enforce a nonempty value.
   final bool required;
+  /// Whether to request initial focus (default false).
   final bool autofocus;
+  /// Whether to conceal displayed characters (default false).
   final bool obscureText;
+  /// Flutter-only clear action; disabled by default.
   final bool clearable;
   @Deprecated('Use invalid instead.')
+  /// Deprecated stored invalid flag; prefer [invalid].
   final bool hasError;
+  /// React-aligned invalid getter backed by [hasError].
   bool get invalid => hasError;
+  /// Maximum input lines (default 1; textarea defaults to null).
   final int? maxLines;
+  /// Minimum displayed text lines, when supplied.
   final int? minLines;
+  /// Flutter character-length limit delegated to TextField.
+  /// Distinct from [maxGraphemeCount], which describes the change payload.
   final int? maxLength;
+  /// Optional platform keyboard type (textarea defaults to multiline).
   final TextInputType? keyboardType;
+  /// Platform IME action displayed on the keyboard.
   final TextInputAction? textInputAction;
+  /// Icon displayed before input text.
   final Widget? prefixIcon;
+  /// Icon displayed after input text.
   final Widget? suffixIcon;
+  /// Outline or underline styling (default outline).
   final SeedTextInputVariant variant;
+  /// Input visual size; defaults to large.
   final SeedTextInputSize size;
+  /// When true, uses medium at viewport width 1280px and above; default false.
   final bool responsive;
+  /// Text displayed before the editable value.
   final String? prefixText;
+  /// Text displayed after the editable value.
   final String? suffixText;
+  /// Flutter input formatters applied to native TextField edits.
   final List<TextInputFormatter>? inputFormatters;
+  /// Flutter custom editor builder receiving the current controller and focus node.
+  /// When null, a configured Material [TextField] is used.
   final Widget Function(BuildContext, TextEditingController, FocusNode)?
   inputBuilder;
   @Deprecated('Use onValueChange instead.')
+  /// Deprecated callback spelling; use [onValueChange].
   final ValueChanged<SeedTextValueChange>? onValueChanged;
+  /// React-aligned change callback with full and sliced graphemes.
+  /// The original [SeedTextValueChange.value] is not truncated.
   ValueChanged<SeedTextValueChange>? get onValueChange => onValueChanged;
+  /// Limit used for the sliced grapheme payload; not automatic enforcement.
   final int? maxGraphemeCount;
+  /// Whether multiline editing grows with its content (textarea default true).
   final bool autoResize;
+  /// Optional maximum height for the editable area in logical pixels.
   final double? maxHeight;
+  /// Accessible text-field label override when a surrounding Field label is absent.
   final String? semanticsLabel;
   // Flutter input extensions, independent of React value ownership.
+  /// Flutter autofill hints passed to the underlying editor.
   final Iterable<String>? autofillHints;
+  /// Whether platform autocorrection is enabled (default true).
   final bool autocorrect;
+  /// Whether platform suggestions are enabled (default true).
   final bool enableSuggestions;
+  /// Automatic capitalization policy (default none).
   final TextCapitalization textCapitalization;
+  /// Flutter state restoration identifier for retained editing text.
   final String? restorationId;
+  /// Horizontal alignment of input text (default start).
   final TextAlign textAlign;
+  /// Optional explicit input text direction.
   final TextDirection? textDirection;
+  /// Padding maintained around input on keyboard scroll (default 20px each side).
   final EdgeInsets scrollPadding;
+  /// Flutter tap-outside callback for the text editing region.
   final TapRegionCallback? onTapOutside;
+  /// Callback invoked on input tap.
   final VoidCallback? onTap;
+  /// Callback invoked on completion of the current editing action.
   final VoidCallback? onEditingComplete;
+  /// Optional text cursor color override.
   final Color? cursorColor;
+  /// Whether text selection menus and gestures are enabled.
   final bool? enableInteractiveSelection;
+  /// Optional platform text-selection handles and toolbar controls.
   final TextSelectionControls? selectionControls;
+  /// Text selection menu builder, default [defaultContextMenuBuilder].
+  /// Passing null explicitly disables a custom context menu.
   final EditableTextContextMenuBuilder? contextMenuBuilder;
+  /// Whether smart dash substitutions are enabled by Flutter.
   final SmartDashesType? smartDashesType;
+  /// Whether smart quote substitutions are enabled by Flutter.
   final SmartQuotesType? smartQuotesType;
+  /// Optional externally owned undo/redo history controller.
   final UndoHistoryController? undoController;
+  /// Whether this editor can request focus (default true).
   final bool canRequestFocus;
+  /// Flutter enforcement policy applied with [maxLength].
   final MaxLengthEnforcement? maxLengthEnforcement;
 
+  /// Creates a single-line SEED text input in outline/large style by default.
+  /// [value] is controlled, [defaultValue] is the initial uncontrolled seed,
+  /// [initialValue] its deprecated alias; [controller] is exclusive with those.
+  /// [placeholder] aliases [hintText]; [invalid] aliases deprecated [hasError].
+  /// [onValueChange] reports a [SeedTextValueChange] payload while [onChanged]
+  /// reports plain text; deprecated [onValueChanged] is its legacy spelling.
+  /// [maxGraphemeCount] controls slicing of the payload without truncating text.
+  /// [clearable] is an opt-in Flutter affordance. [autoResize] defaults to false.
+  /// Native keyboard, formatters, focus, restoration, selection and input
+  /// callbacks forward to Flutter TextField; [inputBuilder] may replace it.
   const SeedTextInput({
     super.key,
     this.controller,
@@ -200,6 +288,10 @@ class SeedTextInput extends StatefulWidget {
 
   /// Creates a multiline textarea input that auto-resizes by default,
   /// matching React's `<TextFieldTextarea>`.
+  /// Creates the React TextFieldTextarea counterpart with multiline editing.
+  /// Unlike the default constructor, [maxLines] defaults to null,
+  /// [keyboardType] to multiline and [autoResize] to true. Remaining properties
+  /// have the same controlled/uncontrolled, callback and Flutter option rules.
   const SeedTextInput.textarea({
     super.key,
     this.controller,

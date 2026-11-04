@@ -26,11 +26,22 @@ import '../theme/seed_theme_data.dart';
 /// );
 /// ```
 class SeedMaterialBridge extends StatelessWidget {
+  /// Legacy Material or mixed SEED/Material subtree to style.
   final Widget child;
+  /// Optional explicit [SeedThemeData]; when supplied its own brightness wins when constructing SEED tokens.
   final SeedThemeData? theme;
+  /// Optional brightness used for generating default SEED tokens; null reads the parent Material Theme.
   final Brightness? brightness;
+  /// Preserve explicit Material component theme overrides when true.
+  ///
+  /// Defaults to false; SEED ThemeExtensions are always supplied.
   final bool preserveComponentThemes;
 
+  /// Wraps [child] with SEED styles while preserving the enclosing Material app.
+  ///
+  /// [theme] is optional; [brightness] defaults to the inherited Theme brightness and only selects the
+  /// default SEED theme when [theme] is null. [preserveComponentThemes] defaults to false, replacing
+  /// Material component defaults with SEED component themes.
   const SeedMaterialBridge({
     super.key,
     required this.child,
@@ -39,6 +50,8 @@ class SeedMaterialBridge extends StatelessWidget {
     this.preserveComponentThemes = false,
   });
 
+  /// Builds a local Theme with SEED ThemeExtensions and optional preservation of host Material component
+  /// themes.
   @override
   Widget build(BuildContext context) {
     final effectiveBrightness = brightness ?? Theme.of(context).brightness;

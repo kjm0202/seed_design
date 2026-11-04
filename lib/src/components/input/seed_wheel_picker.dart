@@ -12,29 +12,53 @@ import '../layout/seed_scroll_fog.dart';
 
 /// Size options for [SeedWheelPicker].
 enum SeedWheelPickerSize {
+  /// Compact wheel: 180px tall with 36px rows.
   small(height: 180.0, itemExtent: 36.0),
 
+  /// Standard wheel: 220px tall with 44px rows.
   medium(height: 220.0, itemExtent: 44.0);
 
+  /// Creates a wheel size with its [height] and [itemExtent].
   const SeedWheelPickerSize({required this.height, required this.itemExtent});
 
+  /// Default total wheel height for this size.
   final double height;
 
+  /// Default height of an individual option row.
   final double itemExtent;
 }
 
 /// React WheelPicker value-change details, independent of option type.
 class SeedWheelPickerValueChangeDetails {
+  /// Creates details recording the signed number of traversed [stepDelta] steps.
   const SeedWheelPickerValueChangeDetails({required this.stepDelta});
 
+  /// Signed number of wheel steps traversed during this committed change.
   final int stepDelta;
 }
 
 /// Specification for a single column in [SeedWheelPicker].
+///
+/// Use [SeedWheelColumn.value] to mirror React's value/defaultValue callbacks,
+/// or [SeedWheelColumn.typed] for Flutter's index-based API.
 abstract class SeedWheelColumn {
+  /// Creates a column specification for implementations that subclass it.
   const SeedWheelColumn();
 
   /// Creates a typed column specification for [SeedWheelPicker].
+  ///
+  /// [items] supplies rows and [itemBuilder] optionally renders custom widgets.
+  /// [index] controls the current selection; [initialIndex] seeds an
+  /// uncontrolled column (default zero). [onChanged] reports the settled index,
+  /// [onStepChanged] includes signed travel steps, and [onIndexChanged] is an
+  /// additional observer of index changes.
+  ///
+  /// [itemExtent] overrides the wheel's row height; [width] reserves an
+  /// explicit width, otherwise [flex] (default one) allocates remaining space.
+  /// [alignment] aligns row contents. [loop] wraps at both ends and defaults
+  /// to false; [looping] is its deprecated name. [enabled] is true and
+  /// [readOnly] false by default. The [semanticsLabel] and
+  /// [semanticsValueFormatter] describe the accessible column.
   static SeedWheelColumn typed<T>({
     required List<T> items,
     int initialIndex = 0,
@@ -75,6 +99,17 @@ abstract class SeedWheelColumn {
     );
   }
 
+  /// Creates a React-compatible value-based wheel column.
+  ///
+  /// [value] controls selection, whereas [defaultValue] initializes the local
+  /// selection (first item by default). Both must occur in [items].
+  /// [onValueChange] receives the selected item and
+  /// [SeedWheelPickerValueChangeDetails.stepDelta] after wheel movement;
+  /// [onIndexChange] observes its position. The deprecated [onValueChanged],
+  /// [onValueStepChanged], and [looping] names remain compatibility options.
+  /// [loop], [enabled], [readOnly], [width], [flex], [alignment], [itemBuilder],
+  /// [semanticsLabel], and [semanticsValueFormatter] configure the column as
+  /// in [SeedWheelColumn.typed]. [items] must not be empty.
   static SeedWheelColumn value<T>({
     required List<T> items,
     T? value,
@@ -136,10 +171,13 @@ abstract class SeedWheelColumn {
     );
   }
 
+  /// Number of selectable items in this column.
   int get itemCount;
 
+  /// Starting zero-based selection index of an uncontrolled column.
   int get initialIndex;
 
+  /// Controlled zero-based index, or null for an uncontrolled column.
   int? get index => null;
 
   /// Called once when scrolling settles on a different value.
@@ -148,37 +186,50 @@ abstract class SeedWheelColumn {
   /// Called once when scrolling settles, providing both the resolved index and
   /// the signed step delta traversed on the wheel.
   void Function(int index, int stepDelta)? get onStepChanged => null;
+  /// Preferred height of one row in logical pixels.
   double get itemExtent;
 
+  /// Fixed column width in logical pixels, or null to allocate flex space.
   double? get width => null;
 
+  /// Content alignment within the column (default center).
   AlignmentGeometry get alignment => Alignment.center;
 
+  /// Proportional share of remaining space when [width] is absent.
   int get flex;
 
   /// Whether the column repeats across its first/last item boundary.
   /// Change callbacks still report indices in `0 .. itemCount - 1`.
   bool get loop => looping;
+  /// Deprecated wraparound alias; use [loop].
   @Deprecated('Use loop instead.')
   bool get looping => false;
   bool get _preserveInitialSelection => false;
   int? _indexPreservingValue(SeedWheelColumn previous, int previousIndex) =>
       null;
+  /// Whether this column accepts interaction (default true).
   bool get enabled => true;
 
+  /// Whether the column is viewable but cannot be changed (default false).
   bool get readOnly => false;
 
+  /// Optional accessible label for this column.
   String? get semanticsLabel => null;
 
+  /// Reports each zero-based index passed while the wheel moves, before
+  /// the final [onChanged] or [onStepChanged] notification on scroll settle.
   ValueChanged<int>? get onIndexChanged => null;
 
+  /// Text that assistive technologies announce for [index].
   String semanticValue(int index) => '$index';
 
+  /// Builds the option at [index]; [isSelected] identifies the centered option.
   Widget buildItem(BuildContext context, int index, bool isSelected);
 
   /// Resolves the row height, preserving custom column implementations.
   double effectiveItemExtent(SeedWheelPickerSize size) => itemExtent;
 
+  /// Builds an option for [size], delegating to [buildItem] by default.
   Widget buildItemForSize(
     BuildContext context,
     int index,
@@ -309,6 +360,13 @@ class _SeedWheelColumnImpl<T> extends SeedWheelColumn {
 /// - Scroll fog overlays on top and bottom
 /// - Haptic feedback on item snapping
 class SeedWheelPicker extends StatefulWidget {
+  /// Creates a wheel containing one or more [columns].
+  ///
+  /// [size] defaults to [SeedWheelPickerSize.medium] (220px tall);
+  /// [height] overrides the size's height. [showFog] and [showIndicator]
+  /// default to true. [enabled] is true and [readOnly] false by default.
+  /// [semanticsLabel] labels the overall wheel; each column may have its
+  /// own [SeedWheelColumn.semanticsLabel].
   const SeedWheelPicker({
     super.key,
     required this.columns,
@@ -338,10 +396,15 @@ class SeedWheelPicker extends StatefulWidget {
 
   /// Whether scrolling, item selection and focus are allowed.
   final bool enabled;
+  /// Whether the wheel remains visible while selection changes are blocked.
+  ///
+  /// Defaults to false and combines with each column's read-only state.
   final bool readOnly;
 
+  /// Accessible name of the wheel containing all [columns].
   final String? semanticsLabel;
 
+  /// Resolved picker height: explicit [height] or [size]'s default height.
   double get effectiveHeight => height ?? size.height;
 
   @override
@@ -873,6 +936,8 @@ class _SeedWheelPickerState extends State<SeedWheelPicker> {
       widget.showFog ? SeedScrollFogMask(size: size, child: child) : child;
 }
 
+/// Keeps explicit widths out of the flex pool, while retaining the centered
+/// intrinsic group and proportional shrink required by the React TimePicker.
 class _SeedWheelColumns extends StatelessWidget {
   const _SeedWheelColumns({required this.columns, required this.children});
   final List<SeedWheelColumn> columns;

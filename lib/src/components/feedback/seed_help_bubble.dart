@@ -13,16 +13,21 @@ import '../../foundations/radius/seed_radius.dart';
 import '../../theme/seed_theme.dart';
 import '../../foundations/feedback/seed_scale_feedback.dart';
 
-/// Arrow orientation for [SeedHelpBubble].
+/// Direction in which the help bubble's pointer projects.
 enum SeedHelpBubbleArrowPlacement {
+  /// Arrow along the top edge.
   top,
 
+  /// Arrow along the bottom edge.
   bottom,
 
+  /// Arrow along the left edge.
   left,
 
+  /// Arrow along the right edge.
   right,
 
+  /// No pointer arrow.
   none,
 }
 
@@ -31,21 +36,32 @@ enum SeedHelpBubbleArrowPlacement {
 /// Highlights new features, provides contextual guidance, and supports
 /// directional indicator arrows and close actions.
 class SeedHelpBubble extends StatelessWidget {
+  /// Required heading of the bubble.
   final String title;
 
+  /// Optional supporting text below [title].
   final String? description;
 
+  /// Displays a close action when supplied.
   final VoidCallback? onClose;
 
+  /// Edge that holds the pointer arrow; defaults to top.
   final SeedHelpBubbleArrowPlacement arrowPlacement;
 
+  /// Arrow position along its edge, in logical pixels.
   final double arrowOffset;
 
+  /// Uses the brand surface instead of the neutral surface.
   final bool isBrand;
 
+  /// Maximum content width (280 logical pixels by default).
   final double maxWidth;
   final bool _dialogSemantics;
 
+  /// Creates the standalone help bubble card.
+  ///
+  /// [onClose] makes the close affordance visible. To anchor an interactive
+  /// bubble to a trigger, use [SeedHelpBubbleTrigger].
   const SeedHelpBubble({
     super.key,
     required this.title,
@@ -309,7 +325,17 @@ double _bubbleArrowOffset(BuildContext context) {
       24;
 }
 
+/// Anchors an interactive help bubble to a trigger or custom [anchor].
+///
+/// Uses [SeedAnchoredOverlay] for dismissal, positioning and focus handling.
+/// React's open/defaultOpen/onOpenChange inputs correspond to [open],
+/// [defaultOpen] and [onOpenChange].
 class SeedHelpBubbleTrigger extends StatelessWidget {
+  /// Creates a trigger with controlled or internal open state.
+  ///
+  /// [triggerBuilder] receives the current open state and a toggle callback.
+  /// [onOpenChange] receives open state and dismissal reason. The older
+  /// [onOpenChanged] name is a deprecated alias.
   const SeedHelpBubbleTrigger({
     super.key,
     required this.triggerBuilder,
@@ -334,18 +360,30 @@ class SeedHelpBubbleTrigger extends StatelessWidget {
     this.skipAnimation = false,
   }) : onOpenChanged = onOpenChange ?? onOpenChanged,
        assert(onOpenChange == null || onOpenChanged == null);
+  /// Builds the trigger with context, open flag and toggle callback.
   final Widget Function(BuildContext, bool, VoidCallback) triggerBuilder;
 
+  /// Required bubble heading.
   final String title;
 
+  /// Optional body copy.
   final String? description;
 
+  /// Optional separate anchor widget; otherwise uses the trigger itself.
   final Widget? anchor;
 
+  /// Flutter overlay controller for imperative opening and closing.
   final SeedOverlayController? controller;
 
+  /// Parent-controlled visibility when non-null.
   final bool? open;
 
+  /// Opening state and behavior options.
+  ///
+  /// [defaultOpen] is the initial uncontrolled state (false); [flip] moves
+  /// the popup to another side when space is insufficient (true).
+  /// [showCloseButton] and [closeOnInteractOutside] default to true,
+  /// [autoFocus], [isBrand] and [skipAnimation] to false.
   final bool defaultOpen,
       flip,
       showCloseButton,
@@ -354,16 +392,24 @@ class SeedHelpBubbleTrigger extends StatelessWidget {
       isBrand,
       skipAnimation;
 
+  /// Ordered alternate sides (React `flip={['right', 'left', 'top', 'bottom']}`).
+  ///
+  /// Null keeps the established bool [flip] opposite-side behavior unchanged.
   final List<SeedOverlaySide>? flipFallbackSides;
+  /// Maximum width of the bubble card, default 280 logical pixels.
   final double maxWidth;
 
+  /// Deprecated spelling of [onOpenChange]; carries dismiss reason.
   @Deprecated('Use onOpenChange instead.')
   final SeedOverlayOpenChanged? onOpenChanged;
 
+  /// Official spelling of the callback for open-state changes.
   SeedOverlayOpenChanged? get onOpenChange => onOpenChanged;
 
+  /// Preferred side relative to the anchor (top by default).
   final SeedOverlaySide side;
 
+  /// Alignment along the chosen side (center by default).
   final SeedOverlayAlign align;
   @override
   Widget build(BuildContext context) => SeedAnchoredOverlay(
@@ -406,7 +452,14 @@ class SeedHelpBubbleTrigger extends StatelessWidget {
   );
 }
 
+/// Shares tooltip delay configuration across descendant tooltips.
+///
+/// Recently closed tooltips may reopen without the full initial delay
+/// during [skipDelay].
 class SeedTooltipDelayGroup extends StatefulWidget {
+  /// Configures hover delays for [child]'s tooltips.
+  ///
+  /// Defaults: [openDelay] 200 ms, [closeDelay] 100 ms, [skipDelay] 800 ms.
   const SeedTooltipDelayGroup({
     super.key,
     required this.child,
@@ -414,10 +467,13 @@ class SeedTooltipDelayGroup extends StatefulWidget {
     this.closeDelay = const Duration(milliseconds: 100),
     this.skipDelay = const Duration(milliseconds: 800),
   });
+  /// Tooltip-bearing subtree.
   final Widget child;
 
+  /// Initial hover delay, exit delay and recent-tooltip skip interval.
   final Duration openDelay, closeDelay, skipDelay;
 
+  /// Creates state that remembers active tooltip and last close time.
   @override
   State<SeedTooltipDelayGroup> createState() => _SeedTooltipDelayGroupState();
 }
@@ -438,7 +494,17 @@ class _SeedTooltipGroupScope extends InheritedWidget {
       state != oldWidget.state;
 }
 
+/// Hover/focus help bubble with tooltip semantics and configurable delays.
+///
+/// Unlike [SeedHelpBubbleTrigger], this presents noninteractive tooltip
+/// content. [onOpenChange] follows React's bool callback, while
+/// [onOpenChanged] is a Flutter-specific callback including dismiss reason.
 class SeedHelpBubbleTooltip extends StatefulWidget {
+  /// Adds a tooltip to [child].
+  ///
+  /// [open] optionally controls visibility. When delay values are omitted,
+  /// values come from [SeedTooltipDelayGroup] or 200/100 ms defaults.
+  /// [keepOpenOnContentHover] defaults to false, following React.
   const SeedHelpBubbleTooltip({
     super.key,
     required this.child,
@@ -456,28 +522,42 @@ class SeedHelpBubbleTooltip extends StatefulWidget {
     this.maxWidth = 280,
     this.isBrand = false,
   });
+  /// Hoverable and focusable trigger subtree.
   final Widget child;
 
+  /// Required tooltip heading.
   final String title;
 
+  /// Optional supporting text.
   final String? description;
 
+  /// Controlled open state; null uses internal interaction handling.
   final bool? open;
 
+  /// React-style callback invoked with the next open flag.
   final ValueChanged<bool>? onOpenChange;
 
+  /// Flutter callback reporting visibility and dismiss reason.
   final SeedOverlayOpenChanged? onOpenChanged;
 
+  /// Optional delay overrides; null inherits the tooltip delay group.
   final Duration? openDelay, closeDelay;
 
+  /// Preferred popup side relative to [child].
   final SeedOverlaySide side;
 
+  /// Alignment along [side].
   final SeedOverlayAlign align;
 
+  /// [flip] permits alternate positioning (true by default);
+  /// [keepOpenOnContentHover] controls pointer transition (false by default);
+  /// [isBrand] selects a brand-colored surface (false by default).
   final bool flip, keepOpenOnContentHover, isBrand;
 
+  /// Maximum bubble width, 280 logical pixels by default.
   final double maxWidth;
 
+  /// Creates state for hover timers and the anchored overlay controller.
   @override
   State<SeedHelpBubbleTooltip> createState() => _SeedHelpBubbleTooltipState();
 }

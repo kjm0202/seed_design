@@ -13,16 +13,32 @@ import '../layout/seed_scroll_fog.dart';
 import 'seed_anchored_overlay.dart';
 
 /// Official width presets for [SeedSidePanel].
+///
+/// `small` = 480px, `medium` = 720px, `large` = 960px; layouts can still be
+/// constrained by the available screen width.
 enum SeedSidePanelSize {
+  /// Narrow panel intended for compact details (480px).
   small(480.0),
+  /// Standard panel width (720px).
   medium(720.0),
+  /// Wide panel for complex content (960px).
   large(960.0);
 
+  /// Creates a width preset with its fixed logical-pixel [width].
   const SeedSidePanelSize(this.width);
+  /// Preferred panel width, in logical pixels.
   final double width;
 }
 
 /// Shows a slide-over SEED Side Panel from the right or left edge.
+///
+/// [title] and [body] are required. [titleWidget], [descriptionWidget] and
+/// [footer] customize its structure; [semanticsLabel] overrides the accessible
+/// name. The default [size] is medium (720px), while [width] and [maxWidth]
+/// permit a custom width. [fromRight] chooses the entrance edge (true by
+/// default). [barrierDismissible] controls outside taps; the route is modal.
+/// [useRootNavigator], [routeSettings] and [requestFocus] are Flutter route
+/// configuration rather than React SidePanel.Root props.
 Future<T?> showSeedSidePanel<T>({
   required BuildContext context,
   required String title,
@@ -99,7 +115,16 @@ Future<T?> showSeedSidePanel<T>({
 }
 
 /// A modal SEED Side Panel with a fixed header/footer and scrolling body.
+///
+/// This widget provides the panel's visual structure. Route-based modality
+/// and backdrop dismissal come from [showSeedSidePanel] or a trigger wrapper.
+/// The preset [width] is capped to fit the available safe viewport; [maxWidth]
+/// optionally limits it further. [onClose] handles the close-button action.
 class SeedSidePanel extends StatefulWidget {
+  /// Creates panel content with a fixed header, scrolling [body], and [footer].
+  ///
+  /// [size] defaults to medium; a positive explicit `width` overrides it.
+  /// [fromRight] defaults to true and [showCloseButton] defaults to true.
   const SeedSidePanel({
     super.key,
     required this.title,
@@ -120,26 +145,38 @@ class SeedSidePanel extends StatefulWidget {
        assert(width == null || width > 0),
        assert(maxWidth == null || maxWidth > 0);
 
+  /// Required heading string; [titleWidget] can customize its rendering.
   final String title;
 
   /// Accessible dialog name when the visible title is intentionally omitted.
   /// Mirrors the React SidePanel.Content `aria-label` override.
   final String? semanticsLabel;
+  /// Optional custom heading widget.
   final Widget? titleWidget;
+  /// Optional supporting heading description.
   final String? description;
+  /// Custom description widget taking precedence over [description].
   final Widget? descriptionWidget;
+  /// Scrollable main panel content.
   final Widget body;
+  /// Optional padding around [body].
   final EdgeInsetsGeometry? bodyPadding;
+  /// Fixed bottom section, not part of the body scroll view.
   final Widget? footer;
+  /// Close-button callback; caller must dismiss its owning route if needed.
   final VoidCallback? onClose;
+  /// Preferred width preset, medium by default.
   final SeedSidePanelSize size;
   final double? _width;
+  /// Optional positive upper bound on panel width.
   final double? maxWidth;
 
   /// Preferred content width, capped at 80% of the available safe width by default.
   /// Official small, medium (default), and large widths are 480, 720, and 960.
   double get width => _width ?? size.width;
+  /// Whether the panel enters from the right rather than left.
   final bool fromRight;
+  /// Whether the heading includes a close affordance.
   final bool showCloseButton;
 
   @override

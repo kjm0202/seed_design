@@ -12,20 +12,24 @@ import '../../theme/seed_theme.dart';
 
 /// Size of [SeedInputButton].
 enum SeedInputButtonSize {
-  /// Official `large` (52px), retaining the original Flutter API name.
+  /// 52px, the official default.
   large(height: 52.0, paddingX: 16.0),
 
-  /// Official `medium` (40px), intended for desktop use.
+  /// 40px, intended for desktop use.
   medium(height: 40.0, paddingX: 14.0),
 
+  /// Deprecated alias for [medium], also 40 logical pixels high.
   @Deprecated('Use medium instead. Note that medium is now 40px.')
   small(height: 40.0, paddingX: 14.0),
 
   /// Large below the official 1280px breakpoint, medium at and above it.
   responsive(height: 52.0, paddingX: 16.0);
 
+  /// Defines size metrics [height] and [paddingX] in logical pixels.
   const SeedInputButtonSize({required this.height, required this.paddingX});
+  /// Minimum height of this size variant in logical pixels.
   final double height;
+  /// Horizontal padding of this size variant in logical pixels.
   final double paddingX;
 }
 
@@ -34,6 +38,15 @@ enum SeedInputButtonSize {
 /// Looks like an input field but functions as an interactive button that opens
 /// pickers, sheets, or modal selections.
 class SeedInputButton extends StatelessWidget {
+  /// Creates a button styled as an input for opening selection surfaces.
+  /// [value] or [valueChild] supplies visible content; [placeholder] is the
+  /// fallback. [prefixIcon], [suffixIcon], [prefixText] and [suffixText]
+  /// decorate it. [showDefaultSuffix] defaults to true, [showClear] to false
+  /// and [onClear] handles clearing. [onPressed] handles activation.
+  /// [size] defaults to large (52px). [invalid] styles errors, while [isError]
+  /// is a compatibility alias. [enabled] defaults to true, [readOnly] false.
+  /// [expanded], [focusNode] and [semanticsLabel] configure Flutter semantics
+  /// and focus; [contentScale] is a Flutter-only press effect (default false).
   const SeedInputButton({
     super.key,
     this.value,
@@ -62,6 +75,8 @@ class SeedInputButton extends StatelessWidget {
   /// Currently selected or displayed value.
   final String? value;
 
+  /// Accessible name, like the official trigger `aria-label`. Defaults to the
+  /// surrounding [SeedField] label; the shown text stays the value.
   final String? semanticsLabel;
 
   /// Placeholder text when [value] is null or empty.
@@ -85,21 +100,31 @@ class SeedInputButton extends StatelessWidget {
   /// The size variant of the input button.
   final SeedInputButtonSize size;
 
+  /// False when the button has no affordance of its own, as in FieldButton.
   final bool showDefaultSuffix;
-  /// Whether the input button is in an error state.
+  /// Legacy stored invalid-state flag; prefer [invalid].
   @Deprecated('Use invalid instead.')
   final bool isError;
+  /// React-aligned invalid state, default false.
   bool get invalid => isError;
 
   /// Whether the button is enabled for interaction.
   final bool enabled;
+  /// When true, blocks activation and clearing while showing content.
   final bool readOnly;
+  /// Optional [SeedPressable] expansion behavior.
   final bool? expanded;
+  /// Text prefix placed before the selected value.
   final String? prefixText;
+  /// Text suffix placed after the selected value.
   final String? suffixText;
+  /// Custom displayed value widget instead of ordinary text.
   final Widget? valueChild;
+  /// Optional focus node; defaults to an enclosing Field focus node.
   final FocusNode? focusNode;
 
+  /// Scales the content while pressed, as React's Select trigger does.
+  /// React's FieldButton keeps its content at rest, which is the default.
   final bool contentScale;
 
   // The official trigger is named by its <label>, with the shown text as its

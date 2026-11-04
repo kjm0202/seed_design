@@ -11,14 +11,24 @@ import '../../theme/seed_theme.dart';
 /// Features 36px height, 14px horizontal padding, 8px corner radius,
 /// `t4Bold` typography in `fg.neutral-muted`, and `layerDefaultPressed` feedback.
 class SeedTextButton extends StatelessWidget {
+  /// Text shown in the button and used as the default accessible name.
   final String label;
+  /// Invoked when activated; null disables the button.
   final VoidCallback? onPressed;
+  /// Optional leading icon, sized to 16 logical pixels.
   final Widget? prefixIcon;
+  /// Optional trailing icon, sized to 16 logical pixels.
   final Widget? suffixIcon;
+  /// Whether user interaction is allowed; defaults to true.
   final bool enabled;
+  /// Optional foreground override when the button is interactive.
   final Color? textColor;
+  /// Accessible name override; defaults to [label].
   final String? semanticsLabel;
 
+  /// Creates a text action with SEED text-button dimensions and feedback.
+  ///
+  /// [onPressed] is required syntactically but may be null to disable input.
   const SeedTextButton({
     super.key,
     required this.label,

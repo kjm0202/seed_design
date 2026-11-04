@@ -4,19 +4,33 @@ import 'package:material_ui/material_ui.dart';
 class SeedFontSize {
   const SeedFontSize._();
 
+  /// Type scale t1 font size: 11.0 logical pixels.
   static const double t1 = 11.0;
+  /// Type scale t2 font size: 12.0 logical pixels.
   static const double t2 = 12.0;
+  /// Type scale t3 font size: 13.0 logical pixels.
   static const double t3 = 13.0;
+  /// Type scale t4 font size: 14.0 logical pixels.
   static const double t4 = 14.0;
+  /// Type scale t5 font size: 16.0 logical pixels.
   static const double t5 = 16.0;
+  /// Type scale t6 font size: 18.0 logical pixels.
   static const double t6 = 18.0;
+  /// Type scale t7 font size: 20.0 logical pixels.
   static const double t7 = 20.0;
+  /// Type scale t8 font size: 22.0 logical pixels.
   static const double t8 = 22.0;
+  /// Type scale t9 font size: 24.0 logical pixels.
   static const double t9 = 24.0;
+  /// Type scale t10 font size: 26.0 logical pixels.
   static const double t10 = 26.0;
+  /// Type scale t11 font size: 28.0 logical pixels.
   static const double t11 = 28.0;
+  /// Type scale t12 font size: 32.0 logical pixels.
   static const double t12 = 32.0;
+  /// Type scale t13 font size: 40.0 logical pixels.
   static const double t13 = 40.0;
+  /// Type scale t14 font size: 48.0 logical pixels.
   static const double t14 = 48.0;
 }
 
@@ -24,19 +38,33 @@ class SeedFontSize {
 class SeedLineHeight {
   const SeedLineHeight._();
 
+  /// Type scale t1 line height: 15.0 logical pixels.
   static const double t1 = 15.0;
+  /// Type scale t2 line height: 16.0 logical pixels.
   static const double t2 = 16.0;
+  /// Type scale t3 line height: 18.0 logical pixels.
   static const double t3 = 18.0;
+  /// Type scale t4 line height: 19.0 logical pixels.
   static const double t4 = 19.0;
+  /// Type scale t5 line height: 22.0 logical pixels.
   static const double t5 = 22.0;
+  /// Type scale t6 line height: 24.0 logical pixels.
   static const double t6 = 24.0;
+  /// Type scale t7 line height: 27.0 logical pixels.
   static const double t7 = 27.0;
+  /// Type scale t8 line height: 30.0 logical pixels.
   static const double t8 = 30.0;
+  /// Type scale t9 line height: 32.0 logical pixels.
   static const double t9 = 32.0;
+  /// Type scale t10 line height: 35.0 logical pixels.
   static const double t10 = 35.0;
+  /// Type scale t11 line height: 38.0 logical pixels.
   static const double t11 = 38.0;
+  /// Type scale t12 line height: 42.0 logical pixels.
   static const double t12 = 42.0;
+  /// Type scale t13 line height: 52.0 logical pixels.
   static const double t13 = 52.0;
+  /// Type scale t14 line height: 60.0 logical pixels.
   static const double t14 = 60.0;
 }
 
@@ -44,8 +72,11 @@ class SeedLineHeight {
 class SeedFontWeight {
   const SeedFontWeight._();
 
+  /// Regular text weight: FontWeight.w400.
   static const FontWeight regular = FontWeight.w400;
+  /// Medium text weight: FontWeight.w500.
   static const FontWeight medium = FontWeight.w500;
+  /// Bold text weight: FontWeight.w700.
   static const FontWeight bold = FontWeight.w700;
 }
 
@@ -54,76 +85,131 @@ class SeedFontWeight {
 /// Implements both scale text styles (t1~t14 with regular, medium, bold)
 /// and semantic text styles.
 class SeedTypography extends ThemeExtension<SeedTypography> {
+  /// SEED type scale t1, regular weight: 11 px font size with 15 px line height in [SeedTypography.base].
   final TextStyle t1Regular;
+  /// SEED type scale t1, medium weight: 11 px font size with 15 px line height in [SeedTypography.base].
   final TextStyle t1Medium;
+  /// SEED type scale t1, bold weight: 11 px font size with 15 px line height in [SeedTypography.base].
   final TextStyle t1Bold;
 
+  /// SEED type scale t2, regular weight: 12 px font size with 16 px line height in [SeedTypography.base].
   final TextStyle t2Regular;
+  /// SEED type scale t2, medium weight: 12 px font size with 16 px line height in [SeedTypography.base].
   final TextStyle t2Medium;
+  /// SEED type scale t2, bold weight: 12 px font size with 16 px line height in [SeedTypography.base].
   final TextStyle t2Bold;
 
+  /// SEED type scale t3, regular weight: 13 px font size with 18 px line height in [SeedTypography.base].
   final TextStyle t3Regular;
+  /// SEED type scale t3, medium weight: 13 px font size with 18 px line height in [SeedTypography.base].
   final TextStyle t3Medium;
+  /// SEED type scale t3, bold weight: 13 px font size with 18 px line height in [SeedTypography.base].
   final TextStyle t3Bold;
 
+  /// SEED type scale t4, regular weight: 14 px font size with 19 px line height in [SeedTypography.base].
   final TextStyle t4Regular;
+  /// SEED type scale t4, medium weight: 14 px font size with 19 px line height in [SeedTypography.base].
   final TextStyle t4Medium;
+  /// SEED type scale t4, bold weight: 14 px font size with 19 px line height in [SeedTypography.base].
   final TextStyle t4Bold;
 
+  /// SEED type scale t5, regular weight: 16 px font size with 22 px line height in [SeedTypography.base].
   final TextStyle t5Regular;
+  /// SEED type scale t5, medium weight: 16 px font size with 22 px line height in [SeedTypography.base].
   final TextStyle t5Medium;
+  /// SEED type scale t5, bold weight: 16 px font size with 22 px line height in [SeedTypography.base].
   final TextStyle t5Bold;
 
+  /// SEED type scale t6, regular weight: 18 px font size with 24 px line height in [SeedTypography.base].
   final TextStyle t6Regular;
+  /// SEED type scale t6, medium weight: 18 px font size with 24 px line height in [SeedTypography.base].
   final TextStyle t6Medium;
+  /// SEED type scale t6, bold weight: 18 px font size with 24 px line height in [SeedTypography.base].
   final TextStyle t6Bold;
 
+  /// SEED type scale t7, regular weight: 20 px font size with 27 px line height in [SeedTypography.base].
   final TextStyle t7Regular;
+  /// SEED type scale t7, medium weight: 20 px font size with 27 px line height in [SeedTypography.base].
   final TextStyle t7Medium;
+  /// SEED type scale t7, bold weight: 20 px font size with 27 px line height in [SeedTypography.base].
   final TextStyle t7Bold;
 
+  /// SEED type scale t8, regular weight: 22 px font size with 30 px line height in [SeedTypography.base].
   final TextStyle t8Regular;
+  /// SEED type scale t8, medium weight: 22 px font size with 30 px line height in [SeedTypography.base].
   final TextStyle t8Medium;
+  /// SEED type scale t8, bold weight: 22 px font size with 30 px line height in [SeedTypography.base].
   final TextStyle t8Bold;
 
+  /// SEED type scale t9, regular weight: 24 px font size with 32 px line height in [SeedTypography.base].
   final TextStyle t9Regular;
+  /// SEED type scale t9, medium weight: 24 px font size with 32 px line height in [SeedTypography.base].
   final TextStyle t9Medium;
+  /// SEED type scale t9, bold weight: 24 px font size with 32 px line height in [SeedTypography.base].
   final TextStyle t9Bold;
 
+  /// SEED type scale t10, regular weight: 26 px font size with 35 px line height in [SeedTypography.base].
   final TextStyle t10Regular;
+  /// SEED type scale t10, medium weight: 26 px font size with 35 px line height in [SeedTypography.base].
   final TextStyle t10Medium;
+  /// SEED type scale t10, bold weight: 26 px font size with 35 px line height in [SeedTypography.base].
   final TextStyle t10Bold;
 
+  /// SEED type scale t11, regular weight: 28 px font size with 38 px line height in [SeedTypography.base].
   final TextStyle t11Regular;
+  /// SEED type scale t11, medium weight: 28 px font size with 38 px line height in [SeedTypography.base].
   final TextStyle t11Medium;
+  /// SEED type scale t11, bold weight: 28 px font size with 38 px line height in [SeedTypography.base].
   final TextStyle t11Bold;
 
+  /// SEED type scale t12, regular weight: 32 px font size with 42 px line height in [SeedTypography.base].
   final TextStyle t12Regular;
+  /// SEED type scale t12, medium weight: 32 px font size with 42 px line height in [SeedTypography.base].
   final TextStyle t12Medium;
+  /// SEED type scale t12, bold weight: 32 px font size with 42 px line height in [SeedTypography.base].
   final TextStyle t12Bold;
 
+  /// SEED type scale t13, regular weight: 40 px font size with 52 px line height in [SeedTypography.base].
   final TextStyle t13Regular;
+  /// SEED type scale t13, medium weight: 40 px font size with 52 px line height in [SeedTypography.base].
   final TextStyle t13Medium;
+  /// SEED type scale t13, bold weight: 40 px font size with 52 px line height in [SeedTypography.base].
   final TextStyle t13Bold;
 
+  /// SEED type scale t14, regular weight: 48 px font size with 60 px line height in [SeedTypography.base].
   final TextStyle t14Regular;
+  /// SEED type scale t14, medium weight: 48 px font size with 60 px line height in [SeedTypography.base].
   final TextStyle t14Medium;
+  /// SEED type scale t14, bold weight: 48 px font size with 60 px line height in [SeedTypography.base].
   final TextStyle t14Bold;
 
   // Semantic shortcuts
+  /// Screen-heading semantic style, equal to [t10Bold].
   TextStyle get screenTitle => t10Bold;
+  /// Long-form article body style: [t5Regular] with a 24 px line height.
   TextStyle get articleBody =>
       t5Regular.copyWith(height: SeedLineHeight.t6 / SeedFontSize.t5);
+  /// Long-form article note style: [t4Regular] with a 22 px line height.
   TextStyle get articleNote =>
       t4Regular.copyWith(height: SeedLineHeight.t5 / SeedFontSize.t4);
+  /// Section-heading semantic style, equal to [t6Bold].
   TextStyle get sectionTitle => t6Bold;
+  /// Default body text style, equal to [t5Regular].
   TextStyle get body => t5Regular;
+  /// Medium-weight body style, equal to [t5Medium].
   TextStyle get bodyMedium => t5Medium;
+  /// Bold body style, equal to [t5Bold].
   TextStyle get bodyBold => t5Bold;
+  /// Caption style, equal to [t3Regular].
   TextStyle get caption => t3Regular;
+  /// Medium-weight caption style, equal to [t3Medium].
   TextStyle get captionMedium => t3Medium;
+  /// Footnote style, equal to [t2Regular].
   TextStyle get footnote => t2Regular;
 
+  /// Creates a complete typography extension.
+  ///
+  /// All 42 styles (t1–t14 in regular, medium and bold) are required.
   const SeedTypography({
     required this.t1Regular,
     required this.t1Medium,
@@ -169,6 +255,11 @@ class SeedTypography extends ThemeExtension<SeedTypography> {
     required this.t14Bold,
   });
 
+  /// Creates the SEED base type scale.
+  ///
+  /// [fontFamily] (default null) specifies the font; [defaultColor] (default null) sets every style
+  /// foreground. Sizes and line heights come from [SeedFontSize] and [SeedLineHeight] with even leading
+  /// distribution.
   factory SeedTypography.base({String? fontFamily, Color? defaultColor}) {
     TextStyle makeStyle(double fontSize, double lineHeight, FontWeight weight) {
       return TextStyle(
@@ -456,6 +547,7 @@ class SeedTypography extends ThemeExtension<SeedTypography> {
     );
   }
 
+  /// Returns an updated typography theme; every omitted/null type style retains its previous value.
   @override
   SeedTypography copyWith({
     TextStyle? t1Regular,
@@ -547,6 +639,8 @@ class SeedTypography extends ThemeExtension<SeedTypography> {
     );
   }
 
+  /// Interpolates each type scale style toward [other] by [t], or returns this for an incompatible/null
+  /// theme.
   @override
   SeedTypography lerp(ThemeExtension<SeedTypography>? other, double t) {
     if (other is! SeedTypography) return this;

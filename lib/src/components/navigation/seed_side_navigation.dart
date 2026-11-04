@@ -22,12 +22,19 @@ import '../layout/seed_scroll_fog.dart';
 
 /// Surface tone for [SeedSideNavigation].
 enum SeedSideNavTone {
+  /// Standard neutral sidebar surface.
   neutral,
+  /// Transparent sidebar surface that shows its parent background.
   transparent,
 }
 
 /// A 2nd-level sub item in [SeedSideNavigation].
 class SeedSideNavSubItem {
+  /// Creates a submenu destination identified by [id] and [label].
+  ///
+  /// [badge] supplies optional trailing status text, [onTap] runs when selected,
+  /// and [enabled]/[disabled] jointly determine whether it accepts input.
+  /// Both enable flags default to true/false respectively.
   const SeedSideNavSubItem({
     required this.id,
     required this.label,
@@ -37,18 +44,33 @@ class SeedSideNavSubItem {
     this.disabled = false,
   });
 
+  /// Stable submenu identity used for [SeedSideNavigation.selectedId].
   final String id;
+  /// Visible and accessible destination text.
   final String label;
+  /// Optional trailing status badge text.
   final String? badge;
+  /// Optional activation callback for this destination.
   final VoidCallback? onTap;
+  /// Positive enable flag, true by default.
   final bool enabled;
+  /// Explicit disabled flag, false by default.
   final bool disabled;
 
+  /// Effective enable state: [enabled] is true and [disabled] is false.
   bool get isEnabled => enabled && !disabled;
 }
 
 /// A 1st-level menu item in [SeedSideNavigation].
 class SeedSideNavItem {
+  /// Creates a top-level sidebar destination or collapsible submenu parent.
+  ///
+  /// [id] identifies selection, [label] names the destination, [icon] and
+  /// [badge] add presentation, and [subItems] defines nested destinations.
+  /// [onTap] handles direct activation; [enabled]/[disabled] gate interaction.
+  /// [open] controls expanded state when non-null; [defaultOpen] initializes
+  /// unmanaged expansion. [onOpenChange] receives the next expanded state;
+  /// [onOpenChanged] is its deprecated compatibility alias.
   const SeedSideNavItem({
     required this.id,
     required this.label,
@@ -65,33 +87,63 @@ class SeedSideNavItem {
   }) : onOpenChanged = onOpenChange ?? onOpenChanged,
        assert(onOpenChange == null || onOpenChanged == null);
 
+  /// Stable item identity used by [SeedSideNavigation.selectedId].
   final String id;
+  /// Visible and accessible main-menu label.
   final String label;
+  /// Optional leading icon, used also in collapsed icon-only navigation.
   final IconData? icon;
+  /// Optional trailing badge text.
   final String? badge;
+  /// Optional submenu destinations; their presence enables expansion.
   final List<SeedSideNavSubItem>? subItems;
+  /// Callback when a selectable item is activated.
   final VoidCallback? onTap;
+  /// Positive enable flag; true by default.
   final bool enabled;
+  /// Explicit disable flag; false by default.
   final bool disabled;
+  /// Controlled expanded state when non-null; otherwise state is internal.
   final bool? open;
+  /// Initial expansion for an unmanaged item; defaults to false.
   final bool defaultOpen;
+  /// Deprecated alias of [onOpenChange].
   @Deprecated('Use onOpenChange instead.')
   final ValueChanged<bool>? onOpenChanged;
+  /// React-style callback receiving the next expanded state.
+  ///
+  /// This getter aliases [onOpenChanged] for backwards compatibility.
   ValueChanged<bool>? get onOpenChange => onOpenChanged;
 
+  /// Whether the item accepts input, combining [enabled] and [disabled].
   bool get isEnabled => enabled && !disabled;
 }
 
 /// A group of items in [SeedSideNavigation].
 class SeedSideNavGroup {
+  /// Groups the required [items] under an optional [label].
   const SeedSideNavGroup({this.label, required this.items});
 
+  /// Optional section heading; a null value omits the heading.
   final String? label;
+  /// First-level menu entries in display order.
   final List<SeedSideNavItem> items;
 }
 
 /// A SEED Design Side Navigation drawer/sidebar component for desktop and tablet.
 class SeedSideNavigation extends StatefulWidget {
+  /// Builds a sidebar with [groups], optional [header], and [footer].
+  ///
+  /// [selectedId] highlights an item or subitem. [collapsed] controls
+  /// expansion from the parent; [defaultCollapsed] initializes local state.
+  /// Deprecated [isCollapsed] is an alias of [collapsed]. [onCollapsedChange]
+  /// receives the next collapsed state, [onCollapsedChanged] is deprecated,
+  /// and [onToggleCollapsed] is a no-argument compatibility callback.
+  /// [showCollapseButton] displays a built-in control; [width] defaults to
+  /// 240px, [collapsedWidth] to 56px. [collapseBelow] forces icon-only mode
+  /// below a viewport width. [tone] defaults to neutral and [backgroundColor]
+  /// optionally overrides the surface color. An optional `key` preserves
+  /// Flutter widget identity.
   const SeedSideNavigation({
     super.key,
     this.header,
@@ -127,15 +179,20 @@ class SeedSideNavigation extends StatefulWidget {
   final List<SeedSideNavGroup> groups;
 
   /// The currently active item or sub-item ID.
+  ///
+  /// Changing this value also expands the matching subitem's parent, but
+  /// ordinary rebuilds do not reopen a parent that the user closed manually.
   final String? selectedId;
 
   final bool? _isCollapsed;
 
-  /// Initial collapsed state when [isCollapsed] is omitted.
+  /// Initial collapsed state when [collapsed] is null (defaults to false).
   final bool defaultCollapsed;
 
-  /// Whether the sidebar is collapsed to icon-only mode.
+  /// Controlled collapsed state, or null when internally managed.
   bool? get collapsed => _isCollapsed;
+  /// Legacy effective collapsed flag, including [defaultCollapsed].
+  /// Prefer [collapsed] for controlled input.
   @Deprecated('Use collapsed or defaultCollapsed instead.')
   bool get isCollapsed => _isCollapsed ?? defaultCollapsed;
 
@@ -145,6 +202,8 @@ class SeedSideNavigation extends StatefulWidget {
   /// Callback with the next collapsed state when toggled.
   @Deprecated('Use onCollapsedChange instead.')
   final ValueChanged<bool>? onCollapsedChanged;
+  /// React-style callback reporting the next collapsed state.
+  /// This getter aliases [onCollapsedChanged].
   ValueChanged<bool>? get onCollapsedChange => onCollapsedChanged;
 
   /// Whether to show the built-in collapse toggle button even without [onToggleCollapsed].
@@ -159,10 +218,16 @@ class SeedSideNavigation extends StatefulWidget {
   /// Surface tone of the sidebar (`neutral` or `transparent`).
   final SeedSideNavTone tone;
 
+  /// Optional explicit surface color, overriding [tone]'s default background.
   final Color? backgroundColor;
+  /// Viewport-width threshold below which collapsed mode is forced.
+  ///
+  /// Null disables this responsive Flutter extension; measured width is from
+  /// [MediaQuery] and does not modify the controlled [collapsed] property.
   final double? collapseBelow;
 
   @override
+  /// Creates state for local expansion, collapse, and scroll tracking.
   State<SeedSideNavigation> createState() => _SeedSideNavigationState();
 }
 
@@ -659,6 +724,8 @@ class _SeedSideNavigationState extends State<SeedSideNavigation> {
   }
 }
 
+/// Reveals a group label or sub-items over the official 200ms and removes them
+/// from the tree once closed.
 class _SeedSideNavPanel extends StatefulWidget {
   const _SeedSideNavPanel({required this.expanded, required this.child});
   final bool expanded;
@@ -713,6 +780,8 @@ class _SeedSideNavPanelState extends State<_SeedSideNavPanel>
   );
 }
 
+/// The item's own background: 44px tall with the official current and pressed
+/// colors, inset from the panel by its parent's padding.
 class _SeedSideNavItemSurface extends StatelessWidget {
   const _SeedSideNavItemSurface({
     required this.selected,

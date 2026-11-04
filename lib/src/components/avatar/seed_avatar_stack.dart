@@ -8,12 +8,18 @@ import '../layout/seed_avatar.dart';
 /// Renders an overlapping horizontal stack of avatars with official negative gaps
 /// and layer background separator strokes.
 class SeedAvatarStack extends StatelessWidget {
+  /// Avatars rendered in order, overlapping from start to end.
   final List<Widget> children;
+  /// Determines avatar diameter, overlap, and ring width.
   final SeedAvatarSize size;
+  /// Limits displayed avatars; null shows all [children].
   final int? maxVisible;
+  /// Custom badge for hidden entries; null displays their count as +N.
   final Widget? overflowBadge;
+  /// Ring color separating overlapping avatars; null uses the layer background.
   final Color? strokeColor;
 
+  /// Creates an overlapping avatar row with optional overflow count.
   const SeedAvatarStack({
     super.key,
     required this.children,

@@ -7,17 +7,29 @@ part 'seed_content_placeholder_presets.dart';
 
 /// Predefined domain types for [SeedContentPlaceholder] as specified by SEED Design.
 enum SeedContentPlaceholderType {
+  /// Generic illustration when no domain-specific asset applies.
   defaultType,
+  /// Buy-and-sell marketplace illustration.
   buySell,
+  /// Vehicle listing illustration.
   car,
+  /// Online commerce illustration.
   commerce,
+  /// Discount coupon illustration.
   coupon,
+  /// Food listing illustration.
   food,
+  /// Group or community illustration.
   group,
+  /// Generic image/media illustration.
   image,
+  /// Job listing illustration.
   jobs,
+  /// Business or storefront illustration.
   business,
+  /// General post illustration.
   post,
+  /// Real estate illustration.
   realty,
 }
 
@@ -26,6 +38,7 @@ enum SeedContentPlaceholderType {
 /// Used as a fallback visual placeholder when images or media content
 /// are absent or failed to load.
 class SeedContentPlaceholder extends StatelessWidget {
+  /// Creates a themed fallback illustration, with optional custom [icon].
   const SeedContentPlaceholder({
     super.key,
     this.type = SeedContentPlaceholderType.defaultType,

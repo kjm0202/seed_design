@@ -14,14 +14,28 @@ import '../badge/seed_notification_badge.dart';
 
 /// Item definition for [SeedSegmentedControl].
 class SeedSegment<T> {
+  /// Selection identity passed to [SeedSegmentedControl.onValueChange].
   final T value;
+  /// Visible and accessible text; defaults to empty when [child] renders it.
   final String label;
+  /// Optional custom segment contents in place of [label].
   final Widget? child;
+  /// Optional badge count to show beside the segment content.
   final int? notificationCount;
+  /// Displays a notification dot when no positive count is shown.
   final bool showNotificationDot;
+  /// Enables this segment independently of the group; defaults to true.
   final bool enabled;
+  /// Additional invalid-state metadata; defaults to false.
+  ///
+  /// The current segment renderer does not draw a separate error treatment.
   final bool invalid;
 
+  /// Describes a mutually exclusive segment with its [value] and contents.
+  ///
+  /// [label] defaults to an empty string; [child] optionally replaces the
+  /// displayed label. [notificationCount] or [showNotificationDot] adds a
+  /// badge. [enabled] defaults to true and [invalid] to false.
   const SeedSegment({
     required this.value,
     this.label = '',
@@ -38,21 +52,40 @@ class SeedSegment<T> {
 /// Smoothly transitions between 2 to 4 mutually exclusive options
 /// with animated floating pill indicator and SEED elevation shadow.
 class SeedSegmentedControl<T> extends StatefulWidget {
+  /// Two to four mutually exclusive options; each needs a distinct value.
   final List<SeedSegment<T>> segments;
+  /// Legacy parent-controlled selection property; prefer [value].
   @Deprecated('Use value instead.')
   final T? selectedValue;
+  /// React-style controlled selection; null leaves the control unmanaged
+  /// unless [controlled] is true.
   T? get value => selectedValue;
+  /// Initial uncontrolled selection; falls back to the first segment.
   final T? defaultValue;
+  /// Legacy callback property; prefer [onValueChange].
   @Deprecated('Use onValueChange instead.')
   final ValueChanged<T>? onValueChanged;
+  /// React-style callback for changed selections, without repeated same-value
+  /// notifications; alias of [onValueChanged].
   ValueChanged<T>? get onValueChange => onValueChanged;
+  /// Whether the whole group is interactive; defaults to true.
   final bool enabled;
 
   /// Keeps [selectedValue], including null, under parent control.
   final bool controlled;
 
+  /// Accessible name of the radio group, like the official `aria-label`.
   final String? semanticsLabel;
 
+  /// Creates a segmented selector with two to four [segments].
+  ///
+  /// [value] and [onValueChange] match the React controlled API, while
+  /// [defaultValue] initializes uncontrolled selection. [selectedValue] and
+  /// [onValueChanged] are deprecated compatibility aliases and cannot be
+  /// combined with their modern counterparts. [controlled] forces a null
+  /// selection to remain parent-owned. [enabled] defaults to true and
+  /// [semanticsLabel] labels the accessible radio group. An optional `key`
+  /// preserves Flutter widget identity.
   const SeedSegmentedControl({
     super.key,
     required this.segments,
@@ -74,6 +107,7 @@ class SeedSegmentedControl<T> extends StatefulWidget {
        );
 
   @override
+  /// Creates state for selection and the animated segment indicator.
   State<SeedSegmentedControl<T>> createState() =>
       _SeedSegmentedControlState<T>();
 }

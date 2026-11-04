@@ -17,21 +17,30 @@ import 'seed_wheel_picker.dart';
 import 'seed_date_constraints.dart';
 export 'seed_date_constraints.dart';
 
+/// Selection policy for [SeedDatePicker].
 enum SeedDatePickerMode {
+  /// Select one calendar day at a time.
   single,
 
+  /// Select a start and optional end date.
   range,
 
+  /// Select multiple independent calendar days.
   multiple,
 }
 
+/// Visible calendar layout.
 enum SeedDatePickerLayout {
+  /// Show one calendar month.
   month,
 
+  /// Show two adjacent months.
   twoMonths,
 
+  /// Show one calendar week.
   week,
 
+  /// Scroll through a continuous calendar; requires a bounded height.
   continuous,
 }
 
@@ -42,6 +51,24 @@ enum SeedDatePickerLayout {
 /// values; the displayed selection changes only when the parent accepts them.
 /// The default* inputs initialize local state once; initial* inputs are aliases.
 class SeedDatePicker extends StatefulWidget {
+  /// Creates a single-, range-, or multiple-date calendar.
+  ///
+  /// [selectionMode] defaults to [SeedDatePickerMode.single] and
+  /// [visibleRange] to [SeedDatePickerLayout.month]. [value], [rangeValue],
+  /// or [values] controls the chosen mode; [controlled] additionally treats
+  /// null as an explicitly empty controlled selection.
+  ///
+  /// [defaultValue], [defaultRangeValue], and [defaultValues] are one-time
+  /// uncontrolled seeds. The deprecated [mode], [layout], [initialDate],
+  /// and [initialDates] names are compatibility alternatives and may not
+  /// accompany their replacements.
+  ///
+  /// [viewDate] controls which month is shown independently of selection;
+  /// [defaultViewDate] sets its initial position. [onViewDateChange] observes
+  /// navigation, while the selection callbacks observe selection attempts.
+  /// [weekStartsOn] accepts ISO weekdays 1 (Monday) through 7 (Sunday).
+  /// For [SeedDatePickerLayout.continuous], provide [height], [minHeight],
+  /// or [maxHeight] to bound scrolling.
   const SeedDatePicker({
     super.key,
     SeedDatePickerMode? selectionMode,
@@ -124,7 +151,14 @@ class SeedDatePicker extends StatefulWidget {
          'Continuous calendars require a bounded height',
        );
 
-  /// React-compatible range selection with a typed value/defaultValue.
+  /// Creates a range picker with React-compatible typed selection values.
+  ///
+  /// [value] supplies a controlled [SeedDateRange], while [defaultValue]
+  /// seeds an uncontrolled range once. [onValueChange] receives the proposed
+  /// range, including a null value for reset. [rangeStartReadOnly] locks an
+  /// already selected start date when the user chooses a new end date.
+  /// [visibleRange] defaults to one month. Other layout, locale, availability,
+  /// accessibility, controller, and reset arguments follow [SeedDatePicker].
   const SeedDatePicker.range({
     SeedDateRange? value,
     SeedDateRange? defaultValue,
@@ -194,7 +228,14 @@ class SeedDatePicker extends StatefulWidget {
          rangeStartReadOnly: rangeStartReadOnly,
        );
 
-  /// React-compatible multiple selection with a typed value/defaultValue.
+  /// Creates a multiple-date picker with React-compatible list values.
+  ///
+  /// [value] controls selected dates, including an empty list, while
+  /// [defaultValue] provides the initial uncontrolled set. [onValueChange]
+  /// receives the entire proposed list after a date is added or removed.
+  /// [visibleRange] defaults to one month. Availability constraints, cell
+  /// builders, locale, navigation, height, accessibility, and reset arguments
+  /// otherwise follow [SeedDatePicker].
   const SeedDatePicker.multiple({
     List<DateTime>? value,
     List<DateTime>? defaultValue,
@@ -262,27 +303,37 @@ class SeedDatePicker extends StatefulWidget {
          onReset: onReset,
        );
 
+  /// Legacy selection-mode alias, superseded by [selectionMode].
   @Deprecated('Use selectionMode instead.')
   final SeedDatePickerMode mode;
 
+  /// Legacy calendar-layout alias, superseded by [visibleRange].
   @Deprecated('Use visibleRange instead.')
   final SeedDatePickerLayout layout;
 
+  /// Selection policy, defaulting to [SeedDatePickerMode.single].
   SeedDatePickerMode get selectionMode => mode;
 
+  /// Layout of visible calendar pages, defaulting to month.
   SeedDatePickerLayout get visibleRange => layout;
 
+  /// Deprecated single-date uncontrolled seed; use [defaultValue].
   @Deprecated('Use defaultValue instead.')
   final DateTime? initialDate;
 
+  /// Deprecated separate range seeds; use [defaultRangeValue] instead.
   final DateTime? initialStartDate, initialEndDate;
 
+  /// Controlled single-date selection, or null to use local selection.
   final DateTime? value;
 
+  /// Controlled [SeedDatePickerMode.range] selection.
   final SeedDateRange? rangeValue;
 
+  /// Controlled [SeedDatePickerMode.multiple] date selection.
   final List<DateTime>? values;
 
+  /// Deprecated multiple-date uncontrolled seed; use [defaultValues].
   @Deprecated('Use defaultValues instead.')
   final List<DateTime> initialDates;
 
@@ -299,60 +350,90 @@ class SeedDatePicker extends StatefulWidget {
 
   /// One-time uncontrolled seed. [initialDates] is a compatibility alias.
   List<DateTime> get defaultValues => initialDates;
+  /// Earliest and latest selectable date, inclusive, when specified.
   final DateTime? firstDate, lastDate;
 
+  /// Flutter compatibility observer called when a date cell is tapped,
+  /// including reselecting an unchanged day.
   final ValueChanged<DateTime>? onDateSelected;
 
+  /// Deprecated single-date change callback; use [onValueChange].
   @Deprecated('Use onValueChange instead.')
   final ValueChanged<DateTime?>? onValueChanged;
 
+  /// Called for a proposed single-date change; unchanged dates are omitted.
   ValueChanged<DateTime?>? get onValueChange => onValueChanged;
 
+  /// Legacy range callback providing separate start and end dates.
   final void Function(DateTime? start, DateTime? end)? onRangeSelected;
 
+  /// Called for a proposed typed range selection, including a null reset.
   final ValueChanged<SeedDateRange?>? onRangeValueChange;
 
+  /// Deprecated multiple-date callback; use [onDatesChange].
   @Deprecated('Use onDatesChange instead.')
   final ValueChanged<List<DateTime>>? onDatesSelected;
 
+  /// Reports proposed selections in multiple-date mode.
   ValueChanged<List<DateTime>>? get onDatesChange => onDatesSelected;
 
+  /// Additional per-day predicate; returning false makes a day unselectable.
   final bool Function(DateTime date)? selectableDayPredicate;
 
+  /// Additional constraints evaluated against proposed selections.
   final List<SeedDateConstraint> constraints;
 
+  /// Respectively: enabled state (default true), disabled state, read-only
+  /// state, start-of-range read-only state, and null-is-controlled policy.
+  /// The latter four flags default to false.
   final bool enabled, disabled, readOnly, rangeStartReadOnly, controlled;
 
+  /// Locale used for calendar labels; defaults to `ko_KR`.
   final Locale locale;
 
   /// Uses DateTime weekday numbering: Monday=1 through Sunday=7.
   final int? weekStartsOn;
+  /// Controlled visible date and initial uncontrolled visible date.
   final DateTime? viewDate, defaultViewDate;
 
+  /// Deprecated view-navigation callback; use [onViewDateChange].
   @Deprecated('Use onViewDateChange instead.')
   final ValueChanged<DateTime>? onViewDateChanged;
 
+  /// Called when the visible calendar date changes independently of selection.
   ValueChanged<DateTime>? get onViewDateChange => onViewDateChanged;
 
+  /// Controller for programmatic navigation and keyboard focus.
   final SeedDatePickerController? controller;
 
+  /// Inclusive first/last year shown in the year picker when set.
   final ({int start, int end})? yearRange;
 
+  /// Inclusive month bounds for calendar navigation when set.
   final DateTimeRange? monthRange;
 
+  /// Calendar height and minimum/maximum height constraints.
+  /// A continuous layout requires at least one to be set.
   final double? height, minHeight, maxHeight;
 
+  /// Calendar day used to highlight today; null uses the current date.
   final DateTime? today;
 
+  /// Height of individual day cells in logical pixels (default 48).
   final double cellHeight;
 
+  /// Cell decoration and replacement-content builders, respectively.
+  /// Only one of the two can be supplied.
   final Widget Function(BuildContext, SeedDateCellInfo)? dateCellSupplement,
       dateCellContent;
 
+  /// Optional accessibility name of the calendar.
   final String? semanticsLabel;
 
+  /// Whether to display a reset action (default false).
   final bool showReset;
 
+  /// Optional callback invoked when the reset action is activated.
   final VoidCallback? onReset;
   @override
   State<SeedDatePicker> createState() => _SeedDatePickerState();
@@ -1432,6 +1513,8 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
   }
 }
 
+/// Press state of a date cell. The official pressed color fills the 42px date
+/// visual rather than the whole cell, so it is drawn by the cell's builder.
 class _SeedDateCellGesture extends StatefulWidget {
   const _SeedDateCellGesture({required this.onTap, required this.builder});
   final VoidCallback? onTap;

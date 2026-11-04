@@ -10,11 +10,14 @@ import '../feedback/seed_progress_circle.dart';
 
 /// Style tone for [SeedContextualFloatingButton].
 enum SeedContextualFloatingButtonTone {
+  /// Opaque solid button surface.
   solid,
 
+  /// Elevated floating layer surface.
   layer,
 }
 
+/// The official name of [SeedContextualFloatingButton]'s style prop.
 typedef SeedContextualFloatingButtonVariant = SeedContextualFloatingButtonTone;
 
 /// Contextual Floating Button component of SEED Design System.
@@ -22,17 +25,30 @@ typedef SeedContextualFloatingButtonVariant = SeedContextualFloatingButtonTone;
 /// A secondary floating button dynamically appearing above screen content
 /// based on context (e.g. "새 글 5개 보기 ↑", "맨 위로").
 class SeedContextualFloatingButton extends StatelessWidget {
+  /// Leading symbol; required when [label] is absent.
   final Widget? icon;
+  /// Optional action text; omit for an icon-only button.
   final String? label;
+  /// Accessible name; required for an icon-only button.
   final String? semanticsLabel;
+  /// Invoked on activation while [enabled] and not [loading].
   final VoidCallback onPressed;
+  /// Visual treatment (solid by default), corresponding to React `variant`.
   final SeedContextualFloatingButtonVariant variant;
+  /// Deprecated alias for [variant].
   @Deprecated('Use variant instead.')
   SeedContextualFloatingButtonTone get tone => variant;
+  /// Uses brand foreground/background tokens where applicable (default false).
   final bool isBrand;
+  /// Displays a spinner and temporarily prevents interaction.
   final bool loading;
+  /// Whether user activation is allowed (true by default).
   final bool enabled;
 
+  /// Creates a contextual action with an icon, label, or both.
+  ///
+  /// The deprecated [tone] constructor argument aliases [variant]; supplying
+  /// both is invalid. Icon-only content requires [semanticsLabel].
   const SeedContextualFloatingButton({
     super.key,
     this.semanticsLabel,
@@ -52,6 +68,8 @@ class SeedContextualFloatingButton extends StatelessWidget {
          'Icon-only buttons require a semanticsLabel.',
        );
 
+  /// Creates a 44 px icon-only contextual button with an accessible label.
+  /// The legacy [tone] parameter is an alias for [variant].
   const SeedContextualFloatingButton.iconOnly({
     super.key,
     required String this.semanticsLabel,

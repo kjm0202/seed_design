@@ -1,0 +1,7 @@
+include: package:flutter_lints/flutter.yaml
+
+# Dartdoc must cover every non-overriding public declaration in lib/.
+# This applies to exported APIs as well as public support types in src/.
+linter:
+  rules:
+    public_member_api_docs: true

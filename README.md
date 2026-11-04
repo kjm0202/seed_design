@@ -1,6 +1,6 @@
 # SEED Design for Flutter
 
-[한국어](README_ko.md)
+[한국어](https://github.com/kjm0202/seed_design/blob/master/README_ko.md)
 
 An unofficial Flutter port of Karrot(also known as Danggn in Korea)’s [SEED Design](https://seed-design.io/).
 
@@ -231,7 +231,7 @@ Give icon-only buttons a `semanticsLabel` so screen readers can describe their a
 
 Use the official React prop names for each component. Select uses list-valued `value/defaultValue/onValueChange` for single and multiple selection. Non-null values are parent-controlled; use `controlled: true` to control an empty selection. Default values initialize local state once. Supply either a text/attachment controller or values and defaults.
 
-See the [example code](example/lib/stackflow_spa) for other components.
+See the [example code](https://github.com/kjm0202/seed_design/tree/master/example/lib/stackflow_spa) for other components.
 
 ## Stateful UI and React feature counterparts
 
@@ -254,6 +254,20 @@ flutter pub get
 flutter run
 ```
 
+## Dart API reference
+
+All exported public types, constructors, properties, callbacks, and methods
+have Dartdoc comments, including defaults, state ownership, Flutter extensions,
+and compatibility aliases. To build and check the HTML reference locally:
+
+```sh
+dart analyze lib
+dart doc --validate-links .
+```
+
+The output is generated in `doc/api/`. Serve that folder with an HTTP server
+to use the search and navigation interface. Generated files are excluded from Git.
+
 ## Tests
 
 Run the test suites from a source checkout:
@@ -267,7 +281,7 @@ flutter test
 
 ## License
 
-The original Flutter implementation is licensed under [MIT](LICENSE). Portions adapted from SEED Design are subject to [Apache License 2.0](third_party/seed-design/LICENSE), with the [upstream notice](third_party/seed-design/NOTICE) included. See [third-party notices](THIRD_PARTY_NOTICES.md) for details and test font credits.
+The original Flutter implementation is licensed under [MIT](https://github.com/kjm0202/seed_design/blob/master/LICENSE). Portions adapted from SEED Design are subject to [Apache License 2.0](https://github.com/kjm0202/seed_design/blob/master/third_party/seed-design/LICENSE), with the [upstream notice](https://github.com/kjm0202/seed_design/blob/master/third_party/seed-design/NOTICE) included. See [third-party notices](https://github.com/kjm0202/seed_design/blob/master/THIRD_PARTY_NOTICES.md) for details and test font credits.
 
 ## Disclaimer
 

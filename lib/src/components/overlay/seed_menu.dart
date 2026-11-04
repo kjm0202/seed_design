@@ -17,14 +17,27 @@ import '../../theme/seed_theme.dart';
 import '../badge/seed_badge.dart';
 import '../layout/seed_divider.dart';
 
+/// Menu sizing policy: `small` is 200px, `medium` is 240px, and `responsive`
+/// selects small at viewport widths of at least 1280px and medium otherwise.
 enum SeedMenuSize {
+  /// Compact 200px menu.
   small,
+  /// Standard 240px menu.
   medium,
+  /// Choose small at viewport width 1280px or more, medium otherwise.
   responsive,
 }
 
 /// An individual action or selectable item in [SeedMenu].
+///
+/// This immutable Flutter data object corresponds to a React Menu.Item and
+/// its optional label, supporting content, and action. Disabled items are
+/// omitted from keyboard traversal and cannot invoke [onTap].
 class SeedMenuItemData {
+  /// Creates a menu item with a required [label] and optional action.
+  ///
+  /// [typeaheadLabel] overrides the text matched by incremental typing;
+  /// [enabled] is true and [isDestructive] is false by default.
   const SeedMenuItemData({
     required this.label,
     this.description,
@@ -37,29 +50,50 @@ class SeedMenuItemData {
     this.enabled = true,
   });
 
+  /// Visible primary label, also used for typeahead by default.
   final String label;
+  /// Optional secondary line of explanatory text.
   final String? description;
 
   /// Search text for keyboard navigation; defaults to [label].
   final String? typeaheadLabel;
+  /// Optional widget before the item label.
   final Widget? prefixIcon;
+  /// Optional widget following the label.
   final Widget? suffixIcon;
+  /// Optional trailing badge text.
   final String? badge;
+  /// Invoked when the enabled item is activated.
   final VoidCallback? onTap;
+  /// Whether the label/action uses critical styling.
   final bool isDestructive;
+  /// Whether selection and keyboard focus are allowed; true by default.
   final bool enabled;
 }
 
 /// A group of items in [SeedMenu].
 class SeedMenuGroupData {
+  /// Creates an item group with an optional section [label].
   const SeedMenuGroupData({this.label, required this.items});
 
+  /// Optional section heading above [items].
   final String? label;
+  /// Ordered menu entries within this group.
   final List<SeedMenuItemData> items;
 }
 
 /// A SEED Design Menu component providing a list of actions or options.
+///
+/// Keyboard behavior follows React's menu navigation: Arrow Up/Down move
+/// among enabled entries, Home/End jump to first/last, and typing searches
+/// [SeedMenuItemData.typeaheadLabel] (or its label). Keyboard opening focuses
+/// the first enabled item; pointer opening initially focuses the menu root.
+/// Place this surface inside [SeedAnchoredOverlay] for outside/Escape handling.
 class SeedMenu extends StatefulWidget {
+  /// Creates a grouped menu whose [groups] provide its actions.
+  ///
+  /// [size] defaults to medium; [width] overrides the calculated width.
+  /// [maxHeight] defaults to 480px and [closeOnSelect] defaults to true.
   const SeedMenu({
     super.key,
     required this.groups,
@@ -69,8 +103,11 @@ class SeedMenu extends StatefulWidget {
     this.closeOnSelect = true,
     this.maxHeight = 480,
   });
+  /// Preferred menu width policy.
   final SeedMenuSize size;
+  /// Whether item selection requests dismissal of its nearest overlay.
   final bool closeOnSelect;
+  /// Maximum menu height before content scrolls, 480px by default.
   final double maxHeight;
 
   /// Accessible name for this menu, corresponding to the trigger's label
@@ -410,6 +447,12 @@ class _SeedMenuState extends State<SeedMenu> {
 
 /// Anchored menu supporting controlled open, independent anchor and focus lifecycle.
 class SeedMenuTrigger extends SeedAnchoredOverlay {
+  /// Builds a keyboard-navigable menu anchored to [triggerBuilder].
+  ///
+  /// [builder] creates menu content, usually [SeedMenu]. Escape and outside
+  /// interaction request dismissal; [open] takes precedence over [controller].
+  /// [defaultOpen] seeds local state when neither is provided. Focus may leave
+  /// this menu with Tab, and its popup is mounted lazily by default.
   const SeedMenuTrigger({
     super.key,
     required super.triggerBuilder,

@@ -8,24 +8,50 @@ import '../../foundations/radius/seed_radius.dart';
 import '../../theme/seed_theme.dart';
 import 'seed_pagination_controls.dart';
 
+/// Why [SeedPagination] requested or normalized a page change.
 enum SeedPageChangeReason {
+  /// The user selected an explicit numbered page.
   pageItem,
+  /// The user activated the previous-page control.
   previous,
+  /// The user activated the next-page control.
   next,
+  /// A new page count or input required clamping the current page.
   constraint,
 }
 
+/// Describes a [SeedPagination] page transition and its origin.
 class SeedPageChange {
+  /// Captures the requested [page], [previousPage], and [reason].
   const SeedPageChange({
     required this.page,
     required this.previousPage,
     required this.reason,
   });
+  /// [page] is the resulting 1-based page and [previousPage] is the value
+  /// before the change; clamping may be reported with [reason] constraint.
   final int page, previousPage;
+  /// User action or constraint adjustment responsible for the change.
   final SeedPageChangeReason reason;
 }
 
+/// Numbered pagination for sequentially browsing pages of content.
+///
+/// Unlike `SeedTablePagination`, this shows page links with compact ellipses.
+/// Pages are one-based, and page counts of zero or one hide the component.
 class SeedPagination extends StatefulWidget {
+  /// Creates pagination with a required [totalPages] count.
+  ///
+  /// [page] is parent-controlled; [defaultPage] defaults to 1 when unmanaged.
+  /// Deprecated [currentPage] is an alias for [page] and cannot be supplied
+  /// simultaneously. [onPageChanged] reports just the new page, while
+  /// [onPageChange] supplies [SeedPageChange] details including the reason.
+  /// [visibleItemCount] is 7 or 9 including arrow controls, with responsive
+  /// defaults; [maxVisibleSlots] is a Flutter extension counting just numbered
+  /// slots. [semanticsLabel] names the navigation landmark, [pageLabelBuilder]
+  /// customizes each accessible page name, and [numberFormatter] changes
+  /// displayed digits. [disabled] prevents interaction. An optional `key`
+  /// preserves Flutter widget identity.
   const SeedPagination({
     super.key,
     int? page,
@@ -54,20 +80,35 @@ class SeedPagination extends StatefulWidget {
        assert(totalPages >= 0),
        assert(maxVisibleSlots == null || maxVisibleSlots > 0);
   @Deprecated('Use page instead.')
+  /// Deprecated controlled page input, replaced by [page].
   final int? currentPage;
+  /// React-compatible one-based controlled page, or null when uncontrolled.
   int? get page => currentPage;
+  /// [defaultPage] initializes uncontrolled selection (default 1), and
+  /// [totalPages] gives the nonnegative page count.
   final int defaultPage, totalPages;
+  /// Legacy simple callback with the next one-based page.
   final ValueChanged<int>? onPageChanged;
+  /// Detailed page-change callback with previous page and reason.
   final ValueChanged<SeedPageChange>? onPageChange;
 
+  /// Total slots including previous and next: 7 or 9, as in React.
+  /// Omitted values follow the official breakpoint (9 from 480px).
   final int? visibleItemCount;
 
+  /// Flutter extension counting page slots only.
   final int? maxVisibleSlots;
   final String? _semanticsLabel;
+  /// Accessible navigation name; defaults to "페이지 탐색" for the getter.
+  /// Rendered semantics use the localized pagination label when unspecified.
   String get semanticsLabel => _semanticsLabel ?? '페이지 탐색';
+  /// Disables page selection and arrow actions when true; defaults to false.
   final bool disabled;
+  /// [pageLabelBuilder] supplies each page's accessible label, while
+  /// [numberFormatter] changes the digits in page links and default labels.
   final String Function(int)? pageLabelBuilder, numberFormatter;
   @override
+  /// Creates state that manages an uncontrolled page and clamps page counts.
   State<SeedPagination> createState() => _SeedPaginationState();
 }
 

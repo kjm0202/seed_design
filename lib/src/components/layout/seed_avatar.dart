@@ -8,21 +8,36 @@ import 'seed_identity_placeholder.dart';
 
 /// Size options for [SeedAvatar] corresponding to SEED Design specifications.
 enum SeedAvatarSize {
+  /// 20 logical pixels; badge attachments are omitted at this size.
   size20,
+  /// 24 logical pixels.
   size24,
+  /// 36 logical pixels.
   size36,
+  /// Legacy alias for the 36-pixel size.
   small,
+  /// 42 logical pixels.
   size42,
+  /// Legacy alias for the 42-pixel size.
   medium,
+  /// 48 logical pixels; the default for [SeedAvatar].
   size48,
+  /// 56 logical pixels.
   size56,
+  /// Legacy alias for the 56-pixel size.
   large,
+  /// 64 logical pixels.
   size64,
+  /// 80 logical pixels.
   size80,
+  /// Legacy alias for the 80-pixel size.
   xlarge,
+  /// 96 logical pixels.
   size96,
+  /// 108 logical pixels.
   size108;
 
+  /// Avatar diameter in logical pixels, including the legacy named aliases.
   double get dimension {
     switch (this) {
       case SeedAvatarSize.size20:
@@ -52,6 +67,7 @@ enum SeedAvatarSize {
     }
   }
 
+  /// Default icon extent, half of [dimension].
   double get iconSize => dimension * 0.5;
 
   // badge size, badge offset, mask size, mask offset from Rootage.
@@ -69,9 +85,15 @@ enum SeedAvatarSize {
   };
 }
 
+/// Cutout shapes around an attached [SeedAvatar.badge].
+/// [SeedAvatarBadgeMask.circle] is circular, [SeedAvatarBadgeMask.flower]
+/// has a scalloped outline, and [SeedAvatarBadgeMask.shield] is shield-shaped.
 enum SeedAvatarBadgeMask {
+  /// Circular cutout.
   circle,
+  /// Scalloped floral cutout.
   flower,
+  /// Shield-shaped cutout.
   shield,
 }
 
@@ -80,12 +102,19 @@ enum SeedAvatarBadgeMask {
 /// Displays user profile pictures, store logos, or default placeholder graphics.
 /// Supports 10 official sizes (20..108px) and badge attachments.
 class SeedAvatar extends StatelessWidget {
+  /// Image displayed with cover fitting; failures display [placeholder].
   final ImageProvider? image;
+  /// Content shown for missing, pending, or failed [image] loads.
   final Widget? placeholder;
+  /// Diameter preset; defaults to [SeedAvatarSize.size48].
   final SeedAvatarSize size;
+  /// Shape of the image clip; null uses [SeedBorderRadius.full].
   final BorderRadius? borderRadius;
+  /// Overlay attached to the avatar, except at [SeedAvatarSize.size20].
   final Widget? badge;
+  /// Position of [badge]; defaults to [Alignment.bottomRight].
   final AlignmentGeometry badgeAlignment;
+  /// Optional cutout behind [badge] so the avatar does not visually overlap it.
   final SeedAvatarBadgeMask? badgeMask;
 
   /// Overrides the official badge dimensions.
@@ -95,6 +124,7 @@ class SeedAvatar extends StatelessWidget {
   /// overrides the gap; custom [badgeSize] uses this value directly.
   final double badgeMaskPadding;
 
+  /// Creates an image or identity placeholder with an optional attached badge.
   const SeedAvatar({
     super.key,
     this.image,

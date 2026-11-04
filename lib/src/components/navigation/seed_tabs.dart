@@ -12,17 +12,24 @@ import '../layout/seed_scroll_fog.dart';
 
 /// Style variants of [SeedTabs].
 enum SeedTabsVariant {
+  /// Tab labels with an underline indicating the active tab.
   line,
+  /// Chip tabs with a filled selected surface.
   chipSolid,
+  /// Chip tabs with an outlined selected surface.
   chipOutline,
 }
 
 /// Sizing options for [SeedTabs].
 enum SeedTabsSize {
+  /// 40-pixel header, the default for line tabs.
   small,
+  /// 44-pixel header, the default for chip tabs.
   medium,
+  /// 44-pixel header using the large size variant.
   large;
 
+  /// Height of the tab strip in logical pixels for this size.
   double get height {
     switch (this) {
       case SeedTabsSize.small:
@@ -37,14 +44,23 @@ enum SeedTabsSize {
 
 /// Represents an item in [SeedTabs].
 class SeedTabItem {
+  /// Visible tab label, also used as its accessible name.
   final String label;
 
   /// React tab value. When omitted, the tab view uses the index as a string.
   final String? value;
+  /// Count displayed in a notification badge when supplied.
   final int? notificationCount;
+  /// Displays a notification dot when the count is absent or zero.
   final bool showNotificationDot;
+  /// Allows selecting and keyboard-focusing this tab; defaults to true.
   final bool enabled;
 
+  /// Describes one tab header, its identity, badge, and enabled state.
+  ///
+  /// [value] corresponds to React `TabsTrigger.value`; [SeedTabsView] uses
+  /// the index converted to a string when it is absent. [notificationCount]
+  /// and [showNotificationDot] add badges. [enabled] defaults to true.
   const SeedTabItem({
     required this.label,
     this.value,
@@ -59,19 +75,36 @@ class SeedTabItem {
 /// Supports Line type (with Fill and Hug layouts) and Chip type (Solid & Outline),
 /// with built-in notification badges and physical scale interactions.
 class SeedTabs extends StatefulWidget {
+  /// Tab header definitions in display order.
   final List<SeedTabItem> items;
+  /// Parent-controlled zero-based selected index.
   final int selectedIndex;
+  /// Reports the activated tab index; the parent updates [selectedIndex].
   final ValueChanged<int> onTabSelected;
+  /// Line or chip appearance; defaults to [SeedTabsVariant.line].
   final SeedTabsVariant variant;
+  /// Tab height, chosen by [variant] when the constructor omits it.
   final SeedTabsSize size;
+  /// Stretches headers to fill the strip; defaults to true.
   final bool fill;
+  /// Adds fading scroll edges for chip variants; defaults to false.
   final bool showScrollFog;
+  /// Keyboard traversal axis; defaults to [Axis.horizontal].
   final Axis orientation;
 
   /// Optional list inset for chip variants. The default remains 16px on both
   /// sides; this corresponds to ChipTabsList's customizable CSS padding.
   final EdgeInsetsGeometry? chipListPadding;
 
+  /// Creates a controlled SEED tab strip with [items] and [selectedIndex].
+  ///
+  /// [onTabSelected] reports user interaction. [variant] chooses line, solid
+  /// chip, or outlined chip styling; [size] defaults to small for line and
+  /// medium for chips. [fill] controls fill versus content-hugging headers,
+  /// [showScrollFog] fades scroll edges for chips, [orientation] determines
+  /// directional keyboard traversal, and [chipListPadding] overrides chip
+  /// list insets. Use `SeedTabsView` to manage corresponding content pages.
+  /// An optional `key` preserves Flutter widget identity.
   const SeedTabs({
     super.key,
     required this.items,
@@ -90,6 +123,7 @@ class SeedTabs extends StatefulWidget {
                : SeedTabsSize.medium);
 
   @override
+  /// Creates the state that draws, measures, and reveals the selected tab.
   State<SeedTabs> createState() => _SeedTabsState();
 }
 

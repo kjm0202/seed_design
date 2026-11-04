@@ -5,14 +5,26 @@ import 'package:flutter/services.dart';
 /// Only the selected choice is in the Tab order; arrows wrap and skip disabled
 /// items. Focus and selection always move together.
 class SeedChoiceGroup extends StatefulWidget {
+  /// Index of the active choice; an invalid or disabled index moves the Tab stop to the first enabled choice.
   final int selectedIndex;
+  /// Per-choice enable flags; list length determines the number of focus nodes.
   final List<bool> enabled;
+  /// Receives the new enabled index selected by arrow/Home/End keyboard navigation.
   final ValueChanged<int> onSelected;
 
+  /// False when the group scrolls its selection into view itself, so moving
+  /// focus never scrolls an enclosing page.
   final bool revealOnMove;
+  /// Builds the group with one managed [FocusNode] for each entry in [enabled].
   final Widget Function(BuildContext, List<FocusNode>) builder;
+  /// Direction of arrow-key navigation: horizontal, vertical, or null for both.
   final Axis? axis;
 
+  /// Creates a roving-keyboard-focus selection group.
+  ///
+  /// [selectedIndex] selects the Tab stop, [enabled] specifies each item enabled state, and [onSelected]
+  /// receives the chosen index. [builder] receives owned [FocusNode]s; [axis] limits arrow navigation
+  /// (null accepts both axes). [revealOnMove] defaults to true.
   const SeedChoiceGroup({
     super.key,
     required this.selectedIndex,
@@ -23,6 +35,7 @@ class SeedChoiceGroup extends StatefulWidget {
     this.axis,
   });
 
+  /// Creates the state that owns focus nodes and handles roving keyboard selection.
   @override
   State<SeedChoiceGroup> createState() => _SeedChoiceGroupState();
 }

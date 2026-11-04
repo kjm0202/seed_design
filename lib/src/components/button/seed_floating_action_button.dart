@@ -12,18 +12,34 @@ import '../overlay/seed_anchored_overlay.dart';
 ///
 /// Prominently displays the screen's primary action floating above content.
 class SeedFloatingActionButton extends StatelessWidget {
+  /// Primary icon; uses 24 px in compact mode and 16 px with a label.
   final Widget icon;
+  /// Optional text displayed by the extended button.
   final String? label;
+  /// Explicit accessible name, defaulting to [label] when provided.
   final String? semanticsLabel;
+  /// Activation callback; null disables the action.
   final VoidCallback? onPressed;
+  /// Whether the label is eligible to appear; null uses `label != null`.
   final bool? extended;
+  /// Optional scroll source; scrolling down hides the label, up shows it.
+  /// The controller remains owned and disposed by the caller.
   final ScrollController? scrollController;
+  /// Menu sections for the [SeedFloatingActionButton.menu] constructor.
   final List<SeedMenuGroupData>? menuGroups;
+  /// Optional external controller for a menu-trigger floating button.
   final SeedOverlayController? menuController;
+  /// Brand fill when true; neutral fill when false (default true).
   final bool isBrand;
+  /// Flutter Hero transition tag; null disables Hero wrapping.
   final Object? heroTag;
+  /// Optional Flutter Material tooltip.
   final String? tooltip;
 
+  /// Creates a floating action, icon-only unless [label] is supplied.
+  ///
+  /// [extended] overrides the initial label visibility and [scrollController]
+  /// collapses the label while scrolling down.
   const SeedFloatingActionButton({
     super.key,
     this.heroTag,
@@ -38,6 +54,8 @@ class SeedFloatingActionButton extends StatelessWidget {
   }) : menuGroups = null,
        menuController = null;
 
+  /// Creates a floating action with a required [label].
+  /// Label visibility still follows [extended] and [scrollController].
   const SeedFloatingActionButton.extended({
     super.key,
     this.heroTag,
@@ -52,6 +70,10 @@ class SeedFloatingActionButton extends StatelessWidget {
   }) : menuGroups = null,
        menuController = null;
 
+  /// Creates a menu-trigger floating button from [groups].
+  ///
+  /// The menu opens above the button; [menuController] can manage its overlay.
+  /// This variant uses brand styling and does not accept [onPressed].
   const SeedFloatingActionButton.menu({
     super.key,
     this.heroTag,

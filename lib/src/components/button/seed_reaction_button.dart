@@ -12,10 +12,14 @@ import '../feedback/seed_progress_circle.dart';
 
 /// Size options for [SeedReactionButton].
 enum SeedReactionButtonSize {
+  /// Compact 32 px reaction button.
   xsmall,
+  /// Standard 36 px reaction button.
   small;
 
+  /// Minimum height in logical pixels.
   double get height => this == SeedReactionButtonSize.xsmall ? 32.0 : 36.0;
+  /// Leading icon size (18 logical pixels in either size).
   double get iconSize => 18.0;
 }
 
@@ -32,20 +36,39 @@ class SeedReactionButton extends StatefulWidget {
   /// The supplied controlled value, or the initial uncontrolled value.
   @Deprecated('Use pressed instead.')
   bool get isReacted => _isReacted ?? defaultIsReacted;
+  /// Optional displayed reaction count; zero suppresses the count text.
   final int count;
+  /// Optional text preceding the reaction count.
   final String? label;
+  /// Legacy reaction callback; prefer [onPressedChange].
   @Deprecated('Use onPressedChange instead.')
   final ValueChanged<bool>? onReactedChanged;
+  /// Controlled reaction state, or null for internally managed state.
   bool? get pressed => _isReacted;
+  /// Initial reaction state for internally managed mode (default false).
   bool get defaultPressed => defaultIsReacted;
+  /// Called with the proposed next pressed state after activation.
   ValueChanged<bool>? get onPressedChange => onReactedChanged;
+  /// Leading icon; defaults to the filled or outlined heart by state.
   final Widget? prefixIcon;
+  /// Button height preset, defaulting to [SeedReactionButtonSize.small].
   final SeedReactionButtonSize size;
+  /// Shows a progress indicator in place of content and blocks activation.
   final bool loading;
+  /// Whether the button accepts user input; defaults to true.
   final bool enabled;
   final String? _semanticsLabel;
+  /// Configured accessible name, defaulting to '관심'.
+  /// The rendered name also falls back to the visible label or localization.
   String get semanticsLabel => _semanticsLabel ?? '관심';
 
+  /// Creates a reaction control equivalent to React `ReactionButton`.
+  ///
+  /// [pressed]/[defaultPressed]/[onPressedChange] are the preferred toggle API.
+  /// [isReacted], [defaultIsReacted], and [onReactedChanged] are legacy aliases;
+  /// each alias pair is mutually exclusive. Uncontrolled state starts from
+  /// [defaultPressed] and changes on taps; controlled state changes only when
+  /// the parent supplies a new [pressed] value.
   const SeedReactionButton({
     super.key,
     bool? pressed,

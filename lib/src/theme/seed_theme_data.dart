@@ -7,11 +7,16 @@ import '../foundations/radius/seed_radius.dart';
 
 /// Complete configuration of SEED Design System theme.
 class SeedThemeData {
+  /// Brightness used by the generated Material ColorScheme and dark-mode check.
   final Brightness brightness;
+  /// SEED semantic foreground, background, stroke and manner-temperature colors.
   final SeedColorScheme colorScheme;
+  /// SEED text scale and semantic styles.
   final SeedTypography typography;
+  /// Three-level elevation shadow theme extension.
   final SeedShadows shadows;
 
+  /// Creates a complete theme with required [brightness], [colorScheme], [typography], and [shadows].
   const SeedThemeData({
     required this.brightness,
     required this.colorScheme,
@@ -19,6 +24,9 @@ class SeedThemeData {
     required this.shadows,
   });
 
+  /// Creates light semantic colors, typography and elevation.
+  ///
+  /// [fontFamily] overrides the default text family when provided; null leaves the family unspecified.
   factory SeedThemeData.light({String? fontFamily}) {
     const colorScheme = SeedColorScheme.light();
     return SeedThemeData(
@@ -32,6 +40,9 @@ class SeedThemeData {
     );
   }
 
+  /// Creates dark semantic colors, typography and elevation.
+  ///
+  /// [fontFamily] overrides the default text family when provided; null leaves the family unspecified.
   factory SeedThemeData.dark({String? fontFamily}) {
     const colorScheme = SeedColorScheme.dark();
     return SeedThemeData(
@@ -45,8 +56,10 @@ class SeedThemeData {
     );
   }
 
+  /// Whether the theme brightness is dark.
   bool get isDark => brightness == Brightness.dark;
 
+  /// Copies the theme, replacing non-null values for brightness, colors, typography, or shadows.
   SeedThemeData copyWith({
     Brightness? brightness,
     SeedColorScheme? colorScheme,
@@ -403,6 +416,9 @@ extension SeedMaterialThemeExtension on ThemeData {
   ///
   /// Preserves custom app configurations while seamlessly applying SEED design tokens
   /// and Material 3 theme overrides.
+  ///
+  /// Set [preserveComponentThemes] to retain app-specific component overrides.
+  /// SEED widget styling continues to come from SEED tokens and widget props.
   ///
   /// An explicit [fontFamily] overrides both the host font and [seedTheme]'s
   /// typography, preserving its fallback fonts. An explicit [seedTheme] supplies

@@ -16,8 +16,13 @@ String _formatTemperature(double value) =>
 
 /// Helper class to resolve temperature to SEED 10-level scale.
 class SeedMannerTempLevel {
+  /// Non-instantiable holder for the official temperature thresholds.
   const SeedMannerTempLevel._();
 
+  /// Maps a Celsius value to a level from 1 through 10.
+  ///
+  /// Levels change at 30, 36, 36.5, 37, 40, 45, 55, 65 and 80 °C.
+  /// Throws [ArgumentError] for NaN or infinite temperatures.
   static int fromTemperature(double temperature) {
     if (!temperature.isFinite) {
       throw ArgumentError.value(temperature, 'temperature', 'Must be finite');
@@ -30,6 +35,8 @@ class SeedMannerTempLevel {
     return 10;
   }
 
+  /// Returns a system-emoji fallback for [level], clamped to 1–10.
+  /// These emoji are separate from the licensed official emote artwork.
   static String getEmoji(int level) {
     switch (level.clamp(1, 10)) {
       case 1:
@@ -62,13 +69,19 @@ class SeedMannerTempLevel {
 /// Compact badge displaying Karrot manner temperature (e.g. 36.5°C)
 /// with level-specific background and text color tokens.
 class SeedMannerTempBadge extends StatelessWidget {
+  /// Celsius temperature displayed in the badge.
   final double temperature;
 
   /// Explicit React level (l1..l10), independent of the displayed temperature.
   /// Null preserves the temperature-derived level.
   final int? level;
+  /// Displays a system emoji after the temperature (false by default).
   final bool showEmoji;
 
+  /// Creates a compact temperature badge.
+  ///
+  /// [level] overrides only the color/emote level, not [temperature] text.
+  /// Values outside 1–10 are rejected by assertion.
   const SeedMannerTempBadge({
     super.key,
     required this.temperature,
@@ -119,7 +132,9 @@ class SeedMannerTempBadge extends StatelessWidget {
 /// Shows temperature with progress bar gauge, level indicator,
 /// and descriptive reliability level.
 class SeedMannerTemp extends StatelessWidget {
+  /// Celsius temperature shown and mapped into a 10-level scale.
   final double temperature;
+  /// Optional smaller line of text beneath the temperature.
   final String? subtitle;
 
   /// Supply the product's licensed emote asset. No network asset is fetched.
@@ -127,8 +142,14 @@ class SeedMannerTemp extends StatelessWidget {
 
   /// Opt-in compatibility display; system emoji are not the official artwork.
   final bool showEmoji;
+  /// Shows an 80 px progress gauge from 0 to 99 °C when true (default false).
   final bool showProgress;
 
+  /// Creates the larger manner-temperature reading.
+  ///
+  /// [emoteBuilder] receives the computed 1–10 level for licensed imagery.
+  /// When it is absent [showEmoji] selects a system emoji fallback; both
+  /// are omitted by default. [showProgress] enables the optional gauge.
   const SeedMannerTemp({
     super.key,
     required this.temperature,

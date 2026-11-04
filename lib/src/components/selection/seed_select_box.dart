@@ -8,28 +8,36 @@ import '../../foundations/feedback/seed_control.dart';
 import '../../foundations/motion/seed_motion.dart';
 import 'seed_select_box_group.dart';
 
-/// Control icon style for [SeedSelectBox].
+/// Type of selection glyph displayed in a select box.
 enum SeedSelectBoxControl {
+  /// Checkbox-style tick mark.
   checkmark,
 
-/// Layout orientation for [SeedSelectBox].
+  /// Radio-style circle mark.
   radiomark,
 
+  /// Omit the selection mark.
   none,
 }
 
+/// Arrangement of a select box's content.
 enum SeedSelectBoxLayout {
+  /// Content arranged left to right.
   horizontal,
 
+  /// Content arranged top to bottom.
   vertical,
 }
 
 /// Visibility policy for the footer of a [SeedSelectBox].
 enum SeedSelectBoxFooterVisibility {
+  /// Show only when selected.
   whenSelected,
 
+  /// Show only when not selected.
   whenNotSelected,
 
+  /// Show regardless of selection.
   always,
 }
 
@@ -37,43 +45,70 @@ enum SeedSelectBoxFooterVisibility {
 ///
 /// An explicit bordered card container for selecting single or multiple options.
 class SeedSelectBox extends StatefulWidget {
+  /// Primary text of the selection card.
   final String title;
 
+  /// Optional supporting text below [title].
   final String? description;
 
+  /// Optional leading graphic.
   final Widget? prefix;
 
+  /// Custom content region within the card.
   final Widget? customContent;
   final bool? _selected;
+  /// Deprecated spelling of [defaultChecked].
   @Deprecated('Use defaultChecked instead.')
   final bool defaultSelected;
 
+  /// Parent-controlled selection state, null for internal state.
   bool? get checked => _selected;
 
+  /// Initial selection for uncontrolled use, false by default.
   bool get defaultChecked => defaultSelected;
 
+  /// Callback for a proposed change of selection.
   ValueChanged<bool>? get onCheckedChange => onSelected;
 
+  /// Identifier for radio-mode selection within [SeedSelectBoxGroup].
   final Object? value;
 
+  /// Deprecated spelling of [onCheckedChange].
   @Deprecated('Use onCheckedChange instead.')
   final ValueChanged<bool>? onSelected;
   final SeedSelectBoxControl? _control;
   final SeedSelectBoxLayout? _layout;
+  /// Whether the card accepts input; defaults to true.
   final bool enabled;
 
+  /// Allows focus while suppressing changes to selection; defaults to false.
   final bool readOnly;
 
+  /// Displays an indeterminate selection mark.
   final bool indeterminate;
 
+  /// Marks the control invalid for accessible form semantics.
   final bool invalid;
 
+  /// Additional leading label, trailing decoration, and expandable footer.
   final Widget? label, suffix, footer;
 
+  /// Whether a hidden footer is removed from layout, true by default.
   final bool collapseFooter;
 
+  /// Conditional visibility of [footer], independent of [collapseFooter].
   final SeedSelectBoxFooterVisibility? footerVisibility;
 
+  /// Creates a selection card that can be standalone or grouped.
+  ///
+  /// [checked], [defaultChecked] and [onCheckedChange] use React's checkbox
+  /// ownership model. [selected], [defaultSelected] and [onSelected] are
+  /// deprecated compatibility spellings and cannot coexist with their
+  /// matching official parameter. In a radio [SeedSelectBoxGroup], [value]
+  /// identifies this option and the group controls selection.
+  ///
+  /// [control] defaults to a checkmark outside a radio group and a radio mark
+  /// inside one; [layout] defaults to horizontal.
   const SeedSelectBox({
     super.key,
     required this.title,
@@ -110,14 +145,18 @@ class SeedSelectBox extends StatefulWidget {
        // ignore: prefer_initializing_formals
        _layout = layout;
 
+  /// Legacy effective selection, using initial state when uncontrolled.
   @Deprecated('Use checked or defaultChecked instead.')
   bool get selected => _selected ?? defaultSelected;
 
+  /// Effective icon type, default [SeedSelectBoxControl.checkmark].
   SeedSelectBoxControl get control =>
       _control ?? SeedSelectBoxControl.checkmark;
 
+  /// Effective layout, default [SeedSelectBoxLayout.horizontal].
   SeedSelectBoxLayout get layout => _layout ?? SeedSelectBoxLayout.horizontal;
 
+  /// Creates state for uncontrolled card selection and group focus.
   @override
   State<SeedSelectBox> createState() => _SeedSelectBoxState();
 }

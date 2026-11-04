@@ -12,22 +12,34 @@ import '../feedback/seed_progress_circle.dart';
 
 /// Variant options for [SeedButton].
 enum SeedButtonVariant {
+  /// Prominent brand-filled action.
   brandSolid,
+  /// Strong neutral-filled action.
   neutralSolid,
+  /// Subtle neutral-filled action.
   neutralWeak,
+  /// Brand foreground over a transparent outlined surface.
   brandOutline,
+  /// Neutral foreground over a transparent outlined surface.
   neutralOutline,
+  /// Destructive or critical filled action.
   criticalSolid,
+  /// Transparent text/icon action without a resting fill.
   ghost,
 }
 
 /// Size options for [SeedButton].
 enum SeedButtonSize {
+  /// Compact 32 px button.
   xsmall,
+  /// Small 36 px button.
   small,
+  /// Medium 40 px button, the default.
   medium,
+  /// Large 52 px button.
   large;
 
+  /// Minimum button height for this size preset.
   double get height {
     switch (this) {
       case SeedButtonSize.xsmall:
@@ -72,6 +84,7 @@ enum SeedButtonSize {
   /// Default icon size (defaults to [iconOnlySize] for backward compatibility).
   double get iconSize => iconOnlySize;
 
+  /// Text-button content insets for the selected preset.
   EdgeInsets get padding {
     switch (this) {
       case SeedButtonSize.xsmall:
@@ -85,6 +98,7 @@ enum SeedButtonSize {
     }
   }
 
+  /// Corner radius for the preset; extra-small buttons use a pill radius.
   BorderRadius get borderRadius {
     switch (this) {
       case SeedButtonSize.xsmall:
@@ -104,27 +118,50 @@ enum SeedButtonSize {
 /// Supports all 7 standard variants, 4 sizes, prefix/suffix icons,
 /// loading state, and native SEED physical scale feedback.
 class SeedButton extends StatelessWidget {
+  /// Text displayed on the button; an icon is required when null.
   final String? label;
+  /// Standalone icon for icon-only presentation when [label] is null.
   final Widget? icon;
+  /// Leading icon used alongside text.
   final Widget? prefixIcon;
+  /// Trailing icon used alongside text.
   final Widget? suffixIcon;
+  /// Activation callback; null makes the button noninteractive.
   final VoidCallback? onPressed;
+  /// Visual recipe, defaulting to [SeedButtonVariant.brandSolid].
   final SeedButtonVariant variant;
+  /// Size recipe, defaulting to [SeedButtonSize.medium].
   final SeedButtonSize size;
+  /// Expands a text button to its parent's available width (default false).
   final bool isFullWidth;
+  /// Replaces content with a spinner while retaining the button dimensions.
   final bool loading;
+  /// Explicit interaction flag; false disables pressing.
   final bool enabled;
+  /// Prevents presses during [loading] when true (the default).
   final bool disableOnLoading;
 
+  /// Extends the surface past the layout by the horizontal padding, so the
+  /// content aligns with its surroundings (React's `bleedX="asPadding"`).
   final bool bleed;
 
+  /// Label and icon color. Applies only to [SeedButtonVariant.ghost], as in React.
   final Color? textColor;
 
+  /// Label weight. Applies only to [SeedButtonVariant.ghost], as in React.
   final FontWeight? fontWeight;
+  /// Accessible name override; defaults to [label] if available.
   final String? semanticsLabel;
+  /// Optional externally managed keyboard focus node.
   final FocusNode? focusNode;
+  /// Requests initial keyboard focus when true (default false).
   final bool autofocus;
 
+  /// Creates a SEED action button.
+  ///
+  /// Supply [label] or [icon]; [prefixIcon] and [suffixIcon] surround text.
+  /// [onPressed] is required but may be null for a disabled action. The
+  /// Flutter-only [focusNode] and [autofocus] control keyboard focus.
   const SeedButton({
     super.key,
     this.label,
@@ -149,7 +186,10 @@ class SeedButton extends StatelessWidget {
          'Either label or icon must be specified.',
        );
 
-  /// Factory for Icon-Only button.
+  /// Creates a square icon-only button with dimensions from [size].
+  ///
+  /// An explicit [semanticsLabel] should identify the icon's action.
+  /// This constructor fixes [label], [prefixIcon], and [suffixIcon] to null.
   const SeedButton.iconOnly({
     super.key,
     required Widget this.icon,
@@ -435,6 +475,8 @@ class SeedButton extends StatelessWidget {
   }
 }
 
+/// Lays out as if the child were narrower by [amount] on each side while
+/// painting and hit-testing it at full size, like a CSS negative margin.
 class _SeedHorizontalBleed extends SingleChildRenderObjectWidget {
   const _SeedHorizontalBleed({required this.amount, required super.child});
   final double amount;

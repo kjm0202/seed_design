@@ -5,6 +5,9 @@ import 'seed_field.dart';
 
 /// UI entries only. File selection, validation and uploading belong to the app.
 class SeedAttachmentController extends ChangeNotifier {
+  /// Creates a UI-only controller from initial [items].
+  /// [maxCount] defaults to 1 and must be positive; [enabled] defaults to true and
+  /// [readOnly] to false. Selecting, validating and uploading files belong to callers.
   SeedAttachmentController({
     List<SeedAttachmentItem> items = const [],
     this.maxCount = 1,
@@ -13,14 +16,21 @@ class SeedAttachmentController extends ChangeNotifier {
   }) : _items = List.of(items),
        assert(maxCount > 0);
   List<SeedAttachmentItem> _items;
+  /// Maximum number of entries [addEntries] accepts; existing entries are not pruned.
   int maxCount;
+  /// Interaction gates: enabled blocks additions/reordering when false; readOnly also blocks removal.
   bool enabled, readOnly;
+  /// Unmodifiable snapshot of the ordered entries.
   List<SeedAttachmentItem> get items => List.unmodifiable(_items);
+  /// Whether adding or reordering is allowed.
   bool get canEdit => enabled && !readOnly;
 
   /// Disabling the trigger still allows pruning existing entries.
   bool get canRemove => !readOnly;
+  /// Whether the controller is editable and below [maxCount].
   bool get canAdd => canEdit && _items.length < maxCount;
+  /// Replaces all entries; entry IDs must be unique.
+  /// [notify] defaults to true and controls whether listeners are notified.
   void replaceItems(List<SeedAttachmentItem> items, {bool notify = true}) {
     assert(
       items.map((item) => item.id).toSet().length == items.length,
@@ -44,6 +54,8 @@ class SeedAttachmentController extends ChangeNotifier {
     replaceItems([..._items, ...added]);
   }
 
+  /// Replaces the status for entry [id] with [status] and optional [progress].
+  /// Null [progress] clears any previous progress, even if edits are disabled.
   void updateStatus(
     String id,
     SeedAttachmentStatus status, {
@@ -60,6 +72,8 @@ class SeedAttachmentController extends ChangeNotifier {
       else
         item,
   ]);
+  /// Removes the entry matching [id] when item and controller allow removal.
+  /// Disabled controllers can still remove; read-only controllers cannot.
   void remove(String id) {
     if (!canRemove) return;
     final item = _items.where((item) => item.id == id).firstOrNull;
@@ -88,6 +102,21 @@ class SeedAttachmentController extends ChangeNotifier {
 
 /// Field composition for externally supplied image/file previews.
 class SeedAttachmentDisplayField extends StatefulWidget {
+  /// Composes the React AttachmentDisplay field with externally supplied entries.
+  /// [entries] is controlled; [defaultEntries] is an uncontrolled initial seed.
+  /// [controller] is mutually exclusive with either. [initialEntries] and
+  /// [onEntriesChanged] are deprecated aliases; [onEntriesChange] reports proposals.
+  ///
+  /// [onTrigger] receives the active controller for application-owned selection;
+  /// [onRetry] receives an item and controller. [maxEntries] defaults to 1.
+  /// [enabled] gates addition; [readOnly] additionally blocks removal.
+  /// [reorderable] enables item dragging. [itemBuilder] overrides the default list.
+  /// [label], [description], [indicator], [labelWeight], [showRequiredIndicator]
+  /// and [errorMessage] configure the field. [invalid] defaults to null and then
+  /// follows the presence of [errorMessage]. [showDropzone] swaps the add tile for
+  /// the dropzone, with externally supplied [isDraggingOver] highlight.
+  /// [inset], [itemSize], [triggerIcon] and [representativeLabel] are composition
+  /// options, not automatic file-handling features.
   const SeedAttachmentDisplayField({
     super.key,
     this.controller,
@@ -132,27 +161,42 @@ class SeedAttachmentDisplayField extends StatefulWidget {
                  initialEntries == null),
          'A controller cannot be combined with entries or an initial seed.',
        );
+  /// Optional externally owned controller; it is not disposed by the field.
   final SeedAttachmentController? controller;
+  /// Controlled attachment list; the parent commits proposed updates.
   final List<SeedAttachmentItem>? entries;
   @Deprecated('Use defaultEntries instead.')
+  /// Deprecated initial-list alias; use [defaultEntries].
   final List<SeedAttachmentItem> initialEntries;
 
   /// One-time seed; [initialEntries] is a compatibility alias.
   List<SeedAttachmentItem> get defaultEntries => initialEntries;
   @Deprecated('Use onEntriesChange instead.')
+  /// Deprecated callback alias; use [onEntriesChange].
   final ValueChanged<List<SeedAttachmentItem>>? onEntriesChanged;
+  /// React-aligned callback receiving proposed attachment lists.
   ValueChanged<List<SeedAttachmentItem>>? get onEntriesChange =>
       onEntriesChanged;
+  /// Add-trigger callback; caller uses controller to add selected entries.
   final ValueChanged<SeedAttachmentController>? onTrigger;
+  /// Retry intent callback receiving the affected entry and active controller.
   final void Function(SeedAttachmentItem, SeedAttachmentController)? onRetry;
+  /// Maximum number of entries permitted by the add control (default 1).
   final int maxEntries;
+  /// Flags for add availability, read-only protection, drag reordering,
+  /// dropzone visibility and external drag-over feedback, respectively.
+  /// Only [enabled] defaults to true; the other flags default to false.
   final bool enabled, readOnly, reorderable, showDropzone, isDraggingOver;
+  /// Square preview width and height, in logical pixels (default 80).
   final double itemSize;
+  /// Optional custom icon for the add tile.
   final Widget? triggerIcon;
 
   /// Badge text for the representative item. Existing callers retain '대표'.
   final String? _representativeLabel;
+  /// Representative image badge text; defaults to '대표'.
   String get representativeLabel => _representativeLabel ?? '대표';
+  /// Optional field label, helper description and error message.
   final String? label, description, errorMessage;
 
   /// Independent validation state. When omitted, a legacy [errorMessage]
@@ -162,9 +206,13 @@ class SeedAttachmentDisplayField extends StatefulWidget {
   /// Displays the required mark beside [label], as in React AttachmentDisplayField.
   final bool showRequiredIndicator;
 
+  /// Text beside [label], as in React AttachmentDisplayField.
   final String? indicator;
+  /// Label type weight; defaults to [SeedFieldLabelWeight.medium].
   final SeedFieldLabelWeight labelWeight;
+  /// Custom item-list builder, called with the live attachment controller.
   final Widget Function(BuildContext, SeedAttachmentController)? itemBuilder;
+  /// Padding around attachment content (default [EdgeInsets.zero]).
   final EdgeInsetsGeometry inset;
   @override
   State<SeedAttachmentDisplayField> createState() =>
@@ -275,7 +323,13 @@ class _SeedAttachmentDisplayFieldState
   }
 }
 
+/// Compatibility alias of [SeedAttachmentDisplayField] with item-based names.
 class SeedAttachmentField extends SeedAttachmentDisplayField {
+  /// Compatibility wrapper exposing [SeedAttachmentDisplayField] composition.
+  /// [items]/[defaultItems]/[initialItems] map to entries/defaultEntries/
+  /// initialEntries; [onItemsChanged] maps to onEntriesChange; [onAdd] invokes
+  /// the add trigger without passing a controller. [maxCount] maps to maxEntries
+  /// and defaults to 1. Other named arguments are forwarded unchanged.
   SeedAttachmentField({
     super.key,
     super.controller,

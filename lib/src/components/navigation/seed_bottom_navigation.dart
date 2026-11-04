@@ -11,16 +11,27 @@ import '../layout/seed_divider.dart';
 
 /// Item definition for [SeedBottomNavigation].
 class SeedBottomNavigationItem {
+  /// Icon displayed when this destination is not selected.
   final Widget icon;
+  /// Icon shown for the selected destination; falls back to [icon].
   final Widget? activeIcon;
+  /// Visible, accessible destination name.
   final String label;
+  /// Unread count displayed in a notification badge, when supplied.
   final int? notificationCount;
+  /// Shows a notification dot without requiring a positive count.
   final bool showNotificationDot;
+  /// Whether this destination can be focused and selected; defaults to true.
   final bool enabled;
 
   /// Override for localized notification information read by screen readers.
   final String? notificationSemanticsLabel;
 
+  /// Defines a destination with an [icon], [label], and optional notifications.
+  ///
+  /// [activeIcon] replaces [icon] when selected. [notificationCount] and
+  /// [showNotificationDot] control the badge; [enabled] defaults to true.
+  /// [notificationSemanticsLabel] overrides the localized badge announcement.
   const SeedBottomNavigationItem({
     required this.icon,
     this.activeIcon,
@@ -53,11 +64,21 @@ class SeedBottomNavigationItem {
 /// Fixed at the bottom of the root screen providing navigation across up to 5 tabs,
 /// with notification badge support and safe-area insets.
 class SeedBottomNavigation extends StatelessWidget {
+  /// Root destinations, limited to two through five items.
   final List<SeedBottomNavigationItem> items;
+  /// Zero-based selected destination, controlled by the parent.
   final int currentIndex;
+  /// Invoked with the tapped destination's zero-based index.
   final ValueChanged<int> onTap;
+  /// Background override; defaults to the SEED layer surface color.
   final Color? backgroundColor;
 
+  /// Displays [items] in a safe-area-aware bottom bar.
+  ///
+  /// The parent supplies [currentIndex] and handles [onTap] to update it.
+  /// The bar requires two to five items and keeps their icons and labels in
+  /// one row; [backgroundColor] overrides the default SEED surface.
+  /// An optional `key` identifies this widget within Flutter's element tree.
   const SeedBottomNavigation({
     super.key,
     required this.items,
@@ -70,6 +91,7 @@ class SeedBottomNavigation extends StatelessWidget {
        );
 
   @override
+  /// Builds the bottom navigation destinations and their selection semantics.
   Widget build(BuildContext context) {
     final colors = context.seedColor;
     final typography = context.seedTypography;

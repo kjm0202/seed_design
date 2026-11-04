@@ -11,18 +11,26 @@ import '../../theme/seed_theme.dart';
 
 /// Tone options for [SeedPageBanner].
 enum SeedPageBannerTone {
+  /// Neutral system message.
   neutral,
+  /// Informational message.
   informative,
+  /// Success or positive outcome.
   positive,
+  /// Warning requiring caution.
   warning,
+  /// Critical or destructive message.
   critical,
+  /// Special gradient promotion or magic/AI message; weak variant only.
   magic,
 }
 
 /// Variant options for [SeedPageBanner].
 enum SeedPageBannerVariant {
+  /// Subdued tonal background.
   weak,
 
+  /// Strong filled background.
   solid,
 }
 
@@ -31,23 +39,40 @@ enum SeedPageBannerVariant {
 /// Prominently communicates high-level notifications, system alerts,
 /// and promotions at the top of a page.
 class SeedPageBanner extends StatefulWidget {
+  /// Optional emphasized leading title, omitted when null.
   final String? title;
+  /// Optional body text; shown after [title] when both are supplied.
   final String? description;
+  /// Optional text action displayed beside the message.
   final String? linkText;
+  /// Invoked when the [linkText] action is pressed.
   final VoidCallback? onLinkTap;
+  /// Enables an actionable banner surface; tapping it invokes this callback.
   final VoidCallback? onTap;
+  /// Invoked on dismissal; also enables the visible dismiss control.
   final VoidCallback? onDismiss;
 
   /// When supplied, visibility is owned by the parent.
+  /// A parent must update this value after [onDismiss] to hide the banner.
   final bool? open;
+  /// Initial visibility in internally managed mode (true by default).
   final bool defaultOpen;
 
   /// Shows a close button even when [onDismiss] is omitted.
   final bool dismissible;
+  /// Optional leading icon, displayed at 16 logical pixels.
   final Widget? prefixIcon;
+  /// Semantic tone, default [SeedPageBannerTone.neutral].
   final SeedPageBannerTone tone;
+  /// Color strength, default [SeedPageBannerVariant.weak].
   final SeedPageBannerVariant variant;
 
+  /// Creates a page-level message bar.
+  ///
+  /// [title] and [description] are independently optional. [onTap] makes the
+  /// entire banner actionable; [linkText]/[onLinkTap] add a separate text action.
+  /// A dismiss control is shown for [dismissible] or [onDismiss]. The
+  /// `magic` tone cannot be combined with the solid variant.
   const SeedPageBanner({
     super.key,
     this.title,
@@ -73,6 +98,7 @@ class SeedPageBanner extends StatefulWidget {
 
   bool get _isActionable => onTap != null;
 
+  /// (target height 40 - t3 line height 18) / 2, as in the official recipe.
   static const double _linkTargetBleed = 11;
 
   Widget _scaleContent(Widget child) =>

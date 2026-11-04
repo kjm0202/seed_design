@@ -7,6 +7,7 @@ import 'seed_scroll_fog.dart';
 
 /// Scroll surface with reserved fog padding and a divider after leaving the top.
 class SeedScrollArea extends StatefulWidget {
+  /// Creates a scroll view with optional fog, a scrolled divider, and focus.
   const SeedScrollArea({
     super.key,
     required this.child,
@@ -23,19 +24,32 @@ class SeedScrollArea extends StatefulWidget {
     this.fogOnlyWhenScrollable = false,
     this.focusableWhenScrollable = false,
   });
+  /// Content of the single-child scroll view.
   final Widget child;
+  /// Optional external scroll controller; retained and disposed by its owner.
   final ScrollController? controller;
+  /// Scroll axis; defaults to [Axis.vertical].
   final Axis direction;
+  /// Edges showing fog, initially the bottom edge.
   final Set<SeedScrollFogPlacement> placements;
+  /// Default edge fade depth in logical pixels (20).
   final double fogSize;
+  /// Per-edge fade depth overrides to [fogSize].
   final Map<SeedScrollFogPlacement, double>? fogSizes;
+  /// Content padding, added to the reserved fog edge insets.
   final EdgeInsetsGeometry padding;
+  /// Fog surface color; null uses the themed floating layer color.
   final Color? color;
+  /// [showScrolledDivider] draws a top divider after scrolling;
+  /// [hideScrollbar] (default true) hides the native scrollbar; [showFog]
+  /// (default true) toggles edge fog.
   final bool showScrolledDivider, hideScrollbar, showFog;
 
   /// Show the fade and reserve its padding only when content exceeds the viewport.
   final bool fogOnlyWhenScrollable;
 
+  /// Makes an overflowing area a keyboard stop, as browsers do for scrollers.
+  /// Tracks overflow even when [fogOnlyWhenScrollable] is false.
   final bool focusableWhenScrollable;
   @override
   State<SeedScrollArea> createState() => _SeedScrollAreaState();

@@ -11,20 +11,27 @@ import '../feedback/seed_progress_circle.dart';
 
 /// Variant options for [SeedToggleButton].
 enum SeedToggleButtonVariant {
+  /// Filled brand background when off.
   brandSolid,
 
+  /// Subdued neutral background.
   neutralWeak,
 }
 
 /// Size options for [SeedToggleButton].
 enum SeedToggleButtonSize {
+  /// 32 px high compact toggle.
   xsmall,
+  /// 36 px high standard toggle.
   small;
 
+  /// Minimum height for the size preset.
   double get height => this == SeedToggleButtonSize.xsmall ? 32.0 : 36.0;
 
+  /// Icon dimensions (14 px) for both presets.
   double get iconSize => 14.0;
 
+  /// Horizontal and vertical content insets for the size preset.
   EdgeInsets get padding {
     switch (this) {
       case SeedToggleButtonSize.xsmall:
@@ -43,26 +50,45 @@ enum SeedToggleButtonSize {
 
 /// Toggle Button component of SEED Design System.
 ///
-/// Supports state toggle (`pressed` / `selected`), `brandSolid` and `neutralWeak`
-/// variants, `xsmall` and `small` sizes, loading state, and native scale feedback.
+/// Uses the official `pressed`, `defaultPressed` and `onPressedChange` state.
+/// Supports `brandSolid` and `neutralWeak` variants, `xsmall` and `small` sizes,
+/// loading state, and native scale feedback.
 class SeedToggleButton extends StatefulWidget {
+  /// Controlled pressed state; null uses the widget's internal state.
   final bool? pressed;
+  /// Initial internal pressed value (false by default).
   final bool defaultPressed;
+  /// Receives the next pressed value after user activation.
   final ValueChanged<bool>? onPressedChange;
+  /// Optional text; when omitted [prefixIcon] must be supplied.
   final String? label;
+  /// Icon displayed before [label].
   final Widget? prefixIcon;
+  /// Icon displayed after [label].
   final Widget? suffixIcon;
+  /// Visual treatment, defaulting to [SeedToggleButtonVariant.brandSolid].
   final SeedToggleButtonVariant variant;
+  /// Size preset, defaulting to [SeedToggleButtonSize.small].
   final SeedToggleButtonSize size;
+  /// Replaces visible content with a spinner and prevents activation.
   final bool loading;
+  /// Allows interaction when true (the default).
   final bool enabled;
+  /// Overrides the accessible name derived from [label].
   final String? semanticsLabel;
 
+  /// Legacy selected-state getter; reports constructor configuration.
   @Deprecated('Use pressed or defaultPressed instead.')
   bool get selected => pressed ?? defaultPressed;
+  /// Legacy callback getter; use [onPressedChange].
   @Deprecated('Use onPressedChange instead.')
   ValueChanged<bool>? get onSelectedChanged => onPressedChange;
 
+  /// Creates a toggle button with controlled or internally managed state.
+  ///
+  /// [selected] and [onSelectedChanged] are deprecated constructor aliases
+  /// for [pressed] and [onPressedChange], respectively. Alias pairs must not
+  /// be passed together. The label or a leading icon is required.
   const SeedToggleButton({
     super.key,
     bool? pressed,

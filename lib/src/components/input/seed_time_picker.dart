@@ -8,12 +8,16 @@ import 'seed_wheel_picker.dart';
 
 /// Period for 12-hour format: [am] (오전) or [pm] (오후).
 enum SeedTimePeriod {
+  /// Ante meridiem (오전), for hours before noon.
   am('오전'),
 
+  /// Post meridiem (오후), for noon and later.
   pm('오후');
 
+  /// Creates a period with its Korean display [label].
   const SeedTimePeriod(this.label);
 
+  /// Korean short label of the day period.
   final String label;
 }
 
@@ -23,7 +27,18 @@ enum SeedTimePeriod {
 /// - Period Column (오전 / 오후)
 /// - Hour Column (1 ~ 12)
 /// - Minute Column (00 ~ 59 with optional [minuteStep])
+///
+/// Like React's TimePicker, the default is 00:00, [minuteStep] is five,
+/// and [locale] is `ko_KR`. Flutter represents the value with [TimeOfDay].
 class SeedTimePicker extends StatefulWidget {
+  /// Creates a three-column [SeedWheelPicker]-based time selector.
+  ///
+  /// [value] controls the current time. [defaultValue] initializes local
+  /// selection once and defaults to midnight; [initialTime] is deprecated.
+  /// [onValueChange] reports a selected [TimeOfDay] after the wheel settles,
+  /// while [onChanged] is a compatibility alias. Valid [minuteStep] values are
+  /// 1, 5, 10, 15, and 30. The four semantics labels identify the full picker
+  /// and its period, hour, and minute wheels, respectively.
   const SeedTimePicker({
     super.key,
     TimeOfDay? defaultValue,
@@ -54,29 +69,40 @@ class SeedTimePicker extends StatefulWidget {
   /// One-time uncontrolled seed; [initialTime] is a compatibility alias.
   TimeOfDay get defaultValue => initialTime;
 
-  /// Interval between selectable minute values (e.g. 1, 5, 10, 15).
+  /// Interval between selectable minutes: 1, 5, 10, 15, or 30 (default 5).
+  ///
+  /// Unaligned initial minutes are snapped to the nearest available step.
   final int minuteStep;
 
-  /// Callback when the selected time changes.
+  /// Deprecated callback for the selected time; use [onValueChange].
   @Deprecated('Use onValueChange instead.')
   final ValueChanged<TimeOfDay>? onChanged;
 
+  /// Reports the selected 24-hour time when a wheel selection changes.
   ValueChanged<TimeOfDay>? get onValueChange => onChanged;
 
   /// Overall height of the picker.
   final double height;
+  /// Controlled 24-hour time; null uses [defaultValue] as the local seed.
   final TimeOfDay? value;
 
+  /// Whether interaction is enabled (default true), and whether the user may
+  /// view but not change the time (default false).
   final bool enabled, readOnly;
 
+  /// Locale for numerals, period labels, and column order (default `ko_KR`).
   final Locale locale;
 
+  /// Optional accessible name of the entire picker.
   final String? semanticsLabel;
 
+  /// Accessible name of the AM/PM wheel.
   final String? periodSemanticsLabel;
 
+  /// Accessible name of the hour wheel.
   final String? hourSemanticsLabel;
 
+  /// Accessible name of the minute wheel.
   final String? minuteSemanticsLabel;
 
   @override

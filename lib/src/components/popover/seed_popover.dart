@@ -23,24 +23,42 @@ import '../../theme/seed_theme.dart';
 ///
 /// Anchored overlay card featuring standard Header, Title, Description,
 /// CloseButton (52px), Scrollable Body, and Footer/Action buttons.
+///
+/// This widget only renders the card. Pair it with [SeedPopoverTrigger] for
+/// React-style opening, focus restoration, dismissal, and mount lifecycle;
+/// [showSeedPopover] instead pushes a Flutter dialog route.
 class SeedPopover extends StatelessWidget {
+  /// Optional custom title widget, taking precedence over [titleText].
   final Widget? title;
+  /// Convenience string title when [title] is absent.
   final String? titleText;
+  /// Optional custom description widget, taking precedence over [descriptionText].
   final Widget? description;
+  /// Convenience description text when [description] is absent.
   final String? descriptionText;
+  /// Optional scrollable main content.
   final Widget? body;
+  /// Optional fixed footer below the body.
   final Widget? footer;
+  /// Invoked by the optional close button; caller handles dismissal.
   final VoidCallback? onClose;
 
   /// Accessible dialog name, especially when the visual header is omitted.
   final String? semanticsLabel;
+  /// Minimum card width in logical pixels (`320` by default).
   final double minWidth;
+  /// Maximum card width in logical pixels (`480` by default).
   final double maxWidth;
+  /// Maximum card height in logical pixels (`600` by default).
   final double maxHeight;
+  /// Whether the body scrolls within the fixed card header/footer.
   final bool scrollBody;
+  /// Whether a scroll-edge fog appears for overflowing body content.
   final bool showScrollFog;
+  /// Whether to render the close affordance; false by default.
   final bool showCloseButton;
 
+  /// Creates a composable popover card without showing or dismissing a route.
   const SeedPopover({
     super.key,
     this.title,
@@ -59,6 +77,9 @@ class SeedPopover extends StatelessWidget {
     this.showCloseButton = false,
   });
 
+  /// The official content is `width: auto`: as wide as its text, within
+  /// min/maxWidth. Flutter can't ask arbitrary widgets (a list, a LayoutBuilder)
+  /// for that width, so custom content keeps [maxWidth].
   double? _fittedWidth(
     BuildContext context,
     Widget? title,
@@ -286,7 +307,13 @@ class SeedPopover extends StatelessWidget {
   }
 }
 
-/// Helper function to show a [SeedPopover] anchored to a trigger target.
+/// Shows popover content in a Flutter modal dialog route at [anchorRect].
+///
+/// [anchorRect] uses global coordinates; [builder] constructs the route's
+/// content. The transparent barrier dismisses by tap when
+/// [barrierDismissible] is true (the default). The returned future completes
+/// with the dialog route's result. For React's non-modal Popover focus and
+/// mounting behavior, use [SeedPopoverTrigger] instead.
 Future<T?> showSeedPopover<T>({
   required BuildContext context,
   required Rect anchorRect,
@@ -385,8 +412,22 @@ class _SeedPopoverPositionDelegate extends SingleChildLayoutDelegate {
       anchor != oldDelegate.anchor || insets != oldDelegate.insets;
 }
 
-/// Lifecycle-managed anchored popover. The card remains independently composable.
+/// Lifecycle-managed non-modal popover, corresponding to React Popover.Root.
+///
+/// Unlike the generic `SeedAnchoredOverlay`, this trigger matches React
+/// Popover's `lazyMount: false` and `unmountOnExit: false` defaults: content is
+/// inserted even before its first opening and stays mounted while closed.
+/// [open] overrides [controller]; without either, [defaultOpen] initializes
+/// local state. [onOpenChange] reports proposed state changes with a reason.
+/// Open popovers focus their content by default and return focus on supported
+/// close actions. Escape closes the topmost nested popover; focus leaving
+/// content closes it when [closeOnFocusOut] is enabled.
 class SeedPopoverTrigger extends StatefulWidget {
+  /// Creates a popover with an independently built trigger and card.
+  ///
+  /// [triggerBuilder] receives `(context, isOpen, toggle)`; [builder] runs in
+  /// the floating content context. [slide] shifts content inside viewport
+  /// bounds and [flip] may choose the opposite side.
   const SeedPopoverTrigger({
     super.key,
     required this.triggerBuilder,
@@ -412,11 +453,22 @@ class SeedPopoverTrigger extends StatefulWidget {
   }) : closeOnFocusOut = closeOnFocusOut ?? closeOnInteractOutside,
        onOpenChanged = onOpenChange ?? onOpenChanged,
        assert(onOpenChange == null || onOpenChanged == null);
+  /// Creates the trigger from context, open state, and a toggle callback.
   final Widget Function(BuildContext, bool, VoidCallback) triggerBuilder;
+  /// Creates floating popover content; commonly a [SeedPopover].
   final WidgetBuilder builder;
+  /// Optional separate anchor widget for placement.
   final Widget? anchor;
+  /// External visibility controller when [open] is null.
   final SeedOverlayController? controller;
+  /// Parent-controlled visibility; the parent must accept callbacks and rebuild.
   final bool? open;
+  /// Initial visibility and position/focus/dismiss/mounting policies.
+  ///
+  /// [defaultOpen] defaults to false. [flip], [slide], [autoFocus], and
+  /// [closeOnInteractOutside] default to true; [lazyMount] and [unmountOnExit]
+  /// both default to false. [closeOnFocusOut] defaults to the value of
+  /// [closeOnInteractOutside], mirroring React's outside-interaction policy.
   final bool defaultOpen,
       flip,
       slide,
@@ -425,11 +477,16 @@ class SeedPopoverTrigger extends StatefulWidget {
       autoFocus,
       closeOnInteractOutside,
       closeOnFocusOut;
+  /// Deprecated Flutter compatibility name for [onOpenChange].
   @Deprecated('Use onOpenChange instead.')
   final SeedOverlayOpenChanged? onOpenChanged;
+  /// Receives proposed open changes with [SeedOverlayDismissReason].
   SeedOverlayOpenChanged? get onOpenChange => onOpenChanged;
+  /// Preferred side of [anchor] or the trigger.
   final SeedOverlaySide side;
+  /// Cross-axis alignment of the popover.
   final SeedOverlayAlign align;
+  /// Maximum floating card width and height, in logical pixels.
   final double maxWidth, maxHeight;
 
   @override

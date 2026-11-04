@@ -5,6 +5,9 @@ import 'package:material_ui/material_ui.dart';
 /// Official SEED gradient stops. Directions are set by the consuming component.
 class SeedGradients {
   const SeedGradients._();
+  /// Creates a transparent-to-opaque black fade mask with official 16 alpha stops.
+  ///
+  /// [isDark] is accepted for signature consistency but does not alter this gradient.
   static LinearGradient fadeMask({bool isDark = false}) => LinearGradient(
     colors: const [
       Color(0x00000000),
@@ -43,12 +46,14 @@ class SeedGradients {
       1,
     ],
   );
+  /// Creates the low-emphasis magic glow gradient. [isDark] selects the dark variant and defaults to false.
   static LinearGradient glowMagic({bool isDark = false}) => LinearGradient(
     colors: isDark
         ? const [Color(0xFF2D252D), Color(0xFF3A312B), Color(0xFF333232)]
         : const [Color(0xFFFEF6F7), Color(0xFFFEF0E7), Color(0xFFF9F7F5)],
     stops: const [0, 0.8, 1],
   );
+  /// Creates the pressed-state magic glow gradient; [isDark] selects its dark palette.
   static LinearGradient glowMagicPressed({bool isDark = false}) =>
       LinearGradient(
         colors: isDark
@@ -56,10 +61,12 @@ class SeedGradients {
             : const [Color(0xFFFBF0F2), Color(0xFFFFE8DB), Color(0xFFF5F2EF)],
         stops: const [0, 0.8, 1],
       );
+  /// Creates the orange-to-purple magic highlight gradient. [isDark] does not change its stops or colors.
   static LinearGradient highlightMagic({bool isDark = false}) => LinearGradient(
     colors: const [Color(0xFFFF6600), Color(0xFFD25ACA)],
     stops: const [0.2, 1],
   );
+  /// Creates the pressed magic highlight gradient, with [isDark] choosing the dark variant.
   static LinearGradient highlightMagicPressed({bool isDark = false}) =>
       LinearGradient(
         colors: isDark
@@ -67,6 +74,7 @@ class SeedGradients {
             : const [Color(0xFFE14F00), Color(0xFFAE58BF)],
         stops: const [0.2, 1],
       );
+  /// Creates the magic shimmer alpha stops; [isDark] defaults to false and selects the dark variant.
   static LinearGradient shimmerMagic({bool isDark = false}) => LinearGradient(
     colors: isDark
         ? const [
@@ -83,6 +91,7 @@ class SeedGradients {
           ],
     stops: const [0, 0.46, 0.54, 1],
   );
+  /// Creates the neutral shimmer alpha stops; [isDark] defaults to false and selects the dark variant.
   static LinearGradient shimmerNeutral({bool isDark = false}) => LinearGradient(
     colors: isDark
         ? const [

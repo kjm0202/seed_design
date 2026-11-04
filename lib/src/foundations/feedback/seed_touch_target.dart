@@ -6,6 +6,10 @@ import 'package:flutter/widgets.dart';
 /// Keeps an icon's layout size while centering a larger interactive child on it.
 /// Ancestors must leave the target inside their own hit-test bounds.
 class SeedTouchTarget extends SingleChildRenderObjectWidget {
+  /// Creates a visually compact target.
+  ///
+  /// [visualSize] determines the layout size while [targetSize] sets the minimum centered child hit
+  /// area; the ancestor must not clip the additional hit region.
   const SeedTouchTarget({
     super.key,
     required this.visualSize,
@@ -13,12 +17,15 @@ class SeedTouchTarget extends SingleChildRenderObjectWidget {
     required super.child,
   });
 
+  /// Size reported to layout and intrinsic sizing, even when the child hit area is larger.
   final Size visualSize, targetSize;
 
+  /// Creates a render object that reports the visual bounds and centers the enlarged interactive child.
   @override
   RenderObject createRenderObject(BuildContext context) =>
       _RenderSeedTouchTarget(visualSize, targetSize);
 
+  /// Updates hit-target sizes when [visualSize] or [targetSize] changes.
   @override
   void updateRenderObject(
     BuildContext context,

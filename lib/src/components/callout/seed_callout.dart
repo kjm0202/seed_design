@@ -12,11 +12,17 @@ import '../../theme/seed_theme.dart';
 
 /// Tone options for [SeedCallout].
 enum SeedCalloutTone {
+  /// Neutral guidance.
   neutral,
+  /// Informational tip.
   informative,
+  /// Caution or warning.
   warning,
+  /// Error or critical alert.
   critical,
+  /// Positive or successful outcome.
   positive,
+  /// Gradient AI or special guidance.
   magic,
 }
 
@@ -24,15 +30,25 @@ enum SeedCalloutTone {
 ///
 /// Delivers important announcements, tips, guidance, warnings, or magic AI alerts.
 class SeedCallout extends StatefulWidget {
+  /// Optional bold lead-in text.
   final String? title;
+  /// Required callout body text.
   final String description;
+  /// Optional inline text action, shown only when [onTap] is null.
   final String? linkText;
+  /// Action for [linkText] when the callout surface is not actionable.
   final VoidCallback? onLinkTap;
+  /// Taps on the whole callout; makes its surface interactive when supplied.
   final VoidCallback? onTap;
+  /// Enables a dismiss icon and runs after the user activates it.
   final VoidCallback? onDismiss;
+  /// Optional icon overriding the default tone-based icon.
   final Widget? prefixIcon;
+  /// Semantic color treatment, default [SeedCalloutTone.neutral].
   final SeedCalloutTone tone;
+  /// Whether an inline link is underlined (true by default).
   final bool underlineLink;
+  /// Displays a tone-based icon when true; also shown if [prefixIcon] is set.
   final bool showIcon;
 
   /// Controls visibility externally when non-null.
@@ -41,6 +57,12 @@ class SeedCallout extends StatefulWidget {
   /// Initial visibility when [open] is not supplied.
   final bool defaultOpen;
 
+  /// Creates a compact notification or guidance callout.
+  ///
+  /// [description] is required. When [open] is non-null, the parent controls
+  /// visibility and must update it after [onDismiss]; otherwise the widget
+  /// starts at [defaultOpen] and dismisses itself. [onDismiss] also determines
+  /// whether the close button is present.
   const SeedCallout({
     super.key,
     this.title,
