@@ -1462,4 +1462,66 @@ void main() {
       },
     );
   });
+
+  group('modal toggle', () {
+    testWidgets(
+      'BottomSheet modal changes remove barrier without remounting sheet',
+      (tester) async {
+        final modal = ValueNotifier(true);
+        addTearDown(modal.dispose);
+        var backgroundTaps = 0;
+        await tester.pumpWidget(
+          hostOverlayAuditRegression(
+            Builder(
+              builder: (context) => Column(
+                children: [
+                  TextButton(
+                    onPressed: () => backgroundTaps++,
+                    child: const Text('background'),
+                  ),
+                  TextButton(
+                    onPressed: () => showSeedBottomSheet<void>(
+                      context: context,
+                      modalListenable: modal,
+                      child: const SeedBottomSheet(
+                        title: 'sheet',
+                        content: SeedTextField(label: 'value'),
+                      ),
+                    ),
+                    child: const Text('open'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+        final baselineBarriers = find
+            .byWidgetPredicate(
+              (w) => w is ModalBarrier || w is AnimatedModalBarrier,
+            )
+            .evaluate()
+            .length;
+        await tester.tap(find.text('open'));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(EditableText), 'retained');
+        final barriers = find.byWidgetPredicate(
+          (w) => w is ModalBarrier || w is AnimatedModalBarrier,
+        );
+        expect(barriers, findsWidgets);
+        modal.value = false;
+        await tester.pumpAndSettle();
+        expect(barriers, findsNWidgets(baselineBarriers));
+        expect(find.text('retained'), findsOneWidget);
+        await tester.tapAt(const Offset(65, 24));
+        await tester.pumpAndSettle();
+        expect(backgroundTaps, 1);
+        expect(find.text('sheet'), findsOneWidget);
+        modal.value = true;
+        await tester.pumpAndSettle();
+        expect(barriers, findsWidgets);
+        expect(find.text('retained'), findsOneWidget);
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
+  });
 }

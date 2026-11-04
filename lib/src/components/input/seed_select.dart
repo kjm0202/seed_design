@@ -61,7 +61,7 @@ class SeedSelect<T> extends StatefulWidget {
     this.placeholder = '선택해주세요',
     this.prefixIcon,
     this.onChanged,
-    this.size = SeedInputButtonSize.medium,
+    this.size = SeedInputButtonSize.large,
     this.enabled = true,
     this.isError = false,
     this.readOnly = false,
@@ -383,7 +383,7 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
     if (widget.size == SeedInputButtonSize.responsive) {
       return MediaQuery.sizeOf(context).width >= 1280
           ? SeedInputButtonSize.small
-          : SeedInputButtonSize.medium;
+          : SeedInputButtonSize.large;
     }
     return widget.size;
   }
@@ -589,7 +589,7 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
         duration: open ? SeedDuration.d3 : SeedDuration.d2,
         child: Icon(
           Icons.keyboard_arrow_down,
-          size: effectiveSize == SeedInputButtonSize.medium ? 20 : 16,
+          size: effectiveSize == SeedInputButtonSize.large ? 20 : 16,
         ),
       ),
       enabled: widget.enabled,
@@ -652,7 +652,7 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
             child: DecoratedBox(
               position: DecorationPosition.foreground,
               decoration: BoxDecoration(
-                borderRadius: effectiveSize == SeedInputButtonSize.medium
+                borderRadius: effectiveSize == SeedInputButtonSize.large
                     ? SeedBorderRadius.r3
                     : SeedBorderRadius.r2,
                 border: _showReadOnlyFocus && enabled
@@ -676,7 +676,7 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
     SeedTypography typography,
   ) {
     final effectiveSize = _effectiveSize(context);
-    final isLarge = effectiveSize == SeedInputButtonSize.medium;
+    final isLarge = effectiveSize == SeedInputButtonSize.large;
     final children = <Widget>[];
     var itemIndex = 0;
 

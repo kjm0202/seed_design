@@ -233,7 +233,7 @@ void main() {
           .widgetList<SeedField>(find.byType(SeedField))
           .singleWhere((candidate) => candidate.label == 'Field Integration');
       expect(field.required, isTrue);
-      expect(field.isInvalid, isTrue);
+      expect(field.invalid, isTrue);
     },
   );
 }

@@ -1,4 +1,4 @@
-import 'dart:ui' show CheckedState, SemanticsRole;
+import 'dart:ui' show CheckedState, SemanticsAction, SemanticsRole;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -54,6 +54,24 @@ void main() {
       expect(slide.flagsCollection.isButton, isFalse);
       // Finders that look for SeedChip keep working inside the group.
       expect(find.byType(SeedChip), findsNWidgets(2));
+      handle.dispose();
+    });
+
+    testWidgets('Field label tap target is not a separate button', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(
+        _app(const SeedTextField(label: 'Name', placeholder: 'Type')),
+      );
+      final unnamedTaps = tester.semantics
+          .simulatedAccessibilityTraversal()
+          .where(
+            (node) =>
+                node.getSemanticsData().hasAction(SemanticsAction.tap) &&
+                node.label.isEmpty,
+          );
+      expect(unnamedTaps, isEmpty);
       handle.dispose();
     });
 

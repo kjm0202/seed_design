@@ -4,6 +4,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
 Widget _host(Widget child) => MaterialApp(
+locale: const Locale('ko'), supportedLocales: const [Locale('ko'), Locale('en')], localizationsDelegates: GlobalMaterialLocalizations.delegates,
+
   theme: SeedThemeData.light().toThemeData(),
   home: Scaffold(
     body: Center(child: SizedBox(width: 340, child: child)),
@@ -12,54 +14,61 @@ Widget _host(Widget child) => MaterialApp(
 
 void main() {
   testWidgets(
-    'Attachment explicitly exposes required and independent invalid state',
-    (tester) async {
-      await tester.pumpWidget(
-        _host(
-          const SeedAttachmentDisplayField(
-            label: 'Photos',
-            showRequiredIndicator: true,
-            invalid: true,
-            description: 'Select photos',
+      'Attachment explicitly exposes required and independent invalid state',
+      (tester) async {
+        await tester.pumpWidget(
+          _host(
+            const SeedAttachmentDisplayField(
+              label: 'Photos',
+              showRequiredIndicator: true,
+              invalid: true,
+              description: 'Select photos',
+            ),
           ),
-        ),
-      );
+        );
 
-      final field = tester.widget<SeedField>(find.byType(SeedField));
-      expect(field.required, isTrue);
-      expect(field.isInvalid, isTrue);
-      expect(field.errorMessage, isNull);
-      expect(
-        find.byWidgetPredicate(
-          (widget) => widget is Semantics && widget.properties.label == '필수 입력',
-        ),
-        findsOneWidget,
-      );
-
-      await tester.pumpWidget(
-        _host(
-          const SeedAttachmentDisplayField(
-            label: 'Photos',
-            invalid: false,
-            errorMessage: 'Upload failed',
+        final field = tester.widget<SeedField>(find.byType(SeedField));
+        expect(field.required, isTrue);
+        expect(field.isInvalid, isTrue);
+        expect(field.errorMessage, isNull);
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is Semantics && widget.properties.label == '필수 입력',
           ),
-        ),
-      );
-      expect(tester.widget<SeedField>(find.byType(SeedField)).isInvalid, false);
-      expect(find.text('Upload failed'), findsNothing);
+          findsOneWidget,
+        );
 
-      await tester.pumpWidget(
-        _host(
-          const SeedAttachmentDisplayField(
-            label: 'Photos',
-            errorMessage: 'Upload failed',
+        await tester.pumpWidget(
+          _host(
+            const SeedAttachmentDisplayField(
+              label: 'Photos',
+              invalid: false,
+              errorMessage: 'Upload failed',
+            ),
           ),
-        ),
-      );
-      expect(tester.widget<SeedField>(find.byType(SeedField)).isInvalid, true);
-      expect(find.text('Upload failed'), findsOneWidget);
-    },
-  );
+        );
+        expect(
+          tester.widget<SeedField>(find.byType(SeedField)).isInvalid,
+          false,
+        );
+        expect(find.text('Upload failed'), findsNothing);
+
+        await tester.pumpWidget(
+          _host(
+            const SeedAttachmentDisplayField(
+              label: 'Photos',
+              errorMessage: 'Upload failed',
+            ),
+          ),
+        );
+        expect(
+          tester.widget<SeedField>(find.byType(SeedField)).isInvalid,
+          true,
+        );
+        expect(find.text('Upload failed'), findsOneWidget);
+      },
+    );
 
   testWidgets(
     'ChipTabs respects explicit strip padding and keeps 16px default',

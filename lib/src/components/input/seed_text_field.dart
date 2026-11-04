@@ -1,6 +1,8 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/scheduler.dart';
 
+import '../../localization/seed_localizations.dart';
 import 'seed_field.dart';
 import 'seed_text_input.dart';
 import 'seed_input_button.dart';
@@ -23,6 +25,8 @@ class SeedFormField<T> extends FormField<T> {
     super.onReset,
     super.enabled,
     super.autovalidateMode,
+    super.forceErrorText,
+    super.restorationId,
   }) : super(initialValue: controlled ? value : value ?? initialValue);
 
   /// Includes a null [value] in parent-controlled state.
@@ -65,9 +69,11 @@ class SeedTextField extends StatefulWidget {
     this.value,
     this.defaultValue,
     this.label,
+    this.labelWeight = SeedFieldLabelWeight.medium,
     this.description,
     this.errorMessage,
     this.required = false,
+    this.indicator,
     this.enabled = true,
     this.readOnly = false,
     this.placeholder,
@@ -93,10 +99,35 @@ class SeedTextField extends StatefulWidget {
     this.minLines,
     this.autoResize = false,
     this.maxHeight,
-    this.clearable = true,
+    this.clearable = false,
     this.obscureText = false,
     this.keyboardType,
+    this.autofillHints,
+    this.autocorrect = true,
+    this.enableSuggestions = true,
+    this.textCapitalization = TextCapitalization.none,
+    this.restorationId,
+    this.textAlign = TextAlign.start,
+    this.textDirection,
+    this.scrollPadding = const EdgeInsets.all(20),
+    this.onTapOutside,
+    this.onTap,
+    this.onEditingComplete,
+    this.cursorColor,
+    this.enableInteractiveSelection,
+    this.selectionControls,
+    this.contextMenuBuilder = SeedTextInput.defaultContextMenuBuilder,
+    this.smartDashesType,
+    this.smartQuotesType,
+    this.undoController,
+    this.canRequestFocus = true,
+    this.maxLengthEnforcement,
     this.autovalidateMode = AutovalidateMode.disabled,
+    this.textInputAction,
+    this.onFieldSubmitted,
+    this.autofocus = false,
+    this.onReset,
+    this.forceErrorText,
   }) : onValueChanged = onValueChange ?? onValueChanged,
        assert(onValueChange == null || onValueChanged == null),
        assert(
@@ -112,9 +143,11 @@ class SeedTextField extends StatefulWidget {
     this.value,
     this.defaultValue,
     this.label,
+    this.labelWeight = SeedFieldLabelWeight.medium,
     this.description,
     this.errorMessage,
     this.required = false,
+    this.indicator,
     this.enabled = true,
     this.readOnly = false,
     this.placeholder,
@@ -143,7 +176,32 @@ class SeedTextField extends StatefulWidget {
     this.clearable = false,
     this.obscureText = false,
     this.keyboardType = TextInputType.multiline,
+    this.autofillHints,
+    this.autocorrect = true,
+    this.enableSuggestions = true,
+    this.textCapitalization = TextCapitalization.none,
+    this.restorationId,
+    this.textAlign = TextAlign.start,
+    this.textDirection,
+    this.scrollPadding = const EdgeInsets.all(20),
+    this.onTapOutside,
+    this.onTap,
+    this.onEditingComplete,
+    this.cursorColor,
+    this.enableInteractiveSelection,
+    this.selectionControls,
+    this.contextMenuBuilder = SeedTextInput.defaultContextMenuBuilder,
+    this.smartDashesType,
+    this.smartQuotesType,
+    this.undoController,
+    this.canRequestFocus = true,
+    this.maxLengthEnforcement,
     this.autovalidateMode = AutovalidateMode.disabled,
+    this.textInputAction,
+    this.onFieldSubmitted,
+    this.autofocus = false,
+    this.onReset,
+    this.forceErrorText,
   }) : onValueChanged = onValueChange ?? onValueChanged,
        assert(onValueChange == null || onValueChanged == null),
        assert(
@@ -158,6 +216,8 @@ class SeedTextField extends StatefulWidget {
       description,
       errorMessage,
       placeholder;
+
+  final String? indicator;
   final bool required,
       enabled,
       readOnly,
@@ -183,11 +243,62 @@ class SeedTextField extends StatefulWidget {
   final double? maxHeight;
   final TextInputType? keyboardType;
   final AutovalidateMode autovalidateMode;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onFieldSubmitted;
+  final bool autofocus;
+  final VoidCallback? onReset;
+  final String? forceErrorText;
+  // Flutter input extensions, independent of React value ownership.
+  final Iterable<String>? autofillHints;
+  final bool autocorrect;
+  final bool enableSuggestions;
+  final TextCapitalization textCapitalization;
+  final String? restorationId;
+  final TextAlign textAlign;
+  final TextDirection? textDirection;
+  final EdgeInsets scrollPadding;
+  final TapRegionCallback? onTapOutside;
+  final VoidCallback? onTap;
+  final VoidCallback? onEditingComplete;
+  final Color? cursorColor;
+  final bool? enableInteractiveSelection;
+  final TextSelectionControls? selectionControls;
+  final EditableTextContextMenuBuilder? contextMenuBuilder;
+  final SmartDashesType? smartDashesType;
+  final SmartQuotesType? smartQuotesType;
+  final UndoHistoryController? undoController;
+  final bool canRequestFocus;
+  final MaxLengthEnforcement? maxLengthEnforcement;
+
+  final SeedFieldLabelWeight labelWeight;
+
   @override
   State<SeedTextField> createState() => _SeedTextFieldState();
 }
 
-class _SeedTextFieldState extends State<SeedTextField> {
+class _SeedTextFieldState extends State<SeedTextField> with RestorationMixin {
+  late final RestorableTextEditingController _restorableController;
+  bool _controllerRegistered = false;
+  bool _resetting = false;
+  @override
+  String? get restorationId => widget.restorationId;
+
+  @override
+  void restoreState(RestorationBucket? oldBucket, bool initialRestore) {
+    _controller.removeListener(_changed);
+    if (widget.controller == null && !_controllerRegistered) {
+      _controller.dispose();
+    }
+    registerForRestoration(_restorableController, 'text');
+    _controllerRegistered = true;
+    if (widget.controller == null) {
+      _controller = _restorableController.value;
+      if (widget.value != null) _controller.text = widget.value!;
+    }
+    _controller.addListener(_changed);
+    _syncFormValue(_controller.text);
+  }
+
   late TextEditingController _controller;
   late String _controllerInitialText;
   final FocusNode _focusNode = FocusNode();
@@ -195,13 +306,18 @@ class _SeedTextFieldState extends State<SeedTextField> {
   @override
   void initState() {
     super.initState();
+    _restorableController = RestorableTextEditingController(
+      text: widget.value ?? widget.defaultValue,
+    );
     _attach();
   }
 
   void _attach() {
     _controller =
         widget.controller ??
-        TextEditingController(text: widget.value ?? widget.defaultValue);
+        (_controllerRegistered
+            ? _restorableController.value
+            : TextEditingController(text: widget.value ?? widget.defaultValue));
     _controllerInitialText = _controller.text;
     _controller.addListener(_changed);
   }
@@ -213,6 +329,13 @@ class _SeedTextFieldState extends State<SeedTextField> {
   }
 
   void _syncFormValue(String value) {
+    if (_resetting) return;
+    if (SchedulerBinding.instance.schedulerPhase !=
+        SchedulerPhase.persistentCallbacks) {
+      final field = _field.currentState;
+      if (field != null && field.value != value) field.didChange(value);
+      return;
+    }
     // Controller listeners may run during build. Updating the enclosing Form
     // must wait until that frame completes, and superseded values are ignored.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -235,10 +358,10 @@ class _SeedTextFieldState extends State<SeedTextField> {
     if (widget.controller != oldWidget.controller) {
       final old = _controller;
       old.removeListener(_changed);
-      _attach();
-      if (oldWidget.controller == null) {
-        WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
+      if (widget.controller == null) {
+        _restorableController.value.value = old.value;
       }
+      _attach();
     }
     if (widget.controller == null &&
         widget.value != null &&
@@ -251,19 +374,43 @@ class _SeedTextFieldState extends State<SeedTextField> {
   void dispose() {
     _controller.removeListener(_changed);
     _focusNode.dispose();
-    if (widget.controller == null) _controller.dispose();
+    _restorableController.dispose();
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) => FormField<String>(
+  Widget build(BuildContext context) =>
+      UnmanagedRestorationScope(bucket: bucket, child: _buildField(context));
+
+  Widget _buildField(BuildContext context) => FormField<String>(
     key: _field,
-    initialValue: _controller.text,
+    initialValue: widget.value ?? widget.defaultValue ?? _controllerInitialText,
     enabled: widget.enabled,
-    validator: widget.validator,
+    forceErrorText: widget.forceErrorText ?? widget.errorMessage,
+    validator: (value) {
+      final currentValue = _controller.text;
+      final error = widget.validator?.call(currentValue);
+      if (error != null) return error;
+      if (widget.maxGraphemeCount != null &&
+          currentValue.characters.length > widget.maxGraphemeCount!) {
+        return SeedLocalizations.label(
+          context,
+          SeedLabel.maxLengthExceeded,
+        ).replaceAll('{max}', '${widget.maxGraphemeCount}');
+      }
+      return null;
+    },
     onSaved: (_) => widget.onSaved?.call(_controller.text),
-    onReset: () => _controller.text =
-        widget.value ?? widget.defaultValue ?? _controllerInitialText,
+    onReset: () {
+      _resetting = true;
+      try {
+        _controller.text =
+            widget.value ?? widget.defaultValue ?? _controllerInitialText;
+      } finally {
+        _resetting = false;
+      }
+      widget.onReset?.call();
+    },
     autovalidateMode: widget.autovalidateMode,
     builder: (field) {
       final count = _controller.text.characters.length;
@@ -271,11 +418,13 @@ class _SeedTextFieldState extends State<SeedTextField> {
           widget.maxGraphemeCount != null && count > widget.maxGraphemeCount!;
       return SeedField(
         label: widget.label,
+        labelWeight: widget.labelWeight,
+        indicatorText: widget.indicator,
         disabled: !widget.enabled,
         readOnly: widget.readOnly,
         focusNode: widget.focusNode ?? _focusNode,
         helperText: widget.description,
-        errorMessage: widget.errorMessage ?? field.errorText,
+        errorMessage: field.errorText ?? widget.errorMessage,
         required: widget.required,
         isInvalid: over || field.hasError || widget.errorMessage != null,
         characterCount: widget.maxGraphemeCount == null ? null : '$count',
@@ -290,6 +439,30 @@ class _SeedTextFieldState extends State<SeedTextField> {
           clearable: widget.clearable,
           obscureText: widget.obscureText,
           keyboardType: widget.keyboardType,
+          textInputAction: widget.textInputAction,
+          onSubmitted: widget.onFieldSubmitted,
+          autofocus: widget.autofocus,
+          autofillHints: widget.autofillHints,
+          autocorrect: widget.autocorrect,
+          enableSuggestions: widget.enableSuggestions,
+          textCapitalization: widget.textCapitalization,
+          restorationId: widget.restorationId,
+          textAlign: widget.textAlign,
+          textDirection: widget.textDirection,
+          scrollPadding: widget.scrollPadding,
+          onTapOutside: widget.onTapOutside,
+          onTap: widget.onTap,
+          onEditingComplete: widget.onEditingComplete,
+          cursorColor: widget.cursorColor,
+          enableInteractiveSelection: widget.enableInteractiveSelection,
+          selectionControls: widget.selectionControls,
+          contextMenuBuilder: widget.contextMenuBuilder,
+          smartDashesType: widget.smartDashesType,
+          smartQuotesType: widget.smartQuotesType,
+          undoController: widget.undoController,
+          canRequestFocus: widget.canRequestFocus,
+          maxLengthEnforcement: widget.maxLengthEnforcement,
+
           variant: widget.variant,
           size: widget.size,
           responsive: widget.responsive,
@@ -307,7 +480,7 @@ class _SeedTextFieldState extends State<SeedTextField> {
           maxHeight: widget.maxHeight,
           hasError: over || field.hasError || widget.errorMessage != null,
           onChanged: (value) {
-            field.didChange(value);
+            if (field.value != value) field.didChange(value);
             widget.onChanged?.call(value);
             if (widget.controller == null && widget.value != null) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -340,9 +513,11 @@ class SeedFieldButton extends StatefulWidget {
     ValueChanged<List<String>>? onValuesChanged,
     this.onPressed,
     this.label,
+    this.labelWeight = SeedFieldLabelWeight.medium,
     this.description,
     this.errorMessage,
     this.placeholder,
+    this.showValueChips = true,
     this.prefixIcon,
     this.suffixIcon,
     this.prefixText,
@@ -350,7 +525,7 @@ class SeedFieldButton extends StatefulWidget {
     this.enabled = true,
     this.readOnly = false,
     this.showClear = false,
-    this.size = SeedInputButtonSize.medium,
+    this.size = SeedInputButtonSize.large,
     this.required = false,
   }) : onValuesChanged = onValuesChange ?? onValuesChanged,
        assert(onValuesChange == null || onValuesChanged == null);
@@ -366,9 +541,14 @@ class SeedFieldButton extends StatefulWidget {
       placeholder,
       prefixText,
       suffixText;
+
+  final bool showValueChips;
   final Widget? prefixIcon, suffixIcon;
   final bool enabled, readOnly, showClear, required;
   final SeedInputButtonSize size;
+
+  final SeedFieldLabelWeight labelWeight;
+
   @override
   State<SeedFieldButton> createState() => _SeedFieldButtonState();
 }
@@ -385,6 +565,7 @@ class _SeedFieldButtonState extends State<SeedFieldButton> {
   @override
   Widget build(BuildContext context) => SeedField(
     label: widget.label,
+    labelWeight: widget.labelWeight,
     helperText: widget.description,
     errorMessage: widget.errorMessage,
     required: widget.required,
@@ -396,13 +577,15 @@ class _SeedFieldButtonState extends State<SeedFieldButton> {
       isError: widget.errorMessage != null,
       prefixIcon: widget.prefixIcon,
       suffixIcon: widget.suffixIcon,
+      // The official FieldButton renders a suffix icon only when one is given.
+      showDefaultSuffix: false,
       prefixText: widget.prefixText,
       suffixText: widget.suffixText,
       size: widget.size,
       showClear: widget.showClear,
       onClear: () => update([]),
       onPressed: widget.onPressed,
-      valueChild: values.isEmpty
+      valueChild: values.isEmpty || !widget.showValueChips
           ? null
           : Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),

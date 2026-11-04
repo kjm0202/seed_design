@@ -10,7 +10,10 @@ Widget _app(Widget child) => MaterialApp(
   home: Scaffold(body: Center(child: child)),
 );
 
-
+Widget _appBehavior(Widget child, {bool scaffold = true}) => MaterialApp(
+  theme: SeedThemeData.light(fontFamily: seedTestFontFamily).toThemeData(),
+  home: scaffold ? Scaffold(body: Center(child: child)) : Center(child: child),
+);
 
 Widget host(Widget child, {ThemeData? theme}) => MaterialApp(
   locale: const Locale('ko'),
@@ -73,6 +76,27 @@ Widget hostStateParity(Widget child) => MaterialApp(
 void main() {
   group('field API', () {
     setUpAll(loadSeedTestFonts);
+    testWidgets('invalid, description and placeholder drive the input', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _app(
+          const SeedField(
+            description: 'help',
+            invalid: true,
+            errorMessage: 'wrong',
+            indicatorText: 'optional',
+            child: SeedTextInput(placeholder: 'hint', invalid: true),
+          ),
+        ),
+      );
+      expect(find.text('hint'), findsOneWidget);
+      expect(find.text('wrong'), findsOneWidget);
+      expect(
+        tester.widget<SeedField>(find.byType(SeedField)).isInvalid,
+        isTrue,
+      );
+    });
 
     testWidgets('Space toggles a checkbox and Enter does not', (tester) async {
       var value = false;
@@ -97,13 +121,262 @@ void main() {
       expect(value, isTrue);
     });
 
+    testWidgets(
+      'FieldButton has no default chevron and can show plain values',
+      (tester) async {
+        await tester.pumpWidget(
+          _app(const SeedFieldButton(values: ['Value'], showValueChips: false)),
+        );
+        expect(find.byIcon(Icons.keyboard_arrow_down), findsNothing);
+        expect(find.byType(SeedChip), findsNothing);
+        expect(find.text('Value'), findsOneWidget);
+      },
+    );
+
   });
 
   group('input behavior', () {
     setUpAll(loadSeedTestFonts);
+    testWidgets('TextInput has no clear button by default', (tester) async {
+      await tester.pumpWidget(
+        _appBehavior(
+          const SizedBox(width: 300, child: SeedTextInput(defaultValue: 'abc')),
+        ),
+      );
+      expect(find.byIcon(Icons.close_rounded), findsNothing);
+    });
+
+    testWidgets('error messages show the official icon', (tester) async {
+      await tester.pumpWidget(
+        _appBehavior(
+          const SizedBox(width: 300, child: SeedTextField(errorMessage: 'E')),
+        ),
+      );
+      expect(find.byIcon(Icons.error), findsOneWidget);
+    });
+  });
+  group('controller ownership', () {
+    testWidgets('replaces external controllers and detaches old listeners', (
+      tester,
+    ) async {
+      final first = TextEditingController(text: 'first');
+      final second = TextEditingController(text: 'second');
+      addTearDown(first.dispose);
+      addTearDown(second.dispose);
+      await tester.pumpWidget(host(SeedTextInput(controller: first)));
+      await tester.pumpWidget(host(SeedTextInput(controller: second)));
+      expect(find.text('second'), findsOneWidget);
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller,
+        same(second),
+      );
+      first.text = 'detached';
+      await tester.pump();
+      expect(find.text('detached'), findsNothing);
+      await tester.pumpWidget(const SizedBox());
+      second.text = 'still owned by caller';
+    });
+
+    testWidgets(
+      'external to internal preserves editing value without disposing caller',
+      (tester) async {
+        final controller = TextEditingController(text: 'keep me');
+        addTearDown(controller.dispose);
+        controller.selection = const TextSelection.collapsed(offset: 3);
+        await tester.pumpWidget(host(SeedTextInput(controller: controller)));
+        await tester.pumpWidget(host(const SeedTextInput()));
+        final current = tester
+            .widget<TextField>(find.byType(TextField))
+            .controller!;
+        expect(current, isNot(same(controller)));
+        expect(current.value, controller.value);
+        await tester.pumpWidget(const SizedBox());
+        controller.text = 'caller can still use it';
+      },
+    );
+
+    testWidgets('internal to external and focus node replacement', (
+      tester,
+    ) async {
+      final controller = TextEditingController(text: 'replacement');
+      final first = FocusNode();
+      final second = FocusNode();
+      addTearDown(controller.dispose);
+      addTearDown(first.dispose);
+      addTearDown(second.dispose);
+      await tester.pumpWidget(
+        host(SeedTextInput(initialValue: 'initial', focusNode: first)),
+      );
+      await tester.pumpWidget(
+        host(SeedTextInput(controller: controller, focusNode: second)),
+      );
+      expect(find.text('replacement'), findsOneWidget);
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).focusNode,
+        same(second),
+      );
+      second.requestFocus();
+      await tester.pump();
+      expect(second.hasFocus, isTrue);
+      await tester.pumpWidget(const SizedBox());
+    });
+  });
+
+  group('controlled text in Form', () {
+    testWidgets('controlled text field accepts external update inside Form', (
+      tester,
+    ) async {
+      var value = 'first';
+      final formKey = GlobalKey<FormState>();
+      String? saved;
+      late StateSetter update;
+      await tester.pumpWidget(
+        hostFghFollowupRegression(
+          StatefulBuilder(
+            builder: (context, setState) {
+              update = setState;
+              return Form(
+                key: formKey,
+                child: SeedTextField(
+                  value: value,
+                  validator: (text) => text == value ? null : 'stale value',
+                  onSaved: (text) => saved = text,
+                ),
+              );
+            },
+          ),
+        ),
+      );
+      update(() => value = 'second');
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      expect(find.text('second'), findsOneWidget);
+      expect(formKey.currentState!.validate(), isTrue);
+      formKey.currentState!.save();
+      expect(saved, 'second');
+      await tester.enterText(find.byType(TextField), 'unaccepted edit');
+      await tester.pumpAndSettle();
+      expect(find.text('second'), findsOneWidget);
+      expect(formKey.currentState!.validate(), isTrue);
+    });
+  });
+
+  group('grapheme counting', () {
+    testWidgets(
+      'text field counts graphemes and exposes sliced input without truncating',
+      (tester) async {
+        SeedTextValueChange? change;
+        await tester.pumpWidget(
+          hostInteractionParity(
+            SeedTextField(
+              maxGraphemeCount: 2,
+              onValueChanged: (value) => change = value,
+            ),
+          ),
+        );
+        await tester.enterText(find.byType(TextField), '🇰🇷👨‍👩‍👧‍👦가');
+        await tester.pump();
+        expect(change!.graphemes, hasLength(3));
+        expect(change!.slicedValue, '🇰🇷👨‍👩‍👧‍👦');
+        expect(find.text('🇰🇷👨‍👩‍👧‍👦가'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  });
+
+  group('InputButton clear', () {
+    testWidgets('nested clear action does not open input button', (
+      tester,
+    ) async {
+      var opened = 0;
+      var cleared = 0;
+      await tester.pumpWidget(
+        hostInteraction(
+          SizedBox(
+            width: 280,
+            child: SeedInputButton(
+              value: '선택됨',
+              showClear: true,
+              onClear: () => cleared++,
+              onPressed: () => opened++,
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.bySemanticsLabel('선택 내용 지우기'));
+      expect(cleared, 1);
+      expect(opened, 0);
+    });
   });
 
   group('label focus', () {
     setUpAll(loadSeedTestFonts);
+
+    testWidgets(
+      'composed field labels focus implicit and explicit input nodes',
+      (tester) async {
+        final external = FocusNode();
+        for (final explicit in [false, true]) {
+          await tester.pumpWidget(
+            hostComponentAccessibilityOv(
+              SeedField(
+                label: 'Name',
+                child: SeedTextInput(focusNode: explicit ? external : null),
+              ),
+            ),
+          );
+          await tester.tap(find.text('Name'));
+          await tester.pump();
+          expect(
+            tester
+                .widget<TextField>(find.byType(TextField))
+                .focusNode!
+                .hasFocus,
+            isTrue,
+          );
+          if (explicit) expect(external.hasFocus, isTrue);
+        }
+        await tester.pumpWidget(
+          hostComponentAccessibilityOv(
+            const SeedField(
+              label: 'Disabled',
+              disabled: true,
+              child: SeedTextInput(),
+            ),
+          ),
+        );
+        await tester.tap(find.text('Disabled'));
+        await tester.pump();
+        expect(
+          tester.widget<TextField>(find.byType(TextField)).focusNode!.hasFocus,
+          isFalse,
+        );
+        await tester.pumpWidget(const SizedBox());
+        external.dispose();
+      },
+    );
+  });
+
+  group('form reset', () {
+    testWidgets('form reset restores text and grapheme counter', (
+      tester,
+    ) async {
+      final form = GlobalKey<FormState>();
+      await tester.pumpWidget(
+        hostStateParity(
+          Form(
+            key: form,
+            child: const SeedTextField(
+              defaultValue: 'Original',
+              maxGraphemeCount: 20,
+            ),
+          ),
+        ),
+      );
+      await tester.enterText(find.byType(TextField), 'Changed');
+      form.currentState!.reset();
+      await tester.pump();
+      expect(find.text('Original'), findsOneWidget);
+    });
   });
 }

@@ -503,7 +503,7 @@ class _QuantityPageState extends State<_QuantityPage> {
       SeedField(
         label: '구매 수량',
         required: true,
-        isInvalid: fieldValue == 11,
+        invalid: fieldValue == 11,
         errorMessage: fieldValue == 11 ? '11개는 구매할 수 없어요.' : null,
         helperText: fieldValue == 11 ? null : '11개를 제외한 수량을 선택할 수 있습니다.',
         child: qty(
@@ -741,7 +741,7 @@ class _SelectPageState extends State<_SelectPage> {
           readOnly: readOnly,
           helperText: description,
           errorMessage: errorMessage,
-          isInvalid: errorMessage != null,
+          invalid: errorMessage != null,
           errorIcon: errorMessage == null
               ? null
               : const Icon(Icons.error_rounded),
@@ -827,7 +827,7 @@ class _SelectPageState extends State<_SelectPage> {
               ),
             ],
           ),
-          select(size: SeedInputButtonSize.small, initial: const ['apple']),
+          select(size: SeedInputButtonSize.medium, initial: const ['apple']),
         ),
       ),
       _selectSection(

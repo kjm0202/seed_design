@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:seed_design/seed_design.dart';
 
 Widget host(Widget child) => MaterialApp(
+locale: const Locale('ko'), supportedLocales: const [Locale('ko'), Locale('en')], localizationsDelegates: GlobalMaterialLocalizations.delegates,
+
   theme: SeedThemeData.light().toThemeData(),
   home: Scaffold(body: Center(child: child)),
 );
@@ -24,6 +26,8 @@ void main() {
         addTearDown(backFocus.dispose);
         await tester.pumpWidget(
           MaterialApp(
+locale: const Locale('ko'), supportedLocales: const [Locale('ko'), Locale('en')], localizationsDelegates: GlobalMaterialLocalizations.delegates,
+
             theme: SeedThemeData.light().toThemeData(),
             home: Scaffold(
               body: Builder(
@@ -332,26 +336,28 @@ void main() {
     },
   );
 
-  testWidgets('nested clear action does not open input button', (tester) async {
-    var opened = 0;
-    var cleared = 0;
-    await tester.pumpWidget(
-      host(
-        SizedBox(
-          width: 280,
-          child: SeedInputButton(
-            value: '선택됨',
-            showClear: true,
-            onClear: () => cleared++,
-            onPressed: () => opened++,
+  testWidgets('nested clear action does not open input button', (
+      tester,
+    ) async {
+      var opened = 0;
+      var cleared = 0;
+      await tester.pumpWidget(
+        host(
+          SizedBox(
+            width: 280,
+            child: SeedInputButton(
+              value: '선택됨',
+              showClear: true,
+              onClear: () => cleared++,
+              onPressed: () => opened++,
+            ),
           ),
         ),
-      ),
-    );
-    await tester.tap(find.bySemanticsLabel('선택 내용 지우기'));
-    expect(cleared, 1);
-    expect(opened, 0);
-  });
+      );
+      await tester.tap(find.bySemanticsLabel('선택 내용 지우기'));
+      expect(cleared, 1);
+      expect(opened, 0);
+    });
 
   testWidgets('loading preserves label width and prevents activation', (
     tester,

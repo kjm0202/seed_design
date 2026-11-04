@@ -107,6 +107,8 @@ void main() {
   }) async {
     await tester.pumpWidget(
       MaterialApp(
+locale: const Locale('ko'), supportedLocales: const [Locale('ko'), Locale('en')], localizationsDelegates: GlobalMaterialLocalizations.delegates,
+
         theme: SeedThemeData.light().toThemeData(),
         home: MediaQuery(
           data: MediaQueryData(textScaler: TextScaler.linear(scale)),
@@ -179,9 +181,7 @@ void main() {
         of: find.byType(SeedField),
         matching: find.byWidgetPredicate(
           (widget) =>
-              widget is Container &&
-              widget.decoration is BoxDecoration &&
-              (widget.decoration as BoxDecoration).shape == BoxShape.circle,
+              widget is CustomPaint && widget.size == Size.square(6 * scale),
         ),
       );
       final labelRect = tester.getRect(find.text('상품명'));

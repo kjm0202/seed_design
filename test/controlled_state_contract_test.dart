@@ -15,6 +15,53 @@ Widget host(Widget child) => MaterialApp(
 
 void main() {
 
+  testWidgets(
+    'controlled FormField preserves null, accepted updates and reset',
+    (tester) async {
+      final field = GlobalKey<FormFieldState<String>>();
+      final form = GlobalKey<FormState>();
+      final proposals = <String?>[];
+      String? value;
+      late StateSetter update;
+      await tester.pumpWidget(
+        host(
+          StatefulBuilder(
+            builder: (context, setState) {
+              update = setState;
+              return Form(
+                key: form,
+                child: SeedFormField<String>(
+                  key: field,
+                  controlled: true,
+                  value: value,
+                  initialValue: 'ignored seed',
+                  onValueChanged: proposals.add,
+                  builder: (state) => Text(state.value ?? 'empty'),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+      expect(field.currentState!.value, isNull);
+      field.currentState!.didChange('proposal');
+      await tester.pump();
+      expect(proposals, ['proposal']);
+      expect(field.currentState!.value, isNull);
+      update(() => value = 'accepted');
+      await tester.pump();
+      expect(field.currentState!.value, 'accepted');
+      field.currentState!.didChange('rejected');
+      form.currentState!.reset();
+      await tester.pump();
+      expect(field.currentState!.value, 'accepted');
+      update(() => value = null);
+      await tester.pump();
+      expect(field.currentState!.value, isNull);
+      expect(proposals, ['proposal', 'rejected']);
+    },
+  );
+
   testWidgets('controlled empty radio group rejects proposals', (tester) async {
     final proposals = <String?>[];
     await tester.pumpWidget(
@@ -86,6 +133,43 @@ void main() {
     await tester.pumpAndSettle();
     expect(proposals, ['b', 'b', 'b']);
   });
+
+  testWidgets(
+    'external text controller updates validation and reset without edit callbacks',
+    (tester) async {
+      final controller = TextEditingController(text: 'initial');
+      addTearDown(controller.dispose);
+      final form = GlobalKey<FormState>();
+      final edits = <String>[];
+      String? saved;
+      await tester.pumpWidget(
+        host(
+          Form(
+            key: form,
+            child: SeedTextField(
+              controller: controller,
+              validator: (value) => value == controller.text ? null : 'stale',
+              onChanged: edits.add,
+              onSaved: (value) => saved = value,
+            ),
+          ),
+        ),
+      );
+      controller.text = 'external';
+      await tester.pump();
+      expect(form.currentState!.validate(), isTrue);
+      form.currentState!.save();
+      expect(saved, 'external');
+      expect(edits, isEmpty);
+      form.currentState!.reset();
+      await tester.pump();
+      expect(controller.text, 'initial');
+      expect(form.currentState!.validate(), isTrue);
+      await tester.pumpWidget(host(const SizedBox()));
+      // The widget does not dispose a caller-owned controller.
+      controller.text = 'still usable';
+    },
+  );
 
   testWidgets('tooltip visibility uses the same reason-bearing callback', (
     tester,

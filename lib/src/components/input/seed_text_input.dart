@@ -1,3 +1,5 @@
+import '../../localization/seed_localizations.dart';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/semantics.dart' show SemanticsValidationResult;
 import 'package:flutter/services.dart';
@@ -12,12 +14,20 @@ import '../../theme/seed_theme.dart';
 import '../../foundations/feedback/seed_scale_feedback.dart';
 
 /// Variant options for [SeedTextInput].
-enum SeedTextInputVariant { outline, underline }
+enum SeedTextInputVariant {
+  outline,
+
+  underline,
+}
 
 /// Size options for [SeedTextInput].
 ///
 /// [large] is the default for all viewports. [medium] is a compact desktop size.
-enum SeedTextInputSize { medium, large }
+enum SeedTextInputSize {
+  medium,
+
+  large,
+}
 
 class SeedTextValueChange {
   SeedTextValueChange(this.value, {int? maxGraphemeCount})
@@ -38,9 +48,21 @@ class SeedTextValueChange {
 /// Supports single-line and multi-line modes, outline/underline styles,
 /// clear button, prefix/suffix items, and stateful focus & error highlights.
 class SeedTextInput extends StatefulWidget {
+  static Widget defaultContextMenuBuilder(
+    BuildContext context,
+    EditableTextState state,
+  ) {
+    if (SystemContextMenu.isSupportedByField(state)) {
+      return SystemContextMenu.editableText(editableTextState: state);
+    }
+    return AdaptiveTextSelectionToolbar.editableText(editableTextState: state);
+  }
+
   final TextEditingController? controller;
   final String? value;
+
   final String? hintText;
+  String? get placeholder => hintText;
 
   /// One-time seed; prefer [defaultValue] in new code.
   @Deprecated('Use defaultValue instead.')
@@ -55,7 +77,9 @@ class SeedTextInput extends StatefulWidget {
   final bool autofocus;
   final bool obscureText;
   final bool clearable;
+  @Deprecated('Use invalid instead.')
   final bool hasError;
+  bool get invalid => hasError;
   final int? maxLines;
   final int? minLines;
   final int? maxLength;
@@ -78,12 +102,34 @@ class SeedTextInput extends StatefulWidget {
   final bool autoResize;
   final double? maxHeight;
   final String? semanticsLabel;
+  // Flutter input extensions, independent of React value ownership.
+  final Iterable<String>? autofillHints;
+  final bool autocorrect;
+  final bool enableSuggestions;
+  final TextCapitalization textCapitalization;
+  final String? restorationId;
+  final TextAlign textAlign;
+  final TextDirection? textDirection;
+  final EdgeInsets scrollPadding;
+  final TapRegionCallback? onTapOutside;
+  final VoidCallback? onTap;
+  final VoidCallback? onEditingComplete;
+  final Color? cursorColor;
+  final bool? enableInteractiveSelection;
+  final TextSelectionControls? selectionControls;
+  final EditableTextContextMenuBuilder? contextMenuBuilder;
+  final SmartDashesType? smartDashesType;
+  final SmartQuotesType? smartQuotesType;
+  final UndoHistoryController? undoController;
+  final bool canRequestFocus;
+  final MaxLengthEnforcement? maxLengthEnforcement;
 
   const SeedTextInput({
     super.key,
     this.controller,
     this.value,
-    this.hintText,
+    String? placeholder,
+    String? hintText,
     @Deprecated('Use defaultValue instead.') String? initialValue,
     String? defaultValue,
     this.onChanged,
@@ -94,12 +140,33 @@ class SeedTextInput extends StatefulWidget {
     this.required = false,
     this.autofocus = false,
     this.obscureText = false,
-    this.clearable = true,
-    this.hasError = false,
+    this.clearable = false,
+    bool? invalid,
+    @Deprecated('Use invalid instead.') bool? hasError,
     this.maxLines = 1,
     this.minLines,
     this.maxLength,
     this.keyboardType,
+    this.autofillHints,
+    this.autocorrect = true,
+    this.enableSuggestions = true,
+    this.textCapitalization = TextCapitalization.none,
+    this.restorationId,
+    this.textAlign = TextAlign.start,
+    this.textDirection,
+    this.scrollPadding = const EdgeInsets.all(20),
+    this.onTapOutside,
+    this.onTap,
+    this.onEditingComplete,
+    this.cursorColor,
+    this.enableInteractiveSelection,
+    this.selectionControls,
+    this.contextMenuBuilder = SeedTextInput.defaultContextMenuBuilder,
+    this.smartDashesType,
+    this.smartQuotesType,
+    this.undoController,
+    this.canRequestFocus = true,
+    this.maxLengthEnforcement,
     this.textInputAction,
     this.prefixIcon,
     this.suffixIcon,
@@ -117,7 +184,11 @@ class SeedTextInput extends StatefulWidget {
     this.autoResize = false,
     this.maxHeight,
     this.semanticsLabel,
-  }) : onValueChanged = onValueChange ?? onValueChanged,
+  }) : hasError = invalid ?? hasError ?? false,
+       assert(invalid == null || hasError == null),
+       hintText = placeholder ?? hintText,
+       assert(placeholder == null || hintText == null),
+       onValueChanged = onValueChange ?? onValueChanged,
        assert(onValueChange == null || onValueChanged == null),
        initialValue = defaultValue ?? initialValue,
        assert(defaultValue == null || initialValue == null),
@@ -133,7 +204,8 @@ class SeedTextInput extends StatefulWidget {
     super.key,
     this.controller,
     this.value,
-    this.hintText,
+    String? placeholder,
+    String? hintText,
     @Deprecated('Use defaultValue instead.') String? initialValue,
     String? defaultValue,
     this.onChanged,
@@ -145,11 +217,32 @@ class SeedTextInput extends StatefulWidget {
     this.autofocus = false,
     this.obscureText = false,
     this.clearable = false,
-    this.hasError = false,
+    bool? invalid,
+    @Deprecated('Use invalid instead.') bool? hasError,
     this.maxLines,
     this.minLines,
     this.maxLength,
     this.keyboardType = TextInputType.multiline,
+    this.autofillHints,
+    this.autocorrect = true,
+    this.enableSuggestions = true,
+    this.textCapitalization = TextCapitalization.none,
+    this.restorationId,
+    this.textAlign = TextAlign.start,
+    this.textDirection,
+    this.scrollPadding = const EdgeInsets.all(20),
+    this.onTapOutside,
+    this.onTap,
+    this.onEditingComplete,
+    this.cursorColor,
+    this.enableInteractiveSelection,
+    this.selectionControls,
+    this.contextMenuBuilder = SeedTextInput.defaultContextMenuBuilder,
+    this.smartDashesType,
+    this.smartQuotesType,
+    this.undoController,
+    this.canRequestFocus = true,
+    this.maxLengthEnforcement,
     this.textInputAction,
     this.prefixIcon,
     this.suffixIcon,
@@ -167,7 +260,11 @@ class SeedTextInput extends StatefulWidget {
     this.autoResize = true,
     this.maxHeight,
     this.semanticsLabel,
-  }) : onValueChanged = onValueChange ?? onValueChanged,
+  }) : hasError = invalid ?? hasError ?? false,
+       assert(invalid == null || hasError == null),
+       hintText = placeholder ?? hintText,
+       assert(placeholder == null || hintText == null),
+       onValueChanged = onValueChange ?? onValueChanged,
        assert(onValueChange == null || onValueChanged == null),
        initialValue = defaultValue ?? initialValue,
        assert(defaultValue == null || initialValue == null),
@@ -181,7 +278,26 @@ class SeedTextInput extends StatefulWidget {
   State<SeedTextInput> createState() => _SeedTextInputState();
 }
 
-class _SeedTextInputState extends State<SeedTextInput> {
+class _SeedTextInputState extends State<SeedTextInput> with RestorationMixin {
+  late final RestorableTextEditingController _restorableController;
+  bool _controllerRegistered = false;
+  @override
+  String? get restorationId => widget.restorationId;
+
+  @override
+  void restoreState(RestorationBucket? oldBucket, bool initialRestore) {
+    _controller.removeListener(_handleTextChange);
+    if (_ownsController && !_controllerRegistered) _controller.dispose();
+    registerForRestoration(_restorableController, 'text');
+    _controllerRegistered = true;
+    if (_ownsController) {
+      _controller = _restorableController.value;
+      if (widget.value != null) _controller.text = widget.value!;
+    }
+    _hasValue = _controller.text.isNotEmpty;
+    _controller.addListener(_handleTextChange);
+  }
+
   late TextEditingController _controller;
   late bool _ownsController;
   late FocusNode _focusNode;
@@ -195,6 +311,9 @@ class _SeedTextInputState extends State<SeedTextInput> {
     super.initState();
     _ownsController = widget.controller == null;
     _ownsFocusNode = widget.focusNode == null;
+    _restorableController = RestorableTextEditingController(
+      text: widget.value ?? widget.initialValue,
+    );
     _controller =
         widget.controller ??
         TextEditingController(text: widget.value ?? widget.initialValue);
@@ -245,20 +364,14 @@ class _SeedTextInputState extends State<SeedTextInput> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
       final oldController = _controller;
-      final owned = _ownsController;
       oldController.removeListener(_handleTextChange);
       _ownsController = widget.controller == null;
-      _controller =
-          widget.controller ??
-          TextEditingController.fromValue(oldController.value);
+      if (_ownsController) {
+        _restorableController.value.value = oldController.value;
+      }
+      _controller = widget.controller ?? _restorableController.value;
       _controller.addListener(_handleTextChange);
       _hasValue = _controller.text.isNotEmpty;
-      // The old TextField remains attached until this frame finishes rebuilding.
-      if (owned) {
-        WidgetsBinding.instance.addPostFrameCallback(
-          (_) => oldController.dispose(),
-        );
-      }
     }
     if (_ownsController &&
         widget.value != null &&
@@ -275,7 +388,7 @@ class _SeedTextInputState extends State<SeedTextInput> {
     _fieldScope?.unregisterFocusNode?.call(_focusNode);
     _controller.removeListener(_handleTextChange);
     _focusNode.removeListener(_handleFocusChange);
-    if (_ownsController) _controller.dispose();
+    _restorableController.dispose();
     if (_ownsFocusNode) _focusNode.dispose();
     super.dispose();
   }
@@ -307,7 +420,10 @@ class _SeedTextInputState extends State<SeedTextInput> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      UnmanagedRestorationScope(bucket: bucket, child: _buildInput(context));
+
+  Widget _buildInput(BuildContext context) {
     final field = SeedFieldScope.maybeOf(context);
     final enabled = widget.enabled && !(field?.disabled ?? false);
     final readOnly = widget.readOnly || (field?.readOnly ?? false);
@@ -364,12 +480,18 @@ class _SeedTextInputState extends State<SeedTextInput> {
         ? (isOutline ? (isLarge ? 52.0 : 40.0) : (isLarge ? 40.0 : 34.0))
         : (isLarge ? 94.0 : 82.0);
 
-    final EdgeInsets padding = EdgeInsets.symmetric(
-      horizontal: isOutline ? (isLarge ? 16.0 : 14.0) : 0.0,
-      vertical: isSingleLine
-          ? (isOutline ? 6.0 : (isLarge ? 8.0 : 6.0))
-          : (isLarge ? 14.0 : 12.0),
-    );
+    // React paints the stroke as an overlay, so stroke changes never move the
+    // content. A Container border is added to its padding; subtract it here.
+    final double strokeWidth = showFocusStroke || hasError ? 2 : 1;
+    final double paddingY = isSingleLine
+        ? (isOutline ? 6.0 : (isLarge ? 8.0 : 6.0))
+        : (isLarge ? 14.0 : 12.0);
+    final EdgeInsets padding = isOutline
+        ? EdgeInsets.symmetric(
+            horizontal: (isLarge ? 16.0 : 14.0) - strokeWidth,
+            vertical: paddingY - strokeWidth,
+          )
+        : EdgeInsets.only(top: paddingY, bottom: paddingY - strokeWidth);
 
     final double gap = isLarge ? 10.0 : 8.0;
 
@@ -394,6 +516,26 @@ class _SeedTextInputState extends State<SeedTextInput> {
           inputFormatters: widget.inputFormatters,
           keyboardType: widget.keyboardType,
           textInputAction: widget.textInputAction,
+          autofillHints: widget.autofillHints,
+          autocorrect: widget.autocorrect,
+          enableSuggestions: widget.enableSuggestions,
+          textCapitalization: widget.textCapitalization,
+          restorationId: widget.restorationId,
+          textAlign: widget.textAlign,
+          textDirection: widget.textDirection,
+          scrollPadding: widget.scrollPadding,
+          onTapOutside: widget.onTapOutside,
+          onTap: widget.onTap,
+          onEditingComplete: widget.onEditingComplete,
+          cursorColor: widget.cursorColor,
+          enableInteractiveSelection: widget.enableInteractiveSelection,
+          selectionControls: widget.selectionControls,
+          smartDashesType: widget.smartDashesType,
+          smartQuotesType: widget.smartQuotesType,
+          undoController: widget.undoController,
+          canRequestFocus: widget.canRequestFocus,
+          maxLengthEnforcement: widget.maxLengthEnforcement,
+          contextMenuBuilder: widget.contextMenuBuilder,
           style: textStyle,
           onChanged: _notifyChange,
           onSubmitted: widget.onSubmitted,
@@ -431,15 +573,9 @@ class _SeedTextInputState extends State<SeedTextInput> {
             ? (isLarge ? SeedBorderRadius.r3 : SeedBorderRadius.r2)
             : BorderRadius.zero,
         border: isOutline
-            ? Border.all(
-                color: strokeColor,
-                width: showFocusStroke || hasError ? 2 : 1,
-              )
+            ? Border.all(color: strokeColor, width: strokeWidth)
             : Border(
-                bottom: BorderSide(
-                  color: strokeColor,
-                  width: showFocusStroke || hasError ? 2 : 1,
-                ),
+                bottom: BorderSide(color: strokeColor, width: strokeWidth),
               ),
       ),
       child: Row(
@@ -465,7 +601,10 @@ class _SeedTextInputState extends State<SeedTextInput> {
           if (widget.clearable && _hasValue && enabled && !readOnly) ...[
             const SizedBox(width: SeedDimension.x1),
             SeedPressable(
-              semanticsLabel: '입력 내용 지우기',
+              semanticsLabel: SeedLocalizations.label(
+                context,
+                SeedLabel.clearInput,
+              ),
               enableScale: false,
               onTap: () {
                 _controller.clear();

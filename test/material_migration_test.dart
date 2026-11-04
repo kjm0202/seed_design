@@ -210,6 +210,52 @@ void main() {
     });
   }
 
+  test('replacement catalog distinguishes form fields, tooltips and linear progress', () {
+    expect(SeedMigration.componentMapping['TextField'], 'SeedTextInput');
+    expect(SeedMigration.componentMapping['TextFormField'], 'SeedTextField');
+    expect(
+      SeedMigration.componentMapping['TextField / TextFormField'],
+      'SeedTextInput / SeedTextField',
+    );
+    expect(SeedMigration.componentMapping['Tooltip'], 'SeedHelpBubbleTooltip');
+    expect(
+      SeedMigration.componentMapping['LinearProgressIndicator'],
+      'LinearProgressIndicator (withSeedDesign theme)',
+    );
+  });
+
+  testWidgets(
+    'TextFormField replacement preserves validation, save and reset',
+    (tester) async {
+      final form = GlobalKey<FormState>();
+      String? saved;
+      await tester.pumpWidget(
+        host(
+          Form(
+            key: form,
+            child: SeedTextField(
+              defaultValue: 'initial',
+              validator: (value) =>
+                  value?.startsWith('ok') == true ? null : 'Enter ok',
+              onSaved: (value) => saved = value,
+            ),
+          ),
+        ),
+      );
+      expect(form.currentState!.validate(), isFalse);
+      await tester.pump();
+      expect(find.text('Enter ok'), findsOneWidget);
+      await tester.enterText(find.byType(TextField), 'ok saved');
+      expect(form.currentState!.validate(), isTrue);
+      await tester.pump();
+      form.currentState!.save();
+      expect(saved, 'ok saved');
+      form.currentState!.reset();
+      await tester.pump();
+      expect(find.text('initial'), findsOneWidget);
+    },
+  );
+
   testWidgets(
     'Tooltip replacement opens after hover delay and on keyboard focus',
     (tester) async {
@@ -266,6 +312,174 @@ void main() {
     },
   );
   group('Form, Navigator and theme contracts', () {
+    testWidgets(
+      'programmatic controller edits validate immediately and reset clears interaction',
+      (tester) async {
+        final controller = TextEditingController(text: 'initial');
+        addTearDown(controller.dispose);
+        final form = GlobalKey<FormState>();
+        var changes = 0;
+        await tester.pumpWidget(
+          hostMaterialMigrationContrac(
+            Form(
+              key: form,
+              onChanged: () => changes++,
+              child: SeedTextField(
+                controller: controller,
+                validator: (value) => value == 'initial' ? null : 'Invalid',
+              ),
+            ),
+          ),
+        );
+        controller.text = 'changed';
+        expect(form.currentState!.validate(), isFalse);
+        await tester.pump();
+        expect(find.text('Invalid'), findsOneWidget);
+        form.currentState!.reset();
+        await tester.pump();
+        expect(controller.text, 'initial');
+        final field = tester.state<FormFieldState<String>>(
+          find.byType(FormField<String>),
+        );
+        expect(field.value, 'initial');
+        expect(field.hasInteractedByUser, isFalse);
+        changes = 0;
+        await tester.enterText(find.byType(TextField), 'once');
+        expect(changes, 1);
+      },
+    );
+
+    testWidgets('forceErrorText takes precedence over cosmetic errorMessage', (
+      tester,
+    ) async {
+      final form = GlobalKey<FormState>();
+      await tester.pumpWidget(
+        hostMaterialMigrationContrac(
+          Form(
+            key: form,
+            child: const SeedTextField(
+              errorMessage: 'Secondary',
+              forceErrorText: 'Authoritative',
+            ),
+          ),
+        ),
+      );
+      expect(form.currentState!.validate(), isFalse);
+      await tester.pump();
+      expect(find.text('Authoritative'), findsOneWidget);
+      expect(find.text('Secondary'), findsNothing);
+    });
+    testWidgets(
+      'server errors block Form validation and clear on parent update',
+      (tester) async {
+        final form = GlobalKey<FormState>();
+        var serverError = 'Server rejected';
+        late StateSetter update;
+        await tester.pumpWidget(
+          hostMaterialMigrationContrac(
+            StatefulBuilder(
+              builder: (context, setState) {
+                update = setState;
+                return Form(
+                  key: form,
+                  child: SeedTextField(
+                    defaultValue: 'valid text',
+                    errorMessage: serverError.isEmpty ? null : serverError,
+                    validator: (value) => value!.isEmpty ? 'Required' : null,
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+        expect(form.currentState!.validate(), isFalse);
+        expect(find.text('Server rejected'), findsOneWidget);
+        update(() => serverError = '');
+        await tester.pump();
+        expect(form.currentState!.validate(), isTrue);
+        await tester.pump();
+        expect(find.text('Server rejected'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'grapheme overflow blocks submission without truncating React value',
+      (tester) async {
+        final form = GlobalKey<FormState>();
+        await tester.pumpWidget(
+          hostMaterialMigrationContrac(
+            Form(key: form, child: const SeedTextField(maxGraphemeCount: 2)),
+          ),
+        );
+        await tester.enterText(find.byType(TextField), '👨‍👩‍👧‍👦ab');
+        expect(form.currentState!.validate(), isFalse);
+        await tester.pump();
+        expect(find.text('👨‍👩‍👧‍👦ab'), findsOneWidget);
+        expect(find.text('Use at most 2 characters'), findsOneWidget);
+        await tester.enterText(find.byType(TextField), '👨‍👩‍👧‍👦a');
+        expect(form.currentState!.validate(), isTrue);
+      },
+    );
+
+    testWidgets(
+      'form inputs retain autofill, IME submit, capitalization and editing callbacks',
+      (tester) async {
+        final events = <String>[];
+        await tester.pumpWidget(
+          hostMaterialMigrationContrac(
+            SeedTextField(
+              autofillHints: const [AutofillHints.email],
+              textCapitalization: TextCapitalization.none,
+              textInputAction: TextInputAction.done,
+              keyboardType: TextInputType.emailAddress,
+              autocorrect: false,
+              enableSuggestions: false,
+              onChanged: (value) => events.add('change:$value'),
+              onEditingComplete: () => events.add('complete'),
+              onFieldSubmitted: (value) => events.add('submit:$value'),
+            ),
+          ),
+        );
+        await tester.enterText(find.byType(TextField), 'neighbor@example.com');
+        await tester.testTextInput.receiveAction(TextInputAction.done);
+        expect(events, [
+          'change:neighbor@example.com',
+          'complete',
+          'submit:neighbor@example.com',
+        ]);
+        final input = tester.widget<EditableText>(find.byType(EditableText));
+        expect(input.autofillHints, [AutofillHints.email]);
+        expect(input.autocorrect, isFalse);
+        expect(input.enableSuggestions, isFalse);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    for (final formField in [false, true]) {
+      testWidgets(
+        'owned text controller restores after restart form=$formField',
+        (tester) async {
+          await tester.pumpWidget(
+            hostMaterialMigrationContrac(
+              formField
+                  ? const SeedTextField(
+                      restorationId: 'name',
+                      defaultValue: 'initial',
+                    )
+                  : const SeedTextInput(
+                      restorationId: 'name',
+                      defaultValue: 'initial',
+                    ),
+            ),
+          );
+          await tester.enterText(find.byType(TextField), 'restored name');
+          await tester.pump();
+          await tester.restartAndRestore();
+          expect(find.text('restored name'), findsOneWidget);
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
 
     testWidgets(
       'Snackbar Undo persists and reports action once, explicit timeout remains available',
@@ -525,6 +739,35 @@ void main() {
         ThemeData().withSeedDesign(preserveComponentThemes: true).cardTheme,
         seed.cardTheme,
       );
+    });
+
+    testWidgets('SeedFormField opts a SEED checkbox into Form validation', (
+      tester,
+    ) async {
+      final form = GlobalKey<FormState>();
+      await tester.pumpWidget(
+        hostMaterialMigrationContrac(
+          Form(
+            key: form,
+            child: SeedFormField<bool>(
+              initialValue: false,
+              validator: (agreed) => agreed == true ? null : 'Required',
+              builder: (field) => SeedCheckbox(
+                label: 'Agree to terms',
+                checked: field.value ?? false,
+                onCheckedChange: field.didChange,
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(form.currentState!.validate(), isFalse);
+      await tester.tap(find.text('Agree to terms'));
+      await tester.pump();
+      expect(form.currentState!.validate(), isTrue);
+      form.currentState!.reset();
+      await tester.pump();
+      expect(form.currentState!.validate(), isFalse);
     });
 
     testWidgets('FAB supports explicit Material Hero and tooltip integration', (
