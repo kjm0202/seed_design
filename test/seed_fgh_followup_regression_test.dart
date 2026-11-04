@@ -8,6 +8,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
 Widget host(Widget child) => MaterialApp(
+locale: const Locale('ko'), supportedLocales: const [Locale('ko'), Locale('en')], localizationsDelegates: GlobalMaterialLocalizations.delegates,
+
   theme: SeedThemeData.light().toThemeData(),
   home: Scaffold(body: child),
 );
@@ -290,33 +292,33 @@ void main() {
   );
 
   testWidgets('slider markers anchor to track positions in RTL', (
-    tester,
-  ) async {
-    for (final align in SeedSliderMarkerAlign.values) {
-      await tester.pumpWidget(
-        host(
-          Directionality(
-            textDirection: TextDirection.rtl,
-            child: SizedBox(
-              width: 300,
-              child: SeedSlider(
-                markers: [SeedSliderMarker(25, 'marker', align: align)],
+      tester,
+    ) async {
+      for (final align in SeedSliderMarkerAlign.values) {
+        await tester.pumpWidget(
+          host(
+            Directionality(
+              textDirection: TextDirection.rtl,
+              child: SizedBox(
+                width: 300,
+                child: SeedSlider(
+                  markers: [SeedSliderMarker(25, 'marker', align: align)],
+                ),
               ),
             ),
           ),
-        ),
-      );
-      final bounds = tester.getRect(find.text('marker'));
-      final origin = tester.getTopLeft(find.byType(SeedSlider));
-      final expected = origin.dx + 24 + .75 * (300 - 48);
-      final anchor = switch (align) {
-        SeedSliderMarkerAlign.start => bounds.right,
-        SeedSliderMarkerAlign.center => bounds.center.dx,
-        SeedSliderMarkerAlign.end => bounds.left,
-      };
-      expect(anchor, closeTo(expected, .01));
-    }
-  });
+        );
+        final bounds = tester.getRect(find.text('marker'));
+        final origin = tester.getTopLeft(find.byType(SeedSlider));
+        final expected = origin.dx + 10 + .75 * (300 - 20);
+        final anchor = switch (align) {
+          SeedSliderMarkerAlign.start => bounds.right,
+          SeedSliderMarkerAlign.center => bounds.center.dx,
+          SeedSliderMarkerAlign.end => bounds.left,
+        };
+        expect(anchor, closeTo(expected, .01));
+      }
+    });
 
   testWidgets('slider default step supports keyboard decrement', (
     tester,

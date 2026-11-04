@@ -266,6 +266,49 @@ void main() {
   });
 
   testWidgets(
+    'slider array callbacks report immutable changes and commit once',
+    (tester) async {
+      final changes = <List<double>>[];
+      final commits = <List<double>>[];
+      await tester.pumpWidget(
+        host(
+          SeedSlider(
+            defaultValues: const [20],
+            onValuesChange: changes.add,
+            onValuesCommit: commits.add,
+          ),
+        ),
+      );
+      await tester.drag(find.byType(Slider), const Offset(80, 0));
+      await tester.pumpAndSettle();
+      expect(changes, isNotEmpty);
+      expect(commits, hasLength(1));
+      expect(commits.single, changes.last);
+      expect(() => changes.first.add(0), throwsUnsupportedError);
+      expect(() => commits.single.add(0), throwsUnsupportedError);
+    },
+  );
+
+  testWidgets(
+    'slider array range and controlled refusal preserve both thumbs',
+    (tester) async {
+      final proposals = <List<double>>[];
+      await tester.pumpWidget(
+        host(SeedSlider(values: const [20, 80], onValuesChange: proposals.add)),
+      );
+      final slider = find.byType(RangeSlider);
+      await tester.drag(slider, const Offset(60, 0));
+      await tester.pumpAndSettle();
+      expect(proposals, isNotEmpty);
+      expect(proposals.last, hasLength(2));
+      expect(
+        tester.widget<RangeSlider>(slider).values,
+        const RangeValues(20, 80),
+      );
+    },
+  );
+
+  testWidgets(
     'wheel defaultValue is one-time and reports value with step details',
     (tester) async {
       final values = <String>[];
@@ -305,6 +348,36 @@ void main() {
               as FixedExtentScrollController;
       expect(current.selectedItem, 2);
       expect(values, ['c']);
+    },
+  );
+
+  testWidgets(
+    'slider keyboard changes commit and default props remain one-time',
+    (tester) async {
+      final changes = <List<double>>[];
+      final commits = <List<double>>[];
+      Widget build(double seed) => host(
+        SeedSlider(
+          defaultValues: [seed],
+          onValuesChange: changes.add,
+          onValuesCommit: commits.add,
+        ),
+      );
+      await tester.pumpWidget(build(20));
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pump();
+      expect(changes, [
+        [21.0],
+      ]);
+      expect(commits, [
+        [21.0],
+      ]);
+      await tester.pumpWidget(build(90));
+      expect(tester.widget<Slider>(find.byType(Slider)).value, 21);
+      expect(changes, hasLength(1));
+      expect(commits, hasLength(1));
     },
   );
 
@@ -447,6 +520,27 @@ void main() {
       await tester.pumpAndSettle();
       expect(selected(), 0);
       expect(changes, isEmpty);
+    },
+  );
+
+  test(
+    'deprecated callbacks and RangeValues retain canonical getter adapters',
+    () {
+      void opened(bool open, SeedOverlayDismissReason reason) {}
+      final trigger = SeedDialogTrigger(
+        triggerBuilder: (context, open, toggle) => const SizedBox(),
+        builder: (_) => const SizedBox(),
+        // ignore: deprecated_member_use
+        onOpenChanged: opened,
+      );
+      expect(trigger.onOpenChange, same(opened));
+      const slider = SeedSlider.range(
+        values: RangeValues(20, 80),
+        defaultValues: RangeValues(10, 90),
+      );
+      expect(slider.values, [20.0, 80.0]);
+      expect(slider.defaultValues, [10.0, 90.0]);
+      expect(() => slider.values!.add(0), throwsUnsupportedError);
     },
   );
 }

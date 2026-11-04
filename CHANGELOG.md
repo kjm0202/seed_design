@@ -20,6 +20,9 @@
 - **Breaking migration:** InputButton medium is 40px; use large for 52px. TextInput/TextField clearable defaults to false.
 - **Breaking migration:** AttachmentInput maxCount defaults to 1.
 - **Breaking migration:** QuantityPicker defaultValue is nullable and falls back to min; it no longer registers implicitly with Form. Date reselection does not emit onValueChange; minute ties round up.
+- **Breaking migration:** `SeedSliderMarker.align` is nullable; use `resolveAlign(min, max)` to read its effective alignment.
+- Align with the official recipes found in a runtime comparison: `SeedCheckbox` and `SeedRadio` keep the mark on the first line of a wrapped label (and `SeedSwitch` keeps it centered on that line at large text), `SeedRadioGroup`/`SeedFieldset` render the description below the options, Dialog and AlertDialog no longer draw a shadow, MenuSheet items are at least 52px tall, a snapping BottomSheet's footer follows its content, the attachment dropzone spans the field width, and a stepped range `SeedSlider` no longer shows step dots.
+- Add the official `showRequiredIndicator` to `SeedRadioGroup` (`SeedFieldset.required`) and `indicator`/`showRequiredIndicator` to `SeedSlider`. `SeedSliderMarker.align` is now nullable and defaults like the official snippet: markers at `min`/`max` align to the start/end, others center. Code reading `.align` should use `resolveAlign(min, max)`.
 
 ## 1.0.0
 

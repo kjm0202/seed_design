@@ -1,32 +1,90 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/semantics.dart' show SemanticsValidationResult;
+import 'package:flutter/services.dart';
 
 import '../../foundations/colors/seed_palette.dart';
+import '../../foundations/motion/seed_motion.dart';
 import '../../theme/seed_theme.dart';
 import 'seed_field.dart';
 
-enum SeedSliderTickWeight { thin, thick }
+/// Thickness of scale marks along a [SeedSlider].
+enum SeedSliderTickWeight {
+  /// Subtle tick marks.
+  thin,
 
-enum SeedValueIndicatorTrigger { auto, hover, active }
+  /// Emphasized tick marks.
+  thick,
+}
 
-enum SeedSliderMarkerAlign { start, center, end }
+/// Conditions under which a slider's value indicator appears.
+enum SeedValueIndicatorTrigger {
+  /// Let the slider determine when to display the indicator.
+  auto,
 
+  /// Display the indicator when the control is hovered.
+  hover,
+
+  /// Display the indicator while a thumb is being manipulated.
+  active,
+}
+
+/// Horizontal positioning of a [SeedSliderMarker] label.
+enum SeedSliderMarkerAlign {
+  /// Align the start of the label with its numeric position.
+  start,
+
+  /// Center the label over its numeric position.
+  center,
+
+  /// Align the end of the label with its numeric position.
+  end,
+}
+
+/// Labeled reference mark positioned at a numeric value on a [SeedSlider].
 class SeedSliderMarker {
-  const SeedSliderMarker(
-    this.value,
-    this.label, {
-    this.align = SeedSliderMarkerAlign.center,
-  });
+  /// Creates a marker at [value] with the visible [label].
+  ///
+  /// When [align] is null (the default), the official slider snippet rule
+  /// applies: a marker at `min` aligns to its start, one at `max` to its end,
+  /// and any other marker is centered.
+  const SeedSliderMarker(this.value, this.label, {this.align});
+
+  /// Numeric location of the marker on the slider track.
   final double value;
+
+  /// Text displayed at the marker.
   final String label;
-  final SeedSliderMarkerAlign align;
+
+  /// Positioning of [label] relative to [value]; null selects it by value.
+  final SeedSliderMarkerAlign? align;
+
+  /// The alignment used on a slider spanning [min]..[max].
+  SeedSliderMarkerAlign resolveAlign(double min, double max) =>
+      align ??
+      (value <= min
+          ? SeedSliderMarkerAlign.start
+          : value >= max
+          ? SeedSliderMarkerAlign.end
+          : SeedSliderMarkerAlign.center);
 }
 
 /// One or two thumbs using React values/defaultValues and list callbacks.
 /// Scalar inputs and callbacks are deprecated; RangeValues inputs remain adapters.
+///
+/// Values snap to [allowedValues] if supplied, otherwise to [step] (default
+/// one) or [divisions]. [min] and [max] bound both thumbs; range mode enforces
+/// [minStepsBetweenThumbs]. [onValuesChange] proposes values during interaction,
+/// and [onValuesCommit] reports the completed gesture.
 class SeedSlider extends StatefulWidget {
+  /// Creates a slider with one or two values in the React-compatible list API.
+  ///
+  /// [values] controls the selection and [defaultValues] seeds local state.
+  /// Without either, a single thumb starts midway between [min] and [max].
+  /// [value], [defaultValue], and [onChanged] are legacy scalar alternatives
+  /// and cannot be combined with their list counterparts.
   const SeedSlider({
     super.key,
     List<double>? values,
@@ -34,6 +92,7 @@ class SeedSlider extends StatefulWidget {
     this.onValuesChange,
     this.onValuesCommit,
     this.minStepsBetweenThumbs = 0,
+    this.jumpMultiplier = 10,
     @Deprecated('Use values: [value] instead.') this.value,
     @Deprecated('Use defaultValues: [value] instead.') this.defaultValue,
     @Deprecated('Use onValuesChange instead.') this.onChanged,
@@ -59,6 +118,9 @@ class SeedSlider extends StatefulWidget {
     this.semanticsValueFormatter,
     this.semanticsLabel,
     this.fieldLabel,
+    this.labelWeight = SeedFieldLabelWeight.medium,
+    this.indicator,
+    this.showRequiredIndicator = false,
     this.description,
     this.errorMessage,
   }) : _values = values,
@@ -83,6 +145,11 @@ class SeedSlider extends StatefulWidget {
        onRangeChangeEnd = null,
        _rangeMode = false;
 
+  /// Creates a two-thumb range slider using Flutter [RangeValues] inputs.
+  ///
+  /// [values] and [defaultValues] are range adapters; [onValuesChange] and
+  /// [onValuesCommit] use the React-compatible list callbacks.
+  /// The [SeedRangeSlider] subclass provides the same range behavior.
   const SeedSlider.range({
     super.key,
     RangeValues? values,
@@ -113,9 +180,13 @@ class SeedSlider extends StatefulWidget {
     this.semanticsValueFormatter,
     this.semanticsLabel,
     this.fieldLabel,
+    this.labelWeight = SeedFieldLabelWeight.medium,
+    this.indicator,
+    this.showRequiredIndicator = false,
     this.description,
     this.errorMessage,
     this.minStepsBetweenThumbs = 0,
+    this.jumpMultiplier = 10,
   }) : assert(min < max),
        assert(step == null || step > 0),
        assert(divisions == null || divisions > 0),
@@ -138,11 +209,13 @@ class SeedSlider extends StatefulWidget {
        _rangeMode = true;
 
   final List<double>? _values, _defaultValues;
+  /// Controlled thumb values, as a list of one or two numbers.
   List<double>? get values =>
       _values ??
       (rangeValues == null
           ? null
           : List.unmodifiable([rangeValues!.start, rangeValues!.end]));
+  /// Initial uncontrolled thumb values, as a list of one or two numbers.
   List<double>? get defaultValues =>
       _defaultValues ??
       (defaultRangeValues == null
@@ -151,51 +224,121 @@ class SeedSlider extends StatefulWidget {
               defaultRangeValues!.start,
               defaultRangeValues!.end,
             ]));
+  /// Callbacks for proposed thumb positions and final committed positions.
+  ///
+  /// Both receive a list of one or two values; commit occurs after a gesture.
   final ValueChanged<List<double>>? onValuesChange, onValuesCommit;
+
+  /// Deprecated controlled scalar thumb position; prefer [values].
   @Deprecated('Use values instead.')
   final double? value;
+
+  /// Deprecated uncontrolled scalar seed; prefer [defaultValues].
   @Deprecated('Use defaultValues instead.')
   final double? defaultValue;
+
+  /// Deprecated range input; prefer [values] or [SeedSlider.range].
   @Deprecated('Use values instead.')
   final RangeValues? rangeValues;
+
+  /// Deprecated range seed; prefer [defaultValues].
   @Deprecated('Use defaultValues instead.')
   final RangeValues? defaultRangeValues;
+
+  /// Legacy scalar change callback; prefer [onValuesChange].
   @Deprecated('Use onValuesChange instead.')
   final ValueChanged<double>? onChanged;
+
+  /// Legacy scalar callback invoked at the start of an interaction.
   final ValueChanged<double>? onChangeStart;
+
+  /// Legacy scalar completion callback; prefer [onValuesCommit].
   @Deprecated('Use onValuesCommit instead.')
   final ValueChanged<double>? onChangeEnd;
+
+  /// Deprecated range change callback; prefer [onValuesChange].
   @Deprecated('Use onValuesChange instead.')
   final ValueChanged<RangeValues>? onRangeChanged;
+
+  /// Legacy callback invoked at the start of a range interaction.
   final ValueChanged<RangeValues>? onRangeChangeStart;
+
+  /// Deprecated range completion callback; prefer [onValuesCommit].
   @Deprecated('Use onValuesCommit instead.')
   final ValueChanged<RangeValues>? onRangeChangeEnd;
+
+  /// Minimum and maximum selectable numeric values (defaults 0 and 100).
   final double min, max;
+
+  /// Flutter-compatible uniform division count, when specified.
   final int? divisions;
+
+  /// Legacy value-indicator label for the scalar slider.
   final String? label;
+
+  /// Respectively: brand color treatment, interactions enabled, read-only
+  /// state, invalid styling, active-track visibility, and indicator hiding.
+  /// Defaults: false, true, false, false, true, false.
   final bool isBrand,
       enabled,
       readOnly,
       invalid,
       showActiveTrack,
       hideValueIndicator;
+  /// Numeric step size; if absent, the widget uses a step of one.
   final double? step;
+
+  /// Explicit selectable values; when present they take precedence over [step].
   final List<double>? allowedValues;
+
+  /// Tick positions drawn on the track (default empty).
   final List<double> ticks;
+
+  /// Labeled marker positions drawn along the track (default empty).
   final List<SeedSliderMarker> markers;
+
+  /// Tick visual weight (default [SeedSliderTickWeight.thin]).
   final SeedSliderTickWeight tickWeight;
+
+  /// When value indicators appear (default [SeedValueIndicatorTrigger.auto]).
   final SeedValueIndicatorTrigger valueIndicatorTrigger;
+
+  /// Converts a numeric thumb value to visible display text.
   final String Function(double)? valueFormatter;
+
+  /// Formats an accessible value for the thumb at the given zero-based index.
   final String Function(double, int)? semanticsValueFormatter;
+
+  /// Accessible thumb name, field label, field hint and error text.
+  /// All default to null.
   final String? semanticsLabel, fieldLabel, description, errorMessage;
+
+  /// The official `labelWeight`.
+  final SeedFieldLabelWeight labelWeight;
+
+  /// The official `indicator`: text after the field label, such as '선택'.
+  final String? indicator;
+
+  /// The official `showRequiredIndicator`: the Field required mark after the
+  /// label (default false). Visual/semantic only.
+  final bool showRequiredIndicator;
+
+  /// Minimum distance between two thumbs expressed in step units (default 0).
   final int minStepsBetweenThumbs;
+
+  /// Steps moved by PageUp, PageDown and Shift+Arrow keys.
+  final int jumpMultiplier;
   final bool _rangeMode;
   bool get _range => _rangeMode || (values ?? defaultValues)?.length == 2;
   @override
   State<SeedSlider> createState() => _SeedSliderState();
 }
 
+/// Convenience two-thumb [SeedSlider] using range inputs and callbacks.
+///
+/// Prefer [SeedSlider.range] or the list-valued [SeedSlider] API for new code.
 class SeedRangeSlider extends SeedSlider {
+  /// Creates a range slider with the same options as [SeedSlider.range].
   const SeedRangeSlider({
     super.key,
     super.values,
@@ -224,9 +367,13 @@ class SeedRangeSlider extends SeedSlider {
     super.semanticsValueFormatter,
     super.semanticsLabel,
     super.fieldLabel,
+    super.labelWeight,
+    super.indicator,
+    super.showRequiredIndicator,
     super.description,
     super.errorMessage,
     super.minStepsBetweenThumbs,
+    super.jumpMultiplier,
   }) : super.range();
 }
 
@@ -240,7 +387,9 @@ class _SeedSliderState extends State<SeedSlider> {
       ? RangeValues(widget.defaultValues![0], widget.defaultValues![1])
       : widget.defaultRangeValues ?? RangeValues(widget.min, widget.max);
   RangeValues? _lastRange;
+  double? _lastValue;
   bool _active = false, _hover = false, _focus = false;
+  int _activeThumb = 0;
   double get value => (widget.values?.first ?? widget.value ?? _value).clamp(
     widget.min,
     widget.max,
@@ -292,10 +441,36 @@ class _SeedSliderState extends State<SeedSlider> {
         (widget.divisions != null && widget.divisions! > 0
             ? (widget.max - widget.min) / widget.divisions!
             : 1.0);
-    return (widget.min + ((value - widget.min) / step).round() * step).clamp(
-      widget.min,
-      widget.max,
-    );
+    // React's roundValue: keep the step's precision to avoid float artifacts.
+    final stepText = step.toString();
+    final point = stepText.indexOf('.');
+    final decimals = point < 0 || stepText.contains('e')
+        ? 0
+        : stepText.length - point - 1;
+    final snapped = widget.min + ((value - widget.min) / step).round() * step;
+    return double.parse(snapped.toStringAsFixed(decimals))
+        .clamp(widget.min, widget.max);
+  }
+
+  // Material reports keyboard and accessibility steps as a small value change.
+  // With allowed values, those must move to the neighbor (React's
+  // getNextAllowedValue) instead of snapping back to the current value.
+  bool _pointerActive = false;
+  double _nextValue(double proposed, double current) {
+    final allowed = widget.allowedValues
+        ?.where((v) => v >= widget.min && v <= widget.max)
+        .toSet()
+        .toList();
+    if (allowed == null ||
+        allowed.isEmpty ||
+        _pointerActive ||
+        proposed == current) {
+      return snap(proposed);
+    }
+    allowed.sort();
+    return proposed > current
+        ? allowed.firstWhere((v) => v > current, orElse: () => current)
+        : allowed.lastWhere((v) => v < current, orElse: () => current);
   }
 
   // Keep Material's keyboard and accessibility increments in the same units
@@ -314,7 +489,8 @@ class _SeedSliderState extends State<SeedSlider> {
 
   void change(double v) {
     if (widget.readOnly) return;
-    final next = snap(v);
+    final next = _nextValue(v, value);
+    _lastValue = next;
     if (next == value) return;
     if (!_controlled) setState(() => _value = next);
     widget.onValuesChange?.call(List.unmodifiable([next]));
@@ -323,7 +499,8 @@ class _SeedSliderState extends State<SeedSlider> {
 
   void changeRange(RangeValues v) {
     if (widget.readOnly) return;
-    var start = snap(v.start), end = snap(v.end);
+    var start = _nextValue(v.start, range.start),
+        end = _nextValue(v.end, range.end);
     final allowed =
         widget.allowedValues
             ?.where((val) => val >= widget.min && val <= widget.max)
@@ -364,9 +541,111 @@ class _SeedSliderState extends State<SeedSlider> {
     final next = RangeValues(math.min(start, end), math.max(start, end));
     _lastRange = next;
     if (next == range) return;
+    _activeThumb = next.start != range.start ? 0 : 1;
     if (!_controlled) setState(() => _range = next);
     widget.onValuesChange?.call(List.unmodifiable([next.start, next.end]));
     widget.onRangeChanged?.call(next);
+  }
+
+  double get _step =>
+      widget.step ??
+      (widget.divisions != null && widget.divisions! > 0
+          ? (widget.max - widget.min) / widget.divisions!
+          : 1.0);
+
+  List<double> get _sortedAllowed =>
+      (widget.allowedValues ?? const <double>[])
+          .where((v) => v >= widget.min && v <= widget.max)
+          .toSet()
+          .toList()
+        ..sort();
+
+  double _jump(double current, int direction) {
+    final allowed = _sortedAllowed;
+    if (allowed.isEmpty) {
+      return snap(current + _step * widget.jumpMultiplier * direction);
+    }
+    var next = current;
+    for (var i = 0; i < widget.jumpMultiplier; i++) {
+      next = direction > 0
+          ? allowed.firstWhere((v) => v > next, orElse: () => next)
+          : allowed.lastWhere((v) => v < next, orElse: () => next);
+    }
+    return next;
+  }
+
+  void _moveThumb(double Function(double current) target, {int? thumb}) {
+    _start();
+    if (widget._range) {
+      final index = thumb ?? _activeThumb;
+      final current = range;
+      final next = target(index == 0 ? current.start : current.end);
+      final updated = index == 0
+          ? RangeValues(next, current.end)
+          : RangeValues(current.start, next);
+      final gap = widget.minStepsBetweenThumbs * _step;
+      if (updated.start > updated.end || updated.end - updated.start < gap) {
+        _gestureStart = null;
+        return;
+      }
+      _activeThumb = index;
+      if (updated != current) {
+        if (!_controlled) setState(() => _range = updated);
+        widget.onValuesChange?.call(
+          List.unmodifiable([updated.start, updated.end]),
+        );
+        widget.onRangeChanged?.call(updated);
+      }
+      _commit([updated.start, updated.end]);
+      widget.onRangeChangeEnd?.call(updated);
+      return;
+    }
+    final next = target(value);
+    if (next != value) {
+      if (!_controlled) setState(() => _value = next);
+      widget.onValuesChange?.call(List.unmodifiable([next]));
+      widget.onChanged?.call(next);
+    }
+    _commit([next]);
+    widget.onChangeEnd?.call(next);
+  }
+
+  // Material handles plain arrows. The rest of React's slider keys reach here.
+  KeyEventResult _handleKey(KeyEvent event, bool rtl) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+    if (!widget.enabled || widget.readOnly) return KeyEventResult.ignored;
+    final key = event.logicalKey;
+    final allowed = _sortedAllowed;
+    final count = widget._range ? 2 : 1;
+    if (key == LogicalKeyboardKey.home) {
+      _moveThumb((_) => allowed.isEmpty ? widget.min : allowed.first, thumb: 0);
+    } else if (key == LogicalKeyboardKey.end) {
+      _moveThumb(
+        (_) => allowed.isEmpty ? widget.max : allowed.last,
+        thumb: count - 1,
+      );
+    } else if (key == LogicalKeyboardKey.pageUp) {
+      _moveThumb((current) => _jump(current, 1));
+    } else if (key == LogicalKeyboardKey.pageDown) {
+      _moveThumb((current) => _jump(current, -1));
+    } else if (HardwareKeyboard.instance.isShiftPressed &&
+        (key == LogicalKeyboardKey.arrowUp ||
+            key == LogicalKeyboardKey.arrowDown ||
+            key == LogicalKeyboardKey.arrowLeft ||
+            key == LogicalKeyboardKey.arrowRight)) {
+      final forward =
+          key == LogicalKeyboardKey.arrowUp ||
+          key ==
+              (rtl
+                  ? LogicalKeyboardKey.arrowLeft
+                  : LogicalKeyboardKey.arrowRight);
+      _moveThumb((current) => _jump(current, forward ? 1 : -1));
+    } else {
+      return KeyEventResult.ignored;
+    }
+    return KeyEventResult.handled;
   }
 
   @override
@@ -381,12 +660,15 @@ class _SeedSliderState extends State<SeedSlider> {
     final inactive = colors.isDark
         ? SeedPalette.gray400Dark
         : SeedPalette.gray400Light;
-    final showTooltip =
+    // React shows one indicator: the keyboard-focused or dragged thumb, or the
+    // hovered thumb unless the trigger is limited to active.
+    final showIndicator =
         widget.enabled &&
         !widget.hideValueIndicator &&
-        (_focus ||
-            (widget.valueIndicatorTrigger != SeedValueIndicatorTrigger.hover &&
-                _active) ||
+        ((_focus &&
+                FocusManager.instance.highlightMode ==
+                    FocusHighlightMode.traditional) ||
+            _active ||
             (widget.valueIndicatorTrigger != SeedValueIndicatorTrigger.active &&
                 _hover));
     Widget control = LayoutBuilder(
@@ -400,6 +682,9 @@ class _SeedSliderState extends State<SeedSlider> {
           );
           return rtl ? 1 - f : f;
         }
+
+        double thumbCenter(double value) =>
+            _thumbInset + fraction(value) * (width - _thumbInset * 2);
 
         final values = widget._range ? [range.start, range.end] : [value];
         final slider = widget._range
@@ -460,7 +745,8 @@ class _SeedSliderState extends State<SeedSlider> {
                 onChangeEnd: widget.enabled && !widget.readOnly
                     ? (v) {
                         setState(() => _active = false);
-                        final next = snap(v);
+                        final next = _lastValue ?? snap(v);
+                        _lastValue = null;
                         _commit([next]);
                         widget.onChangeEnd?.call(next);
                       }
@@ -471,14 +757,19 @@ class _SeedSliderState extends State<SeedSlider> {
           children: [
             MouseRegion(
               onHover: (event) {
-                final overThumb = values.any(
+                final hovered = values.indexWhere(
                   (v) =>
-                      (event.localPosition.dx -
-                              (24 + fraction(v) * (width - 48)))
-                          .abs() <=
-                      16,
+                      (event.localPosition.dx - thumbCenter(v)).abs() <=
+                      _thumbInset,
                 );
-                if (overThumb != _hover) setState(() => _hover = overThumb);
+                final overThumb = hovered >= 0;
+                if (overThumb != _hover ||
+                    (overThumb && hovered != _activeThumb)) {
+                  setState(() {
+                    _hover = overThumb;
+                    if (overThumb) _activeThumb = hovered;
+                  });
+                }
               },
               onExit: (_) {
                 if (_hover) setState(() => _hover = false);
@@ -486,10 +777,20 @@ class _SeedSliderState extends State<SeedSlider> {
               child: Focus(
                 canRequestFocus: false,
                 onFocusChange: (v) => setState(() => _focus = v),
+                onKeyEvent: (_, event) => _handleKey(event, rtl),
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    slider,
+                    Listener(
+                      onPointerDown: (_) => _pointerActive = true,
+                      // Gesture callbacks run after raw pointer dispatch, so a
+                      // quick tap must still count as a pointer interaction.
+                      onPointerUp: (_) =>
+                          scheduleMicrotask(() => _pointerActive = false),
+                      onPointerCancel: (_) =>
+                          scheduleMicrotask(() => _pointerActive = false),
+                      child: SizedBox(height: _controlHeight, child: slider),
+                    ),
                     if (widget.ticks.isNotEmpty)
                       Positioned.fill(
                         child: IgnorePointer(
@@ -506,60 +807,15 @@ class _SeedSliderState extends State<SeedSlider> {
                           ),
                         ),
                       ),
-                    if (showTooltip)
-                      for (final v in values)
-                        Positioned(
-                          left: 24 + fraction(v) * (width - 48),
-                          top: -28,
-                          child: FractionalTranslation(
-                            translation: const Offset(-0.5, 0),
-                            child: ExcludeSemantics(
-                              child: IgnorePointer(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    ConstrainedBox(
-                                      constraints: const BoxConstraints(
-                                        minWidth: 24,
-                                      ),
-                                      child: DecoratedBox(
-                                        decoration: BoxDecoration(
-                                          color: colors.bg.neutralSolid,
-                                          borderRadius: BorderRadius.circular(
-                                            6,
-                                          ),
-                                        ),
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 4,
-                                          ),
-                                          child: Text(
-                                            widget.label ?? format(v),
-                                            textAlign: TextAlign.center,
-                                            style: context
-                                                .seedTypography
-                                                .t3Medium
-                                                .copyWith(
-                                                  color:
-                                                      colors.fg.onNeutralSolid,
-                                                ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    CustomPaint(
-                                      size: const Size(8, 6),
-                                      painter: _SeedSliderIndicatorArrow(
-                                        colors.bg.neutralSolid,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
+                    for (var i = 0; i < values.length; i++)
+                      _SeedSliderValueIndicator(
+                        label: widget.label ?? format(values[i]),
+                        thumbCenter: thumbCenter(values[i]),
+                        trackWidth: width,
+                        shown:
+                            showIndicator &&
+                            (values.length == 1 || i == _activeThumb),
+                      ),
                   ],
                 ),
               ),
@@ -572,11 +828,19 @@ class _SeedSliderState extends State<SeedSlider> {
                     children: [
                       for (final marker in widget.markers)
                         Positioned(
-                          left: 24 + fraction(marker.value) * (width - 48),
+                          // React pins the end markers to the track's edges.
+                          left: marker.value <= widget.min
+                              ? (rtl ? width : 0)
+                              : marker.value >= widget.max
+                              ? (rtl ? 0 : width)
+                              : thumbCenter(marker.value),
                           top: 0,
                           bottom: 0,
                           child: FractionalTranslation(
-                            translation: Offset(switch (marker.align) {
+                            translation: Offset(switch (marker.resolveAlign(
+                              widget.min,
+                              widget.max,
+                            )) {
                               SeedSliderMarkerAlign.start => rtl ? -1 : 0,
                               SeedSliderMarkerAlign.center => -0.5,
                               SeedSliderMarkerAlign.end => rtl ? 0 : -1,
@@ -584,7 +848,10 @@ class _SeedSliderState extends State<SeedSlider> {
                             child: Center(
                               child: Text(
                                 marker.label,
-                                textAlign: switch (marker.align) {
+                                textAlign: switch (marker.resolveAlign(
+                                  widget.min,
+                                  widget.max,
+                                )) {
                                   SeedSliderMarkerAlign.start =>
                                     TextAlign.start,
                                   SeedSliderMarkerAlign.center =>
@@ -609,55 +876,405 @@ class _SeedSliderState extends State<SeedSlider> {
         );
       },
     );
+    final name = widget.semanticsLabel ?? widget.fieldLabel;
     control = Semantics(
-      label: widget.semanticsLabel,
+      label: name,
       readOnly: widget.readOnly,
       validationResult: widget.invalid || widget.errorMessage != null
           ? SemanticsValidationResult.invalid
           : SemanticsValidationResult.none,
-      child: SliderTheme(
-        data: SliderThemeData(
-          trackHeight: 4,
-          activeTrackColor: widget.showActiveTrack ? activeRange : inactive,
-          inactiveTrackColor: inactive,
-          disabledActiveTrackColor: widget.showActiveTrack
-              ? colors.fg.disabled
-              : colors.bg.disabled,
-          disabledInactiveTrackColor: colors.bg.disabled,
-          disabledThumbColor: colors.fg.disabled,
-          thumbColor: activeThumb,
-          overlayColor: activeThumb.withValues(alpha: 0.12),
-          thumbShape: const RoundSliderThumbShape(
-            enabledThumbRadius: 10,
-            elevation: 0,
-            pressedElevation: 0,
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(end: _active ? 1.2 : 1.0),
+        duration: MediaQuery.disableAnimationsOf(context)
+            ? Duration.zero
+            : SeedDuration.d3,
+        curve: SeedCurves.easing,
+        builder: (context, thumbScale, child) => SliderTheme(
+          data: SliderThemeData(
+            trackHeight: 4,
+            activeTrackColor: widget.showActiveTrack ? activeRange : inactive,
+            inactiveTrackColor: inactive,
+            disabledActiveTrackColor: widget.showActiveTrack
+                ? colors.fg.disabled
+                : colors.bg.disabled,
+            disabledInactiveTrackColor: colors.bg.disabled,
+            disabledThumbColor: colors.fg.disabled,
+            thumbColor: activeThumb,
+            overlayShape: SliderComponentShape.noOverlay,
+            trackShape: const _SeedSliderTrackShape(),
+            rangeTrackShape: const _SeedRangeSliderTrackShape(),
+            thumbShape: _SeedSliderThumbShape(thumbScale),
+            rangeThumbShape: _SeedRangeSliderThumbShape(thumbScale),
+            tickMarkShape: widget.divisions == null
+                ? SliderTickMarkShape.noTickMark
+                : const RoundSliderTickMarkShape(tickMarkRadius: 2),
+            // RangeSlider reads its own tick shape. Without this, a stepped
+            // range (e.g. step: 50000) shows Material's default step dots,
+            // which the official slider never draws.
+            rangeTickMarkShape: widget.divisions == null
+                ? const _SeedNoRangeTickMarkShape()
+                : const RoundRangeSliderTickMarkShape(tickMarkRadius: 2),
+            activeTickMarkColor: colors.fg.onNeutralSolid,
+            inactiveTickMarkColor: colors.fg.onNeutralSolid,
+            showValueIndicator: ShowValueIndicator.never,
           ),
-          rangeThumbShape: const RoundRangeSliderThumbShape(
-            enabledThumbRadius: 10,
-            elevation: 0,
-            pressedElevation: 0,
-          ),
-          tickMarkShape: widget.divisions == null
-              ? SliderTickMarkShape.noTickMark
-              : const RoundSliderTickMarkShape(tickMarkRadius: 2),
-          activeTickMarkColor: colors.fg.onNeutralSolid,
-          inactiveTickMarkColor: colors.fg.onNeutralSolid,
-          showValueIndicator: ShowValueIndicator.never,
+          child: child!,
         ),
         child: control,
       ),
     );
+    // A single thumb is one role="slider" named by its label, like the
+    // official <input type="range" aria-labelledby>.
+    if (!widget._range && name != null) {
+      control = MergeSemantics(child: control);
+    }
     return widget.fieldLabel != null ||
+            widget.indicator != null ||
             widget.description != null ||
             widget.errorMessage != null
         ? SeedField(
             label: widget.fieldLabel,
+            labelWeight: widget.labelWeight,
+            indicatorText: widget.indicator,
+            required: widget.showRequiredIndicator,
             helperText: widget.description,
             errorMessage: widget.errorMessage,
             isInvalid: widget.invalid,
             child: control,
           )
         : control;
+  }
+}
+
+/// Half of the official 20px thumb, which stays inside the full-width track.
+const double _thumbInset = 10;
+const double _controlHeight = 26;
+
+Rect _sliderThumbTravel(RenderBox parentBox, Offset offset, double height) =>
+    Rect.fromLTWH(
+      offset.dx + _thumbInset,
+      offset.dy + (parentBox.size.height - height) / 2,
+      math.max(0, parentBox.size.width - _thumbInset * 2),
+      height,
+    );
+
+void _paintSliderTrack(
+  PaintingContext context,
+  Rect travel,
+  SliderThemeData theme,
+  Animation<double> enableAnimation,
+  double activeStart,
+  double activeEnd,
+) {
+  final inactive = ColorTween(
+    begin: theme.disabledInactiveTrackColor,
+    end: theme.inactiveTrackColor,
+  ).evaluate(enableAnimation)!;
+  final active = ColorTween(
+    begin: theme.disabledActiveTrackColor,
+    end: theme.activeTrackColor,
+  ).evaluate(enableAnimation)!;
+  final radius = Radius.circular(travel.height / 2);
+  final track = Rect.fromLTRB(
+    travel.left - _thumbInset,
+    travel.top,
+    travel.right + _thumbInset,
+    travel.bottom,
+  );
+  context.canvas.drawRRect(
+    RRect.fromRectAndRadius(track, radius),
+    Paint()..color = inactive,
+  );
+  context.canvas.drawRRect(
+    RRect.fromRectAndRadius(
+      Rect.fromLTRB(activeStart, track.top, activeEnd, track.bottom),
+      radius,
+    ),
+    Paint()..color = active,
+  );
+}
+
+class _SeedSliderTrackShape extends SliderTrackShape {
+  const _SeedSliderTrackShape();
+
+  @override
+  Rect getPreferredRect({
+    required RenderBox parentBox,
+    Offset offset = Offset.zero,
+    required SliderThemeData sliderTheme,
+    bool isEnabled = false,
+    bool isDiscrete = false,
+  }) => _sliderThumbTravel(parentBox, offset, sliderTheme.trackHeight!);
+
+  @override
+  void paint(
+    PaintingContext context,
+    Offset offset, {
+    required RenderBox parentBox,
+    required SliderThemeData sliderTheme,
+    required Animation<double> enableAnimation,
+    required Offset thumbCenter,
+    Offset? secondaryOffset,
+    bool isEnabled = false,
+    bool isDiscrete = false,
+    required TextDirection textDirection,
+  }) {
+    final travel = getPreferredRect(
+      parentBox: parentBox,
+      offset: offset,
+      sliderTheme: sliderTheme,
+    );
+    final ltr = textDirection == TextDirection.ltr;
+    _paintSliderTrack(
+      context,
+      travel,
+      sliderTheme,
+      enableAnimation,
+      ltr ? travel.left - _thumbInset : thumbCenter.dx,
+      ltr ? thumbCenter.dx : travel.right + _thumbInset,
+    );
+  }
+}
+
+class _SeedRangeSliderTrackShape extends RangeSliderTrackShape {
+  const _SeedRangeSliderTrackShape();
+
+  @override
+  Rect getPreferredRect({
+    required RenderBox parentBox,
+    Offset offset = Offset.zero,
+    required SliderThemeData sliderTheme,
+    bool isEnabled = false,
+    bool isDiscrete = false,
+  }) => _sliderThumbTravel(parentBox, offset, sliderTheme.trackHeight!);
+
+  @override
+  void paint(
+    PaintingContext context,
+    Offset offset, {
+    required RenderBox parentBox,
+    required SliderThemeData sliderTheme,
+    required Animation<double> enableAnimation,
+    required Offset startThumbCenter,
+    required Offset endThumbCenter,
+    bool isEnabled = false,
+    bool isDiscrete = false,
+    required TextDirection textDirection,
+  }) {
+    _paintSliderTrack(
+      context,
+      getPreferredRect(
+        parentBox: parentBox,
+        offset: offset,
+        sliderTheme: sliderTheme,
+      ),
+      sliderTheme,
+      enableAnimation,
+      math.min(startThumbCenter.dx, endThumbCenter.dx),
+      math.max(startThumbCenter.dx, endThumbCenter.dx),
+    );
+  }
+}
+
+class _SeedSliderThumbShape extends SliderComponentShape {
+  const _SeedSliderThumbShape(this.scale);
+  final double scale;
+
+  @override
+  Size getPreferredSize(bool isEnabled, bool isDiscrete) =>
+      const Size.square(_thumbInset * 2);
+
+  @override
+  void paint(
+    PaintingContext context,
+    Offset center, {
+    required Animation<double> activationAnimation,
+    required Animation<double> enableAnimation,
+    required bool isDiscrete,
+    required TextPainter labelPainter,
+    required RenderBox parentBox,
+    required SliderThemeData sliderTheme,
+    required TextDirection textDirection,
+    required double value,
+    required double textScaleFactor,
+    required Size sizeWithOverflow,
+  }) {
+    context.canvas.drawCircle(
+      center,
+      _thumbInset * scale,
+      Paint()
+        ..color = ColorTween(
+          begin: sliderTheme.disabledThumbColor,
+          end: sliderTheme.thumbColor,
+        ).evaluate(enableAnimation)!,
+    );
+  }
+}
+
+class _SeedRangeSliderThumbShape extends RangeSliderThumbShape {
+  const _SeedRangeSliderThumbShape(this.scale);
+  final double scale;
+
+  @override
+  Size getPreferredSize(bool isEnabled, bool isDiscrete) =>
+      const Size.square(_thumbInset * 2);
+
+  @override
+  void paint(
+    PaintingContext context,
+    Offset center, {
+    required Animation<double> activationAnimation,
+    required Animation<double> enableAnimation,
+    bool isDiscrete = false,
+    bool isEnabled = false,
+    bool isOnTop = false,
+    TextDirection textDirection = TextDirection.ltr,
+    required SliderThemeData sliderTheme,
+    Thumb thumb = Thumb.start,
+    bool isPressed = false,
+  }) {
+    context.canvas.drawCircle(
+      center,
+      _thumbInset * (isPressed ? scale : 1),
+      Paint()
+        ..color = ColorTween(
+          begin: sliderTheme.disabledThumbColor,
+          end: sliderTheme.thumbColor,
+        ).evaluate(enableAnimation)!,
+    );
+  }
+}
+
+/// The official value bubble: it enters at 0.9 scale, exits by fading in place,
+/// stays within the track, and points its arrow at the thumb.
+class _SeedSliderValueIndicator extends StatefulWidget {
+  const _SeedSliderValueIndicator({
+    required this.label,
+    required this.thumbCenter,
+    required this.trackWidth,
+    required this.shown,
+  });
+  final String label;
+  final double thumbCenter, trackWidth;
+  final bool shown;
+
+  @override
+  State<_SeedSliderValueIndicator> createState() =>
+      _SeedSliderValueIndicatorState();
+}
+
+class _SeedSliderValueIndicatorState extends State<_SeedSliderValueIndicator>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: SeedDuration.d4,
+    value: widget.shown ? 1 : 0,
+  );
+
+  @override
+  void didUpdateWidget(_SeedSliderValueIndicator oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.shown == oldWidget.shown) return;
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _controller.value = widget.shown ? 1 : 0;
+    } else if (widget.shown) {
+      _controller.forward();
+    } else {
+      _controller.reverse();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.seedColor;
+    final style = context.seedTypography.t3Medium.copyWith(
+      color: colors.fg.onNeutralSolid,
+    );
+    final painter = TextPainter(
+      text: TextSpan(text: widget.label, style: style),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    )..layout();
+    final labelWidth = math.max(24.0, painter.width + 16);
+    painter.dispose();
+    final left = (widget.thumbCenter - labelWidth / 2)
+        .clamp(0.0, math.max(0.0, widget.trackWidth - labelWidth))
+        .toDouble();
+    return Positioned(
+      left: left,
+      // Bottom edge at the thumb's half height plus the official 12px offset.
+      top: _controlHeight / 2 - _thumbInset - 12 - 26,
+      child: ExcludeSemantics(
+        child: IgnorePointer(
+          child: AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              if (_controller.value == 0) return const SizedBox.shrink();
+              final entering = _controller.status != AnimationStatus.reverse;
+              return Opacity(
+                opacity: _controller.value,
+                child: Transform.scale(
+                  scale: entering
+                      ? 0.9 +
+                            0.1 * SeedCurves.enter.transform(_controller.value)
+                      : 1,
+                  child: child,
+                ),
+              );
+            },
+            child: SizedBox(
+              width: labelWidth,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: colors.bg.neutralSolid,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      child: SizedBox(
+                        width: labelWidth - 16,
+                        child: Text(
+                          widget.label,
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          softWrap: false,
+                          style: style,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsetsDirectional.only(
+                      start: math.max(0, widget.thumbCenter - left - 4),
+                    ),
+                    child: CustomPaint(
+                      size: const Size(8, 6),
+                      painter: _SeedSliderIndicatorArrow(
+                        colors.bg.neutralSolid,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -698,7 +1315,7 @@ class _SeedSliderTicks extends CustomPainter {
       ..strokeWidth = width
       ..strokeCap = StrokeCap.round;
     for (final f in positions) {
-      final x = 24 + f * (size.width - 48);
+      final x = _thumbInset + f * (size.width - _thumbInset * 2);
       canvas.drawLine(
         Offset(x, size.height / 2 - 3),
         Offset(x, size.height / 2 + 3),
@@ -712,4 +1329,27 @@ class _SeedSliderTicks extends CustomPainter {
       positions != oldDelegate.positions ||
       color != oldDelegate.color ||
       width != oldDelegate.width;
+}
+
+class _SeedNoRangeTickMarkShape extends RangeSliderTickMarkShape {
+  const _SeedNoRangeTickMarkShape();
+
+  @override
+  Size getPreferredSize({
+    required SliderThemeData sliderTheme,
+    bool isEnabled = false,
+  }) => Size.zero;
+
+  @override
+  void paint(
+    PaintingContext context,
+    Offset center, {
+    required RenderBox parentBox,
+    required SliderThemeData sliderTheme,
+    required Animation<double> enableAnimation,
+    required Offset startThumbCenter,
+    required Offset endThumbCenter,
+    bool isEnabled = false,
+    required TextDirection textDirection,
+  }) {}
 }
