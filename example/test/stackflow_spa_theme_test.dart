@@ -189,7 +189,7 @@ void main() {
         expect(find.byTooltip('Left notification 2'), findsOneWidget);
         expect(Theme.of(heading).brightness, brightness);
 
-        await tester.tap(find.text('‹  Back'), kind: PointerDeviceKind.mouse);
+        await tester.tap(find.text('Back'), kind: PointerDeviceKind.mouse);
         await tester.pumpAndSettle();
         expect(find.text('Home'), findsOneWidget);
         expect(
@@ -274,7 +274,7 @@ void main() {
           nextBrightness,
         );
 
-        await tester.tap(find.text('‹  Back'));
+        await tester.tap(find.text('Back'));
         await tester.pumpAndSettle();
         expect(find.text('Home'), findsOneWidget);
         expect(

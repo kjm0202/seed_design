@@ -8,6 +8,15 @@ import 'package:seed_design/seed_design.dart';
 
 import 'spa_types.dart';
 import 'spa_routes.dart';
+import 'font_multiplier_browser_stub.dart'
+    if (dart.library.js_interop) 'font_multiplier_browser_web.dart'
+    as font_browser;
+
+double? _webRootFontMultiplier() {
+  if (!kIsWeb) return null;
+  final attribute = font_browser.readRootFontMultiplier();
+  return attribute == null ? null : double.tryParse(attribute);
+}
 
 /// Body implementations of the React stackflow-spa screen and layout demos.
 /// The hosting SPA owns the activity's Scaffold and top navigation bar.
@@ -78,18 +87,16 @@ Widget _scrollPage(List<Widget> children, {EdgeInsetsGeometry? padding}) =>
       children: children,
     );
 
+/// The official pull-to-refresh content has only the side gutter.
+Widget _ptrScroll(List<Widget> children) => _scrollPage(
+  children,
+  padding: const EdgeInsets.symmetric(horizontal: _gutter),
+);
+
 Widget _caption(String value) => Builder(
   builder: (context) => Text(
     value,
     style: TextStyle(fontSize: 13, color: context.seedColor.fg.neutralMuted),
-  ),
-);
-
-Widget _heading(String title) => Padding(
-  padding: const EdgeInsets.only(bottom: 8),
-  child: Text(
-    title,
-    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
   ),
 );
 
@@ -144,7 +151,9 @@ class _LayerBarPageState extends State<_LayerBarPage> {
     appBar: SeedTopNavigation(
       titleText: 'Random Long Title Hello World Commodo occaecat laboris voluptate aute magna.',
       subtitle: 'Subtitle Ut voluptate in sint sunt adipisicing ex adipisicing magna ad fugiat excepteur commodo voluptate.',
-      centerTitle: false,
+      // Match the SPA's platform-specific AppBar alignment: iOS centers the
+      // title, while Android and desktop keep it beside the leading actions.
+      centerTitle: Theme.of(context).platform == TargetPlatform.iOS,
       leading: _appBarIconStrip('Left', left),
       actions: [_appBarIconStrip('Right', right)],
     ),
@@ -154,12 +163,21 @@ class _LayerBarPageState extends State<_LayerBarPage> {
         () => widget.navigate('ActivityTransparentBar'),
       ),
       _gap,
-      _action('‹  Back', widget.goBack, variant: SeedButtonVariant.neutralWeak),
-      _gap,
-      _action(
-        '⌂  ActivityHome',
-        () => widget.navigate('ActivityHome'),
+      // Official buttons use PrefixIcon, not glyphs in the accessible name.
+      SeedButton(
+        label: 'Back',
+        prefixIcon: const Icon(Icons.chevron_left_rounded),
+        onPressed: widget.goBack,
         variant: SeedButtonVariant.neutralWeak,
+        isFullWidth: true,
+      ),
+      _gap,
+      SeedButton(
+        label: 'ActivityHome',
+        prefixIcon: const Icon(Icons.home_outlined),
+        onPressed: () => widget.navigate('ActivityHome'),
+        variant: SeedButtonVariant.neutralWeak,
+        isFullWidth: true,
       ),
       _gap,
       Row(
@@ -216,125 +234,196 @@ class _TransparentBarPage extends StatefulWidget {
 class _TransparentBarPageState extends State<_TransparentBarPage> {
   String layerOffsetTop = 'none';
   bool gradient = true;
+  // Scroll offset, capped above the largest layer top padding; only that
+  // range moves the sticky gradient pseudo-element.
+  double _stickyScroll = 0;
+  static const double _stickyScrollCap = 200;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: context.seedColor.bg.layerDefault,
-    extendBodyBehindAppBar: layerOffsetTop != 'appBar',
-    appBar: SeedTopNavigation(
-      titleText: '펭귄',
-      centerTitle: false,
-      tone: SeedTopNavigationTone.transparent,
-      gradient: gradient,
-      actions: [
-        for (var i = 0; i < 2; i++)
+  Widget build(BuildContext context) {
+    final safeTop = MediaQuery.paddingOf(context).top;
+    final contentInsetTop = switch (layerOffsetTop) {
+      'safeArea' => safeTop,
+      'appBar' => safeTop + 56,
+      _ => 0.0,
+    };
+    // CSS AppScreen pseudo element: sticky (top 0) after the layer's top
+    // padding, 66px + 400px + safeArea.top tall, translated up by 400px plus
+    // that padding. Unscrolled, its visible tail always spans 66px +
+    // safeArea.top from the top; scrolling past the padding (sticky) exposes
+    // less of it, down to 66px + safeArea.top - padding.
+    final fullFadeExtent = 66.0 + safeTop;
+    final gradientExtent =
+        fullFadeExtent - _stickyScroll.clamp(0.0, contentInsetTop);
+    // The CSS gradient passes #00000059 at y=400 and reaches clear at the
+    // pseudo-element's end (y=466+safeTop). Moving that element upwards
+    // exposes only its remaining tail, including its reduced initial alpha.
+    final gradientStartAlpha =
+        (0x59 * (gradientExtent / fullFadeExtent).clamp(0.0, 1.0)).round();
+    return Scaffold(
+      backgroundColor: context.seedColor.bg.layerDefault,
+      // React keeps the layer full-height and changes its inner top padding.
+      extendBodyBehindAppBar: true,
+      appBar: SeedTopNavigation(
+        title: spaHasEmptyAppBarLeft(context)
+            ? spaRootTitle(context, '펭귄', color: Colors.white)
+            : null,
+        titleText: spaHasEmptyAppBarLeft(context) ? null : '펭귄',
+        // ActivityTransparentBar's AppScreen sets no theme, so it follows the
+        // app-wide platform layout like the other SPA screens.
+        tone: SeedTopNavigationTone.transparent,
+        // The React gradient belongs to AppScreen.Layer, not AppBar itself.
+        gradient: false,
+        actions: [
+          for (var i = 0; i < 2; i++)
+            SeedTopNavigationIconButton(
+              semanticsLabel: 'Notification ${i + 1}',
+              icon: const Icon(Icons.notifications_none),
+              onPressed: () {},
+            ),
           SeedTopNavigationIconButton(
-            semanticsLabel: 'Notification ${i + 1}',
-            icon: const Icon(Icons.notifications_none),
-            onPressed: () {},
+            icon: const Icon(Icons.home_outlined),
+            semanticsLabel: 'Home',
+            onPressed: () => widget.navigate('ActivityHome'),
           ),
-        SeedTopNavigationIconButton(
-          icon: const Icon(Icons.home_outlined),
-          semanticsLabel: 'Home',
-          onPressed: () => widget.navigate('ActivityHome'),
-        ),
-      ],
-    ),
-    body: _scrollPage(
-      [
-        _penguinPanel(gradient),
-        const SizedBox(height: 16),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Column(
-            children: [
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 368),
-                child: SeedSegmentedControl<String>(
-                  segments: const [
-                    SeedSegment(
-                      value: 'none',
-                      child: Text('none', softWrap: false, maxLines: 1),
+        ],
+      ),
+      body: Stack(
+        children: [
+          NotificationListener<ScrollUpdateNotification>(
+            onNotification: (notification) {
+              if (notification.depth == 0) {
+                final next = notification.metrics.pixels.clamp(
+                  0.0,
+                  _stickyScrollCap,
+                );
+                if (next != _stickyScroll) {
+                  setState(() => _stickyScroll = next);
+                }
+              }
+              return false;
+            },
+            child: _scrollPage([
+              _penguinPanel(gradient),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  children: [
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 368),
+                      child: SeedSegmentedControl<String>(
+                        semanticsLabel: 'Layer Offset Top',
+                        segments: const [
+                          SeedSegment(
+                            value: 'none',
+                            child: Text('none', softWrap: false, maxLines: 1),
+                          ),
+                          // Keep this English token on one line, as in React. The
+                          // child supplies its accessible text while the default
+                          // empty label avoids pre-measuring a wrapped two-line row.
+                          SeedSegment(
+                            value: 'safeArea',
+                            child: Text(
+                              'safeArea',
+                              softWrap: false,
+                              maxLines: 1,
+                            ),
+                          ),
+                          SeedSegment(
+                            value: 'appBar',
+                            child: Text('appBar', softWrap: false, maxLines: 1),
+                          ),
+                        ],
+                        value: layerOffsetTop,
+                        onValueChange: (next) =>
+                            setState(() => layerOffsetTop = next),
+                      ),
                     ),
-                    // Keep this English token on one line, as in React. The
-                    // child supplies its accessible text while the default
-                    // empty label avoids pre-measuring a wrapped two-line row.
-                    SeedSegment(
-                      value: 'safeArea',
-                      child: Text('safeArea', softWrap: false, maxLines: 1),
+                    _gap,
+                    SizedBox(
+                      height: 24,
+                      child: OverflowBox(
+                        minHeight: 44,
+                        maxHeight: 44,
+                        alignment: Alignment.center,
+                        child: SeedSwitch(
+                          label: 'gradient',
+                          size: SeedSwitchSize.size24,
+                          tone: SeedControlTone.neutral,
+                          checked: gradient,
+                          onCheckedChange: (next) =>
+                              setState(() => gradient = next),
+                        ),
+                      ),
                     ),
-                    SeedSegment(
-                      value: 'appBar',
-                      child: Text('appBar', softWrap: false, maxLines: 1),
-                    ),
-                  ],
-                  value: layerOffsetTop,
-                  onValueChange: (next) =>
-                      setState(() => layerOffsetTop = next),
-                ),
-              ),
-              _gap,
-              SizedBox(
-                height: 24,
-                child: OverflowBox(
-                  minHeight: 44,
-                  maxHeight: 44,
-                  alignment: Alignment.center,
-                  child: SeedSwitch(
-                    label: 'gradient',
-                    size: SeedSwitchSize.size24,
-                    tone: SeedControlTone.neutral,
-                    checked: gradient,
-                    onCheckedChange: (next) => setState(() => gradient = next),
-                  ),
-                ),
-              ),
-              _gap,
-              _action(
-                'ActivityLayerBar',
-                () => widget.navigate('ActivityLayerBar'),
-                full: false,
-              ),
-              _gap,
-              _action(
-                'ActivityPluginBasicUI',
-                () => widget.navigate('ActivityPluginBasicUI'),
-                full: false,
-              ),
-              for (final style in _transitionStyles) ...[
-                _gap,
-                SizedBox(
-                  height: 40,
-                  child: OverflowBox(
-                    maxWidth: MediaQuery.sizeOf(context).width,
-                    alignment: Alignment.center,
-                    child: _action(
-                      'ActivityTransitionStyle ($style)',
+                    _gap,
+                    _action(
+                      'ActivityLayerBar',
+                      () => widget.navigate('ActivityLayerBar'),
                       full: false,
-                      () => widget.navigate(
-                        'ActivityTransitionStyle',
-                        arguments: {'transitionStyle': style},
+                    ),
+                    _gap,
+                    _action(
+                      'ActivityPluginBasicUI',
+                      () => widget.navigate('ActivityPluginBasicUI'),
+                      full: false,
+                    ),
+                    for (final style in _transitionStyles) ...[
+                      _gap,
+                      SizedBox(
+                        height: 40,
+                        child: OverflowBox(
+                          maxWidth: MediaQuery.sizeOf(context).width,
+                          alignment: Alignment.center,
+                          child: _action(
+                            'ActivityTransitionStyle ($style)',
+                            full: false,
+                            () => widget.navigate(
+                              'ActivityTransitionStyle',
+                              arguments: {'transitionStyle': style},
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              for (var i = 0; i < 3; i++) ...[
+                const SizedBox(height: 16),
+                _penguinPanel(gradient),
+              ],
+            ], padding: EdgeInsets.only(top: contentInsetTop, bottom: 24)),
+          ),
+          if (gradient && gradientExtent > 0)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: IgnorePointer(
+                key: const ValueKey('transparent-bar-scroll-gradient'),
+                child: SizedBox(
+                  height: gradientExtent,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Color.fromARGB(gradientStartAlpha, 0, 0, 0),
+                          const Color(0x00000000),
+                        ],
                       ),
                     ),
                   ),
                 ),
-              ],
-            ],
-          ),
-        ),
-        for (var i = 0; i < 3; i++) ...[
-          const SizedBox(height: 16),
-          _penguinPanel(gradient),
+              ),
+            ),
         ],
-      ],
-      padding: EdgeInsets.only(
-        top: layerOffsetTop == 'safeArea'
-            ? MediaQuery.paddingOf(context).top
-            : 0,
-        bottom: 24,
       ),
-    ),
-  );
+    );
+  }
 }
 
 Widget _penguinPanel(bool gradient) => AspectRatio(
@@ -363,9 +452,23 @@ class _SafeAreaBleedPage extends StatefulWidget {
 
 class _SafeAreaBleedPageState extends State<_SafeAreaBleedPage> {
   String category = _categories.first;
+  final GlobalKey _footerKey = GlobalKey();
+  double _footerExtent = 0;
+
+  void _measureFooter() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final render = _footerKey.currentContext?.findRenderObject();
+      if (render is! RenderBox || !render.hasSize) return;
+      final next = render.size.height;
+      if ((next - _footerExtent).abs() > 0.5) {
+        setState(() => _footerExtent = next);
+      }
+    });
+  }
 
   Widget section(String title, String description, Widget body) => Padding(
-    padding: const EdgeInsets.only(bottom: 30),
+    padding: const EdgeInsets.only(bottom: 32),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -390,10 +493,14 @@ class _SafeAreaBleedPageState extends State<_SafeAreaBleedPage> {
   );
 
   @override
-  Widget build(BuildContext context) => Column(
-    children: [
-      Expanded(
-        child: ListView(
+  Widget build(BuildContext context) {
+    _measureFooter();
+    return Stack(
+      children: [
+        // The official footer is the final in-flow child of a full-height
+        // scroll layer with CSS position:sticky; bottom:0. Keep its measured
+        // height in the scroll extent while painting the sticky copy below.
+        ListView(
           padding: const EdgeInsets.only(top: 16),
           children: [
             section(
@@ -480,30 +587,46 @@ class _SafeAreaBleedPageState extends State<_SafeAreaBleedPage> {
                 right: _gutter + MediaQuery.paddingOf(context).right,
               ),
               child: Column(
-                children: List.generate(
-                  6,
-                  (_) => const Padding(
-                    padding: EdgeInsets.only(bottom: 12),
-                    child: Text(
+                children: [
+                  for (var i = 0; i < 6; i++) ...[
+                    const Text(
                       '아래 하단 바가 콘텐츠 위에 고정되는지 확인하기 위한 문단이에요. '
                       '하단 바는 배경을 화면 끝까지 채우고, 버튼은 safe area 안쪽에 둬요.',
                     ),
+                    if (i != 5) const SizedBox(height: 12),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 32),
+            SizedBox(height: _footerExtent),
+          ],
+        ),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: KeyedSubtree(
+            key: _footerKey,
+            child: ColoredBox(
+              color: context.seedColor.bg.layerDefault,
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(_gutter, 12, _gutter, 12),
+                  child: _action(
+                    '확인',
+                    () {},
+                    variant: SeedButtonVariant.brandSolid,
                   ),
                 ),
               ),
             ),
-          ],
+          ),
         ),
-      ),
-      SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(_gutter, 12, _gutter, 12),
-          child: _action('확인', () {}, variant: SeedButtonVariant.brandSolid),
-        ),
-      ),
-    ],
-  );
+      ],
+    );
+  }
 }
 
 class _PluginBasicUiPage extends StatelessWidget {
@@ -573,8 +696,9 @@ class _SwipeBackKeyboardPageState extends State<_SwipeBackKeyboardPage> {
       _edgeGesture = false;
     },
     child: _scrollPage([
+      const SizedBox(height: 16),
       const Text('입력 화면을 한 장 더 열고 글을 입력한 뒤, 왼쪽 가장자리에서 천천히 오른쪽으로 밀어보세요.'),
-      const SizedBox(height: 20),
+      const SizedBox(height: 36),
       _action(
         '입력 화면 한 장 더 열기',
         () => widget.navigate('ActivitySwipeBackKeyboard'),
@@ -591,22 +715,29 @@ class _SwipeBackKeyboardPageState extends State<_SwipeBackKeyboardPage> {
           focusNode: _focusNode,
           decoration: const InputDecoration(
             hintText: '여기를 눌러 키보드를 여세요',
-            border: OutlineInputBorder(),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(8)),
+              borderSide: BorderSide(color: Color(0xFF868B94)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(8)),
+              borderSide: BorderSide(color: Color(0xFF868B94)),
+            ),
             contentPadding: EdgeInsets.all(12),
           ),
         ),
       ),
-      const SizedBox(height: 20),
+      const SizedBox(height: 36),
       Text(
         '입력 포커스: ${_focused ? '있음' : '없음'}',
         semanticsLabel: '입력 포커스: ${_focused ? '있음' : '없음'}',
       ),
-      const SizedBox(height: 20),
+      const SizedBox(height: 52),
       const Text(
         '정상 동작: 가장자리를 터치하면 입력 포커스가 해제되고 키보드가 내려가기 시작합니다. '
         '화면을 조금 밀었다가 되돌려 취소해도 키보드는 다시 열리지 않습니다.',
       ),
-      _gap,
+      const SizedBox(height: 52),
       const Text(
         '실제 키보드와 커서 잔상은 iPhone의 Safari 또는 앱 웹뷰에서 확인하세요. '
         '데스크톱에서는 모바일 터치 에뮬레이션으로 포커스 상태를 확인할 수 있습니다.',
@@ -673,20 +804,19 @@ class _TransitionStylePageState extends State<_TransitionStylePage> {
               ? SeedButtonVariant.neutralWeak
               : SeedButtonVariant.neutralSolid,
         ),
-        const SizedBox(height: 8),
+        if (transitionStyle != _transitionStyles.last)
+          const SizedBox(height: 8),
       ],
       const SizedBox(height: 16),
-      const Center(
-        child: Text(
-          'Prevent Swipe Back',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+      Center(
+        child: Text('Prevent Swipe Back', style: context.seedTypography.t3Bold),
       ),
       _gap,
       Center(
         child: SizedBox(
           width: 180,
           child: SeedSegmentedControl<bool>(
+            semanticsLabel: 'Prevent Swipe Back',
             segments: const [
               SeedSegment(value: false, label: 'false'),
               SeedSegment(value: true, label: 'true'),
@@ -713,9 +843,7 @@ class _PullToRefreshPreviewPage extends StatelessWidget {
   Widget build(BuildContext context) => SeedPullToRefresh(
     onReady: () {},
     onRefresh: _refreshAfterDelay,
-    child: _scrollPage([
-      const Text(_lorem),
-    ], padding: const EdgeInsets.symmetric(horizontal: _gutter, vertical: 12)),
+    child: _ptrScroll([const Text(_lorem)]),
   );
 }
 
@@ -750,9 +878,9 @@ class _PullToRefreshTabsPageState extends State<_PullToRefreshTabsPage> {
             SeedPullToRefresh(
               onReady: () {},
               onRefresh: _refreshAfterDelay,
-              child: _scrollPage([const Text(_lorem)]),
+              child: _ptrScroll([const Text(_lorem)]),
             ),
-            _scrollPage([const Text('PTR is not available in this tab.')]),
+            _ptrScroll([const Text('PTR is not available in this tab.')]),
           ],
         ),
       ),
@@ -766,7 +894,7 @@ Widget _pullArea(BuildContext context, bool preventsPull) {
     decoration: BoxDecoration(
       color: preventsPull
           ? context.seedColor.bg.criticalWeak
-          : Theme.of(context).colorScheme.surfaceContainerHighest,
+          : context.seedColor.bg.neutralWeak,
       borderRadius: BorderRadius.circular(8),
     ),
     child: Text(
@@ -777,6 +905,11 @@ Widget _pullArea(BuildContext context, bool preventsPull) {
           : '이 영역은 당겨서 새로고침이 가능합니다. Amet in laborum proident fugiat '
                 'mollit quis aute mollit esse nostrud. Excepteur ea proident ipsum duis. '
                 'Nulla Lorem pariatur exercitation velit anim.',
+      style: TextStyle(
+        color: preventsPull
+            ? context.seedColor.fg.criticalContrast
+            : context.seedColor.fg.neutral,
+      ),
     ),
   );
   return preventsPull ? SeedPullToRefreshPreventPull(child: area) : area;
@@ -789,7 +922,7 @@ class _PullToRefreshPreventPullPage extends StatelessWidget {
   Widget build(BuildContext context) => SeedPullToRefresh(
     onReady: () {},
     onRefresh: _refreshAfterDelay,
-    child: _scrollPage([
+    child: _ptrScroll([
       _pullArea(context, false),
       const SizedBox(height: 16),
       _pullArea(context, true),
@@ -823,18 +956,19 @@ class _ArticlePreventPullPage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Article', style: context.seedTypography.t6Bold),
-              const SizedBox(height: 14),
-              const SelectableText(
+              const SizedBox(height: 12),
+              SelectableText(
                 '이 요소는 Article 내부에 있으므로 텍스트 선택이 가능합니다. '
                 '이 Article은 PTR 제스처를 호출하지 않도록 설정되어 있습니다. '
                 '여기를 아래로 끌어 당기면 PTR이 작동하는 대신 텍스트가 선택됩니다.',
+                style: context.seedTypography.articleBody,
               ),
             ],
           ),
         ),
       ),
       const SizedBox(height: 32),
-      const Divider(),
+      const SeedDivider(),
       const SizedBox(height: 32),
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: _gutter),
@@ -842,10 +976,11 @@ class _ArticlePreventPullPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Article 외부', style: context.seedTypography.t6Bold),
-            const SizedBox(height: 14),
-            const Text(
+            const SizedBox(height: 12),
+            Text(
               '이 요소는 Article 외부에 있으므로 텍스트 선택이 불가능합니다. '
               '이 요소는 PTR을 호출할 수 있습니다. 여기를 아래로 끌어 당겨보세요.',
+              style: context.seedTypography.articleBody,
             ),
           ],
         ),
@@ -864,8 +999,9 @@ class _MarginPlaygroundPage extends StatelessWidget {
     builder: (context, size) {
       final width = size.maxWidth;
       final md = width >= 768;
-      final sm = width >= 640;
-      final lg = width >= 1024;
+      // Official packages/css/breakpoints/index.mjs: sm=480, md=768, lg=1280.
+      final sm = width >= 480;
+      final lg = width >= 1280;
       final cases = <Widget>[
         _marginSection('Shorthand cascade', [
           _marginCase(
@@ -1002,15 +1138,38 @@ class _MarginPlaygroundPage extends StatelessWidget {
   );
 }
 
-Widget _marginSection(String title, List<Widget> children) => Column(
-  crossAxisAlignment: CrossAxisAlignment.start,
-  children: [
-    Padding(padding: const EdgeInsets.only(bottom: 8), child: _heading(title)),
-    ...children,
-    const SizedBox(height: 24),
-  ],
+Color _palette(BuildContext context, Color light, Color dark) =>
+    context.seedColor.isDark ? dark : light;
+
+Widget _marginSection(String title, List<Widget> children) => Builder(
+  builder: (context) => Padding(
+    padding: const EdgeInsets.only(bottom: 32),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: Text(
+            title,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: _palette(
+                context,
+                SeedPalette.gray900Light,
+                SeedPalette.gray900Dark,
+              ),
+            ),
+          ),
+        ),
+        ...children,
+      ],
+    ),
+  ),
 );
 
+/// The official Case asks for palette.gray50, which the palette does not have,
+/// so its panel paints nothing.
 Widget _marginCase(
   String label,
   String boxLabel, {
@@ -1020,57 +1179,96 @@ Widget _marginCase(
   double minHeight = 0,
   double offsetY = 0,
   bool bleedX = false,
-}) => Container(
-  padding: const EdgeInsets.all(16),
-  margin: const EdgeInsets.only(bottom: 12),
-  decoration: BoxDecoration(
-    color: const Color(0xFFF5F5F5),
-    borderRadius: BorderRadius.circular(8),
-  ),
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        label,
-        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-      ),
-      if (description != null) ...[_gap, _caption(description)],
-      const SizedBox(height: 8),
-      Container(
-        constraints: BoxConstraints(minHeight: minHeight),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFF3B5),
-          border: Border.all(color: const Color(0xFFB08D00)),
-          borderRadius: BorderRadius.circular(4),
+}) => Builder(
+  builder: (context) => Container(
+    padding: const EdgeInsets.all(16),
+    margin: const EdgeInsets.only(bottom: 12),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: _palette(
+              context,
+              SeedPalette.gray800Light,
+              SeedPalette.gray800Dark,
+            ),
+          ),
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
+        const SizedBox(height: 4),
+        if (description != null) ...[
+          Text(
+            description,
+            style: TextStyle(
+              fontSize: 12,
+              color: _palette(
+                context,
+                SeedPalette.gray600Light,
+                SeedPalette.gray600Dark,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+        Container(
+          constraints: BoxConstraints(minHeight: minHeight),
+          decoration: BoxDecoration(
+            color: _palette(
+              context,
+              SeedPalette.yellow100Light,
+              SeedPalette.yellow100Dark,
+            ),
+            border: Border.all(
+              color: _palette(
+                context,
+                SeedPalette.yellow700Light,
+                SeedPalette.yellow700Dark,
+              ),
+            ),
+            borderRadius: BorderRadius.circular(4),
+          ),
           child: Padding(
-            padding: margin,
-            child: Align(
-              alignment: align,
-              heightFactor: minHeight > 0 ? null : 1,
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: bleedX ? 20 : 0),
-                child: _VerticalMargin(
-                  top: offsetY,
-                  child: Transform.translate(
-                    offset: Offset(bleedX ? -16 : 0, 0),
-                    child: Container(
-                      constraints: const BoxConstraints(maxWidth: 200),
-                      padding: const EdgeInsets.all(12),
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF2273D4),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        boxLabel,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontFamily: 'monospace',
+            padding: const EdgeInsets.all(12),
+            child: Padding(
+              padding: margin,
+              child: Align(
+                alignment: align,
+                heightFactor: minHeight > 0 ? null : 1,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: bleedX ? 20 : 0),
+                  child: _VerticalMargin(
+                    top: offsetY,
+                    child: Transform.translate(
+                      offset: Offset(bleedX ? -16 : 0, 0),
+                      child: Container(
+                        // React DemoBox has width:200px on its *content box*;
+                        // p=x3 is outside that width (no border-box sizing).
+                        // Let the blue background wrap the 200px content
+                        // plus 12px padding on each side, rather than forcing
+                        // the entire painted box to only 200px.
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: _palette(
+                            context,
+                            SeedPalette.blue600Light,
+                            SeedPalette.blue600Dark,
+                          ),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: SizedBox(
+                          width: 200,
+                          child: Text(
+                            boxLabel,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontFamily: 'monospace',
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -1080,8 +1278,8 @@ Widget _marginCase(
             ),
           ),
         ),
-      ),
-    ],
+      ],
+    ),
   ),
 );
 
@@ -1112,13 +1310,30 @@ double seedFontMultiplierForLayout(
 }
 
 class _FontMultiplierLayoutPageState extends State<_FontMultiplierLayoutPage> {
+  void _refresh() {
+    if (kIsWeb) {
+      // Unlike setState, this reloads the HTML + Flutter bootstrap so any
+      // root font multiplier is read again on the newly loaded document.
+      font_browser.reloadDocument();
+      return;
+    }
+    // Native has no browser document or bundler root attribute. Flutter
+    // already observes OS text-scale changes via MediaQuery; re-evaluate
+    // the current value and explain the platform-specific behavior.
+    setState(() {});
+    SeedSnackbarProvider.of(context)
+        .show(child: const SeedSnackbar(message: '앱에서는 글꼴 배율 변경이 자동으로 반영됩니다.'));
+  }
+
   @override
   Widget build(BuildContext context) {
-    final multiplier = seedFontMultiplierForLayout(
-      MediaQuery.textScalerOf(context).scale(1.0),
-      isWeb: kIsWeb,
-      platform: defaultTargetPlatform,
-    );
+    final multiplier =
+        _webRootFontMultiplier() ??
+        seedFontMultiplierForLayout(
+          MediaQuery.textScalerOf(context).scale(1.0),
+          isWeb: kIsWeb,
+          platform: defaultTargetPlatform,
+        );
     final scale = multiplier >= 1.35
         ? 'large'
         : multiplier >= 1.15
@@ -1142,41 +1357,83 @@ class _FontMultiplierLayoutPageState extends State<_FontMultiplierLayoutPage> {
             '레이아웃을 배율에 맞게 조정할 수 있습니다.',
         tone: SeedCalloutTone.informative,
       ),
-      const SizedBox(height: 18),
-      _heading('현재 폰트 배율'),
-      Text('$multiplier'),
-      Text('scale: $scale'),
-      _caption('Flutter에서는 MediaQuery.textScaler를 통해 시스템 배율을 읽습니다.'),
-      const SizedBox(height: 24),
-      _heading('Grid 열 개수 조정 예시'),
-      _caption('폰트 배율이 클수록 열 개수가 줄어듭니다.'),
-      const SizedBox(height: 8),
-      GridView.builder(
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: columns,
-          crossAxisSpacing: 6,
-          mainAxisSpacing: 6,
-          mainAxisExtent: MediaQuery.textScalerOf(context).scale(23) + 32,
-        ),
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: 8,
-        itemBuilder: (context, i) => Container(
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: const Color(0xFF238B54),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            '아이템 ${i + 1}',
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white),
-          ),
+      const SizedBox(height: 12),
+      Padding(
+        padding: const EdgeInsets.all(4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('현재 폰트 배율', style: context.seedTypography.t5Bold),
+            const SizedBox(height: 8),
+            Text(
+              '$multiplier',
+              style: context.seedTypography.t4Medium.copyWith(
+                color: context.seedColor.fg.neutralMuted,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'scale: $scale',
+              style: context.seedTypography.t4Medium.copyWith(
+                color: context.seedColor.fg.neutralMuted,
+              ),
+            ),
+          ],
         ),
       ),
-      const SizedBox(height: 20),
-      _action('새로고침', () => setState(() {})),
-    ]);
+      const SizedBox(height: 12),
+      Padding(
+        padding: const EdgeInsets.all(4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Grid 열 개수 조정 예시', style: context.seedTypography.t5Bold),
+            const SizedBox(height: 8),
+            Text(
+              '폰트 배율이 클수록 열 개수가 줄어듭니다.',
+              style: context.seedTypography.t4Medium.copyWith(
+                color: context.seedColor.fg.neutralSubtle,
+              ),
+            ),
+            const SizedBox(height: 8),
+            // CSS grid rows stretch to their tallest cell.
+            for (var row = 0; row * columns < 8; row++) ...[
+              if (row > 0) const SizedBox(height: 6),
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (var col = 0; col < columns; col++) ...[
+                      if (col > 0) const SizedBox(width: 6),
+                      Expanded(
+                        child: row * columns + col < 8
+                            ? Container(
+                                padding: const EdgeInsets.all(16),
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: context.seedColor.bg.positiveSolid,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  '아이템 ${row * columns + col + 1}',
+                                  textAlign: TextAlign.center,
+                                  style: context.seedTypography.t4Medium
+                                      .copyWith(color: Colors.white),
+                                ),
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+      const SizedBox(height: 12),
+      _action('새로고침', _refresh),
+    ], padding: const EdgeInsets.symmetric(horizontal: _gutter));
   }
 }
 
@@ -1213,7 +1470,9 @@ Widget _previewScreen(BuildContext context, {bool transparent = false}) =>
         leading: (ModalRoute.of(context)?.isFirst ?? true)
             ? SeedTopNavigationIconButton(
                 icon: const Icon(Icons.close),
-                semanticsLabel: 'Close',
+                // Transparent passes aria-label="Close"; Preview keeps the
+                // AppBarCloseButton default "닫기".
+                semanticsLabel: transparent ? 'Close' : '닫기',
                 // Official AppBarCloseButton is root-only; its default click
                 // handler does not navigate (app-bar.tsx:99-127).
                 onPressed: () {},
@@ -1230,7 +1489,9 @@ Widget _previewScreen(BuildContext context, {bool transparent = false}) =>
       body: Center(
         child: Text(
           'Preview',
-          style: transparent ? const TextStyle(color: Colors.white) : null,
+          style: transparent
+              ? TextStyle(color: context.seedColor.fg.onNeutralSolid)
+              : null,
         ),
       ),
     );
@@ -1243,6 +1504,7 @@ class _AppScreenAppBarCustomizationPage extends StatelessWidget {
     backgroundColor: context.seedColor.bg.layerDefault,
     appBar: SeedTopNavigation(
       centerTitle: false,
+      platform: SeedTopNavigationPlatform.android,
       leading: const SizedBox.shrink(),
       backgroundColor: context.seedColor.isDark
           ? SeedPalette.blue200Dark

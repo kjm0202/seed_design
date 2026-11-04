@@ -34,6 +34,37 @@
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
+  <!-- Match SEED's Vite fontScaling:true document bootstrap before Flutter
+       reads data-seed-font-multiplier (official css/theming/index.mjs). -->
+  <script>
+    (function (window, document) {
+      try {
+        var root = document.documentElement;
+        var android = typeof window.AndroidFunction !== 'undefined';
+        root.dataset.seedPlatform = android ? 'android' : 'ios';
+        root.dataset.seedFontScaling = 'enabled';
+
+        if (android) {
+          var rootSize = parseFloat(window.getComputedStyle(root).fontSize);
+          var measured = rootSize > 0 ? rootSize / 16 : 1;
+          root.style.setProperty('--seed-static-font-scale', measured.toString());
+          var androidScale = Math.max(0.8, Math.min(1.5, measured));
+          root.dataset.seedFontMultiplier = parseFloat(androidScale.toFixed(2)).toString();
+        } else {
+          var probe = document.createElement('div');
+          probe.style.cssText = 'position:absolute;visibility:hidden;font-size:16px;font:-apple-system-body;';
+          document.body.appendChild(probe);
+          var size = parseFloat(window.getComputedStyle(probe).fontSize);
+          document.body.removeChild(probe);
+          var raw = size > 0 ? (size / 16) * 0.9412 : 1;
+          var iosScale = Math.max(0.8, Math.min(1.35, raw));
+          root.dataset.seedFontMultiplier = parseFloat(iosScale.toFixed(2)).toString();
+        }
+      } catch (_) {
+        // The Flutter fallback can still calculate a multiplier on older hosts.
+      }
+    })(window, document);
+  </script>
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader
