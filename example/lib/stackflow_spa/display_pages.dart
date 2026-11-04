@@ -44,36 +44,60 @@ Widget? buildDisplayPage(
   }
 }
 
-Widget _scroll(Widget child) => ListView(
-  padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-  children: [child],
+Widget _scroll(
+  Widget child, {
+  EdgeInsetsGeometry padding = const EdgeInsets.fromLTRB(16, 16, 16, 32),
+}) => ListView(padding: padding, children: [child]);
+
+Widget _readingLine(BuildContext context, String text) => Text(
+  text,
+  style: context.seedTypography.t2Regular.copyWith(
+    color: context.seedColor.fg.neutralMuted,
+  ),
 );
 
-Widget _heading(BuildContext context, String label) => Padding(
+Widget _sizeHeader(BuildContext context, String name, String size) => Row(
+  crossAxisAlignment: CrossAxisAlignment.end,
+  children: [
+    Flexible(
+      child: Text(name, softWrap: true, style: context.seedTypography.t4Bold),
+    ),
+    const SizedBox(width: 6),
+    // React HStack's text items may shrink/wrap within the available width.
+    // A fixed-intrinsic trailing token label overflows at 320px/large fonts.
+    Flexible(
+      child: Text(
+        size,
+        softWrap: true,
+        style: context.seedTypography.t2Regular.copyWith(
+          color: context.seedColor.fg.neutralMuted,
+        ),
+      ),
+    ),
+  ],
+);
+
+Widget _namedSection(
+  BuildContext context,
+  String name,
+  TextStyle style,
+  Widget content,
+) => Padding(
   padding: const EdgeInsets.only(bottom: 8),
-  child: Text(
-    label,
-    style: context.seedTypography.t5Bold.copyWith(
-      color: context.seedColor.fg.neutral,
-    ),
-  ),
-);
-
-Widget _subheading(BuildContext context, String label) => Padding(
-  padding: const EdgeInsets.only(bottom: 6),
-  child: Text(
-    label,
-    style: context.seedTypography.t3Medium.copyWith(
-      color: context.seedColor.fg.neutralMuted,
-    ),
-  ),
-);
-
-Widget _section(BuildContext context, String title, Widget content) => Padding(
-  padding: const EdgeInsets.only(bottom: 24),
   child: Column(
     crossAxisAlignment: CrossAxisAlignment.start,
-    children: [_heading(context, title), content],
+    children: [
+      Padding(
+        padding: const EdgeInsets.only(bottom: 4),
+        child: _sizeHeader(
+          context,
+          name,
+          '${style.fontSize!.toStringAsFixed(0)}px / '
+          '${(style.fontSize! * style.height!).toStringAsFixed(0)}px',
+        ),
+      ),
+      content,
+    ],
   ),
 );
 
@@ -92,34 +116,101 @@ Widget _scaleStage(
   BuildContext context,
   Widget child, {
   Key? key,
+  Key? stageKey,
   bool failure = false,
-}) => Container(
-  key: key,
+  bool concentric = false,
+}) => SizedBox(
+  key: stageKey,
   width: double.infinity,
-  padding: const EdgeInsets.all(16),
-  decoration: BoxDecoration(
-    color: failure
-        ? context.seedColor.bg.criticalWeak
-        : context.seedColor.bg.layerDefault,
-    border: Border.all(
-      color: failure
-          ? context.seedColor.stroke.criticalWeak
-          : context.seedColor.stroke.neutralMuted,
+  child: _ScaleSurface(
+    key: key,
+    radius: 12,
+    failure: failure,
+    color: context.seedColor.bg.layerDefault,
+    child: Padding(
+      // ScaleFeedbackPlayground.css.ts: stage uses x4 on every side while
+      // stageConcentric gives full-bleed List rows only x1_5 vertically.
+      padding: concentric
+          ? const EdgeInsets.symmetric(vertical: SeedDimension.x1_5)
+          : const EdgeInsets.all(SeedDimension.x4),
+      child: child,
     ),
-    borderRadius: BorderRadius.circular(12),
   ),
-  child: child,
 );
 
-Widget _scaleLabel(BuildContext context, String label) => Container(
-  padding: const EdgeInsets.symmetric(horizontal: 14),
-  height: 38,
-  alignment: Alignment.center,
-  decoration: BoxDecoration(
-    color: context.seedColor.bg.neutralWeak,
-    borderRadius: BorderRadius.circular(8),
+/// The playground's 1px surface; "misconfigured" specimens are dashed red.
+class _ScaleSurface extends StatelessWidget {
+  const _ScaleSurface({
+    super.key,
+    required this.child,
+    required this.color,
+    this.radius = 8,
+    this.failure = false,
+  });
+
+  final Widget child;
+  final Color color;
+  final double radius;
+  final bool failure;
+
+  @override
+  Widget build(BuildContext context) => AnimatedContainer(
+    duration: const Duration(milliseconds: 200),
+    decoration: BoxDecoration(
+      color: color,
+      borderRadius: BorderRadius.circular(radius),
+      border: failure
+          ? null
+          : Border.all(color: context.seedColor.stroke.neutralMuted),
+    ),
+    child: failure
+        ? CustomPaint(
+            foregroundPainter: _DashedBorderPainter(
+              context.seedColor.stroke.criticalSolid,
+              radius,
+            ),
+            child: child,
+          )
+        : child,
+  );
+}
+
+class _DashedBorderPainter extends CustomPainter {
+  const _DashedBorderPainter(this.color, this.radius);
+
+  final Color color;
+  final double radius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    final rect = RRect.fromRectAndRadius(
+      (Offset.zero & size).deflate(0.5),
+      Radius.circular(radius),
+    );
+    for (final metric in (Path()..addRRect(rect)).computeMetrics()) {
+      for (var d = 0.0; d < metric.length; d += 6) {
+        canvas.drawPath(metric.extractPath(d, d + 3), paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedBorderPainter old) =>
+      old.color != color || old.radius != radius;
+}
+
+Widget _scaleLabel(BuildContext context, String label) => _ScaleSurface(
+  color: context.seedColor.bg.layerDefault,
+  child: Container(
+    padding: const EdgeInsets.symmetric(horizontal: 16),
+    constraints: const BoxConstraints(minHeight: 48),
+    alignment: Alignment.center,
+    child: Text(label, style: context.seedTypography.t6Bold),
   ),
-  child: Text(label, style: context.seedTypography.t3Medium),
 );
 
 /// Tests the hand-written scaling equation separately from SeedPressable.
@@ -156,8 +247,6 @@ class _ManualScalePressableState extends State<_ManualScalePressable> {
   }
 }
 
-/// The equivalent of a ref-only experiment: gestures and the render object's
-/// actual size are observed, but no scale transform is attached to the child.
 class _MeasureOnlyPressable extends StatefulWidget {
   const _MeasureOnlyPressable();
 
@@ -179,23 +268,23 @@ class _MeasureOnlyPressableState extends State<_MeasureOnlyPressable> {
     },
     onPointerUp: (_) => setState(() => _pressed = false),
     onPointerCancel: (_) => setState(() => _pressed = false),
-    child: Container(
+    child: _ScaleSurface(
       key: _node,
-      height: 38,
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: _pressed
-            ? context.seedColor.bg.neutralWeakPressed
-            : context.seedColor.bg.neutralWeak,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        'ref만',
-        style: context.seedTypography.t3Medium,
-        semanticsLabel: _lastSize == null
-            ? 'ref만, 크기 미측정'
-            : 'ref만, 폭 ${_lastSize!.width.round()}px 측정됨',
+      failure: true,
+      color: _pressed
+          ? context.seedColor.bg.layerDefaultPressed
+          : context.seedColor.bg.layerDefault,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 48),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        alignment: Alignment.center,
+        child: Text(
+          'ref만',
+          style: context.seedTypography.t6Bold,
+          semanticsLabel: _lastSize == null
+              ? 'ref만, 크기 미측정'
+              : 'ref만, 폭 ${_lastSize!.width.round()}px 측정됨',
+        ),
       ),
     ),
   );
@@ -372,11 +461,15 @@ class _VariantPageState extends State<_VariantPage> {
       title,
       DropdownButton<String>(
         value: value,
+        isExpanded: true,
         isDense: true,
         underline: const SizedBox.shrink(),
         items: [
           for (final option in options)
-            DropdownMenuItem(value: option, child: Text(option)),
+            DropdownMenuItem(
+              value: option,
+              child: Text(option, maxLines: 1, overflow: TextOverflow.ellipsis),
+            ),
           const DropdownMenuItem(value: 'ALL', child: Text('All')),
         ],
         onChanged: (next) {
@@ -524,7 +617,13 @@ class _VariantPageState extends State<_VariantPage> {
     child: Row(
       children: [
         Expanded(child: Text(title, style: context.seedTypography.t5Bold)),
-        control,
+        if (control is DropdownButton<String>)
+          // The React control panel can shrink its select next to its label.
+          // Keep both flex children bounded instead of overflowing 320px
+          // at larger system text scales.
+          Expanded(child: control)
+        else
+          control,
       ],
     ),
   );
@@ -537,33 +636,40 @@ class _VariantPageState extends State<_VariantPage> {
       builder: (context, constraints) {
         final controls = Material(
           color: context.seedColor.bg.layerDefault,
-          child: SingleChildScrollView(
-            key: const ValueKey('analyzer-controls'),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _controlRow(
-                  '그리드 표시',
-                  SeedSwitch(
-                    size: SeedSwitchSize.size24,
-                    checked: showGrid,
-                    onCheckedChange: _setShowGrid,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border(
+                top: BorderSide(color: context.seedColor.stroke.neutralMuted),
+              ),
+            ),
+            child: SingleChildScrollView(
+              key: const ValueKey('analyzer-controls'),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _controlRow(
+                    '그리드 표시',
+                    SeedSwitch(
+                      size: SeedSwitchSize.size24,
+                      checked: showGrid,
+                      onCheckedChange: _setShowGrid,
+                    ),
                   ),
-                ),
-                if (_variants.isNotEmpty)
-                  _choose('variant', variant, _variants, (v) => variant = v),
-                if (_sizes.isNotEmpty)
-                  _choose('size', size, _sizes, (v) => size = v),
-                if (_isAction || _isChip)
-                  _choose('layout', layout, _layouts, (v) => layout = v),
-                if (_isAvatar)
-                  _choose(
-                    'size',
-                    avatarSize,
-                    _avatarSizeOptions,
-                    (v) => avatarSize = v,
-                  ),
-              ],
+                  if (_variants.isNotEmpty)
+                    _choose('variant', variant, _variants, (v) => variant = v),
+                  if (_sizes.isNotEmpty)
+                    _choose('size', size, _sizes, (v) => size = v),
+                  if (_isAction || _isChip)
+                    _choose('layout', layout, _layouts, (v) => layout = v),
+                  if (_isAvatar)
+                    _choose(
+                      'size',
+                      avatarSize,
+                      _avatarSizeOptions,
+                      (v) => avatarSize = v,
+                    ),
+                ],
+              ),
             ),
           ),
         );
@@ -629,10 +735,17 @@ class _VariantPageState extends State<_VariantPage> {
                 ],
               ),
             ),
-            const SeedDivider(),
+            // ComponentAnalyzer.tsx:33 sets gap="x2" between the flexible
+            // showcase and the intrinsically sized control panel.
+            const SizedBox(height: SeedDimension.x2),
             ConstrainedBox(
               constraints: BoxConstraints(
-                maxHeight: constraints.maxHeight * .46,
+                // Keep controls at natural height unless the entire viewport
+                // is shorter than the controls; then allow panel scrolling.
+                maxHeight: math.max(
+                  0,
+                  constraints.maxHeight - SeedDimension.x2,
+                ),
               ),
               child: controls,
             ),
@@ -781,11 +894,13 @@ class _BadgePage extends StatelessWidget {
         child: const Icon(Icons.help_outline),
       );
 
-  Widget _badgeTooltip(String title) => SeedHelpBubbleTrigger(
+  // Official ActivityBadge uses HelpBubbleTooltipTrigger: a hover/focus
+  // tooltip without a close button.
+  Widget _badgeTooltip(String title) => SeedHelpBubbleTooltip(
     title: title,
-    triggerBuilder: (context, isOpen, toggle) => SeedBadgeAction(
+    child: SeedBadgeAction(
       semanticsLabel: '도움말',
-      onPressed: toggle,
+      onPressed: () {},
       child: const Icon(Icons.help_outline),
     ),
   );
@@ -915,35 +1030,58 @@ class _TagGroupPage extends StatelessWidget {
     Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (final size in SeedTagGroupSize.values)
-          _section(
-            context,
-            size.name,
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _subheading(context, 'Default'),
-                SeedTagGroup(
-                  size: size,
-                  tone: SeedTagTone.neutralSubtle,
-                  items: _items,
-                ),
-                const SizedBox(height: 16),
-                _subheading(context, 'Truncate'),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 220),
-                  child: SeedTagGroup(
+        for (final (index, size) in SeedTagGroupSize.values.indexed) ...[
+          if (index > 0) const SizedBox(height: SeedDimension.x6),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(size.name, style: context.seedTypography.t4Bold),
+              const SizedBox(height: SeedDimension.x3),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Default',
+                    style: context.seedTypography.t2Medium.copyWith(
+                      color: context.seedColor.fg.neutralMuted,
+                    ),
+                  ),
+                  const SizedBox(height: SeedDimension.x1),
+                  SeedTagGroup(
                     size: size,
                     tone: SeedTagTone.neutralSubtle,
-                    truncate: true,
                     items: _items,
                   ),
+                ],
+              ),
+              const SizedBox(height: SeedDimension.x3),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 220),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Truncate',
+                      style: context.seedTypography.t2Medium.copyWith(
+                        color: context.seedColor.fg.neutralMuted,
+                      ),
+                    ),
+                    const SizedBox(height: SeedDimension.x1),
+                    SeedTagGroup(
+                      size: size,
+                      tone: SeedTagTone.neutralSubtle,
+                      truncate: true,
+                      items: _items,
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
+        ],
       ],
     ),
+    padding: const EdgeInsets.all(SeedDimension.x4),
   );
 }
 
@@ -974,72 +1112,104 @@ class _MannerTempPageState extends State<_MannerTempPage> {
   }
 
   Widget controlRow(String label, Widget control) => Container(
-    height: 52,
+    constraints: const BoxConstraints(minHeight: SeedDimension.x13),
     padding: const EdgeInsets.symmetric(horizontal: 16),
     decoration: BoxDecoration(
       border: Border(
-        top: BorderSide(color: context.seedColor.stroke.neutralMuted),
+        bottom: BorderSide(color: context.seedColor.stroke.neutralMuted),
       ),
     ),
     child: Row(
       children: [
         Expanded(child: Text(label, style: context.seedTypography.t5Bold)),
-        control,
+        if (control is DropdownButton<int>)
+          Expanded(child: control)
+        else
+          control,
       ],
     ),
   );
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      Expanded(
-        child: Stack(
-          children: [
-            if (showGrid)
-              Positioned.fill(
-                child: CustomPaint(painter: const _ShowcaseGridPainter()),
-              ),
-            SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    for (final current
-                        in level == null
-                            ? List.generate(10, (i) => i + 1)
-                            : [level!]) ...[
-                      if (current != (level ?? 1)) const SizedBox(width: 16),
-                      SeedMannerTempBadge(temperature: 36.5, level: current),
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, bounds) => Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: Stack(
+            children: [
+              if (showGrid)
+                Positioned.fill(
+                  child: CustomPaint(painter: const _ShowcaseGridPainter()),
+                ),
+              SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      for (final current
+                          in level == null
+                              ? List.generate(10, (i) => i + 1)
+                              : [level!]) ...[
+                        if (current != (level ?? 1)) const SizedBox(width: 16),
+                        SeedMannerTempBadge(temperature: 36.5, level: current),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
+            ],
+          ),
+        ),
+        const SizedBox(height: SeedDimension.x2),
+        ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: math.max(0, bounds.maxHeight - SeedDimension.x2),
+          ),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border(
+                top: BorderSide(color: context.seedColor.stroke.neutralMuted),
+              ),
             ),
-          ],
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  controlRow(
+                    '그리드 표시',
+                    SeedSwitch(
+                      checked: showGrid,
+                      onCheckedChange: _setShowGrid,
+                    ),
+                  ),
+                  controlRow(
+                    'level',
+                    DropdownButton<int>(
+                      value: level ?? 0,
+                      isExpanded: true,
+                      isDense: true,
+                      underline: const SizedBox.shrink(),
+                      items: [
+                        for (var value = 1; value <= 10; value++)
+                          DropdownMenuItem(
+                            value: value,
+                            child: Text('l$value'),
+                          ),
+                        const DropdownMenuItem(value: 0, child: Text('All')),
+                      ],
+                      onChanged: (value) =>
+                          setState(() => level = value == 0 ? null : value),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
-      ),
-      controlRow(
-        '그리드 표시',
-        SeedSwitch(checked: showGrid, onCheckedChange: _setShowGrid),
-      ),
-      controlRow(
-        'level',
-        DropdownButton<int>(
-          value: level ?? 0,
-          isDense: true,
-          underline: const SizedBox.shrink(),
-          items: [
-            for (var value = 1; value <= 10; value++)
-              DropdownMenuItem(value: value, child: Text('l$value')),
-            const DropdownMenuItem(value: 0, child: Text('All')),
-          ],
-          onChanged: (value) =>
-              setState(() => level = value == 0 ? null : value),
-        ),
-      ),
-    ],
+      ],
+    ),
   );
 }
 
@@ -1099,7 +1269,23 @@ class _AccordionPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              SeedBadge(label: variant.name, variant: SeedBadgeVariant.weak),
+              Container(
+                key: ValueKey('accordion-variant-${variant.name}'),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: SeedDimension.x2,
+                  vertical: SeedDimension.x1,
+                ),
+                decoration: BoxDecoration(
+                  color: context.seedColor.bg.layerBasement,
+                  borderRadius: SeedBorderRadius.r2,
+                ),
+                child: Text(
+                  variant.name,
+                  style: context.seedTypography.t2Bold.copyWith(
+                    color: context.seedColor.fg.neutralMuted,
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -1286,7 +1472,7 @@ class _ScaleFeedbackPageState extends State<_ScaleFeedbackPage> {
             style: context.seedTypography.t1Regular.copyWith(
               color: context.seedColor.fg.neutralMuted,
               fontFamily: 'monospace',
-              letterSpacing: 0.08,
+              letterSpacing: 0.88,
             ),
           ),
           const SizedBox(width: 8),
@@ -1310,9 +1496,11 @@ class _ScaleFeedbackPageState extends State<_ScaleFeedbackPage> {
   Widget _demo(
     String title,
     String description,
-    Widget child, {
+    Widget? child, {
     bool highlighted = false,
     Widget? footer,
+    List<Widget>? separateStages,
+    bool concentric = false,
   }) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
@@ -1330,12 +1518,23 @@ class _ScaleFeedbackPageState extends State<_ScaleFeedbackPage> {
         ),
       ),
       const SizedBox(height: SeedDimension.x3),
-      _scaleStage(
-        context,
-        SizedBox(width: double.infinity, child: child),
-        key: ValueKey('scale-feedback-panel:$title'),
-        failure: highlighted,
-      ),
+      for (var i = 0; i < (separateStages?.length ?? 1); i++) ...[
+        if (i > 0) const SizedBox(height: SeedDimension.x3),
+        _scaleStage(
+          context,
+          separateStages == null ? child! : separateStages[i],
+          // Preserve the original first-panel key used by screen_routes_test
+          // while exposing :0 for the newer multi-stage geometry checks.
+          key: ValueKey(
+            i == 0
+                ? 'scale-feedback-panel:$title'
+                : 'scale-feedback-panel:$title:$i',
+          ),
+          stageKey: i == 0 ? ValueKey('scale-feedback-panel:$title:0') : null,
+          failure: highlighted,
+          concentric: concentric,
+        ),
+      ],
       if (footer != null) ...[const SizedBox(height: SeedDimension.x3), footer],
     ],
   );
@@ -1354,21 +1553,23 @@ class _ScaleFeedbackPageState extends State<_ScaleFeedbackPage> {
       // specimens; keep the press gesture active for visual scale alone.
       onTap: onTap ?? () {},
       enableScale: enableScale,
-      child: Container(
-        width: width,
-        height: height ?? 38,
-        padding: width == null
-            ? const EdgeInsets.symmetric(horizontal: 14)
-            : EdgeInsets.zero,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: context.seedColor.bg.neutralWeak,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          text,
-          style: context.seedTypography.t3Medium.copyWith(
-            color: context.seedColor.fg.neutral,
+      builder: (ctx, pressed) => _ScaleSurface(
+        color: pressed
+            ? ctx.seedColor.bg.layerDefaultPressed
+            : ctx.seedColor.bg.layerDefault,
+        child: Container(
+          width: width,
+          height: height,
+          constraints: BoxConstraints(minHeight: height == null ? 48 : 0),
+          padding: width == null
+              ? const EdgeInsets.symmetric(horizontal: 16)
+              : EdgeInsets.zero,
+          alignment: Alignment.center,
+          child: Text(
+            text,
+            style: ctx.seedTypography.t6Bold.copyWith(
+              color: ctx.seedColor.fg.neutral,
+            ),
           ),
         ),
       ),
@@ -1409,7 +1610,7 @@ class _ScaleFeedbackPageState extends State<_ScaleFeedbackPage> {
                   semanticsLabel: '아이콘 전용 정사각 버튼',
                   onPressed: () {},
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: SeedDimension.x3),
                 SizedBox(
                   width: double.infinity,
                   child: SeedButton(
@@ -1447,84 +1648,78 @@ class _ScaleFeedbackPageState extends State<_ScaleFeedbackPage> {
           _demo(
             'Checkbox / RadioGroup — ListItem 안',
             '행 배경만 바뀌고 마크는 줄지 않습니다.',
-            Column(
-              children: [
-                SeedList(
-                  children: [
-                    SeedListItem(
-                      titleText: 'prefix Checkmark',
-                      prefix: Icon(
-                        checkInList
-                            ? Icons.check_box
-                            : Icons.check_box_outline_blank,
-                      ),
-                      checked: checkInList,
-                      onTap: () => setState(() => checkInList = !checkInList),
+            null,
+            concentric: true,
+            separateStages: [
+              SeedList(
+                children: [
+                  SeedListItem(
+                    titleText: 'prefix Checkmark',
+                    prefix: Icon(
+                      checkInList
+                          ? Icons.check_box
+                          : Icons.check_box_outline_blank,
                     ),
-                    SeedCheckListItem(
-                      title: 'suffix Checkmark',
-                      value: !checkInList,
-                      onChanged: (value) =>
-                          setState(() => checkInList = !value),
+                    checked: checkInList,
+                    onTap: () => setState(() => checkInList = !checkInList),
+                  ),
+                  SeedCheckListItem(
+                    title: 'suffix Checkmark',
+                    value: !checkInList,
+                    onChanged: (value) => setState(() => checkInList = !value),
+                  ),
+                ],
+              ),
+              SeedList(
+                children: [
+                  for (final value in ['first', 'second'])
+                    SeedRadioListItem<String>(
+                      title: value == 'first' ? 'Radiomark 1' : 'Radiomark 2',
+                      value: value,
+                      groupValue: radio,
+                      onChanged: (next) =>
+                          setState(() => radio = next ?? 'first'),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                SeedList(
-                  children: [
-                    for (final value in ['first', 'second'])
-                      SeedRadioListItem<String>(
-                        title: value == 'first' ? 'Radiomark 1' : 'Radiomark 2',
-                        value: value,
-                        groupValue: radio,
-                        onChanged: (next) =>
-                            setState(() => radio = next ?? 'first'),
-                      ),
-                  ],
-                ),
-              ],
-            ),
+                ],
+              ),
+            ],
           ),
           _demo(
             'Callout — 루트 전체',
             '누를 수 있는 Callout만 전체가 줄어듭니다.',
-            Column(
-              children: [
-                SeedCallout(
-                  title: 'asChild button',
-                  description: '루트 전체가 줄어듭니다.',
-                  onTap: () {},
-                ),
-                const SizedBox(height: 12),
-                SeedCallout(
-                  title: 'asChild anchor',
-                  description: '링크처럼 동작해도 같습니다.',
-                  onTap: () {},
-                ),
-              ],
-            ),
+            null,
+            separateStages: [
+              SeedCallout(
+                title: 'asChild button',
+                description: '루트 전체가 줄어듭니다.',
+                onTap: () {},
+              ),
+              SeedCallout(
+                title: 'asChild anchor',
+                description: '링크처럼 동작해도 같습니다.',
+                onTap: () {},
+              ),
+            ],
           ),
           _demo(
             '닫기 버튼',
             '닫기 버튼만 줄어듭니다. 반복해서 눌러볼 수 있도록 열린 상태로 고정했습니다.',
-            Column(
-              children: [
-                SeedCallout(
-                  open: true,
-                  title: 'Callout',
-                  description: '닫기 버튼만 줄어듭니다.',
-                  onDismiss: () {},
-                ),
-                const SizedBox(height: 12),
-                SeedPageBanner(
-                  open: true,
-                  dismissible: true,
-                  title: 'PageBanner',
-                  description: '닫기 버튼만 줄어듭니다.',
-                  onDismiss: () {},
-                ),
-              ],
-            ),
+            null,
+            separateStages: [
+              SeedCallout(
+                open: true,
+                title: 'Callout',
+                description: '닫기 버튼만 줄어듭니다.',
+                onDismiss: () {},
+              ),
+              SeedPageBanner(
+                open: true,
+                dismissible: true,
+                title: 'PageBanner',
+                description: '닫기 버튼만 줄어듭니다.',
+                onDismiss: () {},
+              ),
+            ],
           ),
         ]),
         const SizedBox(height: SeedDimension.x12),
@@ -1571,7 +1766,7 @@ class _ScaleFeedbackPageState extends State<_ScaleFeedbackPage> {
               spacing: 12,
               runSpacing: 12,
               children: [
-                _pressable('+', width: 24, height: 24),
+                _pressable('', width: 24, height: 24),
                 _pressable('300px 바', width: 300, height: 44),
               ],
             ),
@@ -1588,14 +1783,17 @@ class _ScaleFeedbackPageState extends State<_ScaleFeedbackPage> {
                 SeedPressable(
                   enableScale: false,
                   onTap: () {},
-                  builder: (ctx, pressed) => Container(
-                    height: 38,
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    alignment: Alignment.center,
+                  builder: (ctx, pressed) => _ScaleSurface(
+                    failure: true,
                     color: pressed
-                        ? ctx.seedColor.bg.neutralWeakPressed
-                        : ctx.seedColor.bg.neutralWeak,
-                    child: const Text('클래스만'),
+                        ? ctx.seedColor.bg.layerDefaultPressed
+                        : ctx.seedColor.bg.layerDefault,
+                    child: Container(
+                      constraints: const BoxConstraints(minHeight: 48),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      alignment: Alignment.center,
+                      child: Text('클래스만', style: ctx.seedTypography.t6Bold),
+                    ),
                   ),
                 ),
                 const _MeasureOnlyPressable(),
@@ -1606,16 +1804,17 @@ class _ScaleFeedbackPageState extends State<_ScaleFeedbackPage> {
           _demo(
             '커스텀 래퍼 안의 SEED 마크',
             '래퍼와 마크를 함께 축소하는 경우와 마크의 축소를 끈 경우입니다.',
-            Column(
-              children: [
-                for (final optOut in [false, true])
-                  SeedPressable(
-                    onTap: () {},
-                    builder: (ctx, pressed) => Container(
-                      padding: const EdgeInsets.all(16),
-                      color: pressed
-                          ? ctx.seedColor.bg.neutralWeakPressed
-                          : ctx.seedColor.bg.neutralWeak,
+            null,
+            separateStages: [
+              for (final optOut in [false, true])
+                SeedPressable(
+                  onTap: () {},
+                  builder: (ctx, pressed) => _ScaleSurface(
+                    color: pressed
+                        ? ctx.seedColor.bg.layerDefaultPressed
+                        : ctx.seedColor.bg.layerDefault,
+                    child: Padding(
+                      padding: const EdgeInsets.all(SeedDimension.x3),
                       child: Row(
                         children: [
                           Expanded(
@@ -1633,8 +1832,8 @@ class _ScaleFeedbackPageState extends State<_ScaleFeedbackPage> {
                       ),
                     ),
                   ),
-              ],
-            ),
+                ),
+            ],
           ),
         ]),
       ],
@@ -1807,8 +2006,9 @@ class _TypographyPageState extends State<_TypographyPage> {
             title: '폰트 스케일링 검증',
             description: 'dynamic과 raw px / raw rem은 시스템 글꼴 배율을 따라가고 static만 기준 막대에 고정됩니다. Flutter의 시스템 글꼴 크기를 변경해 비교해 보세요.',
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: SeedDimension.x3),
           SeedSegmentedControl<String>(
+            semanticsLabel: 'Font weight',
             value: weight,
             onValueChange: (next) => setState(() => weight = next),
             segments: const [
@@ -1817,13 +2017,18 @@ class _TypographyPageState extends State<_TypographyPage> {
               SeedSegment(value: 'Bold', label: 'Bold'),
             ],
           ),
-          const SizedBox(height: 20),
-          _heading(context, '읽는 법'),
-          const Text('세로 막대 = 단계별 기준 line-height를 px로 고정한 자'),
-          const Text('dynamic = 시스템 배율을 따르는 SEED TextStyle'),
-          const Text('static = 시스템 배율을 적용하지 않은 고정 TextStyle'),
-          const Text('raw px, raw rem = 배율이 적용되는 직접 지정 값'),
-          const SizedBox(height: 20),
+          const SizedBox(height: SeedDimension.x3),
+          Text('읽는 법', style: context.seedTypography.t3Bold),
+          const SizedBox(height: SeedDimension.x1),
+          _readingLine(context, '세로 막대 = 그 단계의 기준 line-height를 px로 고정한 자'),
+          const SizedBox(height: SeedDimension.x1),
+          _readingLine(
+            context,
+            'dynamic = fontSize.t5 / static = fontSize.t5Static',
+          ),
+          const SizedBox(height: SeedDimension.x1),
+          _readingLine(context, 'raw px, raw rem = SEED 토큰 없이 직접 지정한 값'),
+          const SizedBox(height: SeedDimension.x3),
           for (var index = 0; index < _typeSizes.length; index++)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
@@ -1832,9 +2037,10 @@ class _TypographyPageState extends State<_TypographyPage> {
                 children: [
                   Padding(
                     padding: const EdgeInsets.only(bottom: 4),
-                    child: Text(
-                      't${index + 1}   ${_typeSizes[index].toStringAsFixed(0)}px / ${_typeHeights[index].toStringAsFixed(0)}px',
-                      style: context.seedTypography.t4Bold,
+                    child: _sizeHeader(
+                      context,
+                      't${index + 1}',
+                      '${_typeSizes[index].toStringAsFixed(0)}px / ${_typeHeights[index].toStringAsFixed(0)}px',
                     ),
                   ),
                   _row('dynamic', styles[index], _typeHeights[index]),
@@ -1873,13 +2079,15 @@ class _TypographyPageState extends State<_TypographyPage> {
                 ],
               ),
             ),
-          _heading(context, '이름 있는 텍스트 스타일'),
-          _subheading(context, 'static 대응이 없어 항상 스케일링을 따라갑니다.'),
-          const SizedBox(height: 8),
+          Text('이름 있는 텍스트 스타일', style: context.seedTypography.t4Bold),
+          const SizedBox(height: SeedDimension.x1),
+          _readingLine(context, 'static 대응이 없어 항상 스케일링을 따라갑니다.'),
+          const SizedBox(height: SeedDimension.x3),
           for (final entry in named.entries)
-            _section(
+            _namedSection(
               context,
               entry.key,
+              entry.value,
               Column(
                 children: [
                   _row(
@@ -1901,6 +2109,9 @@ class _TypographyPageState extends State<_TypographyPage> {
             ),
         ],
       ),
+      // ActivityTypographyScale.tsx:190-194 sets horizontal/bottom gutters
+      // without a top inset; this page must not inherit _scroll's top x4.
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, SeedDimension.x14),
     );
   }
 }
