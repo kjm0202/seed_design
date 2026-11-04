@@ -8,7 +8,10 @@ import '../../foundations/radius/seed_radius.dart';
 import '../../theme/seed_theme.dart';
 
 /// Tone options for top navigation bars and buttons.
-enum SeedTopNavigationButtonTone { layer, transparent }
+enum SeedTopNavigationButtonTone {
+  layer,
+  transparent,
+}
 
 /// Inherited scope that shares [SeedTopNavigation]'s [tone] with child buttons.
 class SeedTopNavigationScope extends InheritedWidget {

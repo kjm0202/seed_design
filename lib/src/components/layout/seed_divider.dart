@@ -7,9 +7,13 @@ import '../../theme/seed_theme.dart';
 /// Provides visual separation between content sections and list items.
 class SeedDivider extends StatelessWidget {
   final double thickness;
+
   final Color? color;
+
   final double? indent;
+
   final double? endIndent;
+
   final Axis direction;
 
   /// Optional announcement for a meaningful section boundary.

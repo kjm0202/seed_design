@@ -27,8 +27,11 @@ class SeedPullToRefresh extends StatefulWidget {
        assert(displacementMultiplier > 0);
 
   final Widget child;
+
   final Future<void> Function() onRefresh;
+
   final VoidCallback? onReady;
+
   final bool enabled, preventPull;
 
   /// Distance in logical pixels required to become ready. React defaults to 88.
@@ -382,6 +385,7 @@ class _PullScrollPhysics extends ScrollPhysics {
 /// scrolling and text selection available, like React's prevent-pull marker.
 class SeedPullToRefreshPreventPull extends StatelessWidget {
   const SeedPullToRefreshPreventPull({super.key, required this.child});
+
   final Widget child;
 
   @override

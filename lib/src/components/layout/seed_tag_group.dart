@@ -15,7 +15,11 @@ enum SeedTagGroupSize {
 }
 
 /// Tone of [SeedTagItem].
-enum SeedTagTone { neutralSubtle, neutral, brand }
+enum SeedTagTone {
+  neutralSubtle,
+  neutral,
+  brand,
+}
 
 /// An individual tag item in a [SeedTagGroup].
 class SeedTagItem {

@@ -6,12 +6,19 @@ import '../../foundations/motion/seed_motion.dart';
 import '../../foundations/colors/seed_palette.dart';
 import '../../theme/seed_theme.dart';
 
-enum SeedSkeletonTone { neutral, magic }
+enum SeedSkeletonTone {
+  neutral,
+
+  magic,
+}
 
 enum SeedSkeletonRadius {
   r0,
+
   r8,
+
   r16,
+
   full;
 
   BorderRadius get borderRadius => switch (this) {
@@ -27,10 +34,15 @@ enum SeedSkeletonRadius {
 /// Provides animated shimmer placeholders while content is loading.
 class SeedSkeleton extends StatefulWidget {
   final double? width;
+
   final double? height;
+
   final SeedSkeletonRadius radius;
+
   final BorderRadius? borderRadius;
+
   final BoxShape shape;
+
   final SeedSkeletonTone tone;
 
   const SeedSkeleton({

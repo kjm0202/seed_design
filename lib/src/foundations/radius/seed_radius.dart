@@ -21,15 +21,37 @@ class SeedRadius {
 class SeedBorderRadius {
   const SeedBorderRadius._();
 
-  static const BorderRadius r0_5 = BorderRadius.all(Radius.circular(SeedRadius.r0_5));
-  static const BorderRadius r1 = BorderRadius.all(Radius.circular(SeedRadius.r1));
-  static const BorderRadius r1_5 = BorderRadius.all(Radius.circular(SeedRadius.r1_5));
-  static const BorderRadius r2 = BorderRadius.all(Radius.circular(SeedRadius.r2));
-  static const BorderRadius r2_5 = BorderRadius.all(Radius.circular(SeedRadius.r2_5));
-  static const BorderRadius r3 = BorderRadius.all(Radius.circular(SeedRadius.r3));
-  static const BorderRadius r3_5 = BorderRadius.all(Radius.circular(SeedRadius.r3_5));
-  static const BorderRadius r4 = BorderRadius.all(Radius.circular(SeedRadius.r4));
-  static const BorderRadius r5 = BorderRadius.all(Radius.circular(SeedRadius.r5));
-  static const BorderRadius r6 = BorderRadius.all(Radius.circular(SeedRadius.r6));
-  static const BorderRadius full = BorderRadius.all(Radius.circular(SeedRadius.full));
+  static const BorderRadius r0_5 = BorderRadius.all(
+    Radius.circular(SeedRadius.r0_5),
+  );
+  static const BorderRadius r1 = BorderRadius.all(
+    Radius.circular(SeedRadius.r1),
+  );
+  static const BorderRadius r1_5 = BorderRadius.all(
+    Radius.circular(SeedRadius.r1_5),
+  );
+  static const BorderRadius r2 = BorderRadius.all(
+    Radius.circular(SeedRadius.r2),
+  );
+  static const BorderRadius r2_5 = BorderRadius.all(
+    Radius.circular(SeedRadius.r2_5),
+  );
+  static const BorderRadius r3 = BorderRadius.all(
+    Radius.circular(SeedRadius.r3),
+  );
+  static const BorderRadius r3_5 = BorderRadius.all(
+    Radius.circular(SeedRadius.r3_5),
+  );
+  static const BorderRadius r4 = BorderRadius.all(
+    Radius.circular(SeedRadius.r4),
+  );
+  static const BorderRadius r5 = BorderRadius.all(
+    Radius.circular(SeedRadius.r5),
+  );
+  static const BorderRadius r6 = BorderRadius.all(
+    Radius.circular(SeedRadius.r6),
+  );
+  static const BorderRadius full = BorderRadius.all(
+    Radius.circular(SeedRadius.full),
+  );
 }

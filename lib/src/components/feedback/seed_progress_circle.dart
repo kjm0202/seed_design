@@ -3,7 +3,13 @@ import 'package:material_ui/material_ui.dart';
 import '../../theme/seed_theme.dart';
 import '../../foundations/colors/seed_palette.dart';
 
-enum SeedProgressCircleTone { neutral, brand, staticWhite }
+enum SeedProgressCircleTone {
+  neutral,
+
+  brand,
+
+  staticWhite,
+}
 
 /// Progress Circle component of SEED Design System.
 ///
@@ -15,9 +21,13 @@ class SeedProgressCircle extends StatelessWidget {
   /// Omit to show indeterminate progress.
   final double? value;
   final Color? color;
+
   final Color? trackColor;
+
   final double strokeWidth;
+
   final SeedProgressCircleTone tone;
+
   final String? semanticsLabel;
 
   /// A numeric or percentage value for the native progress-bar semantics.

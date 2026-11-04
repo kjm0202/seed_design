@@ -5,7 +5,10 @@ import '../../theme/seed_theme.dart';
 import '../button/seed_button.dart';
 
 /// Size of [SeedResultSection].
-enum SeedResultSectionSize { medium, large }
+enum SeedResultSectionSize {
+  medium,
+  large,
+}
 
 /// Result Section component of SEED Design System.
 ///

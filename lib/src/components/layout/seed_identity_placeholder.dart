@@ -5,7 +5,10 @@ import 'package:material_ui/material_ui.dart';
 import '../../theme/seed_theme.dart';
 import '../../foundations/colors/seed_palette.dart';
 
-enum SeedIdentityType { person, business }
+enum SeedIdentityType {
+  person,
+  business,
+}
 
 /// Original SEED identity artwork, filling its parent's bounded dimensions.
 /// Clipping belongs to the parent (for example, [SeedAvatar]).

@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 DateTime seedDateOnly(DateTime date) =>
     DateTime(date.year, date.month, date.day);
+
 int seedCalendarDayCount(DateTime start, DateTime end) =>
     DateTime.utc(
       end.year,
@@ -12,7 +13,9 @@ int seedCalendarDayCount(DateTime start, DateTime end) =>
 
 class SeedDateRange {
   const SeedDateRange({required this.start, this.end});
+
   final DateTime start;
+
   final DateTime? end;
 }
 
@@ -25,10 +28,15 @@ class SeedDateSelection {
     this.dates = const [],
   });
   final DateTime? date, start, end;
+
   final List<DateTime> dates;
 }
 
-enum SeedExcludeDatesScope { selection, range }
+enum SeedExcludeDatesScope {
+  selection,
+
+  range,
+}
 
 typedef SeedDateConstraint = bool Function(
   DateTime date,
@@ -36,27 +44,28 @@ typedef SeedDateConstraint = bool Function(
 );
 SeedDateConstraint seedDateOnOrAfter(DateTime first) =>
     (date, _) => !seedDateOnly(date).isBefore(seedDateOnly(first));
+
 SeedDateConstraint seedDateOnOrBefore(DateTime last) =>
     (date, _) => !seedDateOnly(date).isAfter(seedDateOnly(last));
+
 SeedDateConstraint seedExcludeDates(
   bool Function(DateTime) excluded, {
   SeedExcludeDatesScope scope = SeedExcludeDatesScope.range,
-}) =>
-    (date, selection) {
-      if (excluded(date)) return false;
-      if (scope == SeedExcludeDatesScope.range &&
-          selection.start != null &&
-          selection.end != null) {
-        for (
-          var day = seedDateOnly(selection.start!);
-          !day.isAfter(selection.end!);
-          day = DateTime(day.year, day.month, day.day + 1)
-        ) {
-          if (excluded(day)) return false;
-        }
-      }
-      return true;
-    };
+}) => (date, selection) {
+  if (excluded(date)) return false;
+  if (scope == SeedExcludeDatesScope.range &&
+      selection.start != null &&
+      selection.end != null) {
+    for (
+      var day = seedDateOnly(selection.start!);
+      !day.isAfter(selection.end!);
+      day = DateTime(day.year, day.month, day.day + 1)
+    ) {
+      if (excluded(day)) return false;
+    }
+  }
+  return true;
+};
 SeedDateConstraint seedRangeDayCountAtLeast(int count) {
   if (count < 1) {
     throw RangeError.value(count, 'count', 'Must be at least 1');
@@ -88,8 +97,11 @@ SeedDateConstraint seedMaxSelectionCount(int count) {
 class SeedDatePickerController extends ChangeNotifier {
   DateTime? _target;
   bool _focus = false;
+
   DateTime? get target => _target;
+
   bool get requestsFocus => _focus;
+
   void navigateToDate(DateTime date) {
     _target = seedDateOnly(date);
     _focus = false;
@@ -118,7 +130,9 @@ class SeedDateCellInfo {
     required this.focused,
   });
   final DateTime date;
+
   final String label;
+
   final bool selected,
       today,
       inRange,

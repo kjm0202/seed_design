@@ -69,7 +69,11 @@ enum SeedAvatarSize {
   };
 }
 
-enum SeedAvatarBadgeMask { circle, flower, shield }
+enum SeedAvatarBadgeMask {
+  circle,
+  flower,
+  shield,
+}
 
 /// Avatar component of SEED Design System.
 ///
