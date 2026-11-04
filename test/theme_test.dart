@@ -198,6 +198,77 @@ void main() {
       );
     });
   });
+
+  group('local theme in overlays', () {
+    testWidgets('dialog and sheets retain a local theme and custom font', (
+      tester,
+    ) async {
+      for (final kind in ['dialog', 'sheet', 'menu', 'panel']) {
+        await tester.pumpWidget(
+          hostInteraction(
+            SeedTheme(
+              data: SeedThemeData.dark(fontFamily: 'LocalFont'),
+              child: Builder(
+                builder: (context) => TextButton(
+                  onPressed: () {
+                    final content = Builder(
+                      builder: (context) {
+                        expect(context.seedIsDark, isTrue);
+                        expect(
+                          context.seedTypography.t4Regular.fontFamily,
+                          'LocalFont',
+                        );
+                        return const Text('Local content');
+                      },
+                    );
+                    switch (kind) {
+                      case 'dialog':
+                        showSeedDialog<void>(
+                          context: context,
+                          child: SeedDialog(title: 'Title', content: content),
+                        );
+                      case 'sheet':
+                        showSeedBottomSheet<void>(
+                          context: context,
+                          child: SeedBottomSheet(content: content),
+                        );
+                      case 'menu':
+                        showSeedMenuSheet<void>(
+                          context: context,
+                          groups: [
+                            SeedMenuGroupData(
+                              items: [
+                                SeedMenuItemData(
+                                  label: 'Menu',
+                                  prefixIcon: content,
+                                ),
+                              ],
+                            ),
+                          ],
+                        );
+                      case 'panel':
+                        showSeedSidePanel<void>(
+                          context: context,
+                          title: 'Panel',
+                          body: content,
+                        );
+                    }
+                  },
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+        expect(find.text('Local content'), findsOneWidget);
+        // Remove the whole navigator between cases.
+        await tester.pumpWidget(const SizedBox());
+        await tester.pumpAndSettle();
+      }
+    });
+  });
 }
 
 class _AppMarker extends ThemeExtension<_AppMarker> {

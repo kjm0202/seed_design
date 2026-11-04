@@ -311,6 +311,48 @@ void main() {
       expect(tester.getSemantics(finder).getSemanticsData().value, '75%');
     },
   );
+
+  testWidgets(
+    'bridge preserves host configuration and captures its theme in dialogs',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(
+            fontFamily: 'HostFont',
+            visualDensity: VisualDensity.compact,
+          ),
+          home: SeedMaterialBridge(
+            brightness: Brightness.dark,
+            child: Builder(
+              builder: (context) {
+                expect(Theme.of(context).visualDensity, VisualDensity.compact);
+                expect(Theme.of(context).brightness, Brightness.dark);
+                expect(context.seedIsDark, isTrue);
+                expect(context.seedTypography.t4Regular.fontFamily, 'HostFont');
+                return Scaffold(
+                  body: TextButton(
+                    onPressed: () => showDialog<void>(
+                      context: context,
+                      builder: (context) {
+                        expect(context.seedIsDark, isTrue);
+                        expect(Theme.of(context).brightness, Brightness.dark);
+                        return const AlertDialog(title: Text('Captured theme'));
+                      },
+                    ),
+                    child: const Text('Open'),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      expect(find.text('Captured theme'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
   group('Form, Navigator and theme contracts', () {
     testWidgets(
       'programmatic controller edits validate immediately and reset clears interaction',
@@ -922,5 +964,56 @@ void main() {
         expect(tester.takeException(), isNull);
       });
     }
+
+    testWidgets(
+      'material_ui Korean localizations support Seed inputs and dialogs',
+      (tester) async {
+        bool? confirmed;
+        await tester.pumpWidget(
+          MaterialApp(
+            locale: const Locale('ko'),
+            supportedLocales: const [Locale('en'), Locale('ko')],
+            localizationsDelegates: GlobalMaterialLocalizations.delegates,
+            theme: SeedThemeData.light().toThemeData(),
+            home: Builder(
+              builder: (context) {
+                expect(MaterialLocalizations.of(context).okButtonLabel, '확인');
+                expect(
+                  context.seedColor.fg.brand,
+                  Theme.of(context).colorScheme.primary,
+                );
+                return Scaffold(
+                  body: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SeedTextInput(hintText: '이름'),
+                      SeedButton(
+                        label: '다이얼로그 열기',
+                        onPressed: () async {
+                          confirmed = await showSeedAlertDialog(
+                            context: context,
+                            title: '변경 확인',
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField), '동네 이웃');
+        expect(find.text('동네 이웃'), findsOneWidget);
+        await tester.tap(find.text('다이얼로그 열기'));
+        await tester.pumpAndSettle();
+        expect(find.text('변경 확인'), findsOneWidget);
+        await tester.tap(find.text('확인'));
+        await tester.pumpAndSettle();
+        expect(confirmed, isTrue);
+        expect(tester.takeException(), isNull);
+      },
+    );
   });
 }

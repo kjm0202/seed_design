@@ -100,6 +100,96 @@ void main() {
     );
 
     testWidgets(
+      'semantic menu click leaves the first arrow on the first item $width',
+      (tester) async {
+        size(tester);
+        final semantics = tester.ensureSemantics();
+        final selected = <String>[];
+        await tester.pumpWidget(
+          _host(
+            SeedMenuTrigger(
+              triggerBuilder: (_, open, toggle) =>
+                  SeedButton(label: 'Open menu', onPressed: toggle),
+              builder: (_) => SeedMenu(
+                groups: [
+                  SeedMenuGroupData(
+                    items: [
+                      SeedMenuItemData(
+                        label: 'First',
+                        onTap: () => selected.add('first'),
+                      ),
+                      SeedMenuItemData(
+                        label: 'Second',
+                        onTap: () => selected.add('second'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await _action(
+          tester,
+          tester.getSemantics(find.text('Open menu')),
+          SemanticsAction.tap,
+        );
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await tester.pumpAndSettle();
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+        expect(selected, ['first']);
+        semantics.dispose();
+      },
+    );
+
+    for (final key in [
+      LogicalKeyboardKey.arrowDown,
+      LogicalKeyboardKey.arrowUp,
+    ]) {
+      testWidgets(
+        'semantic Select click seeds selected value on first $key $width',
+        (tester) async {
+          size(tester);
+          final semantics = tester.ensureSemantics();
+          final selected = <List<String>>[];
+          await tester.pumpWidget(
+            _host(
+              SeedSelect<String>(
+                semanticsLabel: 'Fruit',
+                defaultValue: const ['banana'],
+                onValueChange: selected.add,
+                groups: const [
+                  SeedSelectGroup(
+                    items: [
+                      SeedSelectItem(value: 'apple', label: 'Apple'),
+                      SeedSelectItem(value: 'banana', label: 'Banana'),
+                      SeedSelectItem(value: 'cherry', label: 'Cherry'),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          await _action(
+            tester,
+            tester.getSemantics(find.bySemanticsLabel('Fruit')),
+            SemanticsAction.tap,
+          );
+          await tester.sendKeyEvent(key);
+          await tester.pumpAndSettle();
+          await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+          await tester.pumpAndSettle();
+          expect(selected, isEmpty);
+          expect(find.text('Banana'), findsOneWidget);
+          semantics.dispose();
+        },
+      );
+    }
+
+    testWidgets(
       'readonly Select semantic focus is real and cannot edit $width',
       (tester) async {
         size(tester);

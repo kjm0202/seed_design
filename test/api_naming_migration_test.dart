@@ -265,6 +265,66 @@ void main() {
     expect(changes, ['b', 'b']);
   });
 
+  testWidgets('pagination page remains owned by a rejecting parent', (
+    tester,
+  ) async {
+    final changes = <int>[];
+    await tester.pumpWidget(
+      host(
+        SeedPagination(
+          page: 2,
+          totalPages: 10,
+          onPageChange: (change) => changes.add(change.page),
+        ),
+      ),
+    );
+    for (var i = 0; i < 2; i++) {
+      await tester.tap(find.bySemanticsLabel('다음 페이지'));
+      await tester.pumpAndSettle();
+    }
+    expect(changes, [3, 3]);
+  });
+
+  testWidgets('side navigation item and provider expose canonical callbacks', (
+    tester,
+  ) async {
+    final opened = <bool>[];
+    final collapsed = <bool>[];
+    await tester.pumpWidget(
+      host(
+        SeedSideNavigation(
+          collapsed: false,
+          onCollapsedChange: collapsed.add,
+          groups: [
+            SeedSideNavGroup(
+              items: [
+                SeedSideNavItem(
+                  id: 'parent',
+                  label: 'Parent',
+                  open: false,
+                  onOpenChange: opened.add,
+                  subItems: const [
+                    SeedSideNavSubItem(id: 'child', label: 'Child'),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+    await tester.tap(find.text('Parent'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Parent'));
+    await tester.pumpAndSettle();
+    expect(opened, [true, true]);
+    final trigger = find.byIcon(Icons.menu_open);
+    expect(trigger, findsOneWidget);
+    await tester.tap(trigger);
+    await tester.pumpAndSettle();
+    expect(collapsed, [true]);
+  });
+
   testWidgets(
     'slider array callbacks report immutable changes and commit once',
     (tester) async {
@@ -544,23 +604,43 @@ void main() {
     },
   );
 
-  testWidgets('pagination page remains owned by a rejecting parent', (
-    tester,
-  ) async {
-    final changes = <int>[];
-    await tester.pumpWidget(
-      host(
-        SeedPagination(
-          page: 2,
-          totalPages: 10,
-          onPageChange: (change) => changes.add(change.page),
-        ),
+  test('duplicate canonical and legacy names fail explicitly', () {
+    void changed(bool value) {}
+    expect(
+      () => SeedSideNavItem(
+        id: 'a',
+        label: 'A',
+        onOpenChange: changed,
+        // ignore: deprecated_member_use
+        onOpenChanged: changed,
       ),
+      throwsAssertionError,
     );
-    for (var i = 0; i < 2; i++) {
-      await tester.tap(find.bySemanticsLabel('다음 페이지'));
-      await tester.pumpAndSettle();
-    }
-    expect(changes, [3, 3]);
+    expect(
+      () => SeedPagination(
+        page: 1,
+        // ignore: deprecated_member_use
+        currentPage: 2,
+        totalPages: 10,
+      ),
+      throwsAssertionError,
+    );
+    expect(
+      () => SeedCheckbox(
+        checked: true,
+        // ignore: deprecated_member_use
+        value: null,
+      ),
+      throwsAssertionError,
+    );
+    expect(
+      () => SeedSelectBox(
+        title: 'Box',
+        checked: true,
+        // ignore: deprecated_member_use
+        selected: false,
+      ),
+      throwsAssertionError,
+    );
   });
 }

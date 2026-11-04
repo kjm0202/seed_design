@@ -302,6 +302,58 @@ void main() {
     },
   );
 
+  testWidgets(
+    'official scalar onValueChange names reach generic groups and text',
+    (tester) async {
+      final selected = <String>[];
+      await tester.pumpWidget(
+        host(
+          SeedSegmentedControl<String>(
+            value: 'a',
+            onValueChange: selected.add,
+            segments: const [
+              SeedSegment(value: 'a', label: 'Alpha'),
+              SeedSegment(value: 'b', label: 'Beta'),
+            ],
+          ),
+        ),
+      );
+      await tester.tap(find.text('Beta'));
+      await tester.pumpAndSettle();
+      expect(selected, ['b']);
+      final text = <SeedTextValueChange>[];
+      await tester.pumpWidget(host(SeedTextField(onValueChange: text.add)));
+      await tester.enterText(find.byType(TextField), '한글');
+      await tester.pump();
+      expect(text.single.value, '한글');
+      expect(text.single.graphemes, ['한', '글']);
+    },
+  );
+
+  testWidgets('React tabs select by item value instead of a positional index', (
+    tester,
+  ) async {
+    final changes = <String>[];
+    await tester.pumpWidget(
+      host(
+        SeedTabsView(
+          defaultValue: 'second',
+          onValueChange: changes.add,
+          items: const [
+            SeedTabItem(value: 'first', label: 'Alpha'),
+            SeedTabItem(value: 'second', label: 'Beta'),
+          ],
+          children: const [Text('Page A'), Text('Page B')],
+        ),
+      ),
+    );
+    expect(find.text('Page B').hitTestable(), findsOneWidget);
+    await tester.tap(find.text('Alpha'));
+    await tester.pumpAndSettle();
+    expect(changes, ['first']);
+    expect(find.text('Page A').hitTestable(), findsOneWidget);
+  });
+
   testWidgets('React table pagination keeps page and pageSize in one value', (
     tester,
   ) async {

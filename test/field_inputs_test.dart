@@ -221,6 +221,38 @@ void main() {
       expect(tester.getSize(find.byType(Row).first).width, uncontrolled);
     });
 
+    for (final (input, step, output) in [
+      (const TimeOfDay(hour: 10, minute: 5), 10, const ['오전', '10', '10']),
+      (const TimeOfDay(hour: 10, minute: 45), 30, const ['오전', '11', '00']),
+      (const TimeOfDay(hour: 23, minute: 45), 30, const ['오전', '12', '00']),
+    ]) {
+      testWidgets(
+        'TimePicker rounds ${input.hour}:${input.minute} ties up at step $step',
+        (tester) async {
+          await tester.pumpWidget(
+            _appBehavior(
+              SizedBox(
+                width: 320,
+                child: SeedTimePicker(defaultValue: input, minuteStep: step),
+              ),
+            ),
+          );
+          await tester.pump();
+          final neutral = tester
+              .element(find.byType(SeedTimePicker))
+              .seedColor
+              .fg
+              .neutral;
+          final selected = tester
+              .widgetList<Text>(find.byType(Text))
+              .where((text) => text.style?.color == neutral)
+              .map((text) => text.data)
+              .toSet();
+          expect(selected, output.toSet());
+        },
+      );
+    }
+
     testWidgets('DatePicker does not report reselecting the same date', (
       tester,
     ) async {
