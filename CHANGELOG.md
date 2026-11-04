@@ -34,6 +34,30 @@
   - **Interaction:** Select supports typeahead and applies `formatValue` to single selection. Slider arrow keys step through `allowedValues` and values keep the step's precision. Pagination and TablePagination no longer require a Material ancestor. InputButton's root no longer scales; Select scales its content.
   - **SideNavigation:** Collapsed items show the current state, rebuilds keep a closed parent closed, labels truncate on one line, press surfaces are inset, and the header/footer dividers are removed.
   - **Others:** `SeedAttachmentController.updateStatus` clears stale progress, Footer places the country selector in the navigation area, and `SeedFlex(wrap: true)` applies its alignment.
+- **Breaking migration:** Tabs fill available space by default. AppBar adaptive title centering applies to iOS only, and default back icons are chevrons.
+- Accessibility names follow the official ARIA: add `semanticsLabel` to `SeedSegmentedControl`, `SeedSelect`, `SeedInputButton`, `SeedSelectBoxGroup` and `SeedChipRadioGroup` (the official `aria-label`). Select and FieldButton are named by their field label with the shown text as the value, `SeedRadioGroup` and `SeedChipRadioGroup` expose a named radiogroup with radio items, a labelled single `SeedSlider` is one named slider, `SeedListLinkItem` is one link node instead of link plus button, and the field label tap, sheet handle and attachment dropzone no longer add unnamed buttons. `SeedMenuSheet` with `showCancelButton: false` keeps a hidden "닫기" button for assistive technology. `SeedReactionButton` is named by its label. Korean/English defaults change: SideNavigation trigger "사이드바 닫기/열기", attachment remove "파일 제거", retry "재시도".
+- Align the remaining API and visuals with official SEED React:
+  - **Breaking sizes:** `SeedInputButtonSize` now follows React: `large` (52px, default) and `medium` (40px). Code that passed `.medium` for 52px must switch to `.large`; `.small` is a deprecated alias for the new `.medium`. Standalone Checkbox, Radio and Switch lay out at their official sizes with a 44px touch target, and labeled rows use the official minimum heights.
+  - **Changed defaults:** `SeedTabs.fill` is true; `SeedList` items have no divider unless `showDivider`/`showDividers` is set; `SeedAttachmentInput.maxCount` is 1; `SeedFooter.copyright` has no default text; `SeedFloat.offset` is zero; `SeedResponsive.largeBreakpoint` is 1280; `SeedAspectRatio.ratio` defaults to 4/3. `SeedButton` `textColor` and `fontWeight` apply only to the ghost variant.
+  - **New official names:** `invalid` on Field, TextInput, InputButton, Select and QuantityPicker (`isInvalid`, `hasError`, `isError` are deprecated); `description` on Field and `placeholder` on TextInput (`helperText`, `hintText` stay as Material migration aliases); ToggleButton `pressed`/`defaultPressed`/`onPressedChange`; ContextualFloatingButton `variant`; Checkbox `variant`; Pagination `visibleItemCount`; GridItem `colSpan`, `rowSpan`, `colStart`, `colEnd`, `rowStart`, `rowEnd`.
+  - **Additions:** Checkbox, Radio and Switch `invalid`/`required`; Button `bleed`; Slider `jumpMultiplier`; Field `indicatorText`; AttachmentDisplayField `indicator`/`labelWeight`; FooterLink `uri`; TablePagination `rangeLabel`; `SeedLayoutContent` with density; `SeedScrollFogMask`; `neutralSolidMuted` and `neutralSolidMutedPressed` tokens.
+  - **Slider:** Official 26px layout, full-width track, 20px thumb that scales while pressed, one value bubble that stays inside the track, and Home, End, PageUp, PageDown and Shift+Arrow keys.
+  - **Snackbar:** `SeedSnackbarController.show` exits the current snackbar before the next enters. New `removeDelay` (200ms) delays removal, and `onClose` now runs after it.
+  - **Visuals:** WheelPicker is flat with a keyboard focus ring. DatePicker, Menu, Footer and SideNavigation no longer use Material ink or icon buttons. Focus rings sit 2px outside the control, or inside where the official recipe insets them.
+- Fix differences found by running the official SPA beside the example:
+  - **BottomSheet / MenuSheet:** Dragging follows the React Drawer rules: close past 25% of the height or above 0.4 px/ms, and fade the backdrop while dragging. Material's fixed 50% threshold no longer applies.
+  - **Menu:** Opening with a pointer no longer activates the first item, so the first arrow key lands on it. Opening with the keyboard still activates it.
+  - **SideNavigation:** The collapsed flyout shows the group label without a tooltip over it, with official item spacing and a 240px minimum width.
+  - **Focus ring:** List rows and Accordion triggers draw it inside so neighbours and clips no longer cut it.
+  - **TablePagination:** Range labels use `51-75`, and triggers size to the current value.
+  - **Keyboard:** Enter no longer toggles Checkbox, Radio and Switch; Space does, as on native inputs. Their focus ring surrounds the control instead of the whole row. WheelPicker adds PageUp and PageDown.
+  - **Pointer:** WheelPicker follows mouse drags. Moving between tabs with arrow keys no longer scrolls the enclosing page.
+  - **Others:** `SeedRadioListItem` places its radio inside the row. `SeedTextField` adds `indicator`. Narrow Popover footers keep button labels readable. `SeedTopNavigation` centers its title on iOS only, as the React cupertino theme does.
+  - **FieldButton:** No longer shows a default chevron, as in React. `showValueChips: false` shows values as plain text.
+  - **Menu:** `SeedMenuTrigger` shrinks long menus to the requested side and flips only below 200px, like React's size and flip order.
+  - **Dialog:** A scrolling body is a keyboard stop with a focus ring and arrow-key scrolling. The dialog root is no longer an invisible Tab stop.
+  - **Accordion:** Hover shows the engaged surface, and the surface insets without moving the content.
+  - **Others:** `SeedRadioListItem` adds `tone` and uses the large mark.
 
 ## 1.0.0
 
