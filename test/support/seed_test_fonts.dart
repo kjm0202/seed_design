@@ -10,7 +10,8 @@ Future<void> loadSeedTestFonts({
   String fontDirectory = 'test/assets/fonts',
 }) async {
   if (_loaded) return;
-  final bytes = await File('$fontDirectory/WantedSansVariable.ttf').readAsBytes();
+  final bytes = await File('$fontDirectory/WantedSansVariable.ttf')
+      .readAsBytes();
   final loader = FontLoader(seedTestFontFamily)
     ..addFont(Future.value(ByteData.sublistView(bytes)));
   await loader.load();
