@@ -21,11 +21,17 @@ class SeedSelectBoxGroupScope extends InheritedWidget {
   });
 
   final SeedSelectBoxLayout? defaultLayout;
+
   final bool isRadioGroup;
+
   final Object? selectedValue;
+
   final bool enabled;
+
   final bool readOnly;
+
   final ValueChanged<Object?> onSelect;
+
   final SeedSelectBoxFocusCoordinator? focusCoordinator;
 
   static SeedSelectBoxGroupScope? maybeOf(BuildContext context) =>
@@ -143,19 +149,29 @@ class SeedSelectBoxFocusCoordinator {
 /// specify a [SeedSelectBox.value].
 class SeedSelectBoxGroup extends StatefulWidget {
   final List<Widget> children;
+
   final Axis direction;
+
   final int? columns;
+
   final WrapCrossAlignment crossAxisAlignment;
+
   final Object? value;
+
   final Object? defaultValue;
 
   /// Keeps [value], including null (no selection), under parent control.
   final bool controlled;
   @Deprecated('Use onValueChange instead.')
   final ValueChanged<Object?>? onValueChanged;
+
   ValueChanged<Object?>? get onValueChange => onValueChanged;
+
   final bool enabled;
+
   final bool readOnly;
+
+  final String? semanticsLabel;
 
   const SeedSelectBoxGroup({
     super.key,
@@ -171,6 +187,7 @@ class SeedSelectBoxGroup extends StatefulWidget {
     ValueChanged<Object?>? onValueChanged,
     this.enabled = true,
     this.readOnly = false,
+    this.semanticsLabel,
   }) : onValueChanged = onValueChange ?? onValueChanged,
        assert(onValueChange == null || onValueChanged == null);
 
@@ -304,6 +321,7 @@ class _SeedSelectBoxGroupState extends State<SeedSelectBoxGroup> {
       result = Semantics(
         container: true,
         role: SemanticsRole.radioGroup,
+        label: widget.semanticsLabel,
         child: FocusTraversalGroup(
           child: Focus(
             focusNode: _focusCoordinator.root,

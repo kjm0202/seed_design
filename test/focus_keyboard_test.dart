@@ -6,7 +6,10 @@ import 'package:seed_design/seed_design.dart';
 
 import 'support/seed_test_fonts.dart';
 
-
+Widget _app(Widget child) => MaterialApp(
+  theme: SeedThemeData.light(fontFamily: seedTestFontFamily).toThemeData(),
+  home: Scaffold(body: Center(child: child)),
+);
 
 
 
@@ -20,6 +23,59 @@ Widget host(Widget child) => MaterialApp(
 
 void main() {
   setUpAll(loadSeedTestFonts);
+
+  for (final toggle in [false, true]) {
+    for (final width in [390.0, 800.0]) {
+      testWidgets(
+        'disabled List ${toggle ? 'Switch' : 'Check'} click blurs previous toggle at $width',
+        (tester) async {
+          tester.view.physicalSize = Size(width, 844);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.reset);
+          var selected = false;
+          await tester.pumpWidget(
+            _app(
+              StatefulBuilder(
+                builder: (context, refresh) => Column(
+                  children: [
+                    SeedListItem(
+                      titleText: 'Enabled selection',
+                      checked: toggle ? null : selected,
+                      toggled: toggle ? selected : null,
+                      onTap: () => refresh(() => selected = !selected),
+                    ),
+                    SeedListItem(
+                      titleText: 'Disabled selection',
+                      checked: toggle ? null : false,
+                      toggled: toggle ? false : null,
+                      enabled: false,
+                      onTap: () => refresh(() => selected = !selected),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('Enabled selection'));
+          await tester.pumpAndSettle();
+          expect(selected, true);
+          await tester.sendKeyEvent(LogicalKeyboardKey.space);
+          await tester.pumpAndSettle();
+          expect(selected, false);
+          await tester.tap(find.text('Disabled selection'));
+          await tester.pumpAndSettle();
+          await tester.sendKeyEvent(LogicalKeyboardKey.space);
+          await tester.pumpAndSettle();
+          expect(
+            selected,
+            false,
+            reason: 'Disabled native input pointer blurs former active row',
+          );
+        },
+      );
+    }
+  }
   group('focus visibility and disabled controls', () {
     for (final keyboardReturn in [false, true]) {
       testWidgets(

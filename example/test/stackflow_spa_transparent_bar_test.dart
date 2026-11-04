@@ -52,7 +52,11 @@ void main() {
         'safeArea',
       );
 
-      await tester.ensureVisible(find.text('gradient'));
+      await Scrollable.ensureVisible(
+        tester.element(find.text('gradient')),
+        alignment: 0.5,
+      );
+      await tester.pumpAndSettle();
       await tester.tap(find.text('gradient'));
       await tester.pumpAndSettle();
       expect(tester.widget<SeedSwitch>(toggle).checked, false);

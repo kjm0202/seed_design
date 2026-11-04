@@ -1071,7 +1071,7 @@ class _NavigationPageState extends State<_NavigationPage> {
         : check
         ? SeedCheckmark(
             value: value,
-            shape: entry.state.startsWith('ghost')
+            variant: entry.state.startsWith('ghost')
                 ? SeedCheckboxShape.ghost
                 : SeedCheckboxShape.square,
             size: SeedCheckboxSize.large,

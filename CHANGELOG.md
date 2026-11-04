@@ -10,6 +10,7 @@
 - Add `preserveComponentThemes` and locale-aware, overridable SEED labels. Explicit labels and official React value/default/callback contracts remain supported.
 - **Breaking migration:** Button textColor and fontWeight overrides apply only to ghost variants.
 - Align with the official recipes: `SeedPageBanner` prefix icons stay on the first line, text-attached notification badges sit at the top of the line, the attachment remove button overhangs its item with a cut-out, and the default back button is a chevron on every platform.
+- **Breaking migration:** List dividers are hidden by default. Choice controls use official visual sizes. RadioGroup no longer registers implicitly with Form.
 
 ## 1.0.0
 

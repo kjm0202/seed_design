@@ -624,39 +624,40 @@ void main() {
   });
 
   testWidgets('radio row receives its parent radio press feedback', (
-    tester,
-  ) async {
-    int? selected;
-    await tester.pumpWidget(
-      host(
-        SeedRadioListItem<int>(
-          title: 'Radio',
-          value: 1,
-          onChanged: (value) => selected = value,
-          showDivider: false,
+      tester,
+    ) async {
+      int? selected;
+      await tester.pumpWidget(
+        host(
+          SeedRadioListItem<int>(
+            title: 'Radio',
+            value: 1,
+            onChanged: (value) => selected = value,
+            showDivider: false,
+          ),
         ),
-      ),
-    );
-    final gesture = await tester.startGesture(
-      tester.getCenter(find.text('Radio')),
-    );
-    await tester.pump(const Duration(milliseconds: 200));
-    final row = find.descendant(
-      of: find.byType(SeedListItem),
-      matching: find.byType(AnimatedContainer),
-    );
-    expect(
-      tester.widget<AnimatedContainer>(row).margin,
-      const EdgeInsets.symmetric(horizontal: 6),
-    );
-    final scale = find.descendant(
-      of: find.byType(SeedContentScale),
-      matching: find.byType(AnimatedScale),
-    );
-    expect(tester.widget<AnimatedScale>(scale).scale, lessThan(1));
-    await gesture.up();
-    await tester.pumpAndSettle();
-    expect(selected, 1);
-    expect(tester.takeException(), isNull);
-  });
+      );
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.text('Radio')),
+      );
+      await tester.pump(const Duration(milliseconds: 200));
+      final row = find.descendant(
+        of: find.byType(SeedListItem),
+        matching: find.byType(AnimatedContainer),
+      );
+      expect(
+        // The row's pressed surface; the radio mark is now inside the row.
+        tester.widget<AnimatedContainer>(row.first).margin,
+        const EdgeInsets.symmetric(horizontal: 6),
+      );
+      final scale = find.descendant(
+        of: find.byType(SeedContentScale),
+        matching: find.byType(AnimatedScale),
+      );
+      expect(tester.widget<AnimatedScale>(scale.first).scale, lessThan(1));
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(selected, 1);
+      expect(tester.takeException(), isNull);
+    });
 }

@@ -1,3 +1,5 @@
+import 'dart:ui' show SemanticsRole;
+
 import 'package:material_ui/material_ui.dart';
 
 import '../../foundations/colors/seed_color_scheme.dart';
@@ -10,7 +12,13 @@ import '../../foundations/feedback/seed_choice_group.dart';
 import '../../foundations/feedback/seed_control.dart';
 
 /// Variant options for [SeedChip].
-enum SeedChipVariant { solid, outlineStrong, outlineWeak }
+enum SeedChipVariant {
+  solid,
+
+  outlineStrong,
+
+  outlineWeak,
+}
 
 /// Size options for [SeedChip].
 enum SeedChipSize {
@@ -95,6 +103,8 @@ class SeedChip extends StatefulWidget {
   final SeedChipSize size;
   final bool enabled;
   final bool _iconOnly;
+
+  final bool _radioItem;
   final String? semanticsLabel;
   final FocusNode? focusNode;
   bool get _toggle =>
@@ -124,11 +134,37 @@ class SeedChip extends StatefulWidget {
     this.prefixImage,
   }) : _selected = selected,
        _iconOnly = false,
+       _radioItem = false,
        assert(
          selected == null ||
              (checked == null && defaultChecked == null && !indeterminate),
        ),
        assert(onSelected == null || onCheckedChange == null);
+
+  const SeedChip._radioItem({
+    required this.label,
+    required bool selected,
+    required this.onSelected,
+    this.prefix,
+    this.enabled = true,
+    this.focusNode,
+    this.variant = SeedChipVariant.solid,
+    this.size = SeedChipSize.medium,
+    // Named parameters cannot be private initializing formals.
+    // ignore: prefer_initializing_formals
+  }) : _selected = selected,
+       checked = null,
+       defaultChecked = null,
+       onCheckedChange = null,
+       indeterminate = false,
+       onPressed = null,
+       onDeleted = null,
+       suffix = null,
+       prefixAvatar = null,
+       prefixImage = null,
+       semanticsLabel = null,
+       _iconOnly = false,
+       _radioItem = true;
 
   const SeedChip.iconOnly({
     super.key,
@@ -157,7 +193,8 @@ class SeedChip extends StatefulWidget {
        onDeleted = null,
        prefixAvatar = null,
        prefixImage = null,
-       _iconOnly = true;
+       _iconOnly = true,
+       _radioItem = false;
 
   @override
   State<SeedChip> createState() => _SeedChipState();
@@ -200,6 +237,7 @@ class _SeedChipState extends State<SeedChip> {
       selected: checked,
       indeterminate: widget.indeterminate,
       checkboxSemantics: widget._toggle,
+      radioSemantics: widget._radioItem,
       onSelected: onSelected,
       onPressed: widget.onPressed,
       onDeleted: widget.onDeleted,
@@ -224,6 +262,8 @@ class _SeedChipControl extends StatelessWidget {
   final bool selected;
   final bool indeterminate;
   final bool checkboxSemantics;
+
+  final bool radioSemantics;
   final ValueChanged<bool>? onSelected;
   final VoidCallback? onPressed;
   final VoidCallback? onDeleted;
@@ -242,6 +282,7 @@ class _SeedChipControl extends StatelessWidget {
     this.selected = false,
     this.indeterminate = false,
     this.checkboxSemantics = false,
+    this.radioSemantics = false,
     this.onSelected,
     this.onPressed,
     this.onDeleted,
@@ -274,6 +315,7 @@ class _SeedChipControl extends StatelessWidget {
        onDeleted = null,
        prefixAvatar = null,
        prefixImage = null,
+       radioSemantics = false,
        _iconOnly = true;
 
   bool get _isClickable => enabled && (onSelected != null || onPressed != null);
@@ -301,8 +343,14 @@ class _SeedChipControl extends StatelessWidget {
       semanticsLabel: semanticsLabel,
       focusNode: focusNode,
       enabled: _isClickable,
-      selected: !checkboxSemantics && onSelected != null ? selected : null,
-      checked: checkboxSemantics && onSelected != null ? selected : null,
+      selected: !checkboxSemantics && !radioSemantics && onSelected != null
+          ? selected
+          : null,
+      checked: (checkboxSemantics || radioSemantics) && onSelected != null
+          ? selected
+          : null,
+      inMutuallyExclusiveGroup: radioSemantics ? true : null,
+      semanticButton: !radioSemantics,
       mixed: checkboxSemantics && onSelected != null ? indeterminate : null,
       onTap: () {
         if (onSelected != null) {
@@ -332,18 +380,21 @@ class _SeedChipControl extends StatelessWidget {
                       SeedChipSize.large => 52,
                     },
             ),
-            padding: EdgeInsets.only(
-              left: _iconOnly
-                  ? size.rootPaddingX
-                  : prefix != null
-                  ? size.rootPaddingX
-                  : size.rootPaddingX + SeedDimension.x1_5,
-              right: _iconOnly
-                  ? size.rootPaddingX
-                  : (suffix != null || onDeleted != null)
-                  ? size.rootPaddingX
-                  : size.rootPaddingX + SeedDimension.x1_5,
-            ),
+            // prefixIcon, suffixIcon and label each carry x1_5 toward the root
+            // edge; only an avatar and the wider delete target sit on it. React's
+            // stroke is an inset shadow, so it must not add to the width.
+            padding:
+                EdgeInsets.only(
+                  left: _iconOnly || prefixAvatar != null || prefixImage != null
+                      ? size.rootPaddingX
+                      : size.rootPaddingX + SeedDimension.x1_5,
+                  right: _iconOnly || onDeleted != null
+                      ? size.rootPaddingX
+                      : size.rootPaddingX + SeedDimension.x1_5,
+                ) -
+                (strokeColor != null
+                    ? const EdgeInsets.symmetric(horizontal: 1)
+                    : EdgeInsets.zero),
             decoration: BoxDecoration(
               color: bgColor,
               borderRadius: size.borderRadius,
@@ -507,9 +558,12 @@ class SeedChipRadioGroup<T> extends StatefulWidget {
     this.description,
     this.variant = SeedChipVariant.solid,
     this.size = SeedChipSize.medium,
+    this.semanticsLabel,
   }) : onChanged = onValueChange ?? onChanged,
        assert(onValueChange == null || onChanged == null);
   final List<SeedChipOption<T>> options;
+
+  final String? semanticsLabel;
   final T? value, defaultValue;
   @Deprecated('Use onValueChange instead.')
   final ValueChanged<T>? onChanged;
@@ -533,26 +587,28 @@ class _SeedChipRadioGroupState<T> extends State<SeedChipRadioGroup<T>> {
     widget.onChanged?.call(next);
   }
 
+  // Official Chip.RadioRoot renders role="radiogroup".
   @override
-  Widget build(BuildContext context) => SeedFieldset(
-    label: widget.label,
-    description: widget.description,
-    enabled: widget.enabled,
-    child: SeedChoiceGroup(
-      selectedIndex: widget.options.indexWhere((item) => item.value == value),
-      enabled: widget.options
-          .map((item) => widget.enabled && item.enabled)
-          .toList(),
-      onSelected: (index) => _change(widget.options[index].value),
-      builder: (context, nodes) => Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          for (var i = 0; i < widget.options.length; i++)
-            Semantics(
-              inMutuallyExclusiveGroup: true,
-              checked: widget.options[i].value == value,
-              child: SeedChip(
+  Widget build(BuildContext context) => Semantics(
+    container: true,
+    role: SemanticsRole.radioGroup,
+    label: widget.semanticsLabel ?? widget.label,
+    child: SeedFieldset(
+      label: widget.label,
+      description: widget.description,
+      enabled: widget.enabled,
+      child: SeedChoiceGroup(
+        selectedIndex: widget.options.indexWhere((item) => item.value == value),
+        enabled: widget.options
+            .map((item) => widget.enabled && item.enabled)
+            .toList(),
+        onSelected: (index) => _change(widget.options[index].value),
+        builder: (context, nodes) => Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (var i = 0; i < widget.options.length; i++)
+              SeedChip._radioItem(
                 label: widget.options[i].label,
                 prefix: widget.options[i].prefix,
                 enabled: widget.enabled && widget.options[i].enabled,
@@ -562,8 +618,8 @@ class _SeedChipRadioGroupState<T> extends State<SeedChipRadioGroup<T>> {
                 variant: widget.variant,
                 size: widget.size,
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     ),
   );

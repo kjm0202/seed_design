@@ -9,39 +9,69 @@ import '../../foundations/motion/seed_motion.dart';
 import 'seed_select_box_group.dart';
 
 /// Control icon style for [SeedSelectBox].
-enum SeedSelectBoxControl { checkmark, radiomark, none }
+enum SeedSelectBoxControl {
+  checkmark,
 
 /// Layout orientation for [SeedSelectBox].
-enum SeedSelectBoxLayout { horizontal, vertical }
+  radiomark,
+
+  none,
+}
+
+enum SeedSelectBoxLayout {
+  horizontal,
+
+  vertical,
+}
 
 /// Visibility policy for the footer of a [SeedSelectBox].
-enum SeedSelectBoxFooterVisibility { whenSelected, whenNotSelected, always }
+enum SeedSelectBoxFooterVisibility {
+  whenSelected,
+
+  whenNotSelected,
+
+  always,
+}
 
 /// Select Box component of SEED Design System.
 ///
 /// An explicit bordered card container for selecting single or multiple options.
 class SeedSelectBox extends StatefulWidget {
   final String title;
+
   final String? description;
+
   final Widget? prefix;
+
   final Widget? customContent;
   final bool? _selected;
   @Deprecated('Use defaultChecked instead.')
   final bool defaultSelected;
+
   bool? get checked => _selected;
+
   bool get defaultChecked => defaultSelected;
+
   ValueChanged<bool>? get onCheckedChange => onSelected;
+
   final Object? value;
+
   @Deprecated('Use onCheckedChange instead.')
   final ValueChanged<bool>? onSelected;
   final SeedSelectBoxControl? _control;
   final SeedSelectBoxLayout? _layout;
   final bool enabled;
+
   final bool readOnly;
+
   final bool indeterminate;
+
   final bool invalid;
+
   final Widget? label, suffix, footer;
+
   final bool collapseFooter;
+
   final SeedSelectBoxFooterVisibility? footerVisibility;
 
   const SeedSelectBox({
@@ -82,8 +112,10 @@ class SeedSelectBox extends StatefulWidget {
 
   @Deprecated('Use checked or defaultChecked instead.')
   bool get selected => _selected ?? defaultSelected;
+
   SeedSelectBoxControl get control =>
       _control ?? SeedSelectBoxControl.checkmark;
+
   SeedSelectBoxLayout get layout => _layout ?? SeedSelectBoxLayout.horizontal;
 
   @override
@@ -182,7 +214,8 @@ class _SeedSelectBoxState extends State<SeedSelectBox> {
         widget.footer != null &&
         effectiveFooterVisibility != SeedSelectBoxFooterVisibility.always;
 
-    final borderExtra = effectiveSelected ? 1.0 : 0.0;
+    // React's stroke is an overlay; the padding is measured from the outer edge.
+    final strokeWidth = effectiveSelected ? 2.0 : 1.0;
     final disableAnimations = MediaQuery.disableAnimationsOf(context);
 
     final prefixWidget = widget.prefix != null
@@ -243,22 +276,19 @@ class _SeedSelectBoxState extends State<SeedSelectBox> {
       builder: (context, isPressed) => Container(
         padding: effectiveLayout == SeedSelectBoxLayout.horizontal
             ? EdgeInsets.fromLTRB(
-                20 - borderExtra,
-                16 - borderExtra,
-                16 - borderExtra,
-                16 - borderExtra,
+                20 - strokeWidth,
+                16 - strokeWidth,
+                16 - strokeWidth,
+                16 - strokeWidth,
               )
             : EdgeInsets.symmetric(
-                horizontal: 16 - borderExtra,
-                vertical: 20 - borderExtra,
+                horizontal: 16 - strokeWidth,
+                vertical: 20 - strokeWidth,
               ),
         decoration: BoxDecoration(
           color: isPressed ? colors.bg.transparentPressed : bgColor,
           borderRadius: SeedBorderRadius.r3,
-          border: Border.all(
-            color: strokeColor,
-            width: effectiveSelected ? 2 : 1,
-          ),
+          border: Border.all(color: strokeColor, width: strokeWidth),
         ),
         child: SeedContentScale(
           child: Column(

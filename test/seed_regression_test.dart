@@ -241,21 +241,23 @@ void main() {
       },
     );
 
-    testWidgets('checkbox exposes checked state and has a minimum target', (
-      tester,
-    ) async {
+    testWidgets('tristate checkbox exposes mixed state', (tester) async {
       await tester.pumpWidget(
-        host(SeedCheckbox(value: true, onChanged: (_) {})),
-      );
-      expect(
-        tester.getSize(find.byType(SeedCheckbox)).shortestSide,
-        greaterThanOrEqualTo(24),
+        host(
+          SeedCheckbox(
+            value: null,
+            tristate: true,
+            label: '일부',
+            onChanged: (_) {},
+          ),
+        ),
       );
       expect(
         tester.getSemantics(find.byType(SeedCheckbox)),
         matchesSemantics(
+          label: '일부',
           hasCheckedState: true,
-          isChecked: true,
+          isCheckStateMixed: true,
           hasEnabledState: true,
           isEnabled: true,
           isFocusable: true,

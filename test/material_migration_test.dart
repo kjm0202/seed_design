@@ -95,6 +95,119 @@ void main() {
     },
   );
 
+  for (final brightness in Brightness.values) {
+    testWidgets('incremental controls share brand colors in $brightness mode', (
+      tester,
+    ) async {
+      late ThemeData theme;
+      late SeedThemeData seed;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(brightness: brightness),
+          home: SeedMaterialBridge(
+            child: Builder(
+              builder: (context) {
+                theme = Theme.of(context);
+                seed = context.seedTheme;
+                return Scaffold(
+                  body: Wrap(
+                    children: [
+                      Checkbox(value: true, onChanged: (_) {}),
+                      const SeedCheckmark(
+                        key: ValueKey('seed-check'),
+                        value: true,
+                      ),
+                      Switch(value: true, onChanged: (_) {}),
+                      SeedSwitchMark(
+                        key: const ValueKey('seed-switch'),
+                        checked: true,
+                        onCheckedChange: (_) {},
+                      ),
+                      RadioGroup<String>(
+                        groupValue: 'selected',
+                        onChanged: (_) {},
+                        child: const Radio<String>(value: 'selected'),
+                      ),
+                      SeedRadio<String>(
+                        key: const ValueKey('seed-radio'),
+                        value: 'selected',
+                        groupValue: 'selected',
+                        onChanged: (_) {},
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+      final selected = {WidgetState.selected};
+      final disabled = {WidgetState.selected, WidgetState.disabled};
+      final checkbox = tester.widget<Container>(
+        find
+            .descendant(
+              of: find.byKey(const ValueKey('seed-check')),
+              matching: find.byType(Container),
+            )
+            .first,
+      );
+      final switchTrack = tester.widget<AnimatedContainer>(
+        find
+            .descendant(
+              of: find.byKey(const ValueKey('seed-switch')),
+              matching: find.byType(AnimatedContainer),
+            )
+            .first,
+      );
+      final radio = tester.widget<Container>(
+        find
+            .descendant(
+              of: find.byKey(const ValueKey('seed-radio')),
+              matching: find.byType(Container),
+            )
+            .first,
+      );
+      expect(
+        theme.checkboxTheme.fillColor!.resolve(selected),
+        (checkbox.decoration! as BoxDecoration).color,
+      );
+      expect(
+        theme.switchTheme.trackColor!.resolve(selected),
+        (switchTrack.decoration! as BoxDecoration).color,
+      );
+      expect(
+        theme.radioTheme.fillColor!.resolve(selected),
+        (radio.decoration! as BoxDecoration).color,
+      );
+      expect(
+        theme.checkboxTheme.checkColor!.resolve(selected),
+        seed.colorScheme.fg.onBrandSolid,
+      );
+      expect(
+        theme.switchTheme.thumbColor!.resolve(selected),
+        seed.colorScheme.fg.onBrandSolid,
+      );
+      expect(
+        theme.checkboxTheme.fillColor!.resolve(disabled),
+        seed.colorScheme.bg.disabled,
+      );
+      expect(
+        theme.checkboxTheme.checkColor!.resolve(disabled),
+        seed.colorScheme.fg.disabled,
+      );
+      expect(
+        theme.switchTheme.trackColor!.resolve(disabled),
+        seed.colorScheme.bg.disabled,
+      );
+      expect(
+        theme.radioTheme.fillColor!.resolve(disabled),
+        seed.colorScheme.bg.disabled,
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets(
     'retained linear progress preserves numeric values and announcements',
     (tester) async {

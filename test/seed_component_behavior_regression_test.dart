@@ -296,26 +296,32 @@ void main() {
   });
 
   testWidgets('list can suppress dividers through wrapped children', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      host(
-        const SeedList(
-          showDividers: false,
-          children: [
-            SeedListItem(titleText: 'One'),
-            Padding(
-              padding: EdgeInsets.zero,
-              child: SeedListItem(titleText: 'Two'),
-            ),
-          ],
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          const SeedList(
+            showDividers: false,
+            children: [
+              SeedListItem(titleText: 'One'),
+              Padding(
+                padding: EdgeInsets.zero,
+                child: SeedListItem(titleText: 'Two'),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
-    expect(find.byType(SeedDivider), findsNothing);
-    await tester.pumpWidget(host(const SeedListItem(titleText: 'Standalone')));
-    expect(find.byType(SeedDivider), findsOneWidget);
-  });
+      );
+      expect(find.byType(SeedDivider), findsNothing);
+      await tester.pumpWidget(
+        host(const SeedListItem(titleText: 'Standalone')),
+      );
+      expect(find.byType(SeedDivider), findsNothing);
+      await tester.pumpWidget(
+        host(const SeedListItem(titleText: 'Explicit', showDivider: true)),
+      );
+      expect(find.byType(SeedDivider), findsOneWidget);
+    });
 
   testWidgets('snackbars retain each message for its duration in FIFO order', (
     tester,

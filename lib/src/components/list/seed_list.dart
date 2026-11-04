@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter/semantics.dart' show SemanticsRole;
 
 import '../../foundations/dimensions/seed_dimension.dart';
+import '../../foundations/feedback/seed_control.dart';
 import '../../foundations/feedback/seed_scale_feedback.dart';
 import '../../foundations/motion/seed_motion.dart';
 import '../../theme/seed_theme.dart';
@@ -12,7 +13,10 @@ import '../selection/seed_radio.dart';
 import '../selection/seed_switch.dart';
 
 /// Vertical alignment for prefix and suffix in [SeedListItem].
-enum SeedListItemAlign { center, top }
+enum SeedListItemAlign {
+  center,
+  top,
+}
 
 /// List Item component of SEED Design System.
 ///
@@ -30,7 +34,8 @@ class SeedListItem extends StatelessWidget {
   final SeedListItemAlign align;
   final bool highlighted;
   final bool enabled;
-  final bool showDivider;
+
+  final bool? showDivider;
   final bool? checked;
   final bool? toggled;
   final VoidCallback? onTap;
@@ -52,7 +57,7 @@ class SeedListItem extends StatelessWidget {
     this.align = SeedListItemAlign.center,
     this.highlighted = false,
     this.enabled = true,
-    this.showDivider = true,
+    this.showDivider,
     this.checked,
     this.toggled,
     this.onTap,
@@ -110,131 +115,127 @@ class SeedListItem extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Semantics(
-            link: linkUrl != null,
-            linkUrl: linkUrl,
-            onTap: linkUrl != null && enabled ? onTap : null,
-            child: SeedPressable(
-              enabled: enabled && onTap != null,
-              onTap: onTap,
-              enableScale: false,
-              semanticButton:
-                  checked == null &&
-                  toggled == null &&
-                  onTap != null &&
-                  linkUrl == null,
-              activateOnEnter: checked == null && toggled == null,
-              unfocusOnDisabledTap:
-                  !enabled && (checked != null || toggled != null),
-              checked: checked,
-              toggled: toggled,
-              builder: (context, isPressed) {
-                isPressed =
-                    enabled &&
-                    (isPressed ||
-                        parentInteraction?.pressed == true ||
-                        parentInteraction?.hovered == true);
-                Color bgColor = colors.bg.transparent;
-                if (highlighted) {
-                  bgColor = colors.bg.brandWeak;
-                }
-                if (isPressed) {
-                  bgColor = highlighted
-                      ? colors.bg.brandWeakPressed
-                      : colors.bg.transparentPressed;
-                }
+          SeedPressable(
+            enabled: enabled && onTap != null,
+            semanticsLinkUrl: linkUrl,
+            onTap: onTap,
+            enableScale: false,
+            // Rows touch their neighbours, so an outside ring would be cut.
+            focusRingInside: true,
+            semanticButton:
+                checked == null &&
+                toggled == null &&
+                onTap != null &&
+                linkUrl == null,
+            activateOnEnter: checked == null && toggled == null,
+            unfocusOnDisabledTap:
+                !enabled && (checked != null || toggled != null),
+            checked: checked,
+            toggled: toggled,
+            builder: (context, isPressed) {
+              isPressed =
+                  enabled &&
+                  (isPressed ||
+                      parentInteraction?.pressed == true ||
+                      parentInteraction?.hovered == true);
+              Color bgColor = colors.bg.transparent;
+              if (highlighted) {
+                bgColor = colors.bg.brandWeak;
+              }
+              if (isPressed) {
+                bgColor = highlighted
+                    ? colors.bg.brandWeakPressed
+                    : colors.bg.transparentPressed;
+              }
 
-                return Stack(
-                  children: [
-                    Positioned.fill(
-                      child: AnimatedContainer(
-                        duration: SeedDuration.d3,
-                        curve: SeedCurves.easing,
-                        margin: EdgeInsets.symmetric(
-                          horizontal: isPressed ? SeedDimension.x1_5 : 0,
-                        ),
-                        decoration: BoxDecoration(
-                          color: bgColor,
-                          borderRadius: BorderRadius.circular(
-                            isPressed ? SeedDimension.x2_5 : 0,
-                          ),
+              return Stack(
+                children: [
+                  Positioned.fill(
+                    child: AnimatedContainer(
+                      duration: SeedDuration.d3,
+                      curve: SeedCurves.easing,
+                      margin: EdgeInsets.symmetric(
+                        horizontal: isPressed ? SeedDimension.x1_5 : 0,
+                      ),
+                      decoration: BoxDecoration(
+                        color: bgColor,
+                        borderRadius: BorderRadius.circular(
+                          isPressed ? SeedDimension.x2_5 : 0,
                         ),
                       ),
                     ),
-                    Padding(
-                      padding: padding,
-                      child: SeedContentScale(
-                        pressed: parentInteraction?.pressed,
-                        child: Row(
-                          crossAxisAlignment: align == SeedListItemAlign.center
-                              ? CrossAxisAlignment.center
-                              : CrossAxisAlignment.start,
-                          children: [
-                            if (prefix != null) ...[
-                              IconTheme(
-                                data: IconThemeData(
-                                  size: 22.0,
-                                  color: enabled
-                                      ? colors.fg.neutral
-                                      : colors.fg.disabled,
-                                ),
-                                child: prefix!,
+                  ),
+                  Padding(
+                    padding: padding,
+                    child: SeedContentScale(
+                      pressed: parentInteraction?.pressed,
+                      child: Row(
+                        crossAxisAlignment: align == SeedListItemAlign.center
+                            ? CrossAxisAlignment.center
+                            : CrossAxisAlignment.start,
+                        children: [
+                          if (prefix != null) ...[
+                            IconTheme(
+                              data: IconThemeData(
+                                size: 22.0,
+                                color: enabled
+                                    ? colors.fg.neutral
+                                    : colors.fg.disabled,
                               ),
-                              const SizedBox(width: SeedDimension.x3),
-                            ],
-                            Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.only(
-                                  right: SeedDimension.x2_5,
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    titleWidget,
-                                    if (detailWidget != null) ...[
-                                      const SizedBox(
-                                        height: SeedDimension.x0_5,
-                                      ),
-                                      detailWidget,
-                                    ],
-                                  ],
-                                ),
-                              ),
+                              child: prefix!,
                             ),
-                            if (suffixTextWidget != null || suffix != null) ...[
-                              Row(
+                            const SizedBox(width: SeedDimension.x3),
+                          ],
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(
+                                right: SeedDimension.x2_5,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  ?suffixTextWidget,
-                                  if (suffixTextWidget != null &&
-                                      suffix != null)
-                                    const SizedBox(width: SeedDimension.x1),
-                                  if (suffix != null)
-                                    IconTheme(
-                                      data: IconThemeData(
-                                        size: 18.0,
-                                        color: enabled
-                                            ? colors.fg.neutralSubtle
-                                            : colors.fg.disabled,
-                                      ),
-                                      child: suffix!,
-                                    ),
+                                  titleWidget,
+                                  if (detailWidget != null) ...[
+                                    const SizedBox(height: SeedDimension.x0_5),
+                                    detailWidget,
+                                  ],
                                 ],
                               ),
-                            ],
+                            ),
+                          ),
+                          if (suffixTextWidget != null || suffix != null) ...[
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                ?suffixTextWidget,
+                                if (suffixTextWidget != null && suffix != null)
+                                  const SizedBox(width: SeedDimension.x1),
+                                if (suffix != null)
+                                  IconTheme(
+                                    data: IconThemeData(
+                                      size: 18.0,
+                                      color: enabled
+                                          ? colors.fg.neutralSubtle
+                                          : colors.fg.disabled,
+                                    ),
+                                    child: suffix!,
+                                  ),
+                              ],
+                            ),
                           ],
-                        ),
+                        ],
                       ),
                     ),
-                  ],
-                );
-              },
-            ),
+                  ),
+                ],
+              );
+            },
           ),
-          if (showDivider &&
-              (_SeedListDividers.maybeOf(context)?.showDividers ?? true))
+          if (showDivider ??
+              _SeedListDividers.maybeOf(context)?.showDividers ??
+              false)
             const SeedDivider(),
         ],
       ),
@@ -260,7 +261,7 @@ class SeedListLinkItem extends StatelessWidget {
     this.align = SeedListItemAlign.center,
     this.highlighted = false,
     this.enabled = true,
-    this.showDivider = true,
+    this.showDivider,
     this.onTap,
     this.padding = const EdgeInsets.symmetric(
       horizontal: SeedDimension.x4,
@@ -272,7 +273,8 @@ class SeedListLinkItem extends StatelessWidget {
   final Widget? title, detail, prefix, suffix;
   final String? titleText, detailText, suffixText;
   final SeedListItemAlign align;
-  final bool highlighted, enabled, showDivider;
+  final bool highlighted, enabled;
+  final bool? showDivider;
   final VoidCallback? onTap;
   final EdgeInsetsGeometry padding;
 
@@ -300,7 +302,11 @@ class SeedList extends StatelessWidget {
   final List<Widget> children;
   final bool showDividers;
 
-  const SeedList({super.key, required this.children, this.showDividers = true});
+  const SeedList({
+    super.key,
+    required this.children,
+    this.showDividers = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -332,7 +338,10 @@ class _SeedListDividers extends InheritedWidget {
       showDividers != oldWidget.showDividers;
 }
 
-enum SeedListHeaderVariant { mediumWeak, boldSolid }
+enum SeedListHeaderVariant {
+  mediumWeak,
+  boldSolid,
+}
 
 class SeedListHeader extends StatelessWidget {
   const SeedListHeader({
@@ -340,7 +349,10 @@ class SeedListHeader extends StatelessWidget {
     required this.title,
     this.suffix,
     this.variant = SeedListHeaderVariant.mediumWeak,
-    this.padding = const EdgeInsets.fromLTRB(16, 16, 16, 8),
+    this.padding = const EdgeInsets.symmetric(
+      horizontal: SeedSpacingX.globalGutter,
+      vertical: SeedDimension.x2,
+    ),
   });
   final String title;
   final Widget? suffix;
@@ -357,7 +369,7 @@ class SeedListHeader extends StatelessWidget {
             child: Text(
               title,
               style: variant == SeedListHeaderVariant.boldSolid
-                  ? context.seedTypography.t5Bold.copyWith(
+                  ? context.seedTypography.t4Bold.copyWith(
                       color: context.seedColor.fg.neutral,
                     )
                   : context.seedTypography.t4Medium.copyWith(
@@ -382,12 +394,13 @@ class SeedCheckListItem extends StatelessWidget {
     this.detail,
     this.prefix,
     this.enabled = true,
-    this.showDivider = true,
+    this.showDivider,
   });
   final String title;
   final String? detail;
   final Widget? prefix;
-  final bool value, enabled, showDivider;
+  final bool value, enabled;
+  final bool? showDivider;
   final ValueChanged<bool>? onChanged;
   @override
   Widget build(BuildContext context) => SeedListItem(
@@ -416,14 +429,17 @@ class SeedRadioListItem<T> extends StatelessWidget {
     this.detail,
     this.prefix,
     this.enabled = true,
-    this.showDivider = true,
+    this.showDivider,
+    this.tone = SeedControlTone.brand,
   });
+  final SeedControlTone tone;
   final String title;
   final String? detail;
   final T value;
   final T? groupValue;
   final Widget? prefix;
-  final bool enabled, showDivider;
+  final bool enabled;
+  final bool? showDivider;
   final ValueChanged<T?>? onChanged;
   @override
   Widget build(BuildContext context) => SeedRadio<T>(
@@ -431,10 +447,15 @@ class SeedRadioListItem<T> extends StatelessWidget {
     groupValue: groupValue,
     onChanged: onChanged,
     enabled: enabled,
-    customLabel: SeedListItem(
+    tone: tone,
+    size: SeedRadioSize.large,
+    // The row hosts the mark so it shares the row's padding and pressed surface.
+    rowBuilder: (context, mark) => SeedListItem(
       titleText: title,
       detailText: detail,
-      prefix: prefix,
+      prefix: prefix == null
+          ? mark
+          : Row(mainAxisSize: MainAxisSize.min, children: [mark, prefix!]),
       enabled: enabled,
       showDivider: showDivider,
     ),
@@ -451,12 +472,13 @@ class SeedSwitchListItem extends StatelessWidget {
     this.detail,
     this.prefix,
     this.enabled = true,
-    this.showDivider = true,
+    this.showDivider,
   });
   final String title;
   final String? detail;
   final Widget? prefix;
-  final bool value, enabled, showDivider;
+  final bool value, enabled;
+  final bool? showDivider;
   final ValueChanged<bool>? onChanged;
 
   @override
