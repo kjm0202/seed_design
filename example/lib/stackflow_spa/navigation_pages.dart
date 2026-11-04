@@ -1,7 +1,10 @@
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
+
 import 'dart:async';
 import 'dart:ui' show SemanticsRole;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show RenderProxyBox, ScrollCacheExtent;
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -82,6 +85,23 @@ class _NavigationPageState extends State<_NavigationPage> {
   Timer? _tabTwoTimer;
   int _swipeTab = 0;
   final PageController _swipePages = PageController();
+  final ScrollController _swipeScroll = ScrollController();
+  final Map<int, double> _swipePanelHeights = {};
+
+  void _onSwipePageChanged(int index) {
+    if (_swipeTab == index) return;
+    setState(() => _swipeTab = index);
+    // Tab 1 owns PullToRefresh while Tab 2 does not. Changing that wrapper
+    // remounts the nested PageView. Restore Embla's selected slide after its
+    // new viewport attaches, otherwise Flutter resets it to initialPage=0.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_swipePages.hasClients || _swipeTab != index) return;
+      if ((_swipePages.page ?? index).round() != index) {
+        _swipePages.jumpToPage(index);
+      }
+    });
+  }
+
   String _radioSelection = 'prefix-title-unchecked-suffix-none';
   final Map<String, FocusNode> _radioFocusNodes = {};
   final Map<String, bool> _checks = {};
@@ -116,6 +136,7 @@ class _NavigationPageState extends State<_NavigationPage> {
   void dispose() {
     _tabTwoTimer?.cancel();
     _swipePages.dispose();
+    _swipeScroll.dispose();
     for (final node in _radioFocusNodes.values) {
       node.dispose();
     }
@@ -189,6 +210,21 @@ class _NavigationPageState extends State<_NavigationPage> {
       'Tab 12312312361',
       'Tab 7123123123123',
     ];
+    // The official tab list uses min-height: 40px. A pinned header needs to
+    // grow when scaled text exceeds that minimum.
+    final painter = TextPainter(
+      text: TextSpan(
+        text: labels.last,
+        style: DefaultTextStyle.of(context).style
+            .merge(context.seedTypography.t4Bold),
+      ),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    )..layout();
+    final measuredHeight = painter.height + SeedDimension.x2_5 * 2;
+    painter.dispose();
+    final pinnedHeight = measuredHeight > 40 ? measuredHeight : 40.0;
     return CustomScrollView(
       slivers: [
         const SliverToBoxAdapter(
@@ -200,12 +236,15 @@ class _NavigationPageState extends State<_NavigationPage> {
         SliverPersistentHeader(
           pinned: true,
           delegate: _StickyTabsDelegate(
+            height: pinnedHeight,
             background: context.seedColor.bg.layerDefault,
             child: SeedTabs(
               items: [
                 for (var i = 0; i < labels.length; i++)
                   SeedTabItem(label: labels[i], value: '${i + 1}'),
               ],
+              // ActivityTabs sets triggerLayout="hug".
+              fill: false,
               selectedIndex: _simpleTab,
               onTabSelected: (index) => setState(() => _simpleTab = index),
             ),
@@ -214,11 +253,11 @@ class _NavigationPageState extends State<_NavigationPage> {
         SliverToBoxAdapter(
           child: _simpleTab == 1
               ? (_tabTwoLoaded
-                    ? _panel('Tab 2 content', height: 102)
+                    ? _outlinedTabsPanel('Tab 2 content')
                     : const Text('Loading...'))
-              : _panel(
+              : _outlinedTabsPanel(
                   'Tab ${_simpleTab + 1} content',
-                  height: _simpleTab == 0 ? 1000 : 102,
+                  contentHeight: _simpleTab == 0 ? 1000 : null,
                 ),
         ),
       ],
@@ -230,41 +269,83 @@ class _NavigationPageState extends State<_NavigationPage> {
     final swipe = widget.activity == 'ActivitySwipeableTabs';
     final animated = widget.activity == 'ActivityAnimatedTabs';
     if (swipe) {
-      return Column(
-        children: [
-          SeedTabs(
-            items: const [
-              SeedTabItem(label: 'Tab 1', value: '1'),
-              SeedTabItem(label: 'Disabled', value: 'x', enabled: false),
-              SeedTabItem(
-                label: 'Tab 2',
-                value: '2',
-                showNotificationDot: true,
+      // The React TabsRoot defaults contentLayout="hug"; its carousel is
+      // measured by its feed, while the AppScreen layer owns vertical scroll.
+      // With autoHeight omitted, React's flex carousel camera stretches every
+      // slide to its tallest sibling. Switching to the shorter feed must not
+      // shrink the AppScreen's scroll range or clamp its current scrollTop.
+      final measuredHeights = _swipePanelHeights.values;
+      final carouselHeight = measuredHeights.isEmpty
+          ? 300.0
+          : measuredHeights.reduce(
+              (max, height) => max > height ? max : height,
+            );
+      final content = SingleChildScrollView(
+        key: const PageStorageKey<String>('swipeable-tabs-screen-scroll'),
+        controller: _swipeScroll,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SeedPullToRefreshPreventPull(
+              child: SeedTabs(
+                items: const [
+                  SeedTabItem(label: 'Tab 1', value: '1'),
+                  SeedTabItem(label: 'Disabled', value: 'x', enabled: false),
+                  SeedTabItem(
+                    label: 'Tab 2',
+                    value: '2',
+                    showNotificationDot: true,
+                  ),
+                ],
+                selectedIndex: _swipeTab == 0 ? 0 : 2,
+                fill: true,
+                onTabSelected: (index) {
+                  if (index == 1) return;
+                  _swipePages.animateToPage(
+                    index == 0 ? 0 : 1,
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeOut,
+                  );
+                },
               ),
-            ],
-            selectedIndex: _swipeTab == 0 ? 0 : 2,
-            fill: true,
-            onTabSelected: (index) {
-              if (index == 1) return;
-              _swipePages.animateToPage(
-                index == 0 ? 0 : 1,
-                duration: const Duration(milliseconds: 250),
-                curve: Curves.easeOut,
-              );
-            },
-          ),
-          Expanded(
-            child: PageView(
-              controller: _swipePages,
-              onPageChanged: (index) => setState(() => _swipeTab = index),
-              children: [
-                _feedList(withDialog: true),
-                _feedList(withDialog: false),
-              ],
             ),
-          ),
-        ],
+            AnimatedContainer(
+              duration: _swipePanelHeights.containsKey(_swipeTab)
+                  ? const Duration(milliseconds: 250)
+                  : Duration.zero,
+              curve: Curves.easeOut,
+              height: carouselHeight,
+              child: PageView(
+                key: const PageStorageKey<String>('swipeable-tabs-carousel'),
+                // Embla's carousel also takes mouse drags.
+                scrollBehavior: ScrollConfiguration.of(context).copyWith(
+                  dragDevices: {
+                    ...ScrollConfiguration.of(context).dragDevices,
+                    PointerDeviceKind.mouse,
+                  },
+                ),
+                controller: _swipePages,
+                onPageChanged: _onSwipePageChanged,
+                allowImplicitScrolling: true,
+                scrollCacheExtent: ScrollCacheExtent.viewport(2),
+                children: [
+                  _swipeFeedPanel(0, withDialog: true),
+                  _swipeFeedPanel(1, withDialog: false),
+                ],
+              ),
+            ),
+          ],
+        ),
       );
+      // React mounts PTR in the first TabsContent only. Flutter's listener
+      // must enclose the actual vertical Scrollable to receive overscroll at
+      // the top, and the second tab must have no PTR gesture handler.
+      return _swipeTab == 0
+          ? SeedPullToRefresh(
+              onRefresh: () => Future<void>.delayed(const Duration(seconds: 1)),
+              child: content,
+            )
+          : content;
     }
     if (animated) {
       return SingleChildScrollView(
@@ -290,11 +371,7 @@ class _NavigationPageState extends State<_NavigationPage> {
               duration: const Duration(milliseconds: 250),
               alignment: Alignment.topCenter,
               child: _swipeTab == 0
-                  ? _panel(
-                      'Tab 1 content',
-                      height: 1000,
-                      padding: const EdgeInsets.all(SeedDimension.x2),
-                    )
+                  ? _outlinedTabsPanel('Tab 1 content', contentHeight: 1000)
                   : _animatedCompactPanel(),
             ),
           ],
@@ -329,36 +406,35 @@ class _NavigationPageState extends State<_NavigationPage> {
       _DelayedPanel(
         key: const ValueKey('async-2'),
         delay: const Duration(seconds: 1),
-        // React Box height=500px with p=x4 adds 16px at both edges.
-        // Keep chip-tab sizing independent from this autoHeight example.
-        height: chip ? 500 : 532,
+        // CSS Box uses content-box: 500px content plus padding 16px x 2.
+        height: 532,
         label: 'Tab 2: Async loaded (500px, 1s delay)',
       ),
       _panel(
         'Tab 3: Immediate (200px)',
         showBorder: false,
         // React selected Tab3 has a 232px outer rect: 200px + p=x4 (32px).
-        height: chip ? 200 : 232,
+        height: 232,
         color: context.seedColor.bg.positiveSolid,
         foreground: context.seedColor.fg.positiveContrast,
       ),
       _DelayedPanel(
         key: const ValueKey('lazy-4'),
         delay: const Duration(milliseconds: 1500),
-        height: chip ? 400 : 432,
+        height: 432,
         label: 'Lazy loaded content (400px tall, 1500ms delay)',
         loadingLabel: 'Suspense loading...',
       ),
       _panel(
         'Tab 5: Immediate (150px)',
         showBorder: false,
-        height: chip ? 150 : 182,
+        height: 182,
         color: context.seedColor.bg.warningSolid,
         foreground: context.seedColor.fg.warningContrast,
       ),
       if (chip)
         for (var n = 6; n <= 10; n++)
-          _panel('Tab $n: Immediate (120px)', height: 120, showBorder: false),
+          _panel('Tab $n: Immediate (120px)', height: 152, showBorder: false),
     ];
     final explanation = chip
         ? 'Check 1 (DES-1532): tab 2/4 content loads after a delay and the carousel height follows.\n'
@@ -399,7 +475,7 @@ class _NavigationPageState extends State<_NavigationPage> {
   Widget _panel(
     String label, {
     required double height,
-    EdgeInsetsGeometry padding = const EdgeInsets.all(12),
+    EdgeInsetsGeometry padding = const EdgeInsets.all(SeedDimension.x4),
     Color? color,
     Color? foreground,
     bool showBorder = true,
@@ -416,10 +492,32 @@ class _NavigationPageState extends State<_NavigationPage> {
     child: Text(label, style: TextStyle(color: foreground)),
   );
 
+  /// React Tabs' Box uses content-box sizing. Short panels size intrinsically
+  /// with their text while the first panel has 1000px of content height.
+  Widget _outlinedTabsPanel(String label, {double? contentHeight}) {
+    final padding = EdgeInsets.symmetric(
+      horizontal: SeedDimension.x2,
+      vertical: contentHeight == null ? SeedDimension.x10 : SeedDimension.x2,
+    );
+    return Container(
+      width: double.infinity,
+      height: contentHeight == null
+          ? null
+          : contentHeight + padding.vertical + 2,
+      alignment: Alignment.topLeft,
+      padding: padding,
+      decoration: BoxDecoration(
+        border: Border.all(color: context.seedColor.stroke.neutralMuted),
+      ),
+      child: Text(label),
+    );
+  }
+
   /// ActivityAnimatedTabs.tsx renders its short panel with px="x2" and
   /// py="x10" instead of an arbitrary fixed 92px height. Retain intrinsic
   /// typography height so the carousel resizes with text scaling.
   Widget _animatedCompactPanel() => Container(
+    width: double.infinity,
     padding: const EdgeInsets.symmetric(
       horizontal: SeedDimension.x2,
       vertical: SeedDimension.x10,
@@ -430,17 +528,40 @@ class _NavigationPageState extends State<_NavigationPage> {
     child: Text('Tab 2 content', style: context.seedTypography.t5Regular),
   );
 
+  Widget _swipeFeedPanel(int index, {required bool withDialog}) => OverflowBox(
+    minHeight: 0,
+    maxHeight: double.infinity,
+    alignment: Alignment.topCenter,
+    child: _SwipePanelMeasure(
+      onHeight: (height) {
+        if (!mounted || !height.isFinite || height <= 0) return;
+        if ((_swipePanelHeights[index] ?? -1) == height) return;
+        setState(() => _swipePanelHeights[index] = height);
+      },
+      child: _feedList(withDialog: withDialog),
+    ),
+  );
+
   Widget _feedList({required bool withDialog}) {
-    final feed = ListView(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (withDialog) ...[
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: SizedBox(
-              width: 1000,
-              child: Text(
-                'Scrolling Area',
-                style: context.seedTypography.t5Regular,
+          SeedCarouselPreventDrag(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SizedBox(
+                width: 1000,
+                child: Text(
+                  'Scrolling Area',
+                  // The React Box has no textStyle, so this inherits the
+                  // browser's normal WantedSans 16px/18px line box. t5Regular
+                  // forces 22px and adds 4px to both panel/scroll extents.
+                  style: context.seedTypography.t5Regular.copyWith(
+                    height: 18 / SeedFontSize.t5,
+                  ),
+                ),
               ),
             ),
           ),
@@ -449,12 +570,6 @@ class _NavigationPageState extends State<_NavigationPage> {
         for (var i = 0; i < 10; i++) _feedRow(),
       ],
     );
-    return withDialog
-        ? SeedPullToRefresh(
-            onRefresh: () => Future<void>.delayed(const Duration(seconds: 1)),
-            child: feed,
-          )
-        : feed;
   }
 
   /// ActivitySwipeableTabs.tsx:143-169 renders each Feed as a button with
@@ -596,10 +711,7 @@ class _NavigationPageState extends State<_NavigationPage> {
     // Official ActivityPagination uses px=x4 (16) and py=x6 (24).
     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
     children: [
-      Text(
-        'Pagination',
-        style: context.seedTypography.t5Bold,
-      ),
+      Text('Pagination', style: context.seedTypography.t5Bold),
       const SizedBox(height: 12),
       Center(
         child: SeedPagination(
@@ -610,45 +722,41 @@ class _NavigationPageState extends State<_NavigationPage> {
         ),
       ),
       const SizedBox(height: 12),
-      Text('현재 페이지: $_page'),
-      const SizedBox(height: 32),
       Text(
-        'Table Pagination',
-        style: context.seedTypography.t5Bold,
+        '현재 페이지: $_page',
+        style: context.seedTypography.t4Regular.copyWith(
+          color: context.seedColor.fg.neutralMuted,
+        ),
       ),
+      const SizedBox(height: 32),
+      Text('Table Pagination', style: context.seedTypography.t5Bold),
       const SizedBox(height: 12),
-      SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: SizedBox(
-          width: 640,
-          child: SeedTablePagination(
-            totalItems: 237,
-            value: _table,
-            onValueChange: (next, _) => setState(() => _table = next),
-            semanticsLabel: '상품 표 페이지',
-          ),
+      _minWidthScroller(
+        SeedTablePagination(
+          totalItems: 237,
+          value: _table,
+          onValueChange: (next, _) => setState(() => _table = next),
+          semanticsLabel: '상품 표 페이지',
         ),
       ),
       const SizedBox(height: 12),
-      Text('${_table.page}페이지 · 페이지당 ${_table.pageSize}개'),
-      const SizedBox(height: 32),
       Text(
-        'Unknown Total',
-        style: context.seedTypography.t5Bold,
+        '${_table.page}페이지 · 페이지당 ${_table.pageSize}개',
+        style: context.seedTypography.t4Regular.copyWith(
+          color: context.seedColor.fg.neutralMuted,
+        ),
       ),
+      const SizedBox(height: 32),
+      Text('Unknown Total', style: context.seedTypography.t5Bold),
       const SizedBox(height: 12),
-      SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: SizedBox(
-          width: 640,
-          child: SeedTablePagination(
-            value: _unknown,
-            onValueChange: (next, _) => setState(() => _unknown = next),
-            hasPreviousPage: _unknown.page > 1,
-            hasNextPage: _unknown.page < 5,
-            currentPageItemCount: _unknown.page == 5 ? 7 : _unknown.pageSize,
-            semanticsLabel: '전체 개수를 알 수 없는 상품 표 페이지',
-          ),
+      _minWidthScroller(
+        SeedTablePagination(
+          value: _unknown,
+          onValueChange: (next, _) => setState(() => _unknown = next),
+          hasPreviousPage: _unknown.page > 1,
+          hasNextPage: _unknown.page < 5,
+          currentPageItemCount: _unknown.page == 5 ? 7 : _unknown.pageSize,
+          semanticsLabel: '전체 개수를 알 수 없는 상품 표 페이지',
         ),
       ),
     ],
@@ -679,23 +787,77 @@ class _NavigationPageState extends State<_NavigationPage> {
         .toList(),
   );
 
-  /// Official SPA uses fixed two/three columns even in narrow side insets.
-  /// Three short density labels fit in narrower columns than the two longer
-  /// tone labels. Keep all three density choices painted at 600px rather than
-  /// introducing an unnecessary horizontal scroll/clipped third option.
+  /// React's SelectBox.Group is a fixed-column CSS grid:
+  /// repeat(columns, minmax(0, 1fr)). The *grid tracks* must always fill the
+  /// real content inset, even when only a few pixels remain beside the 240px
+  /// sidebar. React's SelectBox root clips its overflowing contents; Flutter
+  /// otherwise lets its Row constraints leak out of the cell. Keep the native
+  /// SeedSelectBox radio/focus semantics but clip its visual subtree inside
+  /// each exact-width grid track at extremely narrow widths.
   Widget _scrollableSelectGroup({
     required int columns,
-    required Widget child,
+    required SeedSelectBoxGroup child,
   }) => LayoutBuilder(
-    builder: (context, bounds) => SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: SizedBox(
-        width: bounds.maxWidth < columns * (columns == 3 ? 128.0 : 160.0)
-            ? columns * (columns == 3 ? 128.0 : 160.0)
-            : bounds.maxWidth,
-        child: child,
-      ),
-    ),
+    builder: (context, bounds) {
+      const contentMinWidth = 68.0;
+      final minWidth = columns * contentMinWidth + (columns - 1) * 12;
+      // Official English option labels are indivisible words (normal CSS
+      // word-break); Flutter's default character wrapping would grow even a
+      // fully visible 69-100px card at high text scale.
+      Widget keepLabelsOnOneLine(Widget subtree) => DefaultTextStyle.merge(
+        softWrap: false,
+        maxLines: 1,
+        overflow: TextOverflow.clip,
+        child: subtree,
+      );
+      if (bounds.maxWidth >= minWidth) {
+        return keepLabelsOnOneLine(child);
+      }
+      final selected = child.value;
+      return SeedSelectBoxGroup(
+        semanticsLabel: child.semanticsLabel,
+        columns: columns,
+        value: selected,
+        onValueChange: child.onValueChange,
+        children: [
+          for (final item in child.children)
+            Stack(
+              key: item is SeedSelectBox
+                  ? ValueKey('side-nav-grid-card-${item.value}')
+                  : null,
+              children: [
+                ClipRect(
+                  child: OverflowBox(
+                    alignment: Alignment.topLeft,
+                    minWidth: contentMinWidth,
+                    maxWidth: contentMinWidth,
+                    child: keepLabelsOnOneLine(item),
+                  ),
+                ),
+                // The original root's right border would otherwise be clipped
+                // away with its content. CSS grid still paints that border at
+                // the exact end of each minmax(0) track.
+                if (item is SeedSelectBox)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          borderRadius: SeedBorderRadius.r3,
+                          border: Border.all(
+                            width: selected == item.value ? 2 : 1,
+                            color: selected == item.value
+                                ? context.seedColor.stroke.neutralContrast
+                                : context.seedColor.stroke.neutralWeak,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+        ],
+      );
+    },
   );
 
   Widget _sideNavigation() {
@@ -804,6 +966,8 @@ class _NavigationPageState extends State<_NavigationPage> {
                   selected: _navSelection == '알림',
                   child: Tooltip(
                     message: '알림',
+                    // The visible text already names the official button.
+                    excludeFromSemantics: true,
                     child: InkWell(
                       onTap: () => setState(() => _navSelection = '알림'),
                       borderRadius: BorderRadius.circular(10),
@@ -824,7 +988,12 @@ class _NavigationPageState extends State<_NavigationPage> {
                             const Icon(Icons.notifications, size: 20),
                             if (!_collapsed) ...[
                               const SizedBox(width: 12),
-                              const Text('알림'),
+                              Text(
+                                '알림',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: context.seedTypography.t4Medium,
+                              ),
                             ],
                           ],
                         ),
@@ -845,10 +1014,15 @@ class _NavigationPageState extends State<_NavigationPage> {
                     child: ListView(
                       padding: const EdgeInsets.all(16),
                       children: [
-                        const Text('Side Navigation Tone'),
+                        Text(
+                          'Side Navigation Tone',
+                          style: context.seedTypography.t5Medium,
+                        ),
+                        const SizedBox(height: 8),
                         _scrollableSelectGroup(
                           columns: 2,
                           child: SeedSelectBoxGroup(
+                            semanticsLabel: 'Side Navigation Tone',
                             columns: 2,
                             value: _navTone.name,
                             onValueChange: (value) {
@@ -870,10 +1044,15 @@ class _NavigationPageState extends State<_NavigationPage> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        const Text('Layout Density'),
+                        Text(
+                          'Layout Density',
+                          style: context.seedTypography.t5Medium,
+                        ),
+                        const SizedBox(height: 8),
                         _scrollableSelectGroup(
                           columns: 3,
                           child: SeedSelectBoxGroup(
+                            semanticsLabel: 'Layout Density',
                             columns: 3,
                             value: _density,
                             onValueChange: (value) {
@@ -1107,12 +1286,8 @@ class _NavigationPageState extends State<_NavigationPage> {
         detail = 'lorem ipsum dolor sit amet';
       }
     }
-    // React's list-item title is flex-shrink:0 and never line-wraps.
-    // Preserve the full label in text semantics on narrow viewports.
     final title = Text(
       entry.key,
-      softWrap: false,
-      overflow: TextOverflow.clip,
       style: context.seedTypography.t5Regular.copyWith(
         color: entry.disabled
             ? context.seedColor.fg.disabled
@@ -1212,6 +1387,7 @@ class _NavigationPageState extends State<_NavigationPage> {
               variant: SeedButtonVariant.neutralWeak,
               onPressed: onPressed,
             ),
+            const SizedBox(width: SeedDimension.x1),
             SeedButton(
               size: SeedButtonSize.xsmall,
               label: '라벨',
@@ -1298,6 +1474,9 @@ class _RadioListMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.seedColor;
+    final gray300 = colors.isDark
+        ? SeedPalette.gray300Dark
+        : SeedPalette.gray300Light;
     return ExcludeSemantics(
       child: Container(
         width: 24,
@@ -1307,10 +1486,14 @@ class _RadioListMark extends StatelessWidget {
           shape: BoxShape.circle,
           color: checked && enabled
               ? colors.bg.brandSolid
+              : !enabled && !checked
+              ? gray300
               : colors.bg.transparent,
           border: Border.all(
             color: checked && enabled
                 ? colors.bg.brandSolid
+                : !enabled && checked
+                ? gray300
                 : colors.stroke.neutralWeak,
           ),
         ),
@@ -1320,7 +1503,7 @@ class _RadioListMark extends StatelessWidget {
                 height: enabled ? 10 : 12,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: enabled ? colors.fg.onBrandSolid : colors.fg.disabled,
+                  color: enabled ? colors.fg.onBrandSolid : gray300,
                 ),
               )
             : null,
@@ -1382,13 +1565,18 @@ class _DelayedPanelState extends State<_DelayedPanel> {
 }
 
 class _StickyTabsDelegate extends SliverPersistentHeaderDelegate {
-  const _StickyTabsDelegate({required this.child, required this.background});
+  const _StickyTabsDelegate({
+    required this.child,
+    required this.background,
+    required this.height,
+  });
   final Widget child;
   final Color background;
+  final double height;
   @override
-  double get minExtent => 40;
+  double get minExtent => height;
   @override
-  double get maxExtent => 40;
+  double get maxExtent => height;
   @override
   Widget build(
     BuildContext context,
@@ -1396,5 +1584,57 @@ class _StickyTabsDelegate extends SliverPersistentHeaderDelegate {
     bool overlapsContent,
   ) => ColoredBox(color: background, child: child);
   @override
-  bool shouldRebuild(_StickyTabsDelegate oldDelegate) => true;
+  bool shouldRebuild(_StickyTabsDelegate oldDelegate) =>
+      oldDelegate.height != height ||
+      oldDelegate.background != background ||
+      oldDelegate.child != child;
+}
+
+/// `<Box overflowX="auto"><Box minWidth="640px">` from ActivityPagination.
+Widget _minWidthScroller(Widget child) => LayoutBuilder(
+  builder: (context, constraints) => SingleChildScrollView(
+    scrollDirection: Axis.horizontal,
+    child: SizedBox(
+      width: constraints.maxWidth < 640 ? 640 : constraints.maxWidth,
+      child: child,
+    ),
+  ),
+);
+
+/// Reports a carousel panel's laid-out, unbounded content height to its owner.
+/// React Embla AutoHeight measures the slide itself, not the viewport.
+class _SwipePanelMeasure extends SingleChildRenderObjectWidget {
+  const _SwipePanelMeasure({required this.onHeight, required super.child});
+
+  final ValueChanged<double> onHeight;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _SwipePanelMeasureRender(onHeight);
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    _SwipePanelMeasureRender renderObject,
+  ) {
+    renderObject.onHeight = onHeight;
+  }
+}
+
+class _SwipePanelMeasureRender extends RenderProxyBox {
+  _SwipePanelMeasureRender(this.onHeight);
+
+  ValueChanged<double> onHeight;
+  double? _height;
+
+  @override
+  void performLayout() {
+    super.performLayout();
+    if (_height == size.height) return;
+    _height = size.height;
+    final measured = size.height;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (attached) onHeight(measured);
+    });
+  }
 }
