@@ -10,14 +10,24 @@ import '../../foundations/radius/seed_radius.dart';
 import '../../theme/seed_theme.dart';
 import '../../foundations/feedback/seed_scale_feedback.dart';
 
-enum SeedSnackbarVariant { neutral, positive, critical }
+enum SeedSnackbarVariant {
+  neutral,
 
 /// Standalone Snackbar component of SEED Design System.
+  positive,
+
+  critical,
+}
+
 class SeedSnackbar extends StatelessWidget {
   final String message;
+
   final String? actionLabel;
+
   final VoidCallback? onAction;
+
   final Widget? prefixIcon;
+
   final SeedSnackbarVariant variant;
 
   const SeedSnackbar({
@@ -122,10 +132,13 @@ ScaffoldFeatureController<SnackBar, SnackBarClosedReason> showSeedSnackbar({
   String? actionLabel,
   VoidCallback? onAction,
   Duration duration = const Duration(seconds: 4),
+  bool? persist,
+  VoidCallback? onVisible,
   Widget? prefixIcon,
   SeedSnackbarVariant variant = SeedSnackbarVariant.neutral,
 }) {
   final scaffoldMessenger = ScaffoldMessenger.of(context);
+  var actionInvoked = false;
 
   return scaffoldMessenger.showSnackBar(
     SnackBar(
@@ -135,6 +148,8 @@ ScaffoldFeatureController<SnackBar, SnackBarClosedReason> showSeedSnackbar({
       margin: const EdgeInsets.all(SeedDimension.x2),
       padding: EdgeInsets.zero,
       duration: duration,
+      persist: persist ?? (actionLabel != null && onAction != null),
+      onVisible: onVisible,
       content: SeedSnackbar(
         message: message,
         actionLabel: actionLabel,
@@ -142,7 +157,11 @@ ScaffoldFeatureController<SnackBar, SnackBarClosedReason> showSeedSnackbar({
         variant: variant,
         onAction: onAction != null
             ? () {
-                scaffoldMessenger.hideCurrentSnackBar();
+                if (actionInvoked) return;
+                actionInvoked = true;
+                scaffoldMessenger.hideCurrentSnackBar(
+                  reason: SnackBarClosedReason.action,
+                );
                 onAction();
               }
             : null,
@@ -151,12 +170,16 @@ ScaffoldFeatureController<SnackBar, SnackBarClosedReason> showSeedSnackbar({
   );
 }
 
-enum SeedSnackbarStrategy { queued, immediate }
+enum SeedSnackbarStrategy {
+  queued,
+
+  immediate,
+}
 
 class _SeedSnackbarEntry {
-  _SeedSnackbarEntry(this.child, this.duration, this.onClose);
+  _SeedSnackbarEntry(this.child, this.duration, this.removeDelay, this.onClose);
   final Widget child;
-  final Duration duration;
+  final Duration duration, removeDelay;
   final VoidCallback? onClose;
 }
 
@@ -167,34 +190,36 @@ class SeedSnackbarController extends ChangeNotifier {
     this.pauseOnInteraction = true,
   });
   SeedSnackbarStrategy strategy;
+
   bool pauseOnInteraction;
   bool _disposed = false;
   bool _attached = false;
   final List<_SeedSnackbarEntry> _queue = [];
   final Map<Object, double> _avoidedHeights = {};
-  Timer? _timer;
+  Timer? _timer, _removeTimer;
+  // The current entry is exiting: hidden, but not yet removed from the queue.
+  bool _dismissing = false;
   final Stopwatch _elapsed = Stopwatch();
   Duration _remaining = Duration.zero;
   bool _hover = false, _pressed = false, _focused = false;
   bool get _paused => _hover || _pressed || _focused;
   double get _bottomOffset => _avoidedHeights.values.fold(0, math.max);
-  _SeedSnackbarEntry? get _current => _queue.firstOrNull;
+  _SeedSnackbarEntry? get _current => _dismissing ? null : _queue.firstOrNull;
 
   /// Returns a dismiss callback for this entry, including when it is queued.
   VoidCallback show({
     required Widget child,
     Duration duration = const Duration(seconds: 4),
+    Duration removeDelay = const Duration(milliseconds: 200),
     SeedSnackbarStrategy? strategy,
     VoidCallback? onClose,
   }) {
-    final entry = _SeedSnackbarEntry(child, duration, onClose);
+    final entry = _SeedSnackbarEntry(child, duration, removeDelay, onClose);
     if ((strategy ?? this.strategy) == SeedSnackbarStrategy.immediate &&
         _queue.isNotEmpty) {
-      _timer?.cancel();
-      final old = _queue.removeAt(0);
-      old.onClose?.call();
-      _queue.insert(0, entry);
-      _start();
+      // The current snackbar exits first; this one enters when it is removed.
+      _queue.insert(1, entry);
+      _dismiss(_queue.first);
     } else {
       _queue.add(entry);
       if (_queue.length == 1) _start();
@@ -210,13 +235,24 @@ class SeedSnackbarController extends ChangeNotifier {
   void _dismiss(_SeedSnackbarEntry entry) {
     final index = _queue.indexOf(entry);
     if (index < 0) return;
-    _queue.removeAt(index);
-    if (index == 0) {
-      _timer?.cancel();
-      _start();
+    if (index > 0) {
+      _queue.removeAt(index);
+      entry.onClose?.call();
+      notifyListeners();
+      return;
     }
-    entry.onClose?.call();
+    if (_dismissing) return;
+    _timer?.cancel();
+    _elapsed.stop();
+    _dismissing = true;
     notifyListeners();
+    _removeTimer = Timer(entry.removeDelay, () {
+      _dismissing = false;
+      _queue.remove(entry);
+      entry.onClose?.call();
+      _start();
+      notifyListeners();
+    });
   }
 
   void _start() {
@@ -292,6 +328,7 @@ class SeedSnackbarController extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     _timer?.cancel();
+    _removeTimer?.cancel();
     super.dispose();
   }
 }
@@ -324,9 +361,13 @@ class SeedSnackbarProvider extends StatefulWidget {
     this.pauseOnInteraction = true,
   });
   final Widget child;
+
   final SeedSnackbarController? controller;
+
   final SeedSnackbarStrategy strategy;
+
   final bool pauseOnInteraction;
+
   static SeedSnackbarController of(BuildContext context) => context
       .dependOnInheritedWidgetOfExactType<_SeedSnackbarScope>()!
       .controller;
@@ -459,7 +500,9 @@ class _SeedSnackbarProviderState extends State<SeedSnackbarProvider> {
 /// Reserves the measured height of a floating action region above the snackbar.
 class SeedSnackbarAvoidOverlap extends StatefulWidget {
   const SeedSnackbarAvoidOverlap({super.key, required this.child});
+
   final Widget child;
+
   @override
   State<SeedSnackbarAvoidOverlap> createState() =>
       _SeedSnackbarAvoidOverlapState();

@@ -2,10 +2,14 @@
 // No browser parity is inferred from these WidgetTester fake-clock results.
 // To run a separately labelled expected React-strict RED probe:
 // flutter test --dart-define=REACT_STRICT_RED=true --plain-name 'REACT_STRICT_RED' <this file>
+
 import 'package:flutter/gestures.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
+
+import 'support/seed_test_fonts.dart';
 
 const bool _reactStrictRed = bool.fromEnvironment('REACT_STRICT_RED');
 
@@ -40,8 +44,29 @@ Future<void> _show(
   await tester.pump(const Duration(milliseconds: 330));
 }
 
+Widget _app(Widget child) => MaterialApp(
+  theme: SeedThemeData.light(fontFamily: seedTestFontFamily).toThemeData(),
+  home: Scaffold(body: Center(child: child)),
+);
+
+Widget host(Widget child) => MaterialApp(
+  locale: const Locale('ko'),
+  supportedLocales: const [Locale('en'), Locale('ko')],
+  localizationsDelegates: GlobalMaterialLocalizations.delegates,
+  theme: SeedThemeData.light().toThemeData(),
+  home: Scaffold(body: Center(child: child)),
+);
+
+Widget hostStateParity(Widget child) => MaterialApp(
+  supportedLocales: const [Locale('en'), Locale('ko')],
+  locale: const Locale('ko'),
+  localizationsDelegates: GlobalMaterialLocalizations.delegates,
+  theme: SeedThemeData.light().toThemeData(),
+  home: Scaffold(body: child),
+);
+
 void main() {
-  testWidgets('GREEN actual mouse hover holds timer; leave expires once', (
+  testWidgets('actual mouse hover holds timer; leave expires once', (
     tester,
   ) async {
     final controller = SeedSnackbarController();
@@ -71,12 +96,12 @@ void main() {
     expect(notifications, greaterThanOrEqualTo(2));
     // Capture observer count without relying on private queue/timer fields.
     // ignore: avoid_print
-    print('GREEN hover: closed=$closed notifications=$notifications');
+    print('hover: closed=$closed notifications=$notifications');
     await mouse.removePointer();
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('GREEN focus holds; unfocus releases public controller timer', (
+  testWidgets('focus holds; unfocus releases public controller timer', (
     tester,
   ) async {
     final controller = SeedSnackbarController();
@@ -108,11 +133,11 @@ void main() {
     expect(find.text('focus-public'), findsNothing);
     expect(closes, 1);
     // ignore: avoid_print
-    print('GREEN focus: closes=$closes focusHasFocus=${focus.hasFocus}');
+    print('focus: closes=$closes focusHasFocus=${focus.hasFocus}');
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('GREEN explicit queued vs immediate override: two real entries', (
+  testWidgets('explicit queued vs immediate override: two real entries', (
     tester,
   ) async {
     final controller = SeedSnackbarController(
@@ -155,14 +180,14 @@ void main() {
     expect(find.text('immediate-C'), findsOneWidget);
     expect(closed, ['queued-A', 'queued-B']);
     controller.close();
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
     expect(closed, ['queued-A', 'queued-B', 'immediate-C']);
     // ignore: avoid_print
-    print('GREEN strategy: closeOrder=$closed notifications=$updates');
+    print('strategy: closeOrder=$closed notifications=$updates');
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('GREEN root provider survives route change and new submission', (
+  testWidgets('root provider survives route change and new submission', (
     tester,
   ) async {
     final controller = SeedSnackbarController();
@@ -222,12 +247,12 @@ void main() {
     expect(closed, ['route-A', 'route-B']);
     // ignore: avoid_print
     print(
-      'GREEN global provider routes=$routes closed=$closed notifications=$notifications',
+      'global provider routes=$routes closed=$closed notifications=$notifications',
     );
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('GREEN disposing page-scoped provider detaches visible entry', (
+  testWidgets('disposing page-scoped provider detaches visible entry', (
     tester,
   ) async {
     final controller = SeedSnackbarController();
@@ -265,32 +290,193 @@ void main() {
     // Detaching provider is NOT equivalent to dismiss/onClose.
     expect(closed, 0);
     controller.close();
+    await tester.pump(const Duration(milliseconds: 200));
     expect(closed, 1);
     // ignore: avoid_print
-    print('GREEN page-dispose: visible=false closedAfterExplicitClose=$closed');
+    print('page-dispose: visible=false closedAfterExplicitClose=$closed');
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
   // Historical React-strict probe. Flutter now uses the source-confirmed
   // default immediate strategy; keep this optional test for that contract.
-  testWidgets(
-    'REACT_STRICT default-immediate expectation',
-    (tester) async {
+  testWidgets('REACT_STRICT default-immediate expectation', (tester) async {
+    final controller = SeedSnackbarController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(_host(controller: controller));
+    await _show(tester, controller, 'contract-A');
+    await _show(tester, controller, 'contract-B');
+    // React headless defaults to immediate, but first transitions through
+    // the dismissing state before promoting the second entry (200ms exit
+    // delay): use a 500ms observation instead of claiming instant paint.
+    // Flutter's default now also promotes B (while callers may explicitly
+    // request the legacy queued strategy).
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(milliseconds: 300));
+    // This is only a Flutter widget contract, not paired-browser parity.
+    expect(find.text('contract-B'), findsOneWidget);
+  }, skip: !_reactStrictRed);
+  group('immediate queue', () {
+    setUpAll(loadSeedTestFonts);
+    testWidgets('immediate exits the current one before the next enters', (
+      tester,
+    ) async {
       final controller = SeedSnackbarController();
       addTearDown(controller.dispose);
-      await tester.pumpWidget(_host(controller: controller));
-      await _show(tester, controller, 'contract-A');
-      await _show(tester, controller, 'contract-B');
-      // React headless defaults to immediate, but first transitions through
-      // the dismissing state before promoting the second entry (200ms exit
-      // delay): use a 500ms observation instead of claiming instant paint.
-      // Flutter's default now also promotes B (while callers may explicitly
-      // request the legacy queued strategy).
-      await tester.pump(const Duration(milliseconds: 500));
-      await tester.pump(const Duration(milliseconds: 300));
-      // This is only a Flutter widget contract, not paired-browser parity.
-      expect(find.text('contract-B'), findsOneWidget);
-    },
-    skip: !_reactStrictRed,
-  );
+      final closed = <String>[];
+      await tester.pumpWidget(
+        _app(
+          SeedSnackbarProvider(
+            controller: controller,
+            child: const SizedBox.expand(),
+          ),
+        ),
+      );
+      controller.show(
+        child: const SeedSnackbar(message: 'A'),
+        onClose: () => closed.add('A'),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 330));
+      controller.show(
+        child: const SeedSnackbar(message: 'B'),
+        onClose: () => closed.add('B'),
+      );
+      await tester.pump();
+      expect(closed, isEmpty, reason: 'onClose waits for removeDelay');
+      await tester.pump(const Duration(milliseconds: 199));
+      expect(find.text('B'), findsNothing);
+      await tester.pump(const Duration(milliseconds: 1));
+      expect(closed, ['A']);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 330));
+      expect(find.text('B'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+  });
+  group('text style', () {
+    for (final dark in [false, true]) {
+      for (final variant in SeedSnackbarVariant.values) {
+        testWidgets(
+          'provider snackbar text dark=$dark variant=${variant.name}',
+          (tester) async {
+            final controller = SeedSnackbarController();
+            addTearDown(controller.dispose);
+            final seedTheme = dark
+                ? SeedThemeData.dark()
+                : SeedThemeData.light();
+            await tester.pumpWidget(
+              MaterialApp(
+                theme: seedTheme.toThemeData(),
+                // Match app-root placement, outside the page's Material surface.
+                home: SeedSnackbarProvider(
+                  controller: controller,
+                  child: const Scaffold(body: SizedBox.shrink()),
+                ),
+              ),
+            );
+            var actions = 0;
+            controller.show(
+              child: SeedSnackbar(
+                message: '키워드 알림이 설정되었습니다.',
+                actionLabel: '설정확인',
+                onAction: () => actions++,
+                variant: variant,
+              ),
+            );
+            await tester.pumpAndSettle();
+
+            for (final (label, color) in [
+              ('키워드 알림이 설정되었습니다.', seedTheme.colorScheme.fg.onNeutralSolid),
+              ('설정확인', seedTheme.colorScheme.fg.brand),
+            ]) {
+              final paragraph = tester.renderObject<RenderParagraph>(
+                find.descendant(
+                  of: find.text(label),
+                  matching: find.byType(RichText),
+                ),
+              );
+              final style = paragraph.text.style!;
+              expect(
+                style.decoration ?? TextDecoration.none,
+                TextDecoration.none,
+              );
+              expect(style.color, color);
+            }
+
+            await tester.tap(find.text('설정확인'));
+            await tester.pumpAndSettle();
+            expect(actions, 1);
+            expect(find.byType(SeedSnackbar), findsNothing);
+            expect(tester.takeException(), isNull);
+            await tester.pumpWidget(const SizedBox.shrink());
+          },
+        );
+      }
+    }
+  });
+
+  group('FIFO queue', () {
+    testWidgets(
+      'snackbars retain each message for its duration in FIFO order',
+      (tester) async {
+        late BuildContext context;
+        await tester.pumpWidget(
+          host(
+            Builder(
+              builder: (value) {
+                context = value;
+                return const SizedBox();
+              },
+            ),
+          ),
+        );
+        final first = showSeedSnackbar(context: context, message: 'First');
+        await tester.pumpAndSettle();
+        showSeedSnackbar(context: context, message: 'Second');
+        await tester.pump(const Duration(seconds: 1));
+        expect(find.text('First'), findsOneWidget);
+        expect(find.text('Second'), findsNothing);
+        await tester.pump(const Duration(seconds: 4));
+        await tester.pumpAndSettle();
+        expect(await first.closed, SnackBarClosedReason.timeout);
+        expect(find.text('Second'), findsOneWidget);
+      },
+    );
+  });
+
+  group('hover pause', () {
+    testWidgets(
+      'snackbar pauses while hovered and preserves explicit queued strategy',
+      (tester) async {
+        final controller = SeedSnackbarController(
+          strategy: SeedSnackbarStrategy.queued,
+        );
+        addTearDown(controller.dispose);
+        await tester.pumpWidget(
+          hostStateParity(
+            SeedSnackbarProvider(
+              controller: controller,
+              child: const SizedBox.expand(),
+            ),
+          ),
+        );
+        controller.show(
+          child: const SeedSnackbar(message: 'One'),
+          duration: const Duration(seconds: 1),
+        );
+        controller.show(child: const SeedSnackbar(message: 'Two'));
+        await tester.pumpAndSettle();
+        final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+        await mouse.addPointer(location: tester.getCenter(find.text('One')));
+        await tester.pump(const Duration(seconds: 2));
+        expect(find.text('One'), findsOneWidget);
+        await mouse.moveTo(const Offset(0, 0));
+        await tester.pump(const Duration(seconds: 1));
+        await tester.pumpAndSettle();
+        expect(find.text('One'), findsNothing);
+        expect(find.text('Two'), findsOneWidget);
+        await mouse.removePointer();
+      },
+    );
+  });
 }

@@ -268,6 +268,62 @@ void main() {
   group('Form, Navigator and theme contracts', () {
 
     testWidgets(
+      'Snackbar Undo persists and reports action once, explicit timeout remains available',
+      (tester) async {
+        ScaffoldFeatureController<SnackBar, SnackBarClosedReason>? controller;
+        var actions = 0;
+        await tester.pumpWidget(
+          hostMaterialMigrationContrac(
+            Builder(
+              builder: (context) => TextButton(
+                onPressed: () => controller = showSeedSnackbar(
+                  context: context,
+                  message: 'Removed',
+                  actionLabel: 'Undo',
+                  onAction: () => actions++,
+                  duration: const Duration(seconds: 1),
+                ),
+                child: const Text('Show'),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('Show'));
+        await tester.pumpAndSettle();
+        await tester.pump(const Duration(seconds: 8));
+        expect(find.text('Undo'), findsOneWidget);
+        await tester.tap(find.text('Undo'));
+        await tester.tap(find.text('Undo'));
+        await tester.pumpAndSettle();
+        expect(actions, 1);
+        expect(await controller!.closed, SnackBarClosedReason.action);
+        await tester.pumpWidget(
+          hostMaterialMigrationContrac(
+            Builder(
+              builder: (context) => TextButton(
+                onPressed: () => controller = showSeedSnackbar(
+                  context: context,
+                  message: 'Temporary',
+                  actionLabel: 'Undo',
+                  onAction: () {},
+                  persist: false,
+                  duration: const Duration(seconds: 1),
+                ),
+                child: const Text('Show temporary'),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('Show temporary'));
+        await tester.pumpAndSettle();
+        await tester.pump(const Duration(seconds: 2));
+        await tester.pumpAndSettle();
+        expect(find.text('Temporary'), findsNothing);
+        expect(await controller!.closed, SnackBarClosedReason.timeout);
+      },
+    );
+
+    testWidgets(
       'overlay builders select Navigator, preserve scoped theme and return route results',
       (tester) async {
         final outer = RouteLog();
