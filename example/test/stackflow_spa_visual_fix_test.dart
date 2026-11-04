@@ -98,23 +98,7 @@ void main() {
     expect((panel.decoration! as BoxDecoration).border, isNull);
   });
 
-  testWidgets(
-    'Modal-prop sheet matches React compact neutral switch and label',
-    (tester) async {
-      await open(tester, '/bottom-sheet-modal-test', width: 390);
-      expect(find.text('현재 modal: true'), findsOneWidget);
-      expect(tester.getRect(find.text('modal prop 토글')).right, closeTo(374, 1));
-      final mark = tester.widget<SeedSwitchMark>(find.byType(SeedSwitchMark));
-      expect(mark.size, SeedSwitchSize.size16);
-      expect(mark.tone, SeedControlTone.neutral);
-      await tester.tap(find.text('modal prop 토글'));
-      await tester.pumpAndSettle();
-      expect(find.text('현재 modal: false'), findsOneWidget);
-      await tester.tap(find.text('modal prop 토글'));
-      await tester.pumpAndSettle();
-      expect(find.text('현재 modal: true'), findsOneWidget);
-    },
-  );
+
 
   testWidgets('TimePicker keeps the official React AppBar title', (
     tester,

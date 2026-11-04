@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:seed_design/seed_design.dart';
 
 import 'spa_history.dart';
+import 'spa_routes.dart';
 import 'spa_types.dart';
 
 /// The interactive overlay activities from the React stackflow-spa example.
@@ -93,6 +94,58 @@ SeedButton _button(
   size: size,
 );
 
+// Exact normalized JSX <Article> text in the official ActivitySidePanel.tsx:
+// 4690 characters, SHA-256 f5f4f2538aa3cd9bdce7e129ac8ee87680070ae5fbb42bc8ca54014edf71027e.
+// Preserve punctuation without manufactured spaces (e.g. 'duis.Minim').
+const String _sidePanelArticleText =
+    'Exercitation sint voluptate sunt minim ut eiusmod deserunt consectetur elit sit ex. Duis eiusmod non'
+    ' exercitation commodo mollit non elit consequat anim. Dolore enim deserunt ipsum dolor culpa incidid'
+    'unt enim non sit non commodo. Quis ex pariatur aute eiusmod nisi adipisicing sint nulla id. Et conse'
+    'ctetur officia velit. Reprehenderit in qui ea nostrud irure amet ex ullamco in dolore consequat exer'
+    'citation ut qui duis.Minim incididunt id consectetur laboris culpa exercitation commodo excepteur co'
+    'mmodo. Deserunt aliqua officia et est aliquip consectetur do elit ad quis anim ullamco aliquip repre'
+    'henderit. Occaecat ex sint exercitation occaecat do exercitation Lorem exercitation deserunt sit pro'
+    'ident ut Lorem ipsum et. Dolor ea eu sit qui amet. Qui pariatur ut voluptate laboris amet adipisicin'
+    'g esse. Nulla duis nostrud Lorem eu veniam qui sunt. Magna id dolore deserunt labore. Deserunt nulla'
+    ' labore sint officia commodo velit.Culpa labore eiusmod qui aute ea cupidatat. In velit est voluptat'
+    'e Lorem dolore consequat ea officia duis ex velit amet. Consequat esse sunt anim nulla do ea est vel'
+    'it occaecat duis aliqua non culpa ea. Labore ad non exercitation ex minim Lorem minim elit sint dese'
+    'runt proident magna tempor voluptate nostrud. Qui eu qui ad quis fugiat mollit laboris incididunt do'
+    ' enim labore. Incididunt aliquip enim amet cupidatat. Id sunt in deserunt amet sit consectetur molli'
+    't irure officia ex non duis aute laborum. Aute elit adipisicing sunt exercitation cupidatat excepteu'
+    'r et in.Nulla Lorem eu amet veniam ea. Laborum minim elit officia nulla ad ipsum ipsum est minim ali'
+    'quip. Et proident minim sunt culpa magna consectetur. Aliqua cupidatat officia voluptate exercitatio'
+    'n ad Lorem occaecat occaecat fugiat sint esse adipisicing nisi adipisicing. Aliqua tempor reprehende'
+    'rit anim. Eiusmod culpa occaecat cupidatat adipisicing dolor fugiat velit ex ad. Qui culpa et except'
+    'eur consectetur deserunt commodo ut esse velit labore ullamco adipisicing et et. Nulla commodo eu ma'
+    'gna ex exercitation culpa sit.Non laborum velit nulla magna sint laboris commodo tempor. Aliquip vol'
+    'uptate laborum proident aliquip adipisicing proident deserunt Lorem reprehenderit ipsum commodo exer'
+    'citation tempor velit. Id laboris incididunt minim velit amet pariatur. Ut reprehenderit est aute de'
+    'serunt aliqua anim commodo laboris consectetur laborum do elit amet non exercitation. Pariatur cillu'
+    'm enim culpa esse. Eu irure id nostrud et in amet laboris sunt ut enim consequat amet magna qui. Adi'
+    'pisicing enim ea in nisi commodo.Ullamco aute proident elit aute sit adipisicing dolore mollit nostr'
+    'ud nulla excepteur pariatur aute amet commodo. Esse aliquip nulla reprehenderit est Lorem anim est e'
+    'sse duis sint amet. Nulla duis do sit proident labore sit consequat duis fugiat anim cillum consecte'
+    'tur. Esse anim dolore Lorem consequat commodo esse esse aliquip magna dolore est elit cupidatat id n'
+    'on. Culpa qui est duis esse. Tempor est enim magna anim quis qui excepteur aliquip.Ad laboris ullamc'
+    'o aliquip cillum elit. Id in nostrud sit aliqua ad adipisicing voluptate dolore consequat anim incid'
+    'idunt ut mollit. Dolore occaecat incididunt dolore est tempor ad nulla. Lorem eu esse minim cupidata'
+    't nulla eu id excepteur labore quis consectetur adipisicing ad consectetur. Aliqua ullamco officia o'
+    'fficia duis et labore aliquip voluptate magna dolore fugiat labore aliqua eiusmod.Fugiat laborum qui'
+    ' mollit mollit fugiat eiusmod commodo anim duis reprehenderit ut amet non. Nisi consectetur ea adipi'
+    'sicing enim non sint est reprehenderit ea quis qui excepteur proident esse irure. Occaecat excepteur'
+    ' velit mollit. Ea laboris amet non anim consequat proident voluptate sit duis ex deserunt cupidatat.'
+    ' Reprehenderit minim veniam amet velit aute tempor aute.Minim nulla magna elit nisi anim amet cupida'
+    'tat. Minim cillum tempor ut ex. Ipsum aliqua adipisicing incididunt nulla. Aute pariatur irure enim '
+    'et do adipisicing est pariatur excepteur adipisicing Lorem tempor nisi exercitation. Proident veniam'
+    ' excepteur quis anim minim sint consequat ut pariatur dolor nulla. Occaecat in minim non. Sit nisi i'
+    'n consectetur id aliquip sunt consectetur ex sunt voluptate pariatur laboris sit.Sint ad aute est mo'
+    'llit qui exercitation qui deserunt aliqua ea mollit aute aliqua incididunt ipsum. Adipisicing veniam'
+    ' dolore qui duis ex dolor reprehenderit sint reprehenderit eiusmod aute ullamco deserunt. Aliqua vel'
+    'it officia amet id dolore exercitation est culpa eiusmod dolore magna dolore. Ullamco in sint quis c'
+    'onsequat culpa deserunt. Aute incididunt ex duis minim tempor deserunt aute cillum et eiusmod labori'
+    's minim do. Duis veniam consequat consectetur duis tempor ea ipsum culpa nostrud pariatur.';
+
 Widget _column(List<Widget> children, {double gap = 12}) => Column(
   mainAxisSize: MainAxisSize.min,
   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -124,8 +177,17 @@ Widget _choices(
   ],
 );
 
-Widget _section(String title, Widget child, {String? hint}) => Padding(
-  padding: const EdgeInsets.symmetric(vertical: 12),
+SeedButtonVariant _toggleVariant(bool value) =>
+    value ? SeedButtonVariant.neutralSolid : SeedButtonVariant.neutralWeak;
+
+Widget _section(
+  String title,
+  Widget child, {
+  String? hint,
+  double verticalPadding = 12,
+  double gap = 8,
+}) => Padding(
+  padding: EdgeInsets.symmetric(vertical: verticalPadding),
   child: _column([
     Text(
       title,
@@ -133,13 +195,13 @@ Widget _section(String title, Widget child, {String? hint}) => Padding(
     ),
     if (hint != null) Text(hint, style: const TextStyle(fontSize: 12)),
     child,
-  ], gap: 8),
+  ], gap: gap),
 );
 
-Widget _demoScroll(List<Widget> children) => ListView(
-  padding: const EdgeInsets.fromLTRB(20, 24, 20, 240),
-  children: children,
-);
+Widget _demoScroll(
+  List<Widget> children, {
+  EdgeInsetsGeometry padding = const EdgeInsets.fromLTRB(20, 24, 20, 240),
+}) => ListView(padding: padding, children: children);
 
 void _notify(BuildContext context, String message) {
   if (context.mounted) {
@@ -286,13 +348,23 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
     // Browser history can remove this activity and its modal together. Its
     // completed modal Future must not pop the newly restored parent activity.
     // React Stackflow pop() also refuses to remove the directly entered root.
-    if (mounted &&
-        activityRoute?.isCurrent == true &&
-        SpaHistoryDelegate.of(context).currentConfiguration.activities.length >
-            1) {
-      Navigator.of(context).pop(_result);
+    if (mounted && activityRoute?.isCurrent == true) {
+      if (_canPopActivity) {
+        Navigator.of(context).pop(_result);
+      } else {
+        // A root Activity's overlay has no underlying page. Any close action
+        // that reached the Flutter route presents it again, as React stays open.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _openActivity();
+        });
+      }
     }
   }
+
+  // Stackflow pop() does nothing on a directly entered root Activity, so React
+  // keeps its sheet open on Escape, outside press, drag and the close actions.
+  bool get _canPopActivity =>
+      SpaHistoryDelegate.of(context).currentConfiguration.activities.length > 1;
 
   Future<void> _openFormSheet() async {
     final nameController = TextEditingController();
@@ -303,6 +375,8 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
     try {
       await showSeedBottomSheet<void>(
         context: context,
+        isDismissible: _canPopActivity,
+        enableDrag: _canPopActivity,
         child: StatefulBuilder(
           builder: (sheetContext, refresh) => _RoutePresence(
             keepMounted: keepMounted,
@@ -335,13 +409,10 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
               footer: _column([
                 Row(
                   children: [
-                    Expanded(
-                      child: _button(
-                        '닫기',
-                        () => Navigator.pop(sheetContext),
-                        variant: SeedButtonVariant.neutralWeak,
-                      ),
-                    ),
+                    // React lets only the submit action take the free width.
+                    _button('닫기', () {
+                      if (_canPopActivity) Navigator.pop(sheetContext);
+                    }, variant: SeedButtonVariant.neutralWeak),
                     const SizedBox(width: 8),
                     Expanded(
                       child: _button('제출', () {
@@ -353,55 +424,66 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
                           context,
                           '{"name":"${nameController.text}","subscribe":$subscribe}',
                         );
-                        Navigator.pop(sheetContext);
+                        if (_canPopActivity) Navigator.pop(sheetContext);
                       }),
                     ),
                   ],
                 ),
                 const SeedDivider(),
-                SeedSwitch(
-                  label: 'Push 이후에도 BottomSheet 마운트 유지',
-                  checked: keepMounted,
-                  onCheckedChange: (value) =>
-                      refresh(() => keepMounted = value),
-                ),
-                _choices(
-                  const [
-                    'slideFromRightIOS',
-                    'fadeFromBottomAndroid',
-                    'fadeIn',
-                  ],
-                  transition,
-                  (value) => refresh(() => transition = value),
-                ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _button('ActivityDetail', () {
-                        widget.navigate(
-                          'ActivityDetail',
-                          arguments: {
-                            'title': 'ActivityDetail',
-                            'body': keepMounted
-                                ? 'BottomSheet가 유지되므로 입력한 이름과 체크 상태를 보존합니다.'
-                                : '화면을 다시 열면 BottomSheet의 입력값이 초기화됩니다.',
-                            'transitionStyle': transition,
-                          },
-                        );
-                      }),
+                // Official VStack gap x2 groups the switch, chips and actions.
+                _column(gap: 8, [
+                  Center(
+                    child: SeedSwitch(
+                      size: SeedSwitchSize.size16,
+                      label: 'Push 이후에도 BottomSheet 마운트 유지',
+                      checked: keepMounted,
+                      onCheckedChange: (value) =>
+                          refresh(() => keepMounted = value),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _button('ActivityHome', () {
-                        widget.navigate(
-                          'ActivityHome',
-                          arguments: {'transitionStyle': transition},
-                        );
-                      }),
-                    ),
-                  ],
-                ),
-              ], gap: 8),
+                  ),
+                  // Official ActivityBottomSheet uses Chip.RadioRoot.
+                  SeedChipRadioGroup<String>(
+                    semanticsLabel: 'Transition style',
+                    value: transition,
+                    onValueChange: (value) => refresh(() => transition = value),
+                    options: [
+                      for (final style in [
+                        'slideFromRightIOS',
+                        'fadeFromBottomAndroid',
+                        'fadeIn',
+                      ])
+                        SeedChipOption<String>(value: style, label: style),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _button('ActivityDetail', () {
+                          widget.navigate(
+                            'ActivityDetail',
+                            arguments: {
+                              'title': 'ActivityDetail',
+                              'body': keepMounted
+                                  ? 'BottomSheet가 언마운트되지 않았으므로, 현재 Activity를 pop하는 경우 uncontrolled 상태의 TextField와 Checkbox 값이 유지되며 BottomSheet가 열린 상태로 표시됩니다.'
+                                  : 'BottomSheet가 언마운트되었으므로, 현재 Activity를 pop하는 경우 uncontrolled 상태의 TextField와 Checkbox 값이 초기화되며 BottomSheet가 다시 enter 트랜지션을 재생하며 마운트됩니다.',
+                              'transitionStyle': transition,
+                            },
+                          );
+                        }),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _button('ActivityHome', () {
+                          widget.navigate(
+                            'ActivityHome',
+                            arguments: {'transitionStyle': transition},
+                          );
+                        }),
+                      ),
+                    ],
+                  ),
+                ]),
+              ], gap: 16),
             ),
           ),
         ),
@@ -471,6 +553,7 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
     try {
       await showSeedBottomSheet<void>(
         context: context,
+        isDismissible: _canPopActivity,
         snapPoints: const [
           SeedSheetSnapPoint.fraction(.5),
           SeedSheetSnapPoint.fraction(.85),
@@ -495,53 +578,98 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
               }
 
               return _column([
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      for (final room in rooms)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 14),
-                          // Flutter Web maps `toggled` to role=switch even with
-                          // button=true. Keep React's button role and expose
-                          // current-room selection via its supported state.
-                          // Flutter Web currently lacks aria-pressed for buttons.
-                          child: Semantics(
-                            button: true,
-                            selected: selected == room.$1,
-                            label: '${room.$1}, ${room.$2}',
-                            onTap: () => selectRoom(room.$1),
-                            child: ExcludeSemantics(
-                              child: InkWell(
-                                onTap: () => selectRoom(room.$1),
-                                child: Column(
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 28,
-                                      backgroundColor: room.$1 == '잠실엘스'
-                                          ? Colors.blue.shade200
-                                          : Colors.purple.shade100,
-                                      child: Text(room.$3),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    SizedBox(
-                                      width: 78,
-                                      child: Text(
-                                        room.$1,
-                                        maxLines: 2,
-                                        textAlign: TextAlign.center,
+                // React HStack gap=x3 with four flexGrow, flexShrink=0
+                // buttons. Intrinsic horizontal scrolling packed each room
+                // to the left and distorted room centers at 320/390px.
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (var index = 0; index < rooms.length; index++) ...[
+                      if (index > 0) const SizedBox(width: 12),
+                      Expanded(
+                        child: Builder(
+                          builder: (context) {
+                            final room = rooms[index];
+                            return Semantics(
+                              // Flutter Web maps `toggled` to role=switch even with
+                              // button=true. Keep React's button role and expose
+                              // current-room selection via its supported state.
+                              // Flutter Web currently lacks aria-pressed for buttons.
+                              button: true,
+                              selected: selected == room.$1,
+                              label: '${room.$1}, ${room.$2}',
+                              onTap: () => selectRoom(room.$1),
+                              child: ExcludeSemantics(
+                                child: InkWell(
+                                  onTap: () => selectRoom(room.$1),
+                                  child: Column(
+                                    children: [
+                                      SizedBox.square(
+                                        dimension: 64,
+                                        child: Center(
+                                          child: CircleAvatar(
+                                            radius: 28,
+                                            backgroundColor: switch ((
+                                              room.$1 == '잠실엘스',
+                                              context.seedColor.isDark,
+                                            )) {
+                                              (true, false) =>
+                                                SeedPalette.blue100Light,
+                                              (true, true) =>
+                                                SeedPalette.blue100Dark,
+                                              (false, false) =>
+                                                SeedPalette.purple100Light,
+                                              (false, true) =>
+                                                SeedPalette.purple100Dark,
+                                            },
+                                            child: Text(
+                                              room.$3,
+                                              style: context
+                                                  .seedTypography
+                                                  .t5Bold
+                                                  .copyWith(
+                                                    color: context
+                                                        .seedColor
+                                                        .fg
+                                                        .neutral,
+                                                  ),
+                                            ),
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                    Text(room.$2),
-                                    // Selection is conveyed through the input panel, as in React.
-                                  ],
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        room.$1,
+                                        textAlign: TextAlign.center,
+                                        style: context.seedTypography.t2Medium
+                                            .copyWith(
+                                              color:
+                                                  context.seedColor.fg.neutral,
+                                            ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        room.$2,
+                                        textAlign: TextAlign.center,
+                                        style: context.seedTypography.t2Regular
+                                            .copyWith(
+                                              color: context
+                                                  .seedColor
+                                                  .fg
+                                                  .neutralMuted,
+                                            ),
+                                      ),
+                                      // Selection is conveyed through the input panel, as in React.
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
+                            );
+                          },
                         ),
+                      ),
                     ],
-                  ),
+                  ],
                 ),
                 if (selected != null)
                   SeedTextField(
@@ -573,9 +701,9 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
     final sheetKey = GlobalKey();
     await showGeneralDialog<void>(
       context: context,
-      barrierDismissible: true,
+      barrierDismissible: _canPopActivity,
       barrierLabel: '닫기',
-      barrierColor: Colors.black54,
+      barrierColor: context.seedColor.bg.overlay,
       pageBuilder: (_, animation, secondaryAnimation) => StatefulBuilder(
         builder: (sheetContext, refresh) {
           Widget fields = switch (fieldMode) {
@@ -653,14 +781,17 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
                     _button(
                       'fixed: ${fixed ? "on" : "off"}',
                       () => refresh(() => fixed = !fixed),
+                      variant: _toggleVariant(fixed),
                     ),
                     _button(
                       'snapPoints: ${snap ? "on" : "off"}',
                       () => refresh(() => snap = !snap),
+                      variant: _toggleVariant(snap),
                     ),
                     _button(
                       'repositionInputs: ${reposition ? "on" : "off"}',
                       () => refresh(() => reposition = !reposition),
+                      variant: _toggleVariant(reposition),
                     ),
                   ],
                 ),
@@ -681,7 +812,9 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
               else
                 _playgroundFields(fields, contentMode == 'tall' ? 8 : 0),
             ]),
-            footer: _button('Close', () => Navigator.pop(sheetContext)),
+            footer: _button('Close', () {
+              if (_canPopActivity) Navigator.pop(sheetContext);
+            }),
           );
           final keyboard = media.viewInsets.bottom;
           Widget surface = snap
@@ -750,7 +883,8 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
 
     _result = await showSeedMenuSheet<Map<String, String>>(
       context: context,
-      enableDrag: swipeable,
+      isDismissible: _canPopActivity,
+      enableDrag: swipeable && _canPopActivity,
       closeOnSelect: false,
       showHandle: swipeable,
       showCancelButton: !swipeable,
@@ -797,7 +931,8 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
     _result = await showSeedMenuSheet<Map<String, String>>(
       context: context,
       closeOnSelect: false,
-      enableDrag: true,
+      isDismissible: _canPopActivity,
+      enableDrag: _canPopActivity,
       showCancelButton: false,
       title: 'Actions',
       groups: [
@@ -867,9 +1002,9 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
         showFooter = true;
     await showGeneralDialog<void>(
       context: context,
-      barrierDismissible: true,
+      barrierDismissible: _canPopActivity,
       barrierLabel: '닫기',
-      barrierColor: Colors.black54,
+      barrierColor: context.seedColor.bg.overlay,
       transitionDuration: const Duration(milliseconds: 250),
       pageBuilder: (dialogContext, animation, secondaryAnimation) =>
           StatefulBuilder(
@@ -880,6 +1015,7 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
                   ? 'md 이상에서는 Side Panel, sm 이하에서는 Bottom Sheet로 표시됩니다. 뷰포트를 줄여서 자동 전환을 확인해보세요.'
                   : 'Side Panel 컴포넌트 데모입니다.';
               final sizeControl = SeedSegmentedControl<String>(
+                semanticsLabel: '패널 크기',
                 segments: const [
                   SeedSegment(value: 'small', label: 'Small'),
                   SeedSegment(value: 'medium', label: 'Medium'),
@@ -888,63 +1024,65 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
                 value: size,
                 onValueChange: (next) => refresh(() => size = next),
               );
+              final controls = _column([
+                if (!responsive)
+                  SeedSegmentedControl<String>(
+                    semanticsLabel: '패널 방향',
+                    value: direction,
+                    onValueChange: (next) => refresh(() => direction = next),
+                    segments: const [
+                      SeedSegment(value: 'left', label: 'Left'),
+                      SeedSegment(value: 'right', label: 'Right'),
+                    ],
+                  ),
+                sizeControl,
+                if (!responsive)
+                  _column([
+                    for (final (label, value, change)
+                        in <(String, bool, ValueChanged<bool>)>[
+                          ('제목 표시', showTitle, (v) => showTitle = v),
+                          (
+                            '설명 표시',
+                            showDescription,
+                            (v) => showDescription = v,
+                          ),
+                          (
+                            '닫기 버튼 표시',
+                            showCloseButton,
+                            (v) => showCloseButton = v,
+                          ),
+                          ('푸터 표시', showFooter, (v) => showFooter = v),
+                        ])
+                      SeedSwitch(
+                        tone: SeedControlTone.neutral,
+                        size: SeedSwitchSize.size16,
+                        label: label,
+                        checked: value,
+                        onCheckedChange: (v) => refresh(() => change(v)),
+                      ),
+                  ], gap: 12),
+              ], gap: 16);
+              // React SidePanelBody has no gap between its Article and the
+              // following VStack; that VStack supplies its own 16px gaps.
               final body = _column([
                 if (!responsive)
                   Text(
-                    List.filled(
-                      32,
-                      'Exercitation sint voluptate sunt minim ut eiusmod deserunt consectetur elit sit ex. Duis eiusmod non exercitation commodo mollit non elit consequat anim. ',
-                    ).join(),
+                    // Official Article line-height is 18px at 16px font size;
+                    // its 4690-char JSX has 185/141/60 lines at 320/390/800.
+                    // Keep the canonical text and wrapping unchanged.
+                    style: const TextStyle(fontSize: 16, height: 18 / 16),
+                    _sidePanelArticleText,
                   ),
-                if (!responsive)
-                  _section(
-                    '패널 방향',
-                    _choices(
-                      const ['left', 'right'],
-                      direction,
-                      (next) => refresh(() => direction = next),
-                    ),
-                  ),
-                if (responsive)
-                  Semantics(
-                    label: '패널 크기',
-                    explicitChildNodes: true,
-                    child: sizeControl,
-                  )
-                else
-                  _section('패널 크기', sizeControl),
-                if (!responsive) ...[
-                  SeedSwitch(
-                    label: '제목 표시',
-                    checked: showTitle,
-                    onCheckedChange: (v) => refresh(() => showTitle = v),
-                  ),
-                  SeedSwitch(
-                    label: '설명 표시',
-                    checked: showDescription,
-                    onCheckedChange: (v) => refresh(() => showDescription = v),
-                  ),
-                  SeedSwitch(
-                    label: '닫기 버튼 표시',
-                    checked: showCloseButton,
-                    onCheckedChange: (v) => refresh(() => showCloseButton = v),
-                  ),
-                  SeedSwitch(
-                    label: '푸터 표시',
-                    checked: showFooter,
-                    onCheckedChange: (v) => refresh(() => showFooter = v),
-                  ),
-                ],
-              ]);
+                controls,
+              ], gap: 0);
               void closePanel() {
                 // A directly loaded React Activity has no predecessor;
                 // useFlow().pop() leaves that root panel open.
-                if (responsive &&
-                    SpaHistoryDelegate.of(ctx)
-                            .currentConfiguration
-                            .activities
-                            .length <=
-                        1) {
+                if (SpaHistoryDelegate.of(ctx)
+                        .currentConfiguration
+                        .activities
+                        .length <=
+                    1) {
                   return;
                 }
                 Navigator.pop(ctx);
@@ -971,7 +1109,8 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
                               closePanel,
                               variant: SeedButtonVariant.neutralWeak,
                             ),
-                            _button('확인', () => Navigator.pop(ctx)),
+                            // React ActivitySidePanel's confirm has no onClick.
+                            _button('확인', () {}),
                           ], gap: 8)
                   : null;
               if (compact) {
@@ -1004,7 +1143,7 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
                     _ => SeedSidePanelSize.medium,
                   },
                   showCloseButton: showCloseButton,
-                  onClose: () => Navigator.pop(ctx),
+                  onClose: closePanel,
                   body: body,
                   footer: footer,
                 ),
@@ -1038,7 +1177,7 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
       context: context,
       barrierDismissible: canPopActivity,
       barrierLabel: '닫기',
-      barrierColor: Colors.black54,
+      barrierColor: context.seedColor.bg.overlay,
       pageBuilder: (dialogContext, animation, secondaryAnimation) =>
           PopScope<void>(
             canPop: canPopActivity,
@@ -1046,6 +1185,7 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
               builder: (ctx, refresh) {
                 final compact = MediaQuery.sizeOf(ctx).width < 768;
                 final content = SeedSegmentedControl<String>(
+                  semanticsLabel: '다이얼로그 크기',
                   segments: const [
                     SeedSegment(value: 'medium', label: 'Medium'),
                     SeedSegment(value: 'large', label: 'Large'),
@@ -1114,6 +1254,8 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
     try {
       await showSeedBottomSheet<void>(
         context: context,
+        isDismissible: _canPopActivity,
+        enableDrag: _canPopActivity,
         modalListenable: modal,
         child: StatefulBuilder(
           builder: (ctx, refresh) => SeedBottomSheet(
@@ -1126,32 +1268,24 @@ class _ModalActivityPageState extends State<_ModalActivityPage> {
               const Text(
                 '이 화면은 BottomSheet의 modal prop을 동적으로 변경할 때 애니메이션이 재실행되지 않는지 테스트하기 위한 화면입니다.',
               ),
-              Text('현재 modal: ${modal.value}'),
-              SeedPressable(
-                semanticButton: false,
-                semanticsLabel: 'modal prop 토글',
-                toggled: modal.value,
-                enableScale: false,
-                onTap: () => refresh(() => modal.value = !modal.value),
-                builder: (ctx, pressed) => SizedBox(
-                  height: 44,
-                  width: double.infinity,
-                  child: Row(
-                    children: [
-                      SeedSwitchMark(
-                        size: SeedSwitchSize.size16,
-                        tone: SeedControlTone.neutral,
-                        checked: modal.value,
-                        interactive: false,
-                      ),
-                      const Spacer(),
-                      Text(
-                        'modal prop 토글',
-                        style: ctx.seedTypography.t4Regular,
-                      ),
-                    ],
-                  ),
+              Text.rich(
+                TextSpan(
+                  text: '현재 modal: ',
+                  children: [
+                    TextSpan(
+                      text: '${modal.value}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ],
                 ),
+                style: ctx.seedTypography.t4Regular,
+              ),
+              SeedSwitch(
+                size: SeedSwitchSize.size16,
+                tone: SeedControlTone.neutral,
+                label: 'modal prop 토글',
+                checked: modal.value,
+                onCheckedChange: (value) => refresh(() => modal.value = value),
               ),
               _button('닫기', () => Navigator.pop(ctx)),
             ]),
@@ -1192,32 +1326,28 @@ class _ActivityAlertDialogState extends State<_ActivityAlertDialog> {
         title: '제목',
         description: '다람쥐 헌 쳇바퀴에 타고파',
         footer: _column([
-          Row(
+          SeedResponsivePair(
+            gap: 8,
             children: [
-              Expanded(
-                child: _button('확인', () {
-                  // The React AlertDialogAction invokes useFlow().pop().
-                  // Closing only the Flutter dialog would leave an empty
-                  // root Activity when no predecessor exists.
-                  if (widget.canPopActivity) {
-                    Navigator.pop(context, {'message': 'hello'});
-                  }
-                }, variant: SeedButtonVariant.neutralWeak),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _button('Push', () {
-                  widget.navigate(
-                    'ActivityDetail',
-                    arguments: {
-                      'title': 'AlertDialog에서 Push됨',
-                      'body': keepMounted
-                          ? 'AlertDialog가 유지되므로 현재 Activity를 pop하면 다시 표시됩니다.'
-                          : 'AlertDialog를 재진입하면 enter 애니메이션이 다시 실행됩니다.',
-                    },
-                  );
-                }),
-              ),
+              _button('확인', () {
+                // The React AlertDialogAction invokes useFlow().pop().
+                // Closing only the Flutter dialog would leave an empty
+                // root Activity when no predecessor exists.
+                if (widget.canPopActivity) {
+                  Navigator.pop(context, {'message': 'hello'});
+                }
+              }, variant: SeedButtonVariant.neutralWeak),
+              _button('Push', () {
+                widget.navigate(
+                  'ActivityDetail',
+                  arguments: {
+                    'title': 'AlertDialog에서 Push됨',
+                    'body': keepMounted
+                        ? 'AlertDialog가 유지되므로 현재 Activity를 pop하면 다시 표시됩니다.'
+                        : 'AlertDialog를 재진입하면 enter 애니메이션이 다시 실행됩니다.',
+                  },
+                );
+              }),
             ],
           ),
           SeedSwitch(
@@ -1356,16 +1486,22 @@ class _SheetDialogStepPageState extends State<_SheetDialogStepPage> {
   Widget build(BuildContext context) {
     final history = SpaHistoryDelegate.of(context);
     WidgetsBinding.instance.addPostFrameCallback((_) => _reconcile(history));
-    return _demoScroll([
-      _section(
-        'Step 패턴',
-        const Text(
-          'useStepOverlay로 BottomSheet step과 AlertDialog step을 한 Activity 안에서 동시에 사용합니다. '
-          '시트 위에 다이얼로그를 얹어 Backdrop과 내부 빈 영역을 확인해보세요.',
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: SeedCallout(
+            title: 'Step 패턴',
+            description:
+                ('useStepOverlay로 BottomSheet step과 AlertDialog step을 한 Activity 안에서 동시에 사용합니다. '
+                'BottomSheet 위에 AlertDialog를 얹은 상태에서 AlertDialog의 Backdrop이나 Content 빈 영역을 클릭해 동작을 관찰해보세요.'),
+          ),
         ),
-      ),
-      _button('Open BottomSheet', () => history.pushStep('bottom-sheet')),
-    ]);
+        const SizedBox(height: 16),
+        _button('Open BottomSheet', () => history.pushStep('bottom-sheet')),
+      ],
+    );
   }
 }
 
@@ -1474,12 +1610,10 @@ class _StepHistoryPageState extends State<_StepHistoryPage> {
                       'Alert Dialog가 Step으로 만들어져 있기 때문에 뒤로 가기로 닫을 수 있습니다.',
                   footer: Row(
                     children: [
-                      Expanded(
-                        child: _button(
-                          '닫기',
-                          _close,
-                          variant: SeedButtonVariant.neutralWeak,
-                        ),
+                      _button(
+                        '닫기',
+                        _close,
+                        variant: SeedButtonVariant.neutralWeak,
                       ),
                       const SizedBox(width: 8),
                       Expanded(
@@ -1743,7 +1877,8 @@ class _MenuDemoPageState extends State<_MenuDemoPage> {
     SeedMenuSize size = SeedMenuSize.medium,
     SeedButtonVariant variant = SeedButtonVariant.brandSolid,
     SeedOverlaySide side = SeedOverlaySide.bottom,
-    SeedOverlayAlign align = SeedOverlayAlign.start,
+    // useMenu's default placement is "bottom".
+    SeedOverlayAlign align = SeedOverlayAlign.center,
     double maxHeight = 480,
     bool fullWidth = false,
     SeedOverlayOpenChanged? onOpenChange,
@@ -1778,27 +1913,38 @@ class _MenuDemoPageState extends State<_MenuDemoPage> {
                 : 'Menu item 클릭으로 열린 BottomSheet입니다.',
           ),
           footer: showMenu
-              ? _menuButton('Open Menu', [
-                  const SeedMenuGroupData(
-                    items: [
-                      SeedMenuItemData(
-                        label: '추가',
-                        prefixIcon: Icon(Icons.add),
-                      ),
-                      SeedMenuItemData(
-                        label: '수정',
-                        prefixIcon: Icon(Icons.edit),
-                      ),
-                      SeedMenuItemData(
-                        label: '공유',
-                        prefixIcon: Icon(Icons.share),
-                      ),
-                    ],
-                  ),
-                  const SeedMenuGroupData(
-                    items: [SeedMenuItemData(label: '삭제', isDestructive: true)],
-                  ),
-                ], variant: SeedButtonVariant.neutralWeak)
+              ? _menuButton(
+                  'Open Menu',
+                  [
+                    const SeedMenuGroupData(
+                      items: [
+                        SeedMenuItemData(
+                          label: '추가',
+                          prefixIcon: Icon(Icons.add),
+                        ),
+                        SeedMenuItemData(
+                          label: '수정',
+                          prefixIcon: Icon(Icons.edit),
+                        ),
+                        SeedMenuItemData(
+                          label: '공유',
+                          prefixIcon: Icon(Icons.share),
+                        ),
+                      ],
+                    ),
+                    const SeedMenuGroupData(
+                      items: [
+                        SeedMenuItemData(
+                          label: '삭제',
+                          isDestructive: true,
+                          prefixIcon: Icon(Icons.delete_outline),
+                        ),
+                      ],
+                    ),
+                  ],
+                  variant: SeedButtonVariant.neutralWeak,
+                  fullWidth: true,
+                )
               : null,
         ),
       ),
@@ -1808,14 +1954,17 @@ class _MenuDemoPageState extends State<_MenuDemoPage> {
   void _openDialogWithMenu() {
     showSeedDialog<void>(
       context: context,
+      barrierDismissible: false,
       child: Builder(
         builder: (dialogContext) => SeedAlertDialog(
           title: 'Menu in AlertDialog',
           description: 'AlertDialog 내부에서 Menu를 열 수 있습니다.',
-          footer: Row(
+          footer: SeedResponsivePair(
+            gap: 8,
             children: [
-              Expanded(
-                child: _menuButton('Open Menu', [
+              _menuButton(
+                'Open Menu',
+                [
                   const SeedMenuGroupData(
                     items: [
                       SeedMenuItemData(
@@ -1828,12 +1977,11 @@ class _MenuDemoPageState extends State<_MenuDemoPage> {
                       ),
                     ],
                   ),
-                ], variant: SeedButtonVariant.neutralWeak),
+                ],
+                variant: SeedButtonVariant.neutralWeak,
+                fullWidth: true,
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _button('확인', () => Navigator.pop(dialogContext)),
-              ),
+              _button('확인', () => Navigator.pop(dialogContext)),
             ],
           ),
         ),
@@ -1848,7 +1996,7 @@ class _MenuDemoPageState extends State<_MenuDemoPage> {
       // React keeps an empty AppBarLeft at the root, reserving its 14px
       // additional title inset even when Back is hidden.
       title: Padding(
-        padding: EdgeInsets.only(left: Navigator.of(context).canPop() ? 0 : 14),
+        padding: EdgeInsets.only(left: spaIsRootRoute(context) ? 14 : 0),
         child: Text(
           'Menu',
           style: context.seedTypography.t6Bold.copyWith(
@@ -1922,9 +2070,10 @@ class _MenuDemoPageState extends State<_MenuDemoPage> {
       ],
     ),
     body: ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
       children: [
         _section(
+          gap: 12,
           'Basic Trigger',
           Wrap(
             spacing: 12,
@@ -1948,12 +2097,14 @@ class _MenuDemoPageState extends State<_MenuDemoPage> {
           ),
         ),
         _section(
+          gap: 12,
           'Placement',
           Wrap(
             spacing: 12,
             runSpacing: 12,
             children: [
               _menuButton(
+                align: SeedOverlayAlign.start,
                 'bottom-start',
                 _placementGroups(),
                 variant: SeedButtonVariant.neutralWeak,
@@ -1975,10 +2126,15 @@ class _MenuDemoPageState extends State<_MenuDemoPage> {
           ),
         ),
         _section(
+          gap: 12,
           'Anchor (Controlled)',
+          // React: <HStack align="center" gap="x4" justify="space-between">.
+          // The Switch keeps its intrinsic width (inline-flex root).
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            spacing: 16,
             children: [
-              Expanded(
+              Flexible(
                 child: SeedSwitch(
                   label: '메뉴',
                   tone: SeedControlTone.neutral,
@@ -2029,6 +2185,7 @@ class _MenuDemoPageState extends State<_MenuDemoPage> {
           ),
         ),
         _section(
+          gap: 12,
           'Many Items (Scroll)',
           _menuButton(
             '30개 항목',
@@ -2046,6 +2203,7 @@ class _MenuDemoPageState extends State<_MenuDemoPage> {
           ),
         ),
         _section(
+          gap: 12,
           'Max Height',
           Row(
             children: [
@@ -2064,16 +2222,19 @@ class _MenuDemoPageState extends State<_MenuDemoPage> {
                 variant: SeedButtonVariant.neutralWeak,
               ),
               const SizedBox(width: 16),
-              const Expanded(
+              Expanded(
                 child: Text(
                   '--seed-menu-max-height로 기본 480px 대신 160px까지만 열립니다 · 화면에 남은 공간이 더 좁으면 그쪽을 따릅니다',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                  style: context.seedTypography.t3Regular.copyWith(
+                    color: context.seedColor.fg.neutralMuted,
+                  ),
                 ),
               ),
             ],
           ),
         ),
         _section(
+          gap: 12,
           'onOpenChange Reason',
           Row(
             children: [
@@ -2096,11 +2257,19 @@ class _MenuDemoPageState extends State<_MenuDemoPage> {
                 },
               ),
               const SizedBox(width: 16),
-              Expanded(child: Text('마지막: $_lastReason')),
+              Expanded(
+                child: Text(
+                  '마지막: $_lastReason',
+                  style: context.seedTypography.t3Regular.copyWith(
+                    color: context.seedColor.fg.neutralMuted,
+                  ),
+                ),
+              ),
             ],
           ),
         ),
         _section(
+          gap: 12,
           'Menu → BottomSheet',
           _menuButton('메뉴에서 시트 열기', [
             SeedMenuGroupData(
@@ -2122,43 +2291,22 @@ class _MenuDemoPageState extends State<_MenuDemoPage> {
           ], fullWidth: true),
         ),
         _section(
+          gap: 12,
           'Menu in BottomSheet',
-          _button('BottomSheet 열기', () => _openSheet(context, showMenu: true)),
+          _button(
+            'BottomSheet 열기',
+            () => _openSheet(context, showMenu: true),
+            variant: SeedButtonVariant.brandSolid,
+          ),
         ),
         _section(
+          gap: 12,
           'Menu in AlertDialog',
-          _button('AlertDialog 열기', _openDialogWithMenu),
-        ),
-        _section(
-          'Navigation',
-          _menuButton('더보기', [
-            SeedMenuGroupData(
-              items: [
-                const SeedMenuItemData(
-                  label: '공유',
-                  prefixIcon: Icon(Icons.share),
-                ),
-                const SeedMenuItemData(
-                  label: '북마크',
-                  prefixIcon: Icon(Icons.bookmark),
-                ),
-                SeedMenuItemData(
-                  label: '홈으로 이동',
-                  prefixIcon: const Icon(Icons.home),
-                  onTap: () => widget.navigate('ActivityHome'),
-                ),
-              ],
-            ),
-            const SeedMenuGroupData(
-              items: [
-                SeedMenuItemData(
-                  label: '신고',
-                  isDestructive: true,
-                  prefixIcon: Icon(Icons.flag),
-                ),
-              ],
-            ),
-          ]),
+          _button(
+            'AlertDialog 열기',
+            _openDialogWithMenu,
+            variant: SeedButtonVariant.brandSolid,
+          ),
         ),
       ],
     ),
@@ -2177,7 +2325,8 @@ class _HelpBubbleDemoPageState extends State<_HelpBubbleDemoPage> {
   static const _longDescription =
       '당근은 동네 이웃과 따뜻한 거래를 나누는 공간이에요. 중고 거래부터 동네 가게, 알바, 부동산까지 '
       '우리 동네의 다양한 소식을 만나보세요. 이 도움말은 컨텐츠가 길 때 말풍선이 세로로 얼마나 '
-      '늘어나는지 확인하기 위한 예시예요. 가로 너비는 제한하고 세로 넘침은 flip과 shift가 처리합니다.';
+      '늘어나는지 확인하기 위한 예시예요. 가로 너비는 size 미들웨어가 제한하지만, '
+      '세로 넘침은 flip과 shift가 처리합니다.';
   static const _portalDescription = '말풍선을 포털로 렌더링하며 화면 너비를 넘지 않도록 조정합니다.';
 
   Widget _helpButton(
@@ -2188,6 +2337,7 @@ class _HelpBubbleDemoPageState extends State<_HelpBubbleDemoPage> {
     SeedOverlaySide side = SeedOverlaySide.top,
     SeedOverlayAlign align = SeedOverlayAlign.center,
     bool flip = true,
+    List<SeedOverlaySide>? flipFallbackSides,
     bool showCloseButton = false,
     bool dismissOutside = true,
     bool fullWidth = false,
@@ -2197,6 +2347,7 @@ class _HelpBubbleDemoPageState extends State<_HelpBubbleDemoPage> {
     side: side,
     align: align,
     flip: flip,
+    flipFallbackSides: flipFallbackSides,
     showCloseButton: showCloseButton,
     closeOnInteractOutside: dismissOutside,
     triggerBuilder: (context, open, toggle) => SeedButton(
@@ -2218,9 +2369,10 @@ class _HelpBubbleDemoPageState extends State<_HelpBubbleDemoPage> {
             '왼쪽 말풍선은 Escape나 바깥 탭 한 번에 말풍선만 닫히고 시트는 남아 있어야 해요. '
             '오른쪽은 바깥 탭으로 닫히지 않으니 시트를 닫으면 함께 닫혀야 합니다.',
           ),
-          footer: Wrap(
-            spacing: 8,
-            runSpacing: 8,
+          // React BottomSheetHelpBubble uses an HStack with space-between.
+          // Its three actions share one row and distribute the free width.
+          footer: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _helpButton(
                 '기본',
@@ -2245,197 +2397,224 @@ class _HelpBubbleDemoPageState extends State<_HelpBubbleDemoPage> {
   }
 
   @override
-  Widget build(BuildContext context) => _demoScroll([
-    Center(
-      child: _button(
-        'BottomSheet 안에서 테스트',
-        _showSheet,
-        variant: SeedButtonVariant.brandSolid,
+  Widget build(BuildContext context) => _demoScroll(
+    [
+      Center(
+        child: _button(
+          'BottomSheet 안에서 테스트',
+          _showSheet,
+          variant: SeedButtonVariant.brandSolid,
+        ),
       ),
-    ),
-    for (final demo
-        in <
-          ({
-            String label,
-            SeedOverlaySide side,
-            SeedOverlayAlign align,
-            bool flip,
-            bool close,
-            String? description,
-          })
-        >[
-          (
-            label: 'Flip 테스트',
-            side: SeedOverlaySide.top,
-            align: SeedOverlayAlign.center,
-            flip: true,
-            close: false,
-            description: null,
+      for (final demo
+          in <
+            ({
+              String label,
+              SeedOverlaySide side,
+              SeedOverlayAlign align,
+              bool flip,
+              bool close,
+              String? description,
+            })
+          >[
+            (
+              label: 'Flip 테스트',
+              side: SeedOverlaySide.top,
+              align: SeedOverlayAlign.center,
+              flip: true,
+              close: false,
+              description: null,
+            ),
+            (
+              label: 'Flip off 테스트',
+              side: SeedOverlaySide.top,
+              align: SeedOverlayAlign.center,
+              flip: false,
+              close: false,
+              description: null,
+            ),
+            (
+              label: 'Slide 테스트',
+              side: SeedOverlaySide.top,
+              align: SeedOverlayAlign.center,
+              flip: true,
+              close: false,
+              description: '어흥어흥어흥어흥 야옹야옹야옹야옹야옹야옹',
+            ),
+            (
+              label: 'Close Button 테스트',
+              side: SeedOverlaySide.top,
+              align: SeedOverlayAlign.center,
+              flip: true,
+              close: true,
+              description: '어흥어흥어흥어흥 야옹야옹야옹야옹야옹야옹',
+            ),
+            (
+              label: 'Placement=bottom 테스트',
+              side: SeedOverlaySide.bottom,
+              align: SeedOverlayAlign.center,
+              flip: true,
+              close: false,
+              description: null,
+            ),
+            (
+              label: 'Placement=right 테스트',
+              side: SeedOverlaySide.right,
+              align: SeedOverlayAlign.center,
+              flip: true,
+              close: false,
+              description: '어흥어흥어흥어흥 야옹야옹야옹야옹야옹야옹',
+            ),
+            (
+              label: 'Placement=left 테스트',
+              side: SeedOverlaySide.left,
+              align: SeedOverlayAlign.center,
+              flip: true,
+              close: false,
+              description: '어흥어흥어흥어흥 야옹야옹야옹야옹야옹야옹',
+            ),
+            (
+              label: 'Placement=right-start 테스트',
+              side: SeedOverlaySide.right,
+              align: SeedOverlayAlign.start,
+              flip: true,
+              close: false,
+              description: null,
+            ),
+            (
+              label: 'Placement=left-end 테스트',
+              side: SeedOverlaySide.left,
+              align: SeedOverlayAlign.end,
+              flip: true,
+              close: false,
+              description: null,
+            ),
+          ])
+        Padding(
+          padding: EdgeInsets.only(top: MediaQuery.sizeOf(context).height * .2),
+          child: Align(
+            alignment:
+                demo.label == 'Slide 테스트' || demo.side == SeedOverlaySide.left
+                ? Alignment.centerRight
+                : demo.side == SeedOverlaySide.right
+                ? Alignment.centerLeft
+                : Alignment.center,
+            child: _helpButton(
+              demo.label,
+              description: demo.description,
+              side: demo.side,
+              align: demo.align,
+              flip: demo.flip,
+              showCloseButton: demo.close,
+            ),
           ),
-          (
-            label: 'Flip off 테스트',
-            side: SeedOverlaySide.top,
-            align: SeedOverlayAlign.center,
-            flip: false,
-            close: false,
-            description: null,
+        ),
+      // The width-control VStack also starts after a 20vh interval in React.
+      SizedBox(height: MediaQuery.sizeOf(context).height * .2),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _section(
+              'Trigger 너비: ${triggerWidth.round()}%',
+              Slider(
+                min: 20,
+                max: 100,
+                divisions: 80,
+                value: triggerWidth,
+                onChanged: (next) => setState(() => triggerWidth = next),
+              ),
+            ),
+            FractionallySizedBox(
+              alignment: Alignment.centerLeft,
+              widthFactor: triggerWidth / 100,
+              child: _helpButton(
+                '너비 ${triggerWidth.round()}%',
+                title: 'Width 조절 테스트',
+                side: SeedOverlaySide.right,
+                flipFallbackSides: const [
+                  SeedOverlaySide.right,
+                  SeedOverlaySide.left,
+                  SeedOverlaySide.top,
+                  SeedOverlaySide.bottom,
+                ],
+                dismissOutside: false,
+                fullWidth: true,
+                description:
+                    'trigger를 넓혀 좌우 공간이 없어지면 top/bottom으로 폴백돼요. '
+                    '말풍선을 열어둔 채 슬라이더를 움직여 보세요.',
+              ),
+            ),
+          ],
+        ),
+      ),
+      for (final side in [SeedOverlaySide.top, SeedOverlaySide.bottom])
+        Padding(
+          padding: EdgeInsets.only(top: MediaQuery.sizeOf(context).height * .2),
+          child: Center(
+            child: _helpButton(
+              '긴 컨텐츠 ${side.name} 테스트',
+              title: '긴 컨텐츠 (placement=${side.name})',
+              side: side,
+              description: _longDescription,
+            ),
           ),
-          (
-            label: 'Slide 테스트',
-            side: SeedOverlaySide.top,
-            align: SeedOverlayAlign.center,
-            flip: true,
-            close: false,
-            description: '어흥어흥어흥어흥 야옹야옹야옹야옹야옹야옹',
+        ),
+      for (final side in SeedOverlaySide.values)
+        Padding(
+          padding: EdgeInsets.only(top: MediaQuery.sizeOf(context).height * .2),
+          child: Align(
+            alignment: side == SeedOverlaySide.left
+                ? Alignment.centerRight
+                : side == SeedOverlaySide.right
+                ? Alignment.centerLeft
+                : Alignment.center,
+            child: _helpButton(
+              'Portal (${side.name})',
+              title: 'Portal placement=${side.name}',
+              side: side,
+              description: _portalDescription,
+            ),
           ),
-          (
-            label: 'Close Button 테스트',
-            side: SeedOverlaySide.top,
-            align: SeedOverlayAlign.center,
-            flip: true,
-            close: true,
-            description: '어흥어흥어흥어흥 야옹야옹야옹야옹야옹야옹',
-          ),
-          (
-            label: 'Placement=bottom 테스트',
-            side: SeedOverlaySide.bottom,
-            align: SeedOverlayAlign.center,
-            flip: true,
-            close: false,
-            description: null,
-          ),
-          (
-            label: 'Placement=right 테스트',
-            side: SeedOverlaySide.right,
-            align: SeedOverlayAlign.center,
-            flip: true,
-            close: false,
-            description: '어흥어흥어흥어흥 야옹야옹야옹야옹야옹야옹',
-          ),
-          (
-            label: 'Placement=left 테스트',
-            side: SeedOverlaySide.left,
-            align: SeedOverlayAlign.center,
-            flip: true,
-            close: false,
-            description: '어흥어흥어흥어흥 야옹야옹야옹야옹야옹야옹',
-          ),
-          (
-            label: 'Placement=right-start 테스트',
-            side: SeedOverlaySide.right,
-            align: SeedOverlayAlign.start,
-            flip: true,
-            close: false,
-            description: null,
-          ),
-          (
-            label: 'Placement=left-end 테스트',
-            side: SeedOverlaySide.left,
-            align: SeedOverlayAlign.end,
-            flip: true,
-            close: false,
-            description: null,
-          ),
-        ])
+        ),
       Padding(
         padding: EdgeInsets.only(top: MediaQuery.sizeOf(context).height * .2),
-        child: Align(
-          alignment:
-              demo.label == 'Slide 테스트' || demo.side == SeedOverlaySide.left
-              ? Alignment.centerRight
-              : demo.side == SeedOverlaySide.right
-              ? Alignment.centerLeft
-              : Alignment.center,
-          child: _helpButton(
-            demo.label,
-            description: demo.description,
-            side: demo.side,
-            align: demo.align,
-            flip: demo.flip,
-            showCloseButton: demo.close,
-          ),
-        ),
-      ),
-    const SizedBox(height: 60),
-    _section(
-      'Trigger 너비: ${triggerWidth.round()}%',
-      Slider(
-        min: 20,
-        max: 100,
-        divisions: 80,
-        value: triggerWidth,
-        onChanged: (next) => setState(() => triggerWidth = next),
-      ),
-    ),
-    FractionallySizedBox(
-      alignment: Alignment.centerLeft,
-      widthFactor: triggerWidth / 100,
-      child: _helpButton(
-        '너비 ${triggerWidth.round()}%',
-        title: 'Width 조절 테스트',
-        side: SeedOverlaySide.right,
-        dismissOutside: false,
-        fullWidth: true,
-        description:
-            'trigger를 넓혀 좌우 공간이 없어지면 top/bottom으로 폴백돼요. '
-            '말풍선을 열어둔 채 슬라이더를 움직여 보세요.',
-      ),
-    ),
-    for (final side in [SeedOverlaySide.top, SeedOverlaySide.bottom])
-      Padding(
-        padding: const EdgeInsets.only(top: 110),
         child: Center(
-          child: _helpButton(
-            '긴 컨텐츠 ${side.name} 테스트',
-            title: '긴 컨텐츠 (placement=${side.name})',
-            side: side,
-            description: _longDescription,
+          child: SeedHelpBubbleTooltip(
+            title: 'Hover 트리거 테스트',
+            description: '포인터를 올리거나 키보드로 포커스해보세요.',
+            maxWidth: 200,
+            child: _button(
+              'Hover 트리거 테스트',
+              () {},
+              variant: SeedButtonVariant.brandSolid,
+            ),
           ),
         ),
       ),
-    for (final side in SeedOverlaySide.values)
       Padding(
-        padding: const EdgeInsets.only(top: 110),
+        padding: EdgeInsets.only(top: MediaQuery.sizeOf(context).height * .2),
         child: Center(
-          child: _helpButton(
-            'Portal (${side.name})',
-            title: 'Portal placement=${side.name}',
-            side: side,
-            description: _portalDescription,
+          child: SeedHelpBubbleTooltip(
+            title: 'Portal 트리거 테스트',
+            description: '포털로 body에 렌더되는 변종이에요.',
+            maxWidth: 200,
+            child: _button(
+              'Portal 트리거 테스트',
+              () {},
+              variant: SeedButtonVariant.brandSolid,
+            ),
           ),
         ),
       ),
-    Padding(
-      padding: const EdgeInsets.only(top: 110),
-      child: Center(
-        child: SeedHelpBubbleTooltip(
-          title: 'Hover 트리거 테스트',
-          description: '포인터를 올리거나 키보드로 포커스해보세요.',
-          maxWidth: 200,
-          child: _button(
-            'Hover 트리거 테스트',
-            () {},
-            variant: SeedButtonVariant.brandSolid,
-          ),
-        ),
-      ),
+    ],
+    padding: EdgeInsets.only(
+      top: 24,
+      // React ends the HelpBubble activity with a 100vh spacer.
+      bottom: MediaQuery.sizeOf(context).height,
     ),
-    Padding(
-      padding: const EdgeInsets.only(top: 110),
-      child: Center(
-        child: SeedHelpBubbleTooltip(
-          title: 'Portal 트리거 테스트',
-          description: '포털로 body에 렌더되는 변종이에요.',
-          maxWidth: 200,
-          child: _button(
-            'Portal 트리거 테스트',
-            () {},
-            variant: SeedButtonVariant.brandSolid,
-          ),
-        ),
-      ),
-    ),
-  ]);
+  );
 }
 
 class _PopoverDemoPage extends StatefulWidget {
@@ -2444,6 +2623,64 @@ class _PopoverDemoPage extends StatefulWidget {
   @override
   State<_PopoverDemoPage> createState() => _PopoverDemoPageState();
 }
+
+/// `GroupHeading`, `Section` and the page padding of the official ActivityPopover.
+Widget _popoverScroll(BuildContext context, List<Widget> children) => ListView(
+  padding: EdgeInsets.fromLTRB(
+    20,
+    0,
+    20,
+    MediaQuery.sizeOf(context).height * 0.4,
+  ),
+  children: children,
+);
+
+Widget _popoverGroup(BuildContext context, String title) => Container(
+  margin: const EdgeInsets.only(top: 40),
+  padding: const EdgeInsets.only(top: 24),
+  decoration: BoxDecoration(
+    border: Border(
+      top: BorderSide(color: context.seedColor.stroke.neutralMuted),
+    ),
+  ),
+  child: Text(
+    title,
+    style: TextStyle(
+      fontSize: 15,
+      fontWeight: FontWeight.bold,
+      color: context.seedColor.fg.brand,
+    ),
+  ),
+);
+
+Widget _popoverSection(String title, Widget child, {String? hint}) => Builder(
+  builder: (context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 24),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+        ),
+        if (hint != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            hint,
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.5,
+              color: context.seedColor.fg.neutralSubtle,
+            ),
+          ),
+        ],
+        const SizedBox(height: 12),
+        // The official Row centers its triggers.
+        Center(child: child),
+      ],
+    ),
+  ),
+);
 
 class _PopoverDemoPageState extends State<_PopoverDemoPage> {
   static const placements = [
@@ -2520,9 +2757,11 @@ class _PopoverDemoPageState extends State<_PopoverDemoPage> {
     SeedOverlayOpenChanged? onOpenChange,
     String footerLabel = '확인',
     String? semanticsLabel,
-    double maxWidth = 360,
-    double maxHeight = 420,
+    double maxWidth = 480,
+    double? fixedWidth,
+    double maxHeight = 600,
     WidgetBuilder? customBody,
+    bool fullWidth = false,
   }) => SeedPopoverTrigger(
     key: triggerKey ?? ValueKey('popover-$label'),
     open: open,
@@ -2537,8 +2776,10 @@ class _PopoverDemoPageState extends State<_PopoverDemoPage> {
     closeOnFocusOut: closeOnFocusOut,
     maxWidth: maxWidth,
     maxHeight: maxHeight,
-    triggerBuilder: (ctx, isOpen, toggle) =>
-        _button(label, toggle, variant: SeedButtonVariant.neutralWeak),
+    triggerBuilder: (ctx, isOpen, toggle) => SizedBox(
+      width: fullWidth ? double.infinity : null,
+      child: _button(label, toggle, variant: SeedButtonVariant.neutralSolid),
+    ),
     builder: (overlayContext) => SeedPopover(
       // An explicit empty title means the React sample omits the title slot.
       // Supplying Text('') would still reserve an empty header row in Flutter.
@@ -2546,9 +2787,11 @@ class _PopoverDemoPageState extends State<_PopoverDemoPage> {
       semanticsLabel: semanticsLabel,
       descriptionText: description,
       showCloseButton: showCloseButton,
-      maxWidth: maxWidth,
+      maxWidth: fixedWidth ?? maxWidth,
       maxHeight: maxHeight,
-      minWidth: 180,
+      // In the width=400px example React specifies the content width, not
+      // merely its max-width. The parent overlay still clips to available space.
+      minWidth: fixedWidth ?? (maxWidth < 320 ? maxWidth : 320),
       body:
           customBody?.call(overlayContext) ??
           Text(bodyText ?? 'Header / Body / Footer 구조를 가진 기본 Popover입니다.'),
@@ -2577,6 +2820,7 @@ class _PopoverDemoPageState extends State<_PopoverDemoPage> {
             title: 'sheet 위의 popover',
             placement: 'top',
             bodyText: '시트 스크림 위로 올라와야 합니다.',
+            fullWidth: true,
           ),
         ),
       ),
@@ -2586,6 +2830,7 @@ class _PopoverDemoPageState extends State<_PopoverDemoPage> {
   void _openLayerDialog() {
     showSeedDialog<void>(
       context: context,
+      barrierDismissible: false,
       child: Builder(
         builder: (ctx) => SeedDialog(
           title: 'Dialog',
@@ -2593,6 +2838,7 @@ class _PopoverDemoPageState extends State<_PopoverDemoPage> {
           footer: _popoverButton(
             'popover 열기',
             title: 'dialog 위의 popover',
+            fullWidth: true,
             bodyText: 'Escape 한 번에 popover만 닫히고 dialog는 남아 있어야 합니다.',
           ),
         ),
@@ -2618,7 +2864,9 @@ class _PopoverDemoPageState extends State<_PopoverDemoPage> {
         placement: 'bottom-end',
         onOpenChange: (next, reason) => _record('nested', next, reason),
         customBody: (innerCtx) => _column([
-          const Text('아래 버튼으로 부모 레이어를 먼저 닫으면 안쪽 레이어도 닫힙니다.'),
+          const Text(
+            '아래 버튼으로 부모 레이어를 먼저 닫으면, 남아 있던 이 popover가 cascadeDismiss로 닫힙니다.',
+          ),
           _button('바깥 popover 닫기', () {
             setState(() => outerOpen = false);
             _record('outer', false, null);
@@ -2632,7 +2880,10 @@ class _PopoverDemoPageState extends State<_PopoverDemoPage> {
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: context.seedColor.bg.layerDefault,
     appBar: SeedTopNavigation(
-      titleText: 'Popover',
+      title: spaHasEmptyAppBarLeft(context)
+          ? spaRootTitle(context, 'Popover')
+          : null,
+      titleText: spaHasEmptyAppBarLeft(context) ? null : 'Popover',
       centerTitle: false,
       actions: [
         SeedPopoverTrigger(
@@ -2662,9 +2913,10 @@ class _PopoverDemoPageState extends State<_PopoverDemoPage> {
         ),
       ],
     ),
-    body: _demoScroll([
-      const Text('기본', style: TextStyle(fontWeight: FontWeight.bold)),
-      _section(
+    body: _popoverScroll(context, [
+      _popoverGroup(context, '기본'),
+      _popoverSection(
+        hint: 'title, description, 닫기 버튼이 모두 있는 기본 구성입니다.',
         'Header / Body / Footer',
         Center(
           child: _popoverButton(
@@ -2674,11 +2926,13 @@ class _PopoverDemoPageState extends State<_PopoverDemoPage> {
           ),
         ),
       ),
-      _section(
+      _popoverSection(
+        hint: 'title이 없으면 aria-labelledby를 붙이지 않고 aria-label을 이름으로 씁니다. description만 있으면 aria-describedby만 연결됩니다.',
         '헤더 구성과 접근 가능한 이름',
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          alignment: WrapAlignment.center,
+          spacing: 12,
+          runSpacing: 12,
           children: [
             _popoverButton(
               '닫기 버튼 없음',
@@ -2690,7 +2944,7 @@ class _PopoverDemoPageState extends State<_PopoverDemoPage> {
               '설명만',
               title: '',
               description: '이 popover는 title이 없습니다.',
-              bodyText: '설명만 있는 Popover입니다.',
+              bodyText: 'aria-describedby만 Description을 가리켜야 합니다.',
             ),
             _popoverButton(
               '헤더 없음',
@@ -2703,10 +2957,9 @@ class _PopoverDemoPageState extends State<_PopoverDemoPage> {
           ],
         ),
       ),
-      const SizedBox(height: 24),
-      const SeedDivider(),
-      const Text('배치', style: TextStyle(fontWeight: FontWeight.bold)),
-      _section(
+      _popoverGroup(context, '배치'),
+      _popoverSection(
+        hint: '열어둔 채로 placement를 바꿔보세요. 요청한 배치와 실제 배치는 다를 수 있고, 적용된 값은 content의 data-side / data-alignment에 찍힙니다.',
         'placement 12종',
         _column([
           Wrap(
@@ -2749,9 +3002,9 @@ class _PopoverDemoPageState extends State<_PopoverDemoPage> {
             ),
           ),
         ]),
-        hint: '열어둔 채 placement를 변경하면 새 위치에서 다시 측정합니다.',
       ),
-      _section(
+      _popoverSection(
+        hint: 'popover를 열어둔 채 값을 바꾸면 재배치가 실시간으로 보입니다.',
         'positioning 옵션',
         _column([
           SeedSwitch(
@@ -2764,22 +3017,23 @@ class _PopoverDemoPageState extends State<_PopoverDemoPage> {
             checked: slide,
             onCheckedChange: (v) => setState(() => slide = v),
           ),
-          _popoverButton(
-            '옵션 적용 popover',
-            title: 'positioning',
-            placement: 'top',
-            flip: flip,
-            slide: slide,
-            closeOnInteractOutside: false,
-            bodyText: 'flip $flip / slide $slide',
+          // React wraps the trigger in a centered flex Row.
+          Center(
+            child: _popoverButton(
+              '옵션 적용 popover',
+              title: 'positioning',
+              placement: 'top',
+              flip: flip,
+              slide: slide,
+              closeOnInteractOutside: false,
+              bodyText: 'flip $flip / slide $slide',
+            ),
           ),
         ]),
-        hint: 'Flutter의 앵커 팝오버는 화면 경계에 맞춰 이동합니다.',
       ),
-      const SizedBox(height: 24),
-      const SeedDivider(),
-      const Text('콘텐츠', style: TextStyle(fontWeight: FontWeight.bold)),
-      _section(
+      _popoverGroup(context, '콘텐츠'),
+      _popoverSection(
+        hint: 'Body가 max-height를 넘으면 스크롤되고, 스크롤 시 상단 divider와 하단 scroll fog가 나타납니다.',
         '긴 콘텐츠 스크롤',
         _popoverButton(
           '약관 동의',
@@ -2791,25 +3045,29 @@ class _PopoverDemoPageState extends State<_PopoverDemoPage> {
           ], gap: 7),
         ),
       ),
-      _section(
+      _popoverSection(
+        hint: 'Content는 width / maxWidth를, Body는 maxHeight / paddingX를 받습니다.',
         '크기 style props',
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          alignment: WrapAlignment.center,
+          spacing: 12,
+          runSpacing: 12,
           children: [
             _popoverButton(
               'width 고정',
               title: 'width=400px',
-              maxWidth: 400,
+              fixedWidth: 400,
               bodyText: '콘텐츠 길이와 무관하게 너비가 고정됩니다.',
             ),
             _popoverButton(
               'Body 높이 제한',
               title: 'maxHeight=120px',
               maxWidth: 360,
-              maxHeight: 240,
-              customBody: (ctx) => SizedBox(
-                height: 120,
+              // React's maxHeight belongs to PopoverBody; the header and
+              // footer remain outside that cap.
+              customBody: (ctx) => ConstrainedBox(
+                key: const ValueKey('popover-body-max-height-120'),
+                constraints: const BoxConstraints(maxHeight: 120),
                 child: SingleChildScrollView(
                   child: _column([
                     for (var i = 1; i <= 12; i++)
@@ -2821,34 +3079,51 @@ class _PopoverDemoPageState extends State<_PopoverDemoPage> {
           ],
         ),
       ),
-      const SizedBox(height: 24),
-      const SeedDivider(),
-      const Text('상태', style: TextStyle(fontWeight: FontWeight.bold)),
-      _section(
+      _popoverGroup(context, '상태'),
+      _popoverSection(
+        hint: 'trigger / closeButton / escapeKeyDown / interactOutside / focusOut을 확인해보세요. Tab으로 바깥으로 이동하면 focusOut이 기록됩니다. cascadeDismiss는 안쪽 popover를 열어둔 채 아래 버튼으로 바깥을 직접 닫아야 나옵니다.',
         'onOpenChange reason + 중첩 dismiss',
         _column([
-          _nestedPopovers(),
+          // React wraps the trigger in a centered flex Row.
+          Center(child: _nestedPopovers()),
+          // React log box: bg.neutralWeak, 12px monospace entries and a
+          // 13px fg.neutralSubtle placeholder (hintStyle).
           Container(
             constraints: const BoxConstraints(minHeight: 120),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.grey.withValues(alpha: .12),
+              color: context.seedColor.bg.neutralWeak,
               borderRadius: BorderRadius.circular(8),
             ),
             child: _column(
               eventLog.isEmpty
-                  ? [const Text('아직 이벤트가 없습니다.')]
+                  ? [
+                      Text(
+                        '아직 이벤트가 없습니다.',
+                        style: TextStyle(
+                          fontSize: 13,
+                          height: 1.5,
+                          color: context.seedColor.fg.neutralSubtle,
+                        ),
+                      ),
+                    ]
                   : [
                       for (final entry in eventLog)
-                        Text(entry, style: const TextStyle(fontSize: 12)),
+                        Text(
+                          entry,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontFamily: 'monospace',
+                          ),
+                        ),
                     ],
               gap: 4,
             ),
           ),
         ]),
-        hint: 'trigger / closeButton / Escape / outside / focusOut을 확인해보세요.',
       ),
-      _section(
+      _popoverSection(
+        hint: '바깥을 눌러도 닫히지 않습니다. Escape와 닫기 버튼은 그대로 동작합니다.',
         'closeOnInteractOutside=false',
         _popoverButton(
           '바깥 클릭 무시',
@@ -2856,13 +3131,14 @@ class _PopoverDemoPageState extends State<_PopoverDemoPage> {
           closeOnInteractOutside: false,
           bodyText: '바깥 아무 데나 눌러보세요.',
         ),
-        hint: '바깥을 눌러도 닫히지 않습니다.',
       ),
-      _section(
+      _popoverSection(
+        hint: '입력값을 적고 닫았다 다시 열어보세요. 기본값은 content를 남겨 입력과 스크롤 위치를 유지하고, unmountOnExit은 닫을 때 버립니다.',
         'lazyMount / unmountOnExit',
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          alignment: WrapAlignment.center,
+          spacing: 12,
+          runSpacing: 12,
           children: [
             _popoverButton(
               '기본 (유지)',
@@ -2887,29 +3163,28 @@ class _PopoverDemoPageState extends State<_PopoverDemoPage> {
           ],
         ),
       ),
-      const SizedBox(height: 24),
-      const SeedDivider(),
-      const Text('레이어', style: TextStyle(fontWeight: FontWeight.bold)),
-      _section(
+      _popoverGroup(context, '레이어'),
+      _popoverSection(
+        hint: 'BottomSheet / Dialog 안에서 열고, 스크림 위로 올라오는지와 닫을 때 focus가 어디로 돌아가는지 확인하세요.',
         '다른 레이어 위의 popover',
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          alignment: WrapAlignment.center,
+          spacing: 12,
+          runSpacing: 12,
           children: [
             _button('BottomSheet 안에서', _openLayerSheet),
             _button('Dialog 안에서', _openLayerDialog),
           ],
         ),
-        hint: 'BottomSheet / Dialog 안에서 열어 overlay와 focus를 시험합니다.',
       ),
-      const SizedBox(height: 24),
-      const SeedDivider(),
-      const Text('포커스', style: TextStyle(fontWeight: FontWeight.bold)),
-      _section(
+      _popoverGroup(context, '포커스'),
+      _popoverSection(
+        hint: 'trigger 앞뒤에 focusable을 둬서 Tab / Shift+Tab 순회와 닫은 뒤 focus 복귀를 관찰합니다.',
         'focus 경계',
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          alignment: WrapAlignment.center,
+          spacing: 12,
+          runSpacing: 12,
           children: [
             _button('이전 버튼', () {}),
             _popoverButton(
@@ -2995,8 +3270,13 @@ class _RoutePresenceState extends State<_RoutePresence> {
   Widget build(BuildContext context) {
     final active = ModalRoute.isCurrentOf(context) ?? true;
     if (wasActive && !active && !widget.keepMounted) {
+      final route = ModalRoute.of(context);
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && !wasActive) widget.onUnmount?.call();
+        // Reset a covered Activity, not a popped modal. Its completed Future
+        // may already have disposed the draft controller during the exit.
+        if (mounted && !wasActive && (route?.isActive ?? false)) {
+          widget.onUnmount?.call();
+        }
       });
     }
     wasActive = active;

@@ -93,22 +93,23 @@ void main() {
   }
 
   testWidgets('Popover remains open while placement changes', (tester) async {
-    await _open(tester, '/popover', size: const Size(800, 800));
-    final trigger = find.widgetWithText(SeedButton, 'placement=bottom');
-    await tester.ensureVisible(trigger);
-    await tester.tap(trigger);
-    await tester.pumpAndSettle();
-    expect(find.text('요청 placement: bottom'), findsOneWidget);
+      await _open(tester, '/popover', size: const Size(800, 800));
+      final trigger = find.widgetWithText(SeedButton, 'placement=bottom');
+      await tester.ensureVisible(trigger);
+      await tester.pumpAndSettle();
+      await tester.tap(trigger);
+      await tester.pumpAndSettle();
+      expect(find.text('요청 placement: bottom'), findsOneWidget);
 
-    final left = find.widgetWithText(SeedButton, 'left');
-    // Exercising the same onPressed callback avoids an offscreen hit-test in
-    // the widget harness while the floating popover remains open.
-    tester.widget<SeedButton>(left).onPressed?.call();
-    await tester.pumpAndSettle();
-    expect(find.widgetWithText(SeedButton, 'placement=left'), findsOneWidget);
-    expect(find.text('요청 placement: left'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
+      final left = find.widgetWithText(SeedButton, 'left');
+      // Exercising the same onPressed callback avoids an offscreen hit-test in
+      // the widget harness while the floating popover remains open.
+      tester.widget<SeedButton>(left).onPressed?.call();
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(SeedButton, 'placement=left'), findsOneWidget);
+      expect(find.text('요청 placement: left'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
 
   testWidgets('Keyboard playground uses pixel snap and fixed is anchoring', (
     tester,
