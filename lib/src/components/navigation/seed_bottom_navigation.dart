@@ -1,3 +1,5 @@
+import '../../localization/seed_localizations.dart';
+
 import 'package:material_ui/material_ui.dart';
 
 import '../../foundations/dimensions/seed_dimension.dart';
@@ -29,13 +31,18 @@ class SeedBottomNavigationItem {
     this.notificationSemanticsLabel,
   });
 
-  String? get _notificationValue {
+  String? _notificationValue(BuildContext context) {
     if ((notificationCount ?? 0) > 0) {
-      return notificationSemanticsLabel ?? '읽지 않은 알림 $notificationCount개';
+      return notificationSemanticsLabel ??
+          SeedLocalizations.label(
+            context,
+            SeedLabel.unreadNotifications,
+          ).replaceAll('{count}', '$notificationCount');
     }
     if (showNotificationDot &&
         (notificationCount == null || notificationCount == 0)) {
-      return notificationSemanticsLabel ?? '새 알림 있음';
+      return notificationSemanticsLabel ??
+          SeedLocalizations.label(context, SeedLabel.newNotification);
     }
     return null;
   }
@@ -118,7 +125,7 @@ class SeedBottomNavigation extends StatelessWidget {
                             selected: isSelected,
                             focusNode: nodes[index],
                             semanticsLabel: item.label,
-                            semanticsValue: item._notificationValue,
+                            semanticsValue: item._notificationValue(context),
                             enableScale: false,
                             onTap: () => onTap(index),
                             child: Column(
