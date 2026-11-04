@@ -11,7 +11,11 @@ import '../badge/seed_notification_badge.dart';
 import '../layout/seed_scroll_fog.dart';
 
 /// Style variants of [SeedTabs].
-enum SeedTabsVariant { line, chipSolid, chipOutline }
+enum SeedTabsVariant {
+  line,
+  chipSolid,
+  chipOutline,
+}
 
 /// Sizing options for [SeedTabs].
 enum SeedTabsSize {
@@ -75,7 +79,7 @@ class SeedTabs extends StatefulWidget {
     required this.onTabSelected,
     this.variant = SeedTabsVariant.line,
     SeedTabsSize? size,
-    this.fill = false,
+    this.fill = true,
     this.showScrollFog = false,
     this.orientation = Axis.horizontal,
     this.chipListPadding,
@@ -278,6 +282,8 @@ class _SeedTabsState extends State<SeedTabs> {
       enabled: widget.items.map((item) => item.enabled).toList(),
       axis: widget.orientation,
       onSelected: widget.onTabSelected,
+      // scrollTabIntoView below reveals the selection with React's buffer.
+      revealOnMove: false,
       builder: (context, nodes) => widget.variant == SeedTabsVariant.line
           ? _buildLineTabs(context, nodes)
           : widget.showScrollFog
@@ -327,116 +333,134 @@ class _SeedTabsState extends State<SeedTabs> {
       return required > height ? required : height;
     });
 
+    // React draws the bottom stroke as an inset shadow beneath the indicator.
     return Container(
       height: height,
-      decoration: BoxDecoration(
-        color: colors.bg.layerDefault,
-        border: Border(
-          bottom: BorderSide(color: colors.stroke.neutralMuted, width: 1.0),
-        ),
-      ),
-      child: widget.fill
-          ? LayoutBuilder(
-              builder: (context, constraints) {
-                final widths = _fillWidths(constraints.maxWidth, labelSizes);
-                final totalWidth = widths.fold(
-                  0.0,
-                  (sum, width) => sum + width,
-                );
-                final indicatorOffset = widths
-                    .take(clampedIndex)
-                    .fold(0.0, (sum, width) => sum + width);
-                return SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: SizedBox(
-                    width: totalWidth,
+      color: colors.bg.layerDefault,
+      child: Stack(
+        children: [
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: 1,
+            child: ColoredBox(color: colors.stroke.neutralMuted),
+          ),
+          Positioned.fill(
+            child: widget.fill
+                ? LayoutBuilder(
+                    builder: (context, constraints) {
+                      final widths = _fillWidths(
+                        constraints.maxWidth,
+                        labelSizes,
+                      );
+                      final totalWidth = widths.fold(
+                        0.0,
+                        (sum, width) => sum + width,
+                      );
+                      final indicatorOffset = widths
+                          .take(clampedIndex)
+                          .fold(0.0, (sum, width) => sum + width);
+                      return SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: SizedBox(
+                          width: totalWidth,
+                          child: Stack(
+                            children: [
+                              Semantics(
+                                role: SemanticsRole.tabBar,
+                                explicitChildNodes: true,
+                                child: Row(
+                                  children: List.generate(items.length, (
+                                    index,
+                                  ) {
+                                    return KeyedSubtree(
+                                      key: _hugItemKeys[index],
+                                      child: SizedBox(
+                                        width: widths[index],
+                                        child: _buildLineTabItem(
+                                          context,
+                                          index,
+                                          nodes[index],
+                                          showBottomIndicator: false,
+                                        ),
+                                      ),
+                                    );
+                                  }),
+                                ),
+                              ),
+                              AnimatedPositioned(
+                                duration: SeedDuration.d4,
+                                curve: SeedCurves.easing,
+                                left:
+                                    Directionality.of(context) ==
+                                        TextDirection.rtl
+                                    ? null
+                                    : indicatorOffset,
+                                right:
+                                    Directionality.of(context) ==
+                                        TextDirection.rtl
+                                    ? indicatorOffset
+                                    : null,
+                                bottom: 0,
+                                width: widths[clampedIndex],
+                                height: 2.0,
+                                child: Container(
+                                  margin: const EdgeInsets.symmetric(
+                                    horizontal: SeedSpacingX.globalGutter,
+                                  ),
+                                  color: colors.fg.neutral,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  )
+                : SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: SeedSpacingX.globalGutter,
+                    ),
                     child: Stack(
                       children: [
                         Semantics(
                           role: SemanticsRole.tabBar,
                           explicitChildNodes: true,
                           child: Row(
+                            key: _hugRowKey,
                             children: List.generate(items.length, (index) {
                               return KeyedSubtree(
                                 key: _hugItemKeys[index],
-                                child: SizedBox(
-                                  width: widths[index],
-                                  child: _buildLineTabItem(
-                                    context,
-                                    index,
-                                    nodes[index],
-                                    showBottomIndicator: false,
-                                  ),
+                                child: _buildLineTabItem(
+                                  context,
+                                  index,
+                                  nodes[index],
+                                  showBottomIndicator: !hasMeasuredHugIndicator,
                                 ),
                               );
                             }),
                           ),
                         ),
-                        AnimatedPositioned(
-                          duration: SeedDuration.d4,
-                          curve: SeedCurves.easing,
-                          left: Directionality.of(context) == TextDirection.rtl
-                              ? null
-                              : indicatorOffset,
-                          right: Directionality.of(context) == TextDirection.rtl
-                              ? indicatorOffset
-                              : null,
-                          bottom: 0,
-                          width: widths[clampedIndex],
-                          height: 2.0,
-                          child: Container(
-                            margin: const EdgeInsets.symmetric(
-                              horizontal: SeedSpacingX.globalGutter,
+                        if (hasMeasuredHugIndicator)
+                          AnimatedPositioned(
+                            duration: SeedDuration.d4,
+                            curve: SeedCurves.easing,
+                            left: _hugIndicatorLeft!,
+                            bottom: 0,
+                            width: _hugIndicatorWidth!,
+                            height: 2.0,
+                            child: IgnorePointer(
+                              child: ColoredBox(color: colors.fg.neutral),
                             ),
-                            color: colors.fg.neutral,
                           ),
-                        ),
                       ],
                     ),
                   ),
-                );
-              },
-            )
-          : SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(
-                horizontal: SeedSpacingX.globalGutter,
-              ),
-              child: Stack(
-                children: [
-                  Semantics(
-                    role: SemanticsRole.tabBar,
-                    explicitChildNodes: true,
-                    child: Row(
-                      key: _hugRowKey,
-                      children: List.generate(items.length, (index) {
-                        return KeyedSubtree(
-                          key: _hugItemKeys[index],
-                          child: _buildLineTabItem(
-                            context,
-                            index,
-                            nodes[index],
-                            showBottomIndicator: !hasMeasuredHugIndicator,
-                          ),
-                        );
-                      }),
-                    ),
-                  ),
-                  if (hasMeasuredHugIndicator)
-                    AnimatedPositioned(
-                      duration: SeedDuration.d4,
-                      curve: SeedCurves.easing,
-                      left: _hugIndicatorLeft!,
-                      bottom: 0,
-                      width: _hugIndicatorWidth!,
-                      height: 2.0,
-                      child: IgnorePointer(
-                        child: ColoredBox(color: colors.fg.neutral),
-                      ),
-                    ),
-                ],
-              ),
-            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -514,6 +538,7 @@ class _SeedTabsState extends State<SeedTabs> {
       semanticsRole: SemanticsRole.tab,
       semanticButton: false,
       focusNode: node,
+      focusRingInside: true,
       onTap: () => widget.onTabSelected(index),
       child: Container(
         padding: const EdgeInsets.symmetric(

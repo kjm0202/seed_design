@@ -439,6 +439,30 @@ void main() {
     },
   );
 
+  testWidgets('selectedIndex takes precedence over a tabs controller', (
+    tester,
+  ) async {
+    final controller = SeedTabsController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      host(
+        SeedTabsView(
+          selectedIndex: 0,
+          controller: controller,
+          items: const [
+            SeedTabItem(label: 'Alpha'),
+            SeedTabItem(label: 'Beta'),
+          ],
+          children: const [Text('Page A'), Text('Page B')],
+        ),
+      ),
+    );
+    controller.animateTo(1);
+    await tester.pumpAndSettle();
+    expect(find.text('Page A').hitTestable(), findsOneWidget);
+    expect(find.text('Page B').hitTestable(), findsNothing);
+  });
+
   testWidgets(
     'external text controller updates validation and reset without edit callbacks',
     (tester) async {
