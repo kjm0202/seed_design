@@ -166,5 +166,25 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.tab);
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets(
+      'disabled controls ignore semantic, pointer and keyboard activation',
+      (tester) async {
+        var calls = 0;
+        await tester.pumpWidget(
+          host(
+            SeedButton(
+              label: 'Disabled',
+              enabled: false,
+              onPressed: () => calls++,
+            ),
+          ),
+        );
+        await tester.tap(find.text('Disabled'));
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        expect(calls, 0);
+      },
+    );
   });
 }

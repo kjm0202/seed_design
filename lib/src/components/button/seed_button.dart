@@ -1,3 +1,4 @@
+import 'package:flutter/rendering.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../foundations/colors/seed_color_scheme.dart';
@@ -114,8 +115,11 @@ class SeedButton extends StatelessWidget {
   final bool loading;
   final bool enabled;
   final bool disableOnLoading;
+
   final bool bleed;
+
   final Color? textColor;
+
   final FontWeight? fontWeight;
   final String? semanticsLabel;
   final FocusNode? focusNode;
@@ -190,11 +194,12 @@ class SeedButton extends StatelessWidget {
         break;
     }
 
-    if (fontWeight != null) {
+    final isGhost = variant == SeedButtonVariant.ghost;
+    if (isGhost && fontWeight != null) {
       textStyle = textStyle.copyWith(fontWeight: fontWeight);
     }
 
-    return SeedPressable(
+    final button = SeedPressable(
       enabled: _effectiveEnabled,
       semanticsLabel: semanticsLabel ?? label,
       focusNode: focusNode,
@@ -212,7 +217,7 @@ class SeedButton extends StatelessWidget {
           enabled: enabled && (onPressed != null || loading),
         );
 
-        final effectiveFg = textColor ?? fgColor;
+        final effectiveFg = isGhost && enabled ? textColor ?? fgColor : fgColor;
         final isIconOnly = icon != null && label == null;
         final normalContent = _buildContent(effectiveFg, textStyle);
         final content = Stack(
@@ -252,10 +257,6 @@ class SeedButton extends StatelessWidget {
           ],
         );
 
-        final basePadding = bleed
-            ? EdgeInsets.symmetric(vertical: size.padding.vertical / 2)
-            : size.padding;
-
         final container = AnimatedContainer(
           duration: SeedDuration.colorTransition,
           curve: SeedCurves.easing,
@@ -265,7 +266,7 @@ class SeedButton extends StatelessWidget {
           ),
           padding: isIconOnly
               ? EdgeInsets.zero
-              : basePadding -
+              : size.padding -
                     (strokeColor != null
                         ? const EdgeInsets.all(1)
                         : EdgeInsets.zero),
@@ -289,6 +290,13 @@ class SeedButton extends StatelessWidget {
 
         return container;
       },
+    );
+    if (!bleed) return button;
+    return _SeedHorizontalBleed(
+      amount: icon != null && label == null
+          ? (size.height - size.iconOnlySize) / 2
+          : size.padding.left,
+      child: button,
     );
   }
 
@@ -425,4 +433,72 @@ class SeedButton extends StatelessWidget {
         );
     }
   }
+}
+
+class _SeedHorizontalBleed extends SingleChildRenderObjectWidget {
+  const _SeedHorizontalBleed({required this.amount, required super.child});
+  final double amount;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderSeedHorizontalBleed(amount);
+
+  @override
+  void updateRenderObject(BuildContext context, RenderObject renderObject) {
+    (renderObject as _RenderSeedHorizontalBleed).amount = amount;
+  }
+}
+
+class _RenderSeedHorizontalBleed extends RenderShiftedBox {
+  _RenderSeedHorizontalBleed(this._amount) : super(null);
+  double _amount;
+
+  set amount(double value) {
+    if (_amount == value) return;
+    _amount = value;
+    markNeedsLayout();
+  }
+
+  BoxConstraints _childConstraints(BoxConstraints constraints) =>
+      constraints.copyWith(
+        minWidth: constraints.minWidth + _amount * 2,
+        maxWidth: constraints.maxWidth + _amount * 2,
+      );
+
+  double _inner(double width) => width.isFinite ? width + _amount * 2 : width;
+
+  @override
+  double computeMinIntrinsicWidth(double height) =>
+      (child?.getMinIntrinsicWidth(height) ?? 0) - _amount * 2;
+  @override
+  double computeMaxIntrinsicWidth(double height) =>
+      (child?.getMaxIntrinsicWidth(height) ?? 0) - _amount * 2;
+  @override
+  double computeMinIntrinsicHeight(double width) =>
+      child?.getMinIntrinsicHeight(_inner(width)) ?? 0;
+  @override
+  double computeMaxIntrinsicHeight(double width) =>
+      child?.getMaxIntrinsicHeight(_inner(width)) ?? 0;
+
+  @override
+  Size computeDryLayout(BoxConstraints constraints) {
+    final childSize =
+        child?.getDryLayout(_childConstraints(constraints)) ?? Size.zero;
+    return constraints.constrain(
+      Size(childSize.width - _amount * 2, childSize.height),
+    );
+  }
+
+  @override
+  void performLayout() {
+    child!.layout(_childConstraints(constraints), parentUsesSize: true);
+    size = constraints.constrain(
+      Size(child!.size.width - _amount * 2, child!.size.height),
+    );
+    (child!.parentData! as BoxParentData).offset = Offset(-_amount, 0);
+  }
+
+  @override
+  bool hitTest(BoxHitTestResult result, {required Offset position}) =>
+      hitTestChildren(result, position: position);
 }

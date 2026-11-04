@@ -188,5 +188,30 @@ void main() {
         seed.cardTheme,
       );
     });
+
+    testWidgets('FAB supports explicit Material Hero and tooltip integration', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        hostMaterialMigrationContrac(
+          SeedFloatingActionButton(
+            heroTag: 'compose',
+            tooltip: 'Compose message',
+            semanticsLabel: 'Compose message',
+            icon: const Icon(Icons.add),
+            onPressed: () {},
+          ),
+        ),
+      );
+      final hero = find.descendant(
+        of: find.byType(SeedFloatingActionButton),
+        matching: find.byType(Hero),
+      );
+      expect(tester.widget<Hero>(hero).tag, 'compose');
+      expect(
+        tester.widget<Tooltip>(find.byType(Tooltip)).message,
+        'Compose message',
+      );
+    });
   });
 }

@@ -8,6 +8,8 @@
 - **Breaking migration:** Direct SeedBgColors constructor calls must supply neutralSolidMuted and neutralSolidMutedPressed.
 - `preserveComponentThemes: true` now merges component themes field by field: app-set button padding, shape and colors win over SEED values, and a partial override such as a dialog's `insetPadding` keeps the remaining SEED fields instead of dropping the whole SEED theme.
 - Add `preserveComponentThemes` and locale-aware, overridable SEED labels. Explicit labels and official React value/default/callback contracts remain supported.
+- **Breaking migration:** Button textColor and fontWeight overrides apply only to ghost variants.
+- Align with the official recipes: `SeedPageBanner` prefix icons stay on the first line, text-attached notification badges sit at the top of the line, the attachment remove button overhangs its item with a cut-out, and the default back button is a chevron on every platform.
 
 ## 1.0.0
 

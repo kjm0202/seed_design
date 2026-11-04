@@ -1,3 +1,5 @@
+import '../../localization/seed_localizations.dart';
+
 import 'package:material_ui/material_ui.dart';
 
 import '../../foundations/colors/seed_color_scheme.dart';
@@ -175,7 +177,10 @@ class _SeedCalloutState extends State<SeedCallout> {
               bottom: 0,
               child: Center(
                 child: SeedPressable(
-                  semanticsLabel: '닫기',
+                  semanticsLabel: SeedLocalizations.label(
+                    context,
+                    SeedLabel.close,
+                  ),
                   behavior: HitTestBehavior.opaque,
                   focusBorderRadius: SeedBorderRadius.r2,
                   onTap: _dismiss,

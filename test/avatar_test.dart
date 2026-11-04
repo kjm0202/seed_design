@@ -96,4 +96,38 @@ void main() {
       expect(find.byType(SeedIdentityPlaceholder), findsOneWidget);
     });
   });
+
+  group('AvatarStack', () {
+    Widget host(Widget child, {bool isDark = false}) {
+      return MaterialApp(
+        theme: (isDark ? SeedThemeData.dark() : SeedThemeData.light())
+            .toThemeData(),
+        home: Scaffold(body: Center(child: child)),
+      );
+    }
+
+    testWidgets(
+      'SeedAvatarStack stacks avatars with negative gap and stroke separation',
+      (tester) async {
+        await tester.pumpWidget(
+          host(
+            SeedAvatarStack(
+              size: SeedAvatarSize.medium,
+              maxVisible: 2,
+              children: const [
+                SeedAvatar(placeholder: Text('A')),
+                SeedAvatar(placeholder: Text('B')),
+                SeedAvatar(placeholder: Text('C')),
+              ],
+            ),
+          ),
+        );
+
+        expect(find.byType(SeedAvatarStack), findsOneWidget);
+        expect(find.text('A'), findsOneWidget);
+        expect(find.text('B'), findsOneWidget);
+        expect(find.text('+1'), findsOneWidget);
+      },
+    );
+  });
 }

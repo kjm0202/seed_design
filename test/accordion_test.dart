@@ -6,7 +6,37 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
+import 'support/seed_test_fonts.dart';
+
 Widget _host(Widget child) => MaterialApp(
+  theme: SeedThemeData.light().toThemeData(),
+  home: Scaffold(
+    body: Center(child: SizedBox(width: 360, child: child)),
+  ),
+);
+
+Widget host(Widget child, {double scale = 1, bool dark = false}) => MaterialApp(
+  supportedLocales: const [Locale('en'), Locale('ko')],
+  locale: const Locale('ko'),
+  localizationsDelegates: GlobalMaterialLocalizations.delegates,
+  theme:
+      (dark
+              ? SeedThemeData.dark(fontFamily: seedTestFontFamily)
+              : SeedThemeData.light(fontFamily: seedTestFontFamily))
+          .toThemeData(),
+  home: Builder(
+    builder: (context) => MediaQuery(
+      data: MediaQuery.of(context)
+          .copyWith(textScaler: TextScaler.linear(scale)),
+      child: Scaffold(body: Center(child: child)),
+    ),
+  ),
+);
+
+Widget hostReactParity(Widget child) => MaterialApp(
+  supportedLocales: const [Locale('en'), Locale('ko')],
+  locale: const Locale('ko'),
+  localizationsDelegates: GlobalMaterialLocalizations.delegates,
   theme: SeedThemeData.light().toThemeData(),
   home: Scaffold(
     body: Center(child: SizedBox(width: 360, child: child)),
@@ -255,4 +285,93 @@ void main() {
       expect(requested, [true]);
     },
   );
+  group('heading semantics', () {
+    setUpAll(loadSeedTestFonts);
+
+    testWidgets('accordion exposes a heading containing one named button', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      await tester.pumpWidget(
+        host(
+          const SizedBox(
+            width: 300,
+            child: SeedAccordionItem(
+              title: 'Details',
+              headingLevel: 4,
+              content: Text('Hidden body'),
+            ),
+          ),
+        ),
+      );
+      final node = tester.getSemantics(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Semantics && widget.properties.headingLevel == 4,
+        ),
+      );
+      final data = node.getSemanticsData();
+      expect(data.headingLevel, 4);
+      expect(data.flagsCollection.isButton, isFalse);
+      final children = <SemanticsNode>[];
+      node.visitChildren((child) {
+        children.add(child);
+        return true;
+      });
+      expect(children, hasLength(1));
+      final button = children.single.getSemanticsData();
+      expect(button.label, 'Details');
+      expect(button.flagsCollection.isButton, isTrue);
+      expect(button.hasAction(ui.SemanticsAction.tap), isTrue);
+      semantics.dispose();
+    });
+  });
+
+  group('single open item', () {
+    testWidgets(
+      'accordion group enforces one open item and disabled items do not activate',
+      (tester) async {
+        final changes = <Set<String>>[];
+        await tester.pumpWidget(
+          hostReactParity(
+            SeedAccordion(
+              onValuesChanged: changes.add,
+              items: const [
+                SeedAccordionItem(
+                  value: 'one',
+                  title: 'One',
+                  content: Text('Body one'),
+                ),
+                SeedAccordionItem(
+                  value: 'two',
+                  title: 'Two',
+                  content: Text('Body two'),
+                ),
+                SeedAccordionItem(
+                  value: 'off',
+                  title: 'Off',
+                  enabled: false,
+                  content: Text('Off body'),
+                ),
+              ],
+            ),
+          ),
+        );
+        await tester.tap(find.text('One'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Two'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Off'));
+        await tester.pumpAndSettle();
+        expect(changes, [
+          {'one'},
+          {'two'},
+        ]);
+        final buttons = tester
+            .widgetList<SeedPressable>(find.byType(SeedPressable))
+            .toList();
+        expect(buttons.map((b) => b.expanded), [false, true, false]);
+      },
+    );
+  });
 }

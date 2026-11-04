@@ -1,3 +1,5 @@
+import '../../localization/seed_localizations.dart';
+
 import 'package:material_ui/material_ui.dart';
 
 import '../../foundations/dimensions/seed_dimension.dart';
@@ -18,7 +20,11 @@ enum SeedPageBannerTone {
 }
 
 /// Variant options for [SeedPageBanner].
-enum SeedPageBannerVariant { weak, solid }
+enum SeedPageBannerVariant {
+  weak,
+
+  solid,
+}
 
 /// Page Banner component of SEED Design System.
 ///
@@ -67,6 +73,8 @@ class SeedPageBanner extends StatefulWidget {
 
   bool get _isActionable => onTap != null;
 
+  static const double _linkTargetBleed = 11;
+
   Widget _scaleContent(Widget child) =>
       _isActionable ? SeedContentScale(child: child) : child;
 
@@ -76,11 +84,17 @@ class SeedPageBanner extends StatefulWidget {
 
     final (bgColor, fgColor, iconColor) = _resolveColors(colors);
 
+    final hasCloseButton = dismissible || onDismiss != null;
+
     Widget content(bool isPressed) => Container(
-      constraints: const BoxConstraints(minHeight: 40),
-      padding: const EdgeInsets.symmetric(
-        horizontal: SeedDimension.x4,
-        vertical: SeedDimension.x2_5,
+      constraints: const BoxConstraints(minHeight: SeedDimension.x10),
+      // React bleeds the 40px link and close targets over the root padding with
+      // negative margins. Here the vertical padding belongs to the text and the
+      // end padding shrinks by the close target's 12px bleed, so the targets stay
+      // inside the root's hit-test bounds without growing the banner.
+      padding: EdgeInsetsDirectional.only(
+        start: SeedDimension.x4,
+        end: hasCloseButton ? SeedDimension.x1 : SeedDimension.x4,
       ),
       decoration: BoxDecoration(
         color: isPressed
@@ -116,44 +130,62 @@ class SeedPageBanner extends StatefulWidget {
       ),
       child: _scaleContent(
         Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          // The official prefix icon sits on the first line of wrapped text;
+          // the suffix stays centered (alignSelf).
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (prefixIcon != null) ...[
-              IconTheme(
-                data: IconThemeData(color: iconColor, size: 16.0),
-                child: prefixIcon!,
+              Padding(
+                padding: const EdgeInsets.only(
+                  top: (SeedDimension.x10 - SeedDimension.x4) / 2,
+                ),
+                child: IconTheme(
+                  data: IconThemeData(color: iconColor, size: 16.0),
+                  child: prefixIcon!,
+                ),
               ),
               const SizedBox(width: SeedDimension.x2),
             ],
             Expanded(
               child: Wrap(
                 alignment: WrapAlignment.spaceBetween,
-                spacing: 6,
-                runSpacing: 6,
+                spacing: SeedDimension.x1_5,
+                // The official 6px gap, less the text padding and link bleed
+                // that overlap when the link wraps below the text.
+                runSpacing:
+                    SeedDimension.x1_5 - SeedDimension.x2_5 - _linkTargetBleed,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  Text.rich(
-                    TextSpan(
-                      children: [
-                        if (title != null)
-                          TextSpan(
-                            text: title,
-                            style: typography.t4Bold.copyWith(color: fgColor),
-                          ),
-                        if (description != null)
-                          TextSpan(
-                            text: title == null
-                                ? description
-                                : '  $description',
-                            style: typography.t4Medium.copyWith(color: fgColor),
-                          ),
-                      ],
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: SeedDimension.x2_5,
                     ),
-                    style: typography.t4Medium.copyWith(color: fgColor),
+                    child: Text.rich(
+                      TextSpan(
+                        children: [
+                          if (title != null)
+                            TextSpan(
+                              text: title,
+                              style: typography.t4Bold.copyWith(color: fgColor),
+                            ),
+                          if (description != null)
+                            TextSpan(
+                              text: title == null
+                                  ? description
+                                  : '  $description',
+                              style: typography.t4Medium.copyWith(
+                                color: fgColor,
+                              ),
+                            ),
+                        ],
+                      ),
+                      style: typography.t4Medium.copyWith(color: fgColor),
+                    ),
                   ),
                   if (linkText != null)
                     SeedPressable(
                       semanticsLabel: linkText,
+                      focusRingInside: true,
                       onTap: onLinkTap,
                       builder: (context, linkPressed) => ConstrainedBox(
                         constraints: const BoxConstraints(minHeight: 40),
@@ -170,36 +202,58 @@ class SeedPageBanner extends StatefulWidget {
                 ],
               ),
             ),
-            if (dismissible || onDismiss != null) ...[
-              const SizedBox(width: SeedDimension.x2),
-              SeedPressable(
-                semanticsLabel: '닫기',
-                behavior: HitTestBehavior.opaque,
-                focusBorderRadius: SeedBorderRadius.r2,
-                onTap: dismiss,
-                builder: (context, isClosePressed) => AnimatedContainer(
-                  duration: SeedDuration.colorTransition,
-                  curve: SeedCurves.easing,
-                  width: SeedDimension.x10,
-                  height: SeedDimension.x10,
-                  decoration: BoxDecoration(
-                    color: isClosePressed
-                        ? colors.bg.transparentPressed
-                        : colors.bg.transparent,
-                    borderRadius: SeedBorderRadius.r2,
-                  ),
-                  child: Center(
-                    child: Icon(
-                      Icons.close_rounded,
-                      size: SeedDimension.x4,
-                      color: iconColor,
+            if (hasCloseButton)
+              // Keeps the official 8px between the text and the 16px icon, with
+              // the 40px target's start edge overlapping the text by 4px.
+              SizedBox(
+                width: SeedDimension.x10 - SeedDimension.x1,
+                height: SeedDimension.x10,
+                child: OverflowBox(
+                  minWidth: SeedDimension.x10,
+                  maxWidth: SeedDimension.x10,
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: SeedPressable(
+                    semanticsLabel: SeedLocalizations.label(
+                      context,
+                      SeedLabel.close,
+                    ),
+                    behavior: HitTestBehavior.opaque,
+                    focusBorderRadius: SeedBorderRadius.r2,
+                    focusRingInside: true,
+                    onTap: dismiss,
+                    builder: (context, isClosePressed) => AnimatedContainer(
+                      duration: SeedDuration.colorTransition,
+                      curve: SeedCurves.easing,
+                      width: SeedDimension.x10,
+                      height: SeedDimension.x10,
+                      decoration: BoxDecoration(
+                        color: isClosePressed
+                            ? colors.bg.transparentPressed
+                            : colors.bg.transparent,
+                        borderRadius: SeedBorderRadius.r2,
+                      ),
+                      child: Center(
+                        child: Icon(
+                          Icons.close_rounded,
+                          size: SeedDimension.x4,
+                          color: iconColor,
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ] else if (_isActionable) ...[
+              )
+            else if (_isActionable) ...[
               const SizedBox(width: SeedDimension.x2),
-              Icon(Icons.chevron_right_rounded, size: 16.0, color: iconColor),
+              Align(
+                alignment: Alignment.center,
+                heightFactor: 1,
+                child: Icon(
+                  Icons.chevron_right_rounded,
+                  size: 16.0,
+                  color: iconColor,
+                ),
+              ),
             ],
           ],
         ),

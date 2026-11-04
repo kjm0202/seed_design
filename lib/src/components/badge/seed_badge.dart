@@ -7,10 +7,28 @@ import '../../foundations/radius/seed_radius.dart';
 import '../../theme/seed_theme.dart';
 
 /// Tone options for [SeedBadge].
-enum SeedBadgeTone { neutral, brand, informative, positive, warning, critical }
+enum SeedBadgeTone {
+  neutral,
+
+  brand,
+
+  informative,
+
+  positive,
+
+  warning,
+
+  critical,
+}
 
 /// Visual variant options for [SeedBadge].
-enum SeedBadgeVariant { solid, outline, weak }
+enum SeedBadgeVariant {
+  solid,
+
+  outline,
+
+  weak,
+}
 
 /// Size options for [SeedBadge].
 enum SeedBadgeSize {
@@ -271,6 +289,7 @@ class SeedBadgeAction extends StatelessWidget {
     semanticsLabel: semanticsLabel,
     focusNode: focusNode,
     focusBorderRadius: SeedBorderRadius.r1,
+    focusRingInside: true,
     child: child,
   );
 }

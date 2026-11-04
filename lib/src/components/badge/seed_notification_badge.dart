@@ -3,9 +3,17 @@ import 'package:material_ui/material_ui.dart';
 import '../../foundations/radius/seed_radius.dart';
 import '../../theme/seed_theme.dart';
 
-enum SeedNotificationBadgeSize { small, large }
+enum SeedNotificationBadgeSize {
+  small,
 
-enum SeedNotificationBadgeAttach { icon, text }
+  large,
+}
+
+enum SeedNotificationBadgeAttach {
+  icon,
+
+  text,
+}
 
 /// Notification Badge component of SEED Design System.
 ///
@@ -131,7 +139,8 @@ class SeedNotificationBadgePositioner extends StatelessWidget {
         child,
         PositionedDirectional(
           top: icon ? (small ? 7 : 14) : 0,
-          bottom: icon ? null : 0,
+          // The official text attachment keeps its static position: the top
+          // of the line, not its middle.
           end: icon ? (small ? 7 : 8) : -2,
           child: FractionalTranslation(
             translation: Offset(rtl ? -1 : 1, icon ? -1 : 0),

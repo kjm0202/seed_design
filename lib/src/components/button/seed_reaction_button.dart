@@ -1,9 +1,12 @@
+import '../../localization/seed_localizations.dart';
+
 import 'package:material_ui/material_ui.dart';
 
 import '../../foundations/colors/seed_palette.dart';
 import '../../foundations/dimensions/seed_dimension.dart';
 import '../../foundations/radius/seed_radius.dart';
 import '../../foundations/feedback/seed_scale_feedback.dart';
+import '../../foundations/motion/seed_motion.dart';
 import '../../theme/seed_theme.dart';
 import '../feedback/seed_progress_circle.dart';
 
@@ -40,7 +43,8 @@ class SeedReactionButton extends StatefulWidget {
   final SeedReactionButtonSize size;
   final bool loading;
   final bool enabled;
-  final String semanticsLabel;
+  final String? _semanticsLabel;
+  String get semanticsLabel => _semanticsLabel ?? '관심';
 
   const SeedReactionButton({
     super.key,
@@ -57,10 +61,13 @@ class SeedReactionButton extends StatefulWidget {
     this.size = SeedReactionButtonSize.small,
     this.loading = false,
     this.enabled = true,
-    this.semanticsLabel = '관심',
+    String? semanticsLabel,
     // Keep the public constructor parameter and non-nullable getter compatible.
     // ignore: prefer_initializing_formals
-  }) : _isReacted = pressed ?? isReacted,
+    // Preserve the public named parameter and getter.
+    // ignore: prefer_initializing_formals
+  }) : _semanticsLabel = semanticsLabel,
+       _isReacted = pressed ?? isReacted,
        defaultIsReacted = defaultPressed ?? defaultIsReacted ?? false,
        onReactedChanged = onPressedChange ?? onReactedChanged,
        assert(pressed == null || isReacted == null),
@@ -95,19 +102,30 @@ class SeedReactionButton extends StatefulWidget {
           !loading &&
           (_isReacted == null || onReactedChanged != null),
       toggled: isReacted,
-      semanticsLabel: semanticsLabel,
+      // React names the button by its visible text; the localized fallback
+      // only covers a count-only button.
+      semanticsLabel:
+          _semanticsLabel ??
+          (label?.isNotEmpty == true
+              ? label
+              : SeedLocalizations.label(context, SeedLabel.interest)),
       semanticsValue: '$count',
       onTap: toggle,
-      builder: (context, isPressed) => Container(
+      builder: (context, isPressed) => AnimatedContainer(
+        duration: SeedDuration.colorTransition,
+        curve: SeedCurves.easing,
         constraints: BoxConstraints(minHeight: size.height),
-        padding: EdgeInsets.symmetric(
-          horizontal: size == SeedReactionButtonSize.xsmall
-              ? SeedDimension.x3
-              : SeedDimension.x3_5,
-          vertical: size == SeedReactionButtonSize.xsmall
-              ? SeedDimension.x1_5
-              : SeedDimension.x2,
-        ),
+        // React's stroke is an inset shadow, so the size never depends on it.
+        padding:
+            EdgeInsets.symmetric(
+              horizontal: size == SeedReactionButtonSize.xsmall
+                  ? SeedDimension.x3
+                  : SeedDimension.x3_5,
+              vertical: size == SeedReactionButtonSize.xsmall
+                  ? SeedDimension.x1_5
+                  : SeedDimension.x2,
+            ) -
+            (enabled ? const EdgeInsets.all(1) : EdgeInsets.zero),
         decoration: BoxDecoration(
           color: enabled && isPressed ? colors.bg.transparentPressed : bgColor,
           borderRadius: SeedBorderRadius.full,

@@ -105,9 +105,11 @@ class SeedAvatarStack extends StatelessWidget {
                 height: itemSize,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
+                  // React's ring is an outer box-shadow, so avatars keep their size.
                   border: Border.all(
                     color: effectiveStrokeColor,
                     width: _strokeWidth,
+                    strokeAlign: BorderSide.strokeAlignOutside,
                   ),
                 ),
                 child: ClipOval(child: itemsToRender[i]),
@@ -123,9 +125,11 @@ class SeedAvatarStack extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: colors.bg.neutralWeak,
                   shape: BoxShape.circle,
+                  // React's ring is an outer box-shadow, so avatars keep their size.
                   border: Border.all(
                     color: effectiveStrokeColor,
                     width: _strokeWidth,
+                    strokeAlign: BorderSide.strokeAlignOutside,
                   ),
                 ),
                 child: Center(

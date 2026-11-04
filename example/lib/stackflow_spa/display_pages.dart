@@ -427,8 +427,8 @@ class _VariantPageState extends State<_VariantPage> {
         );
       case 'ActivityToggleButton':
         return SeedToggleButton(
-          selected: isPressed,
-          onSelectedChanged: changePressed,
+          pressed: isPressed,
+          onPressedChange: changePressed,
           prefixIcon: const Icon(Icons.thumb_up),
           label: 'Like',
           variant: SeedToggleButtonVariant.values.byName(spec.variant),

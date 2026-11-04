@@ -21,9 +21,13 @@ class SeedFloatingActionButton extends StatelessWidget {
   final List<SeedMenuGroupData>? menuGroups;
   final SeedOverlayController? menuController;
   final bool isBrand;
+  final Object? heroTag;
+  final String? tooltip;
 
   const SeedFloatingActionButton({
     super.key,
+    this.heroTag,
+    this.tooltip,
     this.semanticsLabel,
     required this.icon,
     this.label,
@@ -36,6 +40,8 @@ class SeedFloatingActionButton extends StatelessWidget {
 
   const SeedFloatingActionButton.extended({
     super.key,
+    this.heroTag,
+    this.tooltip,
     this.semanticsLabel,
     required this.icon,
     required String this.label,
@@ -48,6 +54,8 @@ class SeedFloatingActionButton extends StatelessWidget {
 
   const SeedFloatingActionButton.menu({
     super.key,
+    this.heroTag,
+    this.tooltip,
     required this.icon,
     required String this.label,
     required List<SeedMenuGroupData> groups,
@@ -61,6 +69,13 @@ class SeedFloatingActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    Widget content = _buildContent(context);
+    if (tooltip != null) content = Tooltip(message: tooltip!, child: content);
+    if (heroTag != null) content = Hero(tag: heroTag!, child: content);
+    return content;
+  }
+
+  Widget _buildContent(BuildContext context) {
     if (menuGroups != null) {
       return SeedMenuTrigger(
         controller: menuController,
@@ -104,16 +119,9 @@ class SeedFloatingActionButton extends StatelessWidget {
           child: SeedPressable(
             semanticsLabel: semanticsLabel ?? this.label,
             onTap: onPressed,
-            builder: (context, isPressed) => Container(
-              constraints: label == null
-                  ? const BoxConstraints.tightFor(width: 56.0, height: 56.0)
-                  : const BoxConstraints(minHeight: 48.0),
-              padding: label != null
-                  ? const EdgeInsets.symmetric(
-                      horizontal: SeedDimension.x4_5,
-                      vertical: SeedDimension.x3,
-                    )
-                  : EdgeInsets.zero,
+            builder: (context, isPressed) => AnimatedContainer(
+              duration: SeedDuration.colorTransition,
+              curve: SeedCurves.easing,
               decoration: BoxDecoration(
                 color: isPressed
                     ? (isBrand
@@ -123,26 +131,37 @@ class SeedFloatingActionButton extends StatelessWidget {
                 borderRadius: SeedBorderRadius.full,
                 boxShadow: shadows.s3,
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  IconTheme(
-                    data: IconThemeData(
-                      color: fgColor,
-                      size: label == null ? 24 : 16,
+              child: Container(
+                constraints: label == null
+                    ? const BoxConstraints.tightFor(width: 56.0, height: 56.0)
+                    : const BoxConstraints(minHeight: 48.0),
+                padding: label != null
+                    ? const EdgeInsets.symmetric(
+                        horizontal: SeedDimension.x4_5,
+                        vertical: SeedDimension.x3,
+                      )
+                    : EdgeInsets.zero,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    IconTheme(
+                      data: IconThemeData(
+                        color: fgColor,
+                        size: label == null ? 24 : 16,
+                      ),
+                      child: icon,
                     ),
-                    child: icon,
-                  ),
-                  if (label != null) ...[
-                    const SizedBox(width: SeedDimension.x1),
-                    Text(
-                      label,
-                      style: typography.t5Bold.copyWith(color: fgColor),
-                    ),
+                    if (label != null) ...[
+                      const SizedBox(width: SeedDimension.x1),
+                      Text(
+                        label,
+                        style: typography.t5Bold.copyWith(color: fgColor),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ),

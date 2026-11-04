@@ -4,11 +4,18 @@ import '../../foundations/colors/seed_palette.dart';
 import '../../foundations/dimensions/seed_dimension.dart';
 import '../../foundations/radius/seed_radius.dart';
 import '../../foundations/feedback/seed_scale_feedback.dart';
+import '../../foundations/motion/seed_motion.dart';
 import '../../theme/seed_theme.dart';
 import '../feedback/seed_progress_circle.dart';
 
 /// Style tone for [SeedContextualFloatingButton].
-enum SeedContextualFloatingButtonTone { solid, layer }
+enum SeedContextualFloatingButtonTone {
+  solid,
+
+  layer,
+}
+
+typedef SeedContextualFloatingButtonVariant = SeedContextualFloatingButtonTone;
 
 /// Contextual Floating Button component of SEED Design System.
 ///
@@ -19,7 +26,9 @@ class SeedContextualFloatingButton extends StatelessWidget {
   final String? label;
   final String? semanticsLabel;
   final VoidCallback onPressed;
-  final SeedContextualFloatingButtonTone tone;
+  final SeedContextualFloatingButtonVariant variant;
+  @Deprecated('Use variant instead.')
+  SeedContextualFloatingButtonTone get tone => variant;
   final bool isBrand;
   final bool loading;
   final bool enabled;
@@ -30,11 +39,14 @@ class SeedContextualFloatingButton extends StatelessWidget {
     this.icon,
     this.label,
     required this.onPressed,
-    this.tone = SeedContextualFloatingButtonTone.solid,
+    SeedContextualFloatingButtonVariant? variant,
+    @Deprecated('Use variant instead.') SeedContextualFloatingButtonTone? tone,
     this.isBrand = false,
     this.loading = false,
     this.enabled = true,
-  }) : assert(icon != null || label != null, 'Must provide icon or label.'),
+  }) : variant = variant ?? tone ?? SeedContextualFloatingButtonTone.solid,
+       assert(variant == null || tone == null),
+       assert(icon != null || label != null, 'Must provide icon or label.'),
        assert(
          label != null || (semanticsLabel != null && semanticsLabel != ''),
          'Icon-only buttons require a semanticsLabel.',
@@ -45,11 +57,14 @@ class SeedContextualFloatingButton extends StatelessWidget {
     required String this.semanticsLabel,
     required Widget this.icon,
     required this.onPressed,
-    this.tone = SeedContextualFloatingButtonTone.solid,
+    SeedContextualFloatingButtonVariant? variant,
+    @Deprecated('Use variant instead.') SeedContextualFloatingButtonTone? tone,
     this.isBrand = false,
     this.loading = false,
     this.enabled = true,
-  }) : assert(semanticsLabel != ''),
+  }) : variant = variant ?? tone ?? SeedContextualFloatingButtonTone.solid,
+       assert(variant == null || tone == null),
+       assert(semanticsLabel != ''),
        label = null;
 
   @override
@@ -64,7 +79,7 @@ class SeedContextualFloatingButton extends StatelessWidget {
     if (!enabled) {
       bgColor = colors.bg.disabled;
       fgColor = colors.fg.disabled;
-    } else if (tone == SeedContextualFloatingButtonTone.solid) {
+    } else if (variant == SeedContextualFloatingButtonTone.solid) {
       bgColor = isBrand ? colors.bg.brandSolid : colors.bg.neutralSolid;
       fgColor = isBrand ? colors.fg.onBrandSolid : colors.fg.onNeutralSolid;
     } else {
@@ -79,7 +94,9 @@ class SeedContextualFloatingButton extends StatelessWidget {
       semanticsLabel: semanticsLabel ?? label,
       enabled: enabled && !loading,
       onTap: onPressed,
-      builder: (context, isPressed) => Container(
+      builder: (context, isPressed) => AnimatedContainer(
+        duration: SeedDuration.colorTransition,
+        curve: SeedCurves.easing,
         constraints: BoxConstraints(
           minHeight: label == null ? 44 : 36,
           minWidth: label == null ? 44 : 0,
@@ -93,7 +110,7 @@ class SeedContextualFloatingButton extends StatelessWidget {
           color: !enabled
               ? colors.bg.disabled
               : (isPressed || loading)
-              ? (tone == SeedContextualFloatingButtonTone.solid
+              ? (variant == SeedContextualFloatingButtonTone.solid
                     ? (isBrand
                           ? colors.bg.brandSolidPressed
                           : colors.bg.neutralSolidPressed)
@@ -102,15 +119,42 @@ class SeedContextualFloatingButton extends StatelessWidget {
           borderRadius: SeedBorderRadius.full,
           boxShadow: shadows.s3,
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
+        // React's LoadingIndicator hides the content in place and overlays the
+        // spinner, so the button keeps its size.
+        child: Stack(
+          alignment: Alignment.center,
           children: [
-            if (loading) ...[
+            Visibility(
+              visible: !loading,
+              maintainSize: true,
+              maintainAnimation: true,
+              maintainState: true,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  if (icon != null)
+                    IconTheme(
+                      data: IconThemeData(
+                        color: fgColor,
+                        size: label == null ? 22 : 16,
+                      ),
+                      child: icon!,
+                    ),
+                  if (label != null) ...[
+                    if (icon != null) const SizedBox(width: SeedDimension.x1),
+                    Text(label!, style: textStyle),
+                  ],
+                ],
+              ),
+            ),
+            if (loading)
               SeedProgressCircle(
                 size: 16.0,
+                strokeWidth: 2,
                 color: fgColor,
-                trackColor: tone == SeedContextualFloatingButtonTone.solid
+                trackColor: variant == SeedContextualFloatingButtonTone.solid
                     ? (colors.isDark
                           ? SeedPalette.gray700Dark
                           : SeedPalette.gray700Light)
@@ -118,20 +162,6 @@ class SeedContextualFloatingButton extends StatelessWidget {
                           ? SeedPalette.gray500Dark
                           : SeedPalette.gray500Light),
               ),
-            ] else if (icon != null) ...[
-              IconTheme(
-                data: IconThemeData(
-                  color: fgColor,
-                  size: label == null ? 22 : 16,
-                ),
-                child: icon!,
-              ),
-            ],
-            if (label != null) ...[
-              if (icon != null || loading)
-                const SizedBox(width: SeedDimension.x1),
-              Text(label!, style: textStyle),
-            ],
           ],
         ),
       ),

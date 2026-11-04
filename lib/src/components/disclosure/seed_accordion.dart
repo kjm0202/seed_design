@@ -9,7 +9,11 @@ import '../../theme/seed_theme.dart';
 import '../layout/seed_divider.dart';
 
 /// Variant of [SeedAccordionItem].
-enum SeedAccordionVariant { inline, separated }
+enum SeedAccordionVariant {
+  inline,
+
+  separated,
+}
 
 /// Size of [SeedAccordionItem].
 enum SeedAccordionSize {
@@ -187,74 +191,88 @@ class _SeedAccordionItemState extends State<SeedAccordionItem>
         enabled: widget.enabled,
         expanded: _isExpanded,
         enableScale: false,
+        // The panel's clip would cut an outside ring.
+        focusRingInside: true,
         onTap: _handleTap,
         builder: (context, _) {
+          final interaction = SeedInteractionState.maybeOf(context);
+          // The official surface uses `:--engaged`, which includes hover.
           final isPressed =
-              SeedInteractionState.maybeOf(context)?.pressed ?? false;
+              (interaction?.pressed ?? false) ||
+              (interaction?.hovered ?? false);
           final insetPressed =
               isPressed && widget.variant == SeedAccordionVariant.inline;
-          return AnimatedContainer(
-            duration: SeedDuration.colorTransition,
-            curve: SeedCurves.easing,
-            margin: EdgeInsets.symmetric(
-              horizontal: insetPressed ? SeedDimension.x1_5 : 0,
-            ),
-            padding: size.padding,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(
-                insetPressed ? SeedDimension.x2_5 : 0,
-              ),
-              // Blend the overlay before animating so interpolation keeps an
-              // opaque surface instead of flashing toward translucent white.
-              color: isPressed
-                  ? Color.alphaBlend(
-                      colors.bg.transparentPressed,
-                      colors.bg.layerDefault,
-                    )
-                  : colors.bg.layerDefault,
-            ),
-            child: SeedContentScale(
-              child: Row(
-                children: [
-                  if (widget.prefix != null) ...[
-                    IconTheme.merge(
-                      data: IconThemeData(
-                        size: 22,
-                        color: widget.enabled
-                            ? colors.fg.neutral
-                            : colors.fg.disabled,
-                      ),
-                      child: widget.prefix!,
+          // The official `::before` insets alone; the trigger content stays put.
+          return Stack(
+            children: [
+              Positioned.fill(
+                child: AnimatedContainer(
+                  duration: SeedDuration.colorTransition,
+                  curve: SeedCurves.easing,
+                  margin: EdgeInsets.symmetric(
+                    horizontal: insetPressed ? SeedDimension.x1_5 : 0,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(
+                      insetPressed ? SeedDimension.x2_5 : 0,
                     ),
-                    const SizedBox(width: SeedDimension.x3),
-                  ],
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(widget.title, style: titleStyle),
-                        if (widget.description != null) ...[
-                          const SizedBox(height: SeedDimension.x0_5),
-                          Text(widget.description!, style: descStyle),
-                        ],
+                    // Blend the overlay before animating so interpolation keeps
+                    // an opaque surface instead of flashing toward translucent.
+                    color: isPressed
+                        ? Color.alphaBlend(
+                            colors.bg.transparentPressed,
+                            colors.bg.layerDefault,
+                          )
+                        : colors.bg.layerDefault,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: size.padding,
+                child: SeedContentScale(
+                  child: Row(
+                    children: [
+                      if (widget.prefix != null) ...[
+                        IconTheme.merge(
+                          data: IconThemeData(
+                            size: 22,
+                            color: widget.enabled
+                                ? colors.fg.neutral
+                                : colors.fg.disabled,
+                          ),
+                          child: widget.prefix!,
+                        ),
+                        const SizedBox(width: SeedDimension.x3),
                       ],
-                    ),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(widget.title, style: titleStyle),
+                            if (widget.description != null) ...[
+                              const SizedBox(height: SeedDimension.x0_5),
+                              Text(widget.description!, style: descStyle),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: SeedDimension.x3),
+                      RotationTransition(
+                        turns: _iconTurns,
+                        child: Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          size: size.iconSize,
+                          color: widget.enabled
+                              ? colors.fg.neutralSubtle
+                              : colors.fg.disabled,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: SeedDimension.x3),
-                  RotationTransition(
-                    turns: _iconTurns,
-                    child: Icon(
-                      Icons.keyboard_arrow_down_rounded,
-                      size: size.iconSize,
-                      color: widget.enabled
-                          ? colors.fg.neutralSubtle
-                          : colors.fg.disabled,
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
+            ],
           );
         },
       ),
