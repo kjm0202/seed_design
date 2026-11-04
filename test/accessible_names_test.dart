@@ -57,6 +57,46 @@ void main() {
       handle.dispose();
     });
 
+    testWidgets('Select trigger is named by its label or semanticsLabel', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      const groups = [
+        SeedSelectGroup(
+          items: [SeedSelectItem(value: 'a', label: 'Apple')],
+        ),
+      ];
+      await tester.pumpWidget(
+        _app(
+          const SizedBox(
+            width: 240,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SeedSelect<String>(
+                  label: 'Fruit',
+                  defaultValue: ['a'],
+                  groups: groups,
+                ),
+                SeedSelect<String>(
+                  semanticsLabel: 'Fruit large',
+                  defaultValue: ['a'],
+                  groups: groups,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      final triggers = tester.semantics
+          .simulatedAccessibilityTraversal()
+          .where((node) => node.flagsCollection.isButton)
+          .map((node) => (node.label, node.value))
+          .toList();
+      expect(triggers, [('Fruit', 'Apple'), ('Fruit large', 'Apple')]);
+      handle.dispose();
+    });
+
     testWidgets('Field label tap target is not a separate button', (
       tester,
     ) async {

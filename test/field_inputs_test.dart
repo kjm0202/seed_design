@@ -149,7 +149,51 @@ void main() {
         expect(find.text('Value'), findsOneWidget);
       },
     );
+    TextStyle labelStyle(WidgetTester tester, String text) =>
+        tester.widget<Text>(find.text(text)).style!;
 
+    testWidgets('labelWeight reaches every field composition', (tester) async {
+      await tester.pumpWidget(
+        _app(
+          SizedBox(
+            width: 300,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SeedTextField(
+                  label: 'Text',
+                  labelWeight: SeedFieldLabelWeight.bold,
+                ),
+                SeedFieldButton(
+                  label: 'Button',
+                  labelWeight: SeedFieldLabelWeight.bold,
+                  onPressed: () {},
+                ),
+                const SeedSelect<int>(
+                  label: 'Select',
+                  labelWeight: SeedFieldLabelWeight.bold,
+                  groups: [],
+                ),
+                SeedRadioGroup<int>(
+                  label: 'Radio',
+                  labelWeight: SeedFieldLabelWeight.bold,
+                  child: const SizedBox.shrink(),
+                ),
+                SeedRadioGroup<int>(
+                  label: 'Plain',
+                  child: const SizedBox.shrink(),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      for (final label in ['Text', 'Button', 'Select', 'Radio']) {
+        expect(labelStyle(tester, label).fontWeight, FontWeight.w700);
+      }
+      expect(labelStyle(tester, 'Plain').fontWeight, FontWeight.w500);
+      expect(labelStyle(tester, 'Plain').fontSize, SeedFontSize.t5);
+    });
   });
 
   group('input behavior', () {

@@ -725,7 +725,7 @@ class _SelectPageState extends State<_SelectPage> {
           multiple: multiple,
           enabled: enabled,
           readOnly: readOnly,
-          isError: errorMessage != null,
+          invalid: errorMessage != null,
           placeholder: placeholder,
           prefixIcon: prefix,
           maxMenuHeight: menuHeight,

@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/gestures.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
@@ -14,6 +15,73 @@ Widget host(Widget child) => MaterialApp(
 );
 
 void main() {
+  test(
+    'canonical default names support const construction and legacy aliases',
+    () {
+      const text = SeedTextInput(defaultValue: 'Text');
+      expect(text.defaultValue, 'Text');
+      expect(text.initialValue, 'Text');
+      const select = SeedSelect<int>(groups: [], defaultValues: {1});
+      expect(select.initialValues, {1});
+      const attachment = SeedAttachmentDisplayField(
+        defaultEntries: [SeedAttachmentItem(id: 'entry')],
+      );
+      expect(attachment.initialEntries.single.id, 'entry');
+      const time = SeedTimePicker(
+        defaultValue: TimeOfDay(hour: 12, minute: 30),
+      );
+      expect(time.initialTime, time.defaultValue);
+      final date = DateTime(2026, 4, 10);
+      final calendar = SeedDatePicker(
+        defaultValue: date,
+        defaultRangeValue: SeedDateRange(start: date),
+        defaultValues: [date],
+      );
+      expect(calendar.initialDate, date);
+      expect(calendar.defaultRangeValue!.start, date);
+      expect(calendar.initialDates, [date]);
+      final legacy = SeedDatePicker(initialStartDate: date);
+      expect(legacy.defaultRangeValue!.start, date);
+    },
+  );
+
+  test('text and attachment controllers have one source of truth', () {
+    final text = TextEditingController();
+    final attachments = SeedAttachmentController();
+    addTearDown(text.dispose);
+    addTearDown(attachments.dispose);
+    expect(
+      () => SeedTextInput(controller: text, value: 'conflict'),
+      throwsAssertionError,
+    );
+    expect(
+      () => SeedTextInput.textarea(controller: text, defaultValue: 'conflict'),
+      throwsAssertionError,
+    );
+    expect(
+      () => SeedTextField(controller: text, value: 'conflict'),
+      throwsAssertionError,
+    );
+    expect(
+      () => SeedTextField.textarea(controller: text, defaultValue: 'conflict'),
+      throwsAssertionError,
+    );
+    expect(
+      () => SeedAttachmentDisplayField(
+        controller: attachments,
+        entries: const [],
+      ),
+      throwsAssertionError,
+    );
+    expect(
+      () => SeedSelect<int>(
+        groups: const [],
+        defaultValues: const {1},
+        initialValues: const {2},
+      ),
+      throwsAssertionError,
+    );
+  });
 
   testWidgets(
     'controlled FormField preserves null, accepted updates and reset',
@@ -268,6 +336,49 @@ void main() {
     expect(cells.values.any((cell) => cell.selected), isFalse);
   });
 
+  testWidgets('controlled multiple select does not commit a local set', (
+    tester,
+  ) async {
+    final proposals = <Set<int>>[];
+    await tester.pumpWidget(
+      host(
+        SeedSelect<int>(
+          multiple: true,
+          controlled: true,
+          defaultValues: const {2},
+          onValuesChanged: proposals.add,
+          groups: const [
+            SeedSelectGroup(
+              items: [
+                SeedSelectItem(value: 1, label: 'Apple'),
+                SeedSelectItem(value: 2, label: 'Pear'),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+    expect(
+      tester.widget<SeedInputButton>(find.byType(SeedInputButton)).value,
+      '',
+    );
+    await tester.tap(find.text('선택해주세요'));
+    await tester.pumpAndSettle();
+    for (var i = 0; i < 2; i++) {
+      await tester.tap(find.text('Apple'));
+      await tester.pumpAndSettle();
+    }
+    expect(proposals, [
+      {1},
+      {1},
+    ]);
+    expect(
+      tester.widget<SeedInputButton>(find.byType(SeedInputButton)).value,
+      '',
+    );
+    expect(() => proposals.last.add(2), throwsUnsupportedError);
+  });
+
   testWidgets(
     'time defaults do not overwrite edits on rebuild or locale change',
     (tester) async {
@@ -338,6 +449,58 @@ void main() {
       await tester.pumpWidget(host(const SizedBox()));
       // The widget does not dispose a caller-owned controller.
       controller.text = 'still usable';
+    },
+  );
+
+  testWidgets(
+    'controlled select reports reasons and keeps rejected dismissal open',
+    (tester) async {
+      final events = <(bool, SeedOverlayDismissReason)>[];
+      final visibility = <bool>[];
+      var open = true;
+      late StateSetter update;
+      await tester.pumpWidget(
+        host(
+          StatefulBuilder(
+            builder: (context, setState) {
+              update = setState;
+              return SeedSelect<int>(
+                open: open,
+                onOpenChanged: (next, reason) => events.add((next, reason)),
+                onOpenStateChanged: visibility.add,
+                groups: const [
+                  SeedSelectGroup(
+                    items: [SeedSelectItem(value: 1, label: 'Apple')],
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Apple'));
+      await tester.pumpAndSettle();
+      expect(events.last, (false, SeedOverlayDismissReason.action));
+      expect(find.byType(MenuItemButton).evaluate().isNotEmpty, isTrue);
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      // React useSelectFloating.ts:106-129 reports focusOut even when an
+      // externally controlled parent rejects the proposed dismissal.
+      expect(events[1], (false, SeedOverlayDismissReason.focusOut));
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(events.last, (false, SeedOverlayDismissReason.escapeKey));
+      expect(find.byType(MenuItemButton).evaluate().isNotEmpty, isTrue);
+      await tester.tapAt(const Offset(5, 5));
+      await tester.pumpAndSettle();
+      expect(events.last, (false, SeedOverlayDismissReason.outside));
+      expect(find.byType(MenuItemButton).evaluate().isNotEmpty, isTrue);
+      expect(visibility, [false, false, false, false]);
+      update(() => open = false);
+      await tester.pumpAndSettle();
+      expect(find.byType(MenuItemButton).evaluate().isNotEmpty, isFalse);
+      expect(events, hasLength(4));
     },
   );
 

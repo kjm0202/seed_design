@@ -670,6 +670,31 @@ void main() {
       },
     );
 
+    testWidgets(
+      'localized semantics and text remain overridable in an English app',
+      (tester) async {
+        await tester.pumpWidget(
+          hostMaterialMigrationContrac(
+            const SeedLocalizations(
+              labels: {
+                SeedLabel.clearInput: 'Effacer',
+                SeedLabel.selectPlaceholder: 'Choisir',
+              },
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SeedTextInput(defaultValue: 'Hello', clearable: true),
+                  SeedSelect<String>(groups: []),
+                ],
+              ),
+            ),
+          ),
+        );
+        expect(find.bySemanticsLabel('Effacer'), findsOneWidget);
+        expect(find.text('Choisir'), findsOneWidget);
+      },
+    );
+
     test('theme bridge can preserve Material component overrides while installing SEED tokens', () {
       final original = ThemeData(
         inputDecorationTheme: const InputDecorationTheme(

@@ -5,6 +5,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
 Widget host(Widget child) => MaterialApp(
+locale: const Locale('ko'), supportedLocales: const [Locale('ko'), Locale('en')], localizationsDelegates: GlobalMaterialLocalizations.delegates,
+
   theme: SeedThemeData.light().toThemeData(),
   home: Scaffold(
     body: Center(child: SizedBox(width: 360, child: child)),
@@ -527,10 +529,7 @@ void main() {
       await tester.tap(find.text('Apple'));
       await tester.pumpAndSettle();
       expect(events.last, (false, SeedOverlayDismissReason.action));
-      expect(
-        tester.widget<MenuAnchor>(find.byType(MenuAnchor)).controller!.isOpen,
-        isTrue,
-      );
+      expect(find.byType(MenuItemButton).evaluate().isNotEmpty, isTrue);
       await tester.sendKeyEvent(LogicalKeyboardKey.tab);
       await tester.pump();
       // React useSelectFloating.ts:106-129 reports focusOut even when an
@@ -539,24 +538,15 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pumpAndSettle();
       expect(events.last, (false, SeedOverlayDismissReason.escapeKey));
-      expect(
-        tester.widget<MenuAnchor>(find.byType(MenuAnchor)).controller!.isOpen,
-        isTrue,
-      );
+      expect(find.byType(MenuItemButton).evaluate().isNotEmpty, isTrue);
       await tester.tapAt(const Offset(5, 5));
       await tester.pumpAndSettle();
       expect(events.last, (false, SeedOverlayDismissReason.outside));
-      expect(
-        tester.widget<MenuAnchor>(find.byType(MenuAnchor)).controller!.isOpen,
-        isTrue,
-      );
+      expect(find.byType(MenuItemButton).evaluate().isNotEmpty, isTrue);
       expect(visibility, [false, false, false, false]);
       update(() => open = false);
       await tester.pumpAndSettle();
-      expect(
-        tester.widget<MenuAnchor>(find.byType(MenuAnchor)).controller!.isOpen,
-        isFalse,
-      );
+      expect(find.byType(MenuItemButton).evaluate().isNotEmpty, isFalse);
       expect(events, hasLength(4));
     },
   );

@@ -23,6 +23,17 @@
 - **Breaking migration:** `SeedSliderMarker.align` is nullable; use `resolveAlign(min, max)` to read its effective alignment.
 - Align with the official recipes found in a runtime comparison: `SeedCheckbox` and `SeedRadio` keep the mark on the first line of a wrapped label (and `SeedSwitch` keeps it centered on that line at large text), `SeedRadioGroup`/`SeedFieldset` render the description below the options, Dialog and AlertDialog no longer draw a shadow, MenuSheet items are at least 52px tall, a snapping BottomSheet's footer follows its content, the attachment dropzone spans the field width, and a stepped range `SeedSlider` no longer shows step dots.
 - Add the official `showRequiredIndicator` to `SeedRadioGroup` (`SeedFieldset.required`) and `indicator`/`showRequiredIndicator` to `SeedSlider`. `SeedSliderMarker.align` is now nullable and defaults like the official snippet: markers at `min`/`max` align to the start/end, others center. Code reading `.align` should use `resolveAlign(min, max)`.
+- **Breaking migration:** Select uses anchored overlays and an 8px menu gap by default.
+- Add the official `labelWeight` to `SeedTextField`, `SeedFieldButton`, `SeedSelect`, `SeedSlider` and `SeedRadioGroup`. `SeedFieldset` labels now use the official t5 medium instead of t4 bold.
+- `SeedSelect` now opens in the official anchored overlay by default, with its exit animation, shadow, inset option highlight, wrapped labels and looping arrow keys. A non-default `menuAlignment` keeps the previous `MenuAnchor`. Tests that look up `MenuAnchor` for a Select need updating.
+- Align components with official SEED React behavior:
+  - **Changed defaults:** `SeedTextInput`/`SeedTextField` `clearable` is now false; pass `clearable: true` to keep the clear button. `SeedQuantityPicker.defaultValue` is nullable and falls back to `min`. `SeedTimePicker` rounds minute ties up, so 10:05 with a 10-minute step becomes 10:10. `SeedSelect.menuOffset` defaults to an 8px gutter. `SeedDatePicker` no longer calls `onValueChange` when the selected date is reselected.
+  - **Layout:** Strokes no longer move TextInput, InputButton, QuantityPicker, ReactionButton, outline Chip or SelectBox content. PageBanner stays 40px tall with a link or close button. TablePagination Selects are 40px. Chip reserves icon padding. Popover close button, ListHeader typography/padding and the Field required asterisk follow the official specs. Fields show an error icon by default.
+  - **Grid:** Auto-placement is sparse like CSS Grid and no longer fills earlier holes; `rows` without `columns` in row flow uses one column. Use explicit `row`/`column` where a dense layout was relied on.
+  - **SeedResponsivePair:** Children share the row equally and stack in reverse at full width when content does not fit.
+  - **Interaction:** Select supports typeahead and applies `formatValue` to single selection. Slider arrow keys step through `allowedValues` and values keep the step's precision. Pagination and TablePagination no longer require a Material ancestor. InputButton's root no longer scales; Select scales its content.
+  - **SideNavigation:** Collapsed items show the current state, rebuilds keep a closed parent closed, labels truncate on one line, press surfaces are inset, and the header/footer dividers are removed.
+  - **Others:** `SeedAttachmentController.updateStatus` clears stale progress, Footer places the country selector in the navigation area, and `SeedFlex(wrap: true)` applies its alignment.
 
 ## 1.0.0
 
