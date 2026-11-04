@@ -6,8 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:seed_design/seed_design.dart';
 import 'package:seed_design_example/stackflow_spa/stackflow_spa.dart';
-import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 import 'package:url_launcher_platform_interface/link.dart';
+import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
 class Picker extends FileSelectorPlatform {
   List<XFile> files = [];
@@ -39,6 +39,7 @@ class Launcher extends UrlLauncherPlatform {
 final png = base64Decode(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIW2P4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==',
 );
+
 XFile image(String name) =>
     XFile.fromData(png, name: name, path: name, mimeType: 'image/png');
 
