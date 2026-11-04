@@ -88,9 +88,11 @@ export 'src/components/input/seed_date_picker.dart';
 export 'src/components/input/seed_attachment_input.dart';
 export 'src/components/input/seed_attachment_field.dart';
 export 'src/components/input/seed_select.dart';
+export 'src/components/input/seed_select_form_field.dart';
 
 // Components - Navigation
 export 'src/components/navigation/seed_tabs.dart';
+export 'src/components/navigation/seed_tab_bar.dart';
 export 'src/components/navigation/seed_tabs_view.dart';
 export 'src/components/navigation/seed_top_navigation.dart';
 export 'src/components/navigation/seed_top_navigation_button.dart';
@@ -136,5 +138,3 @@ export 'src/components/feedback/seed_pull_to_refresh.dart';
 export 'src/components/layout/seed_layout.dart';
 
 export 'src/components/layout/seed_grid.dart';
-
-export 'src/components/input/seed_select_form_field.dart';

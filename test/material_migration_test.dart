@@ -605,6 +605,60 @@ void main() {
     );
 
     testWidgets(
+      'top navigation preserves drawer and Material tab content in both directions',
+      (tester) async {
+        late TabController controller;
+        await tester.pumpWidget(
+          MaterialApp(
+            home: DefaultTabController(
+              length: 2,
+              child: Builder(
+                builder: (context) {
+                  controller = DefaultTabController.of(context);
+                  return const Scaffold(
+                    appBar: SeedTopNavigation(
+                      titleText: 'Navigation',
+                      bottom: SeedTabBar(
+                        items: [
+                          SeedTabItem(label: 'First'),
+                          SeedTabItem(label: 'Second'),
+                        ],
+                      ),
+                    ),
+                    drawer: Drawer(
+                      child: Center(child: Text('Drawer content')),
+                    ),
+                    body: TabBarView(
+                      children: [
+                        Center(child: Text('Page one')),
+                        Center(child: Text('Page two')),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.byType(DrawerButton));
+        await tester.pumpAndSettle();
+        expect(find.text('Drawer content').hitTestable(), findsOneWidget);
+        final scaffold = tester.state<ScaffoldState>(find.byType(Scaffold));
+        scaffold.closeDrawer();
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Second'));
+        await tester.pumpAndSettle();
+        expect(controller.index, 1);
+        expect(find.text('Page two').hitTestable(), findsOneWidget);
+        await tester.drag(find.byType(TabBarView), const Offset(600, 0));
+        await tester.pumpAndSettle();
+        expect(controller.index, 0);
+        expect(tester.widget<SeedTabs>(find.byType(SeedTabs)).selectedIndex, 0);
+        expect(find.text('Page one').hitTestable(), findsOneWidget);
+      },
+    );
+
+    testWidgets(
       'Snackbar Undo persists and reports action once, explicit timeout remains available',
       (tester) async {
         ScaffoldFeatureController<SnackBar, SnackBarClosedReason>? controller;
