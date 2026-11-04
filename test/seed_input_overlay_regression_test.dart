@@ -10,66 +10,68 @@ locale: const Locale('ko'), supportedLocales: const [Locale('ko'), Locale('en')]
   home: Scaffold(body: Center(child: child)),
 );
 
-void main() {
-  testWidgets('date navigation is bounded and selected date has a full label', (
-    tester,
-  ) async {
-    DateTime? picked;
-    await tester.pumpWidget(
-      host(
-        SeedDatePicker(
-          initialDate: DateTime(2026, 4, 12),
-          firstDate: DateTime(2026, 4, 10),
-          lastDate: DateTime(2026, 4, 20),
-          onDateSelected: (day) => picked = day,
-        ),
+SeedPressable _dateNavButton(WidgetTester tester, IconData icon) =>
+    tester.widget<SeedPressable>(
+      find.ancestor(
+        of: find.byIcon(icon),
+        matching: find.byType(SeedPressable),
       ),
     );
-    await tester.pumpAndSettle();
-    expect(
-      tester.widget<IconButton>(find.byType(IconButton).at(0)).onPressed,
-      isNull,
+
+
+void main() {
+  testWidgets(
+      'date navigation is bounded and selected date has a full label',
+      (tester) async {
+        DateTime? picked;
+        await tester.pumpWidget(
+          host(
+            SeedDatePicker(
+              initialDate: DateTime(2026, 4, 12),
+              firstDate: DateTime(2026, 4, 10),
+              lastDate: DateTime(2026, 4, 20),
+              onDateSelected: (day) => picked = day,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(_dateNavButton(tester, Icons.chevron_left).enabled, isFalse);
+        expect(_dateNavButton(tester, Icons.chevron_right).enabled, isFalse);
+        final expectedDisabledColor =
+            SeedThemeData.light().colorScheme.fg.disabled;
+        for (final icon in [Icons.chevron_left, Icons.chevron_right]) {
+          expect(
+            tester.widget<Icon>(find.byIcon(icon)).color,
+            expectedDisabledColor,
+          );
+        }
+        expect(find.text('2026년 4월'), findsOneWidget);
+        final semantics = tester.ensureSemantics();
+        expect(find.bySemanticsLabel('2026년 4월 12일'), findsOneWidget);
+        await tester.tap(find.text('15'));
+        expect(picked, DateTime(2026, 4, 15));
+        semantics.dispose();
+      },
     );
-    expect(
-      tester.widget<IconButton>(find.byType(IconButton).at(1)).onPressed,
-      isNull,
-    );
-    final expectedDisabledColor = SeedThemeData.light().colorScheme.fg.disabled;
-    for (final button in tester.widgetList<IconButton>(
-      find.byType(IconButton),
-    )) {
-      expect(button.disabledColor, expectedDisabledColor);
-      expect((button.icon as Icon).color, isNull);
-    }
-    expect(find.text('2026년 4월'), findsOneWidget);
-    final semantics = tester.ensureSemantics();
-    expect(find.bySemanticsLabel('2026년 4월 12일'), findsOneWidget);
-    await tester.tap(find.text('15'));
-    expect(picked, DateTime(2026, 4, 15));
-    semantics.dispose();
-  });
 
   testWidgets('date picker clamps an initial month outside allowed range', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      host(
-        SeedDatePicker(
-          initialDate: DateTime(2025, 1, 1),
-          firstDate: DateTime(2026, 4, 10),
-          lastDate: DateTime(2026, 5, 10),
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          SeedDatePicker(
+            initialDate: DateTime(2025, 1, 1),
+            firstDate: DateTime(2026, 4, 10),
+            lastDate: DateTime(2026, 5, 10),
+          ),
         ),
-      ),
-    );
-    expect(find.text('2026년 4월'), findsOneWidget);
-    await tester.tap(find.byTooltip('다음 달'));
-    await tester.pumpAndSettle();
-    expect(find.text('2026년 5월'), findsOneWidget);
-    expect(
-      tester.widget<IconButton>(find.byType(IconButton).at(1)).onPressed,
-      isNull,
-    );
-  });
+      );
+      expect(find.text('2026년 4월'), findsOneWidget);
+      await tester.tap(find.byTooltip('다음 달'));
+      await tester.pumpAndSettle();
+      expect(find.text('2026년 5월'), findsOneWidget);
+      expect(_dateNavButton(tester, Icons.chevron_right).enabled, isFalse);
+    });
 
   testWidgets(
     'changing time step rebuilds wheel selection and reports valid minutes',
@@ -191,49 +193,49 @@ void main() {
   );
 
   testWidgets('updating value resynchronizes all three wheel positions', (
-    tester,
-  ) async {
-    var value = const TimeOfDay(hour: 9, minute: 5);
-    late StateSetter updateParent;
-    final notifications = <TimeOfDay>[];
-    await tester.pumpWidget(
-      host(
-        SizedBox(
-          width: 280,
-          child: StatefulBuilder(
-            builder: (context, setState) {
-              updateParent = setState;
-              return SeedTimePicker(
-                value: value,
-                minuteStep: 10,
-                onChanged: notifications.add,
-              );
-            },
+      tester,
+    ) async {
+      var value = const TimeOfDay(hour: 9, minute: 5);
+      late StateSetter updateParent;
+      final notifications = <TimeOfDay>[];
+      await tester.pumpWidget(
+        host(
+          SizedBox(
+            width: 280,
+            child: StatefulBuilder(
+              builder: (context, setState) {
+                updateParent = setState;
+                return SeedTimePicker(
+                  value: value,
+                  minuteStep: 10,
+                  onChanged: notifications.add,
+                );
+              },
+            ),
           ),
         ),
-      ),
-    );
+      );
 
-    List<int> positions() => tester
-        .widgetList<ListWheelScrollView>(find.byType(ListWheelScrollView))
-        .map(
-          (wheel) =>
-              (wheel.controller! as FixedExtentScrollController).selectedItem,
-        )
-        .toList();
+      List<int> positions() => tester
+          .widgetList<ListWheelScrollView>(find.byType(ListWheelScrollView))
+          .map(
+            (wheel) =>
+                (wheel.controller! as FixedExtentScrollController).selectedItem,
+          )
+          .toList();
 
-    await tester.pumpAndSettle();
-    expect(positions(), [0, 9, 0]); // 오전 9시 00분, 5분은 0분으로 반올림.
+      await tester.pumpAndSettle();
+      expect(positions(), [0, 9, 1]); // 오전 9시 10분, 5분은 React처럼 올림.
 
-    updateParent(() => value = const TimeOfDay(hour: 15, minute: 54));
-    await tester.pumpAndSettle();
-    expect(positions(), [1, 3, 5]); // 오후 3시 50분.
-    expect(
-      notifications,
-      isEmpty,
-    ); // External input updates are not user edits.
-    expect(tester.takeException(), isNull);
-  });
+      updateParent(() => value = const TimeOfDay(hour: 15, minute: 54));
+      await tester.pumpAndSettle();
+      expect(positions(), [1, 3, 5]); // 오후 3시 50분.
+      expect(
+        notifications,
+        isEmpty,
+      ); // External input updates are not user edits.
+      expect(tester.takeException(), isNull);
+    });
 
   testWidgets('wheel rebuilds when columns are added, removed and resized', (
     tester,

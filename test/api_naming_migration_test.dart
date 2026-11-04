@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
@@ -264,6 +265,116 @@ void main() {
     expect(changes, ['b', 'b']);
   });
 
+  testWidgets(
+    'wheel defaultValue is one-time and reports value with step details',
+    (tester) async {
+      final values = <String>[];
+      final steps = <int>[];
+      final indices = <int>[];
+      Widget build(String seed) => host(
+        SeedWheelPicker(
+          columns: [
+            SeedWheelColumn.value(
+              items: const ['a', 'b', 'c', 'd'],
+              defaultValue: seed,
+              onValueChange: (value, details) {
+                values.add(value);
+                steps.add(details.stepDelta);
+              },
+              onIndexChange: (index, value) => indices.add(index),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpWidget(build('b'));
+      final wheel = find.byType(ListWheelScrollView);
+      final controller =
+          tester.widget<ListWheelScrollView>(wheel).controller!
+              as FixedExtentScrollController;
+      expect(controller.selectedItem, 1);
+      await tester.tap(wheel);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+      expect(values, ['c']);
+      expect(steps, [1]);
+      expect(indices.last, 2);
+      await tester.pumpWidget(build('a'));
+      await tester.pumpAndSettle();
+      final current =
+          tester.widget<ListWheelScrollView>(wheel).controller!
+              as FixedExtentScrollController;
+      expect(current.selectedItem, 2);
+      expect(values, ['c']);
+    },
+  );
+
+  testWidgets('wheel controlled values can reject repeated proposals', (
+    tester,
+  ) async {
+    final changes = <String>[];
+    final steps = <int>[];
+    await tester.pumpWidget(
+      host(
+        SeedWheelPicker(
+          columns: [
+            SeedWheelColumn.value(
+              items: const ['a', 'b', 'c'],
+              value: 'b',
+              onValueChange: (value, details) {
+                changes.add(value);
+                steps.add(details.stepDelta);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+    final wheel = find.byType(ListWheelScrollView);
+    await tester.tap(wheel);
+    for (var i = 0; i < 2; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+    }
+    expect(changes, ['c', 'c']);
+    expect(steps, [1, 1]);
+    final controller =
+        tester.widget<ListWheelScrollView>(wheel).controller!
+            as FixedExtentScrollController;
+    expect(controller.selectedItem, 1);
+  });
+
+  testWidgets(
+    'wheel looping across a full cycle keeps value notifications distinct',
+    (tester) async {
+      final changes = <String>[];
+      await tester.pumpWidget(
+        host(
+          SeedWheelPicker(
+            columns: [
+              SeedWheelColumn.value(
+                items: const ['a', 'b', 'c'],
+                defaultValue: 'b',
+                loop: true,
+                onValueChange: (value, details) => changes.add(value),
+              ),
+            ],
+          ),
+        ),
+      );
+      final wheel = find.byType(ListWheelScrollView);
+      final controller =
+          tester.widget<ListWheelScrollView>(wheel).controller!
+              as FixedExtentScrollController;
+      controller.animateToItem(
+        4,
+        duration: const Duration(milliseconds: 100),
+        curve: Curves.linear,
+      );
+      await tester.pumpAndSettle();
+      expect(changes, isEmpty);
+    },
+  );
+
   testWidgets('disabled checked controls do not mutate or notify', (
     tester,
   ) async {
@@ -300,4 +411,42 @@ void main() {
     await tester.pumpAndSettle();
     expect(changes, isEmpty);
   });
+
+  testWidgets(
+    'wheel preserves selected values through option reorder and removal',
+    (tester) async {
+      final changes = <String>[];
+      Widget build(List<String> items, String seed) => host(
+        SeedWheelPicker(
+          columns: [
+            SeedWheelColumn.value(
+              items: items,
+              defaultValue: seed,
+              onValueChange: (value, details) => changes.add(value),
+            ),
+          ],
+        ),
+      );
+      int selected() =>
+          (tester
+                      .widget<ListWheelScrollView>(
+                        find.byType(ListWheelScrollView),
+                      )
+                      .controller!
+                  as FixedExtentScrollController)
+              .selectedItem;
+      await tester.pumpWidget(build(['a', 'b', 'c'], 'b'));
+      expect(selected(), 1);
+      await tester.pumpWidget(build(['b', 'c', 'a'], 'a'));
+      await tester.pumpAndSettle();
+      expect(selected(), 0);
+      await tester.pumpWidget(build(['x', 'b', 'c', 'a'], 'x'));
+      await tester.pumpAndSettle();
+      expect(selected(), 1);
+      await tester.pumpWidget(build(['a', 'c'], 'c'));
+      await tester.pumpAndSettle();
+      expect(selected(), 0);
+      expect(changes, isEmpty);
+    },
+  );
 }

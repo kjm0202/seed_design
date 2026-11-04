@@ -741,6 +741,53 @@ void main() {
       );
     });
 
+    testWidgets(
+      'uncontrolled RadioGroup and QuantityPicker do not register with a Form',
+      (tester) async {
+        final form = GlobalKey<FormState>();
+        final radios = <String?>[];
+        await tester.pumpWidget(
+          hostMaterialMigrationContrac(
+            Form(
+              key: form,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SeedRadioGroup<String>(
+                    label: 'Size',
+                    defaultValue: 'a',
+                    onChanged: radios.add,
+                    child: const Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SeedRadio(value: 'a', label: 'A'),
+                        SeedRadio(value: 'b', label: 'B'),
+                      ],
+                    ),
+                  ),
+                  SeedQuantityPicker(defaultValue: 1, onChanged: (_) {}),
+                ],
+              ),
+            ),
+          ),
+        );
+        expect(find.byType(FormField), findsNothing);
+        await tester.tap(find.text('B'));
+        await tester.tap(find.byIcon(Icons.add_rounded));
+        await tester.pump();
+        form.currentState!.reset();
+        await tester.pump();
+        expect(radios, ['b']);
+        expect(
+          tester
+              .widget<RadioGroup<String>>(find.byType(RadioGroup<String>))
+              .groupValue,
+          'b',
+        );
+        expect(find.text('2'), findsOneWidget);
+      },
+    );
+
     testWidgets('SeedFormField opts a SEED checkbox into Form validation', (
       tester,
     ) async {

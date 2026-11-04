@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart'
@@ -12,16 +13,20 @@ import '../layout/seed_scroll_fog.dart';
 /// Size options for [SeedWheelPicker].
 enum SeedWheelPickerSize {
   small(height: 180.0, itemExtent: 36.0),
+
   medium(height: 220.0, itemExtent: 44.0);
 
   const SeedWheelPickerSize({required this.height, required this.itemExtent});
+
   final double height;
+
   final double itemExtent;
 }
 
 /// React WheelPicker value-change details, independent of option type.
 class SeedWheelPickerValueChangeDetails {
   const SeedWheelPickerValueChangeDetails({required this.stepDelta});
+
   final int stepDelta;
 }
 
@@ -132,7 +137,9 @@ abstract class SeedWheelColumn {
   }
 
   int get itemCount;
+
   int get initialIndex;
+
   int? get index => null;
 
   /// Called once when scrolling settles on a different value.
@@ -142,8 +149,11 @@ abstract class SeedWheelColumn {
   /// the signed step delta traversed on the wheel.
   void Function(int index, int stepDelta)? get onStepChanged => null;
   double get itemExtent;
+
   double? get width => null;
+
   AlignmentGeometry get alignment => Alignment.center;
+
   int get flex;
 
   /// Whether the column repeats across its first/last item boundary.
@@ -155,9 +165,13 @@ abstract class SeedWheelColumn {
   int? _indexPreservingValue(SeedWheelColumn previous, int previousIndex) =>
       null;
   bool get enabled => true;
+
   bool get readOnly => false;
+
   String? get semanticsLabel => null;
+
   ValueChanged<int>? get onIndexChanged => null;
+
   String semanticValue(int index) => '$index';
 
   Widget buildItem(BuildContext context, int index, bool isSelected);
@@ -325,6 +339,7 @@ class SeedWheelPicker extends StatefulWidget {
   /// Whether scrolling, item selection and focus are allowed.
   final bool enabled;
   final bool readOnly;
+
   final String? semanticsLabel;
 
   double get effectiveHeight => height ?? size.height;
@@ -502,349 +517,388 @@ class _SeedWheelPickerState extends State<SeedWheelPicker> {
             ),
 
           // Columns
-          Semantics(
-            label: widget.semanticsLabel,
-            enabled: widget.enabled,
-            child: ExcludeFocus(
-              excluding: !widget.enabled,
-              child: IgnorePointer(
-                ignoring: !widget.enabled,
-                child: Row(
-                  // CSS wheel-picker__columns uses `justify-content: center`.
-                  // This matters when TimePicker supplies intrinsic widths.
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(widget.columns.length, (colIdx) {
-                    final col = widget.columns[colIdx];
-                    final enabled = widget.enabled && col.enabled;
-                    final editable =
-                        enabled && !widget.readOnly && !col.readOnly;
-                    final controller = _controllers[colIdx];
-                    final selected = _selectedIndices[colIdx];
-                    final canIncrease =
-                        editable &&
-                        col.itemCount > 0 &&
-                        (col.looping || selected < col.itemCount - 1);
-                    final canDecrease =
-                        editable &&
-                        col.itemCount > 0 &&
-                        (col.looping || selected > 0);
-                    final focusNode = _focusNodes.putIfAbsent(
-                      colIdx,
-                      FocusNode.new,
-                    );
-                    void move(
-                      int target, {
-                      bool keyboard = false,
-                      bool repeat = false,
-                    }) {
-                      if (!editable || col.itemCount == 0) return;
-                      final destination = col.looping
-                          ? target
-                          : target.clamp(0, col.itemCount - 1);
-                      if (keyboard) {
-                        _keyboardTargets[controller] = destination;
-                      } else {
-                        _keyboardTargets.remove(controller);
-                      }
-                      if (repeat) {
-                        // React uses an immediate move for repeated keydown.
-                        controller.jumpToItem(destination);
-                        return;
-                      }
-                      controller.animateToItem(
-                        destination,
-                        duration: SeedDuration.d3,
-                        curve: SeedCurves.easing,
+          _maskFog(
+            fogHeight,
+            Semantics(
+              label: widget.semanticsLabel,
+              enabled: widget.enabled,
+              child: ExcludeFocus(
+                excluding: !widget.enabled,
+                child: IgnorePointer(
+                  ignoring: !widget.enabled,
+                  child: _SeedWheelColumns(
+                    columns: widget.columns,
+                    children: List.generate(widget.columns.length, (colIdx) {
+                      final col = widget.columns[colIdx];
+                      final enabled = widget.enabled && col.enabled;
+                      final editable =
+                          enabled && !widget.readOnly && !col.readOnly;
+                      final controller = _controllers[colIdx];
+                      final selected = _selectedIndices[colIdx];
+                      final canIncrease =
+                          editable &&
+                          col.itemCount > 0 &&
+                          (col.looping || selected < col.itemCount - 1);
+                      final canDecrease =
+                          editable &&
+                          col.itemCount > 0 &&
+                          (col.looping || selected > 0);
+                      final focusNode = _focusNodes.putIfAbsent(
+                        colIdx,
+                        FocusNode.new,
                       );
-                    }
+                      void move(
+                        int target, {
+                        bool keyboard = false,
+                        bool repeat = false,
+                      }) {
+                        if (!editable || col.itemCount == 0) return;
+                        final destination = col.looping
+                            ? target
+                            : target.clamp(0, col.itemCount - 1);
+                        if (keyboard) {
+                          _keyboardTargets[controller] = destination;
+                        } else {
+                          _keyboardTargets.remove(controller);
+                        }
+                        if (repeat) {
+                          // React uses an immediate move for repeated keydown.
+                          controller.jumpToItem(destination);
+                          return;
+                        }
+                        controller.animateToItem(
+                          destination,
+                          duration: SeedDuration.d3,
+                          curve: SeedCurves.easing,
+                        );
+                      }
 
-                    final columnChild = Semantics(
-                      container: true,
-                      excludeSemantics: true,
-                      slider: true,
-                      label: col.semanticsLabel,
-                      focusable: enabled,
-                      focused: focusNode.hasFocus,
-                      onFocus:
-                          enabled && defaultTargetPlatform != TargetPlatform.iOS
-                          ? focusNode.requestFocus
-                          : null,
-                      value: col.itemCount == 0
-                          ? null
-                          : col.semanticValue(_selectedIndices[colIdx]),
-                      enabled: enabled,
-                      readOnly: widget.readOnly || col.readOnly,
-                      increasedValue: canIncrease
-                          ? col.semanticValue((selected + 1) % col.itemCount)
-                          : null,
-                      decreasedValue: canDecrease
-                          ? col.semanticValue((selected - 1) % col.itemCount)
-                          : null,
-                      onIncrease: canIncrease
-                          ? () => move(controller.selectedItem + 1)
-                          : null,
-                      onDecrease: canDecrease
-                          ? () => move(controller.selectedItem - 1)
-                          : null,
-                      child: Focus(
-                        focusNode: focusNode,
-                        canRequestFocus: enabled,
-                        onFocusChange: (_) => setState(() {}),
-                        onKeyEvent: (_, event) {
-                          if (event is! KeyDownEvent &&
-                              event is! KeyRepeatEvent) {
-                            return KeyEventResult.ignored;
-                          }
-                          final key = event.logicalKey;
-                          // React keeps the column focused for unhandled
-                          // horizontal arrows and for readonly navigation.
-                          // Do not let Flutter's directional traversal move
-                          // focus to another column or a neighboring control.
-                          if (key == LogicalKeyboardKey.arrowLeft ||
-                              key == LogicalKeyboardKey.arrowRight) {
+                      final columnChild = Semantics(
+                        container: true,
+                        excludeSemantics: true,
+                        slider: true,
+                        label: col.semanticsLabel,
+                        focusable: enabled,
+                        focused: focusNode.hasFocus,
+                        onFocus:
+                            enabled &&
+                                defaultTargetPlatform != TargetPlatform.iOS
+                            ? focusNode.requestFocus
+                            : null,
+                        value: col.itemCount == 0
+                            ? null
+                            : col.semanticValue(_selectedIndices[colIdx]),
+                        enabled: enabled,
+                        readOnly: widget.readOnly || col.readOnly,
+                        increasedValue: canIncrease
+                            ? col.semanticValue((selected + 1) % col.itemCount)
+                            : null,
+                        decreasedValue: canDecrease
+                            ? col.semanticValue((selected - 1) % col.itemCount)
+                            : null,
+                        onIncrease: canIncrease
+                            ? () => move(controller.selectedItem + 1)
+                            : null,
+                        onDecrease: canDecrease
+                            ? () => move(controller.selectedItem - 1)
+                            : null,
+                        child: Focus(
+                          focusNode: focusNode,
+                          canRequestFocus: enabled,
+                          onFocusChange: (_) => setState(() {}),
+                          onKeyEvent: (_, event) {
+                            if (event is! KeyDownEvent &&
+                                event is! KeyRepeatEvent) {
+                              return KeyEventResult.ignored;
+                            }
+                            final key = event.logicalKey;
+                            // React keeps the column focused for unhandled
+                            // horizontal arrows and for readonly navigation.
+                            // Do not let Flutter's directional traversal move
+                            // focus to another column or a neighboring control.
+                            if (key == LogicalKeyboardKey.arrowLeft ||
+                                key == LogicalKeyboardKey.arrowRight) {
+                              return KeyEventResult.handled;
+                            }
+                            if (!editable) {
+                              return key == LogicalKeyboardKey.arrowDown ||
+                                      key == LogicalKeyboardKey.arrowUp
+                                  ? KeyEventResult.handled
+                                  : KeyEventResult.ignored;
+                            }
+                            final current =
+                                _keyboardTargets[controller] ??
+                                controller.selectedItem;
+                            int target;
+                            if (key == LogicalKeyboardKey.arrowDown) {
+                              target = current + 1;
+                            } else if (key == LogicalKeyboardKey.arrowUp) {
+                              target = current - 1;
+                            } else if (key == LogicalKeyboardKey.pageDown) {
+                              // React's column scrolls by its 4-row page here.
+                              target = current + 4;
+                            } else if (key == LogicalKeyboardKey.pageUp) {
+                              target = current - 4;
+                            } else if (key == LogicalKeyboardKey.home) {
+                              target = 0;
+                            } else if (key == LogicalKeyboardKey.end) {
+                              target = col.itemCount - 1;
+                            } else {
+                              return KeyEventResult.ignored;
+                            }
+                            move(
+                              target,
+                              keyboard: true,
+                              repeat: event is KeyRepeatEvent,
+                            );
                             return KeyEventResult.handled;
-                          }
-                          if (!editable) {
-                            return key == LogicalKeyboardKey.arrowDown ||
-                                    key == LogicalKeyboardKey.arrowUp
-                                ? KeyEventResult.handled
-                                : KeyEventResult.ignored;
-                          }
-                          final current =
-                              _keyboardTargets[controller] ??
-                              controller.selectedItem;
-                          int target;
-                          if (key == LogicalKeyboardKey.arrowDown) {
-                            target = current + 1;
-                          } else if (key == LogicalKeyboardKey.arrowUp) {
-                            target = current - 1;
-                          } else if (key == LogicalKeyboardKey.home) {
-                            target = 0;
-                          } else if (key == LogicalKeyboardKey.end) {
-                            target = col.itemCount - 1;
-                          } else {
-                            return KeyEventResult.ignored;
-                          }
-                          move(
-                            target,
-                            keyboard: true,
-                            repeat: event is KeyRepeatEvent,
-                          );
-                          return KeyEventResult.handled;
-                        },
-                        child: IgnorePointer(
-                          ignoring: !editable,
-                          child: NotificationListener<ScrollNotification>(
-                            onNotification: (notification) {
-                              if (notification is ScrollEndNotification &&
-                                  notification.depth == 0 &&
-                                  controller.hasClients &&
-                                  _keyboardTargets[controller] ==
-                                      controller.selectedItem) {
-                                _keyboardTargets.remove(controller);
-                              }
-                              final scrollMoved =
-                                  _committedScrollIndices[colIdx] !=
-                                  _selectedScrollIndices[colIdx];
-                              final indexChanged =
-                                  _committedIndices[colIdx] !=
-                                  _selectedIndices[colIdx];
-                              if (notification is ScrollEndNotification &&
-                                  notification.depth == 0 &&
-                                  editable &&
-                                  (indexChanged ||
-                                      (col.looping &&
-                                          scrollMoved &&
-                                          col.onStepChanged != null))) {
-                                final index = _selectedIndices[colIdx];
-                                final stepDelta =
-                                    _selectedScrollIndices[colIdx] -
-                                    _committedScrollIndices[colIdx];
-                                _committedIndices[colIdx] = index;
-                                _committedScrollIndices[colIdx] =
+                          },
+                          child: IgnorePointer(
+                            ignoring: !editable,
+                            child: NotificationListener<ScrollNotification>(
+                              onNotification: (notification) {
+                                if (notification is ScrollEndNotification &&
+                                    notification.depth == 0 &&
+                                    controller.hasClients &&
+                                    _keyboardTargets[controller] ==
+                                        controller.selectedItem) {
+                                  _keyboardTargets.remove(controller);
+                                }
+                                final scrollMoved =
+                                    _committedScrollIndices[colIdx] !=
                                     _selectedScrollIndices[colIdx];
-                                HapticFeedback.selectionClick();
-                                col.onStepChanged?.call(index, stepDelta);
-                                if (indexChanged || col.onStepChanged == null) {
-                                  col.onChanged?.call(index);
-                                }
-                                if (col.index != null) {
-                                  WidgetsBinding.instance.addPostFrameCallback((
-                                    _,
-                                  ) {
-                                    if (!mounted ||
-                                        colIdx >= widget.columns.length) {
-                                      return;
-                                    }
-                                    final current = widget.columns[colIdx];
-                                    final target = _validIndex(current);
-                                    if (current.index != null &&
-                                        _selectedIndices[colIdx] != target) {
-                                      setState(() {
-                                        _selectedIndices[colIdx] = target;
-                                        _committedIndices[colIdx] = target;
-                                        _selectedScrollIndices[colIdx] = target;
-                                        _committedScrollIndices[colIdx] =
-                                            target;
-                                      });
-                                      if (_controllers[colIdx].hasClients) {
-                                        _controllers[colIdx].jumpToItem(target);
-                                      }
-                                    }
-                                  });
-                                }
-                              }
-                              return false;
-                            },
-                            child: Listener(
-                              onPointerDown: (_) =>
-                                  _keyboardTargets.remove(controller),
-                              onPointerSignal: (_) =>
-                                  _keyboardTargets.remove(controller),
-                              child: ListWheelScrollView.useDelegate(
-                                // A new controller means an externally supplied selection
-                                // or item count changed. Reset the wheel's Scrollable state
-                                // so its old scroll offset cannot override initialItem.
-                                key: ObjectKey(_controllers[colIdx]),
-                                controller: _controllers[colIdx],
-                                itemExtent: col.effectiveItemExtent(
-                                  widget.size,
-                                ),
-                                perspective: 0.003,
-                                diameterRatio: 1.8,
-                                physics: editable
-                                    ? const FixedExtentScrollPhysics()
-                                    : const NeverScrollableScrollPhysics(),
-                                onSelectedItemChanged: (scrollIndex) {
-                                  if (!editable) return;
-                                  final prevScrollIndex =
+                                final indexChanged =
+                                    _committedIndices[colIdx] !=
+                                    _selectedIndices[colIdx];
+                                if (notification is ScrollEndNotification &&
+                                    notification.depth == 0 &&
+                                    editable &&
+                                    (indexChanged ||
+                                        (col.looping &&
+                                            scrollMoved &&
+                                            col.onStepChanged != null))) {
+                                  final index = _selectedIndices[colIdx];
+                                  final stepDelta =
+                                      _selectedScrollIndices[colIdx] -
+                                      _committedScrollIndices[colIdx];
+                                  _committedIndices[colIdx] = index;
+                                  _committedScrollIndices[colIdx] =
                                       _selectedScrollIndices[colIdx];
-                                  final nextIndex =
-                                      col.looping && col.itemCount > 0
-                                      ? scrollIndex % col.itemCount
-                                      : scrollIndex;
-                                  setState(() {
-                                    _selectedScrollIndices[colIdx] =
-                                        scrollIndex;
-                                    _selectedIndices[colIdx] = nextIndex;
-                                  });
-                                  if (col.onIndexChanged != null &&
-                                      col.itemCount > 0) {
-                                    final step = scrollIndex >= prevScrollIndex
-                                        ? 1
-                                        : -1;
-                                    for (
-                                      var s = prevScrollIndex + step;
-                                      step > 0
-                                          ? s <= scrollIndex
-                                          : s >= scrollIndex;
-                                      s += step
-                                    ) {
-                                      col.onIndexChanged!(
-                                        col.looping ? s % col.itemCount : s,
-                                      );
-                                    }
+                                  HapticFeedback.selectionClick();
+                                  col.onStepChanged?.call(index, stepDelta);
+                                  if (indexChanged ||
+                                      col.onStepChanged == null) {
+                                    col.onChanged?.call(index);
                                   }
-                                },
-                                childDelegate: ListWheelChildBuilderDelegate(
-                                  childCount: col.looping && col.itemCount > 0
-                                      ? null
-                                      : col.itemCount,
-                                  builder: (context, scrollIndex) {
-                                    final index = col.looping
-                                        ? scrollIndex % col.itemCount
-                                        : scrollIndex;
-                                    final isSelected =
-                                        _selectedIndices[colIdx] == index;
-                                    // Wheel slots have a tight itemExtent height. Center
-                                    // custom content within the slot, just like defaults.
-                                    return GestureDetector(
-                                      behavior: HitTestBehavior.opaque,
-                                      onTap: editable
-                                          ? () {
-                                              final controller =
-                                                  _controllers[colIdx];
-                                              if (controller
-                                                  .position
-                                                  .isScrollingNotifier
-                                                  .value) {
-                                                return;
-                                              }
-                                              focusNode.requestFocus();
-                                              controller.animateToItem(
-                                                scrollIndex,
-                                                duration: SeedDuration.d4,
-                                                curve: SeedCurves.easing,
+                                  if (col.index != null) {
+                                    WidgetsBinding.instance
+                                        .addPostFrameCallback((_) {
+                                          if (!mounted ||
+                                              colIdx >= widget.columns.length) {
+                                            return;
+                                          }
+                                          final current =
+                                              widget.columns[colIdx];
+                                          final target = _validIndex(current);
+                                          if (current.index != null &&
+                                              _selectedIndices[colIdx] !=
+                                                  target) {
+                                            setState(() {
+                                              _selectedIndices[colIdx] = target;
+                                              _committedIndices[colIdx] =
+                                                  target;
+                                              _selectedScrollIndices[colIdx] =
+                                                  target;
+                                              _committedScrollIndices[colIdx] =
+                                                  target;
+                                            });
+                                            if (_controllers[colIdx]
+                                                .hasClients) {
+                                              _controllers[colIdx].jumpToItem(
+                                                target,
                                               );
                                             }
-                                          : null,
-                                      child: Center(
-                                        child: col.buildItemForSize(
-                                          context,
-                                          index,
-                                          enabled && isSelected,
-                                          widget.size,
-                                        ),
+                                          }
+                                        });
+                                  }
+                                }
+                                return false;
+                              },
+                              child: Listener(
+                                onPointerDown: (_) =>
+                                    _keyboardTargets.remove(controller),
+                                onPointerSignal: (_) =>
+                                    _keyboardTargets.remove(controller),
+                                child: ListWheelScrollView.useDelegate(
+                                  // A new controller means an externally supplied selection
+                                  // or item count changed. Reset the wheel's Scrollable state
+                                  // so its old scroll offset cannot override initialItem.
+                                  key: ObjectKey(_controllers[colIdx]),
+                                  controller: _controllers[colIdx],
+                                  itemExtent: col.effectiveItemExtent(
+                                    widget.size,
+                                  ),
+                                  // The official pointer handling also takes mouse.
+                                  scrollBehavior:
+                                      ScrollConfiguration.of(context).copyWith(
+                                        dragDevices: {
+                                          ...ScrollConfiguration.of(context)
+                                              .dragDevices,
+                                          PointerDeviceKind.mouse,
+                                        },
                                       ),
-                                    );
+                                  // The official wheel is a flat scroller.
+                                  perspective: 0.0001,
+                                  diameterRatio: 1000,
+                                  physics: editable
+                                      ? const FixedExtentScrollPhysics()
+                                      : const NeverScrollableScrollPhysics(),
+                                  onSelectedItemChanged: (scrollIndex) {
+                                    if (!editable) return;
+                                    final prevScrollIndex =
+                                        _selectedScrollIndices[colIdx];
+                                    final nextIndex =
+                                        col.looping && col.itemCount > 0
+                                        ? scrollIndex % col.itemCount
+                                        : scrollIndex;
+                                    setState(() {
+                                      _selectedScrollIndices[colIdx] =
+                                          scrollIndex;
+                                      _selectedIndices[colIdx] = nextIndex;
+                                    });
+                                    if (col.onIndexChanged != null &&
+                                        col.itemCount > 0) {
+                                      final step =
+                                          scrollIndex >= prevScrollIndex
+                                          ? 1
+                                          : -1;
+                                      for (
+                                        var s = prevScrollIndex + step;
+                                        step > 0
+                                            ? s <= scrollIndex
+                                            : s >= scrollIndex;
+                                        s += step
+                                      ) {
+                                        col.onIndexChanged!(
+                                          col.looping ? s % col.itemCount : s,
+                                        );
+                                      }
+                                    }
                                   },
+                                  childDelegate: ListWheelChildBuilderDelegate(
+                                    childCount: col.looping && col.itemCount > 0
+                                        ? null
+                                        : col.itemCount,
+                                    builder: (context, scrollIndex) {
+                                      final index = col.looping
+                                          ? scrollIndex % col.itemCount
+                                          : scrollIndex;
+                                      final isSelected =
+                                          _selectedIndices[colIdx] == index;
+                                      // Wheel slots have a tight itemExtent height. Center
+                                      // custom content within the slot, just like defaults.
+                                      return GestureDetector(
+                                        behavior: HitTestBehavior.opaque,
+                                        onTap: editable
+                                            ? () {
+                                                final controller =
+                                                    _controllers[colIdx];
+                                                if (controller
+                                                    .position
+                                                    .isScrollingNotifier
+                                                    .value) {
+                                                  return;
+                                                }
+                                                focusNode.requestFocus();
+                                                controller.animateToItem(
+                                                  scrollIndex,
+                                                  duration: SeedDuration.d4,
+                                                  curve: SeedCurves.easing,
+                                                );
+                                              }
+                                            : null,
+                                        child: Center(
+                                          child: col.buildItemForSize(
+                                            context,
+                                            index,
+                                            enabled && isSelected,
+                                            widget.size,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
                                 ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    );
-                    if (col.width != null) {
-                      // Keep the intrinsic CSS-style column width at normal
-                      // sizes, but shrink proportionally on constrained hosts
-                      // instead of overflowing a narrow picker container.
-                      return Flexible(
-                        fit: FlexFit.loose,
-                        flex: (col.width! * 100).round().clamp(1, 1000000),
-                        child: SizedBox(width: col.width, child: columnChild),
                       );
-                    }
-                    return Expanded(flex: col.flex, child: columnChild);
-                  }),
+                      return Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          columnChild,
+                          if (enabled &&
+                              focusNode.hasPrimaryFocus &&
+                              FocusManager.instance.highlightMode ==
+                                  FocusHighlightMode.traditional)
+                            Center(
+                              child: IgnorePointer(
+                                child: Container(
+                                  height: itemHeight,
+                                  decoration: BoxDecoration(
+                                    borderRadius: SeedBorderRadius.r2,
+                                    border: Border.all(
+                                      color: colors.stroke.focusRing,
+                                      width: 2,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    }),
+                  ),
                 ),
               ),
             ),
           ),
-
-          // Top scroll fog
-          if (widget.showFog)
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              height: fogHeight,
-              child: IgnorePointer(
-                child: SeedScrollFog(
-                  placement: SeedScrollFogPlacement.top,
-                  color: colors.bg.layerFloating,
-                  size: fogHeight,
-                ),
-              ),
-            ),
-
-          // Bottom scroll fog
-          if (widget.showFog)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              height: fogHeight,
-              child: IgnorePointer(
-                child: SeedScrollFog(
-                  placement: SeedScrollFogPlacement.bottom,
-                  color: colors.bg.layerFloating,
-                  size: fogHeight,
-                ),
-              ),
-            ),
         ],
       ),
     );
   }
+
+  Widget _maskFog(double size, Widget child) =>
+      widget.showFog ? SeedScrollFogMask(size: size, child: child) : child;
+}
+
+class _SeedWheelColumns extends StatelessWidget {
+  const _SeedWheelColumns({required this.columns, required this.children});
+  final List<SeedWheelColumn> columns;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final fixedWidth = columns.fold<double>(
+        0,
+        (sum, column) => sum + (column.width ?? 0),
+      );
+      final scale =
+          constraints.hasBoundedWidth && fixedWidth > constraints.maxWidth
+          ? constraints.maxWidth / fixedWidth
+          : 1.0;
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          for (var i = 0; i < columns.length; i++)
+            if (columns[i].width case final width?)
+              SizedBox(width: width * scale, child: children[i])
+            else
+              Expanded(flex: columns[i].flex, child: children[i]),
+        ],
+      );
+    },
+  );
 }

@@ -430,7 +430,7 @@ class _QuantityPageState extends State<_QuantityPage> {
     incrementLoading: incrementLoading,
     enabled: !disabled,
     readOnly: readOnly,
-    hasError: invalid,
+    invalid: invalid,
     valueFormatter: (value) => '$value개',
   );
 

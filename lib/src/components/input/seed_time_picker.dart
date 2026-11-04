@@ -9,9 +9,11 @@ import 'seed_wheel_picker.dart';
 /// Period for 12-hour format: [am] (오전) or [pm] (오후).
 enum SeedTimePeriod {
   am('오전'),
+
   pm('오후');
 
   const SeedTimePeriod(this.label);
+
   final String label;
 }
 
@@ -58,16 +60,23 @@ class SeedTimePicker extends StatefulWidget {
   /// Callback when the selected time changes.
   @Deprecated('Use onValueChange instead.')
   final ValueChanged<TimeOfDay>? onChanged;
+
   ValueChanged<TimeOfDay>? get onValueChange => onChanged;
 
   /// Overall height of the picker.
   final double height;
   final TimeOfDay? value;
+
   final bool enabled, readOnly;
+
   final Locale locale;
+
   final String? semanticsLabel;
+
   final String? periodSemanticsLabel;
+
   final String? hourSemanticsLabel;
+
   final String? minuteSemanticsLabel;
 
   @override
@@ -114,24 +123,16 @@ class _SeedTimePickerState extends State<SeedTimePicker> {
     }
 
     final source = seed ?? widget.value ?? widget.defaultValue;
-    var h = source.hour;
-    final initialMin = source.minute;
-    int closestMin = _minutes.first;
-    int minDiff = 1000;
-    for (final m in _minutes) {
-      final diff = (m - initialMin).abs();
-      if (diff < minDiff) {
-        minDiff = diff;
-        closestMin = m;
-      }
-    }
-    if (60 - initialMin < minDiff) {
-      closestMin = 0;
-      h = (h + 1) % 24;
-    }
+    // React's normalizeValueToMinuteStep: ties round up, across the hour and day.
+    final totalMinutes = source.hour * 60 + source.minute;
+    final rounded =
+        (totalMinutes / widget.minuteStep).round() *
+        widget.minuteStep %
+        (24 * 60);
+    final h = rounded ~/ 60;
     _period = h >= 12 ? SeedTimePeriod.pm : SeedTimePeriod.am;
     _hour = h % 12 == 0 ? 12 : h % 12;
-    _minute = closestMin;
+    _minute = rounded % 60;
   }
 
   TimeOfDay get _currentTime {

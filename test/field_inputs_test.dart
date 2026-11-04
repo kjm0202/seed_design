@@ -98,6 +98,12 @@ void main() {
       );
     });
 
+    test('compatibility names report through the official getters', () {
+      expect(const SeedInputButton(invalid: true).invalid, isTrue);
+      expect(const SeedQuantityPicker(invalid: true).invalid, isTrue);
+      expect(const SeedTextInput(placeholder: 'a').hintText, 'a');
+    });
+
     testWidgets('AttachmentDisplayField shows its indicator text', (
       tester,
     ) async {
@@ -155,6 +161,48 @@ void main() {
         ),
       );
       expect(find.byIcon(Icons.close_rounded), findsNothing);
+    });
+
+    testWidgets('QuantityPicker starts at min and keeps its width', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _appBehavior(const SeedQuantityPicker(min: 0, max: 100)),
+      );
+      expect(find.text('0'), findsOneWidget);
+      final uncontrolled = tester.getSize(find.byType(Row).first).width;
+      await tester.pumpWidget(
+        _appBehavior(const SeedQuantityPicker(min: 0, max: 100, value: 100)),
+      );
+      expect(tester.getSize(find.byType(Row).first).width, uncontrolled);
+    });
+
+    testWidgets('DatePicker does not report reselecting the same date', (
+      tester,
+    ) async {
+      var changes = 0;
+      await tester.pumpWidget(
+        _appBehavior(
+          SizedBox(
+            width: 360,
+            height: 600,
+            child: SingleChildScrollView(
+              child: SeedDatePicker(
+                defaultValue: DateTime(2026, 11, 10),
+                today: DateTime(2026, 11, 2),
+                onValueChange: (_) => changes++,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.text('10'));
+      await tester.pump();
+      expect(changes, 0);
+      await tester.tap(find.text('11'));
+      await tester.pump();
+      expect(changes, 1);
     });
 
     testWidgets('error messages show the official icon', (tester) async {

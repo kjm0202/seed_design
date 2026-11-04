@@ -4,6 +4,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
 Widget host(Widget child) => MaterialApp(
+locale: const Locale('ko'), supportedLocales: const [Locale('ko'), Locale('en')], localizationsDelegates: GlobalMaterialLocalizations.delegates,
+
   theme: SeedThemeData.light().toThemeData(),
   home: Scaffold(
     body: Center(child: SizedBox(width: 360, child: child)),
@@ -247,27 +249,27 @@ void main() {
   );
 
   testWidgets('quantity removable and independent loading guard actions', (
-    tester,
-  ) async {
-    var removes = 0;
-    final changes = <int>[];
-    await tester.pumpWidget(
-      host(
-        SeedQuantityPicker(
-          value: 1,
-          onChanged: changes.add,
-          removable: true,
-          onRemove: () => removes++,
-          incrementLoading: true,
+      tester,
+    ) async {
+      var removes = 0;
+      final changes = <int>[];
+      await tester.pumpWidget(
+        host(
+          SeedQuantityPicker(
+            value: 1,
+            onChanged: changes.add,
+            removable: true,
+            onRemove: () => removes++,
+            incrementLoading: true,
+          ),
         ),
-      ),
-    );
-    await tester.tap(find.bySemanticsLabel('상품 삭제'));
-    await tester.pump();
-    expect(removes, 1);
-    expect(changes, isEmpty);
-    expect(find.byType(SeedProgressCircle), findsOneWidget);
-  });
+      );
+      await tester.tap(find.bySemanticsLabel('상품 삭제'));
+      await tester.pump();
+      expect(removes, 1);
+      expect(changes, isEmpty);
+      expect(find.byType(SeedProgressCircle), findsOneWidget);
+    });
 
   test('external media replacement and reorder honor readonly', () {
     final controller = SeedAttachmentController(maxCount: 1);

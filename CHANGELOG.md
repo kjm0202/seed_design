@@ -19,6 +19,7 @@
 - `SeedPopover` with plain text now hugs that text within `minWidth`/`maxWidth` like the official `width: auto`, and reserves its 48px scroll fade only while the body overflows. Custom widgets keep `maxWidth`.
 - **Breaking migration:** InputButton medium is 40px; use large for 52px. TextInput/TextField clearable defaults to false.
 - **Breaking migration:** AttachmentInput maxCount defaults to 1.
+- **Breaking migration:** QuantityPicker defaultValue is nullable and falls back to min; it no longer registers implicitly with Form. Date reselection does not emit onValueChange; minute ties round up.
 
 ## 1.0.0
 

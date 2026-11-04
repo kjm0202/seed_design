@@ -183,35 +183,33 @@ void main() {
   });
 
   testWidgets('custom wheel extent is preserved and limits fog', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      host(
-        SizedBox(
-          width: 220,
-          child: SeedWheelPicker(
-            size: SeedWheelPickerSize.small,
-            height: 400,
-            columns: [
-              SeedWheelColumn.typed(items: ['A', 'B', 'C'], itemExtent: 30),
-            ],
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          SizedBox(
+            width: 220,
+            child: SeedWheelPicker(
+              size: SeedWheelPickerSize.small,
+              height: 400,
+              columns: [
+                SeedWheelColumn.typed(items: ['A', 'B', 'C'], itemExtent: 30),
+              ],
+            ),
           ),
         ),
-      ),
-    );
-    expect(
-      tester
-          .widget<ListWheelScrollView>(find.byType(ListWheelScrollView))
-          .itemExtent,
-      30,
-    );
-    expect(
-      tester
-          .widgetList<SeedScrollFog>(find.byType(SeedScrollFog))
-          .map((fog) => fog.size),
-      [90, 90],
-    );
-  });
+      );
+      expect(
+        tester
+            .widget<ListWheelScrollView>(find.byType(ListWheelScrollView))
+            .itemExtent,
+        30,
+      );
+      expect(
+        tester.widget<SeedScrollFogMask>(find.byType(SeedScrollFogMask)).size,
+        90,
+      );
+    });
 
   testWidgets(
     'bottom navigation skips disabled tabs and reads notification state',

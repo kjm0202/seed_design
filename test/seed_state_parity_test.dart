@@ -7,6 +7,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
 Widget host(Widget child) => MaterialApp(
+locale: const Locale('ko'), supportedLocales: const [Locale('ko'), Locale('en')], localizationsDelegates: GlobalMaterialLocalizations.delegates,
+
   theme: SeedThemeData.light().toThemeData(),
   home: Scaffold(body: child),
 );
@@ -75,13 +77,13 @@ void main() {
     },
   );
   testWidgets('uncontrolled quantity updates without an external callback', (
-    tester,
-  ) async {
-    await tester.pumpWidget(host(const SeedQuantityPicker(defaultValue: 3)));
-    await tester.tap(find.bySemanticsLabel('수량 늘리기'));
-    await tester.pump();
-    expect(find.text('4'), findsOneWidget);
-  });
+      tester,
+    ) async {
+      await tester.pumpWidget(host(const SeedQuantityPicker(defaultValue: 3)));
+      await tester.tap(find.bySemanticsLabel('수량 늘리기'));
+      await tester.pump();
+      expect(find.text('4'), findsOneWidget);
+    });
   testWidgets(
     'pagination hides trivial counts and reports external constraints once',
     (tester) async {

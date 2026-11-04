@@ -1,22 +1,39 @@
 import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart' show DateFormat, NumberFormat;
 import 'package:intl/date_symbol_data_local.dart';
 
+import '../../foundations/colors/seed_palette.dart';
 import '../../foundations/dimensions/seed_dimension.dart';
 import '../../foundations/radius/seed_radius.dart';
 import '../../foundations/feedback/seed_scale_feedback.dart';
 import '../../theme/seed_theme.dart';
+import '../button/seed_text_button.dart';
 import '../popover/seed_popover.dart';
 import 'seed_wheel_picker.dart';
 import 'seed_date_constraints.dart';
 export 'seed_date_constraints.dart';
 
-enum SeedDatePickerMode { single, range, multiple }
+enum SeedDatePickerMode {
+  single,
 
-enum SeedDatePickerLayout { month, twoMonths, week, continuous }
+  range,
+
+  multiple,
+}
+
+enum SeedDatePickerLayout {
+  month,
+
+  twoMonths,
+
+  week,
+
+  continuous,
+}
 
 /// Calendar dates without time-zone conversion. View changes never select a day.
 ///
@@ -247,16 +264,25 @@ class SeedDatePicker extends StatefulWidget {
 
   @Deprecated('Use selectionMode instead.')
   final SeedDatePickerMode mode;
+
   @Deprecated('Use visibleRange instead.')
   final SeedDatePickerLayout layout;
+
   SeedDatePickerMode get selectionMode => mode;
+
   SeedDatePickerLayout get visibleRange => layout;
+
   @Deprecated('Use defaultValue instead.')
   final DateTime? initialDate;
+
   final DateTime? initialStartDate, initialEndDate;
+
   final DateTime? value;
+
   final SeedDateRange? rangeValue;
+
   final List<DateTime>? values;
+
   @Deprecated('Use defaultValues instead.')
   final List<DateTime> initialDates;
 
@@ -274,36 +300,59 @@ class SeedDatePicker extends StatefulWidget {
   /// One-time uncontrolled seed. [initialDates] is a compatibility alias.
   List<DateTime> get defaultValues => initialDates;
   final DateTime? firstDate, lastDate;
+
   final ValueChanged<DateTime>? onDateSelected;
+
   @Deprecated('Use onValueChange instead.')
   final ValueChanged<DateTime?>? onValueChanged;
+
   ValueChanged<DateTime?>? get onValueChange => onValueChanged;
+
   final void Function(DateTime? start, DateTime? end)? onRangeSelected;
+
   final ValueChanged<SeedDateRange?>? onRangeValueChange;
+
   @Deprecated('Use onDatesChange instead.')
   final ValueChanged<List<DateTime>>? onDatesSelected;
+
   ValueChanged<List<DateTime>>? get onDatesChange => onDatesSelected;
+
   final bool Function(DateTime date)? selectableDayPredicate;
+
   final List<SeedDateConstraint> constraints;
+
   final bool enabled, disabled, readOnly, rangeStartReadOnly, controlled;
+
   final Locale locale;
 
   /// Uses DateTime weekday numbering: Monday=1 through Sunday=7.
   final int? weekStartsOn;
   final DateTime? viewDate, defaultViewDate;
+
   @Deprecated('Use onViewDateChange instead.')
   final ValueChanged<DateTime>? onViewDateChanged;
+
   ValueChanged<DateTime>? get onViewDateChange => onViewDateChanged;
+
   final SeedDatePickerController? controller;
+
   final ({int start, int end})? yearRange;
+
   final DateTimeRange? monthRange;
+
   final double? height, minHeight, maxHeight;
+
   final DateTime? today;
+
   final double cellHeight;
+
   final Widget Function(BuildContext, SeedDateCellInfo)? dateCellSupplement,
       dateCellContent;
+
   final String? semanticsLabel;
+
   final bool showReset;
+
   final VoidCallback? onReset;
   @override
   State<SeedDatePicker> createState() => _SeedDatePickerState();
@@ -523,7 +572,7 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
   double _monthHeight(DateTime month) {
     final offset = (month.weekday - _weekStartsOn) % 7;
     final count = DateTime(month.year, month.month + 1, 0).day;
-    return 40 + ((offset + count) / 7).ceil() * widget.cellHeight;
+    return 48 + ((offset + count) / 7).ceil() * widget.cellHeight + 16;
   }
 
   void _scrollTo(DateTime day) {
@@ -598,21 +647,45 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
         }
         return false;
       },
-      child: CustomScrollView(
-        key: _continuousScrollKey,
-        controller: _scroll,
-        primary: false,
-        center: _continuousCenter,
-        slivers: [
-          if (first > 0)
-            SliverList.builder(
-              itemCount: first,
-              itemBuilder: (context, index) => monthAt(-index - 1),
+      child: Stack(
+        children: [
+          CustomScrollView(
+            key: _continuousScrollKey,
+            controller: _scroll,
+            primary: false,
+            center: _continuousCenter,
+            slivers: [
+              if (first > 0)
+                SliverList.builder(
+                  itemCount: first,
+                  itemBuilder: (context, index) => monthAt(-index - 1),
+                ),
+              SliverList.builder(
+                key: _continuousCenter,
+                itemCount: _monthIndex(_lastMonth) - first + 1,
+                itemBuilder: (context, index) => monthAt(index),
+              ),
+            ],
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: 96,
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      context.seedColor.bg.layerFloating.withValues(alpha: 0),
+                      context.seedColor.bg.layerFloating,
+                    ],
+                  ),
+                ),
+              ),
             ),
-          SliverList.builder(
-            key: _continuousCenter,
-            itemCount: _monthIndex(_lastMonth) - first + 1,
-            itemBuilder: (context, index) => monthAt(index),
           ),
         ],
       ),
@@ -677,6 +750,7 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
     final removal =
         widget.mode == SeedDatePickerMode.multiple && _dates.contains(day);
     if (!removal && !_selectable(day)) return;
+    final unchanged = _selectedDate == day;
     final proposal = _proposal(day);
     setState(() {
       _focusedDate = day;
@@ -694,7 +768,8 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
     switch (widget.mode) {
       case SeedDatePickerMode.single:
         widget.onDateSelected?.call(day);
-        widget.onValueChanged?.call(day);
+        // React's selectDate does not change the value for the same date.
+        if (!unchanged) widget.onValueChanged?.call(day);
       case SeedDatePickerMode.range:
         _notifyRange(proposal.start, proposal.end);
       case SeedDatePickerMode.multiple:
@@ -710,7 +785,7 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
     }
     setState(() {
       if (!_showMonthPicker) {
-        _monthPickerHeight = 56 + (_monthHeight(_headerMonth) - 40);
+        _monthPickerHeight = 48 + (_monthHeight(_headerMonth) - 48);
       }
       _showMonthPicker = !_showMonthPicker;
     });
@@ -733,7 +808,7 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
                   Navigator.of(context).pop(),
             },
             child: SizedBox(
-              width: 280,
+              width: 240,
               child: _buildMonthPicker(context, small: true),
             ),
           );
@@ -874,12 +949,12 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
     return KeyEventResult.handled;
   }
 
-  Widget _weekdays() => Row(
+  Widget _weekdays({double height = SeedDimension.x12}) => Row(
     children: [
       for (var i = 0; i < 7; i++)
         Expanded(
           child: SizedBox(
-            height: 48,
+            height: height,
             child: Center(
               child: Text(
                 DateFormat.E(_locale)
@@ -934,11 +1009,18 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
         : inRange || today
         ? colors.fg.neutral
         : colors.fg.neutralMuted;
-    final decoration = endpointSelected
+    BoxDecoration? decoration(bool engaged) => endpointSelected
         ? BoxDecoration(
             color: isRangeStartReadOnly
-                ? colors.bg.neutralSolid.withValues(alpha: 0.5)
+                ? (colors.isDark
+                      ? SeedPalette.gray600Dark
+                      : SeedPalette.gray600Light)
                 : colors.bg.neutralSolid,
+            shape: BoxShape.circle,
+          )
+        : !inRange && engaged
+        ? BoxDecoration(
+            color: colors.bg.transparentPressed,
             shape: BoxShape.circle,
           )
         : !inRange && today
@@ -986,8 +1068,7 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
         focused: node.hasFocus,
         readOnly: readOnly,
         onFocus: _isDisabled ? null : node.requestFocus,
-        child: InkWell(
-          canRequestFocus: false,
+        child: _SeedDateCellGesture(
           onTap: _isDisabled || unavailable || isRangeStartReadOnly
               ? null
               : widget.readOnly
@@ -996,8 +1077,7 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
                   node.requestFocus();
                   _select(date);
                 },
-          borderRadius: SeedBorderRadius.r2,
-          child: Stack(
+          builder: (engaged) => Stack(
             alignment: Alignment.center,
             children: [
               if (showRangeSpan)
@@ -1029,7 +1109,7 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
                   child: Container(
                     width: 42,
                     constraints: const BoxConstraints(minHeight: 42),
-                    decoration: decoration,
+                    decoration: decoration(engaged),
                     alignment: Alignment.center,
                     child: ExcludeSemantics(child: content),
                   ),
@@ -1134,13 +1214,10 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
             alignment: isFirst
                 ? AlignmentDirectional.centerStart
                 : AlignmentDirectional.centerEnd,
-            child: IconButton(
-              icon: Icon(icon),
-              color: colors.fg.neutral,
-              disabledColor: colors.fg.disabled,
-              tooltip: tooltip,
+            child: _SeedDateNavButton(
+              icon: icon,
+              label: tooltip,
               onPressed: canMove ? () => _setView(target) : null,
-              splashRadius: 20,
             ),
           ),
         ],
@@ -1159,16 +1236,20 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
       ?customHeader,
       if (heading)
         SizedBox(
-          height: 40,
-          child: Center(
+          height: SeedDimension.x12,
+          child: Align(
+            alignment: AlignmentDirectional.centerStart,
             child: Text(
               DateFormat.yMMMM(_locale).format(month),
-              style: context.seedTypography.t5Bold,
+              style: context.seedTypography.t5Bold.copyWith(
+                color: context.seedColor.fg.neutral,
+              ),
             ),
           ),
         ),
-      if (weekdays) ...[_weekdays(), const SizedBox(height: 8)],
+      if (weekdays) _weekdays(),
       _grid(month),
+      if (heading) const SizedBox(height: SeedDimension.x4),
     ],
   );
   @override
@@ -1225,29 +1306,23 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
             ),
           ),
         ),
-        IconButton(
-          icon: Icon(rtl ? Icons.chevron_right : Icons.chevron_left),
-          color: colors.fg.neutral,
-          disabledColor: colors.fg.disabled,
-          tooltip: _korean
+        _SeedDateNavButton(
+          icon: rtl ? Icons.chevron_right : Icons.chevron_left,
+          label: _korean
               ? (week ? '이전 주' : '이전 달')
               : (week ? 'Previous week' : 'Previous month'),
           onPressed: !_isDisabled && !_showMonthPicker && _canShow(prev)
               ? () => _setView(prev)
               : null,
-          splashRadius: 20,
         ),
-        IconButton(
-          icon: Icon(rtl ? Icons.chevron_left : Icons.chevron_right),
-          color: colors.fg.neutral,
-          disabledColor: colors.fg.disabled,
-          tooltip: _korean
+        _SeedDateNavButton(
+          icon: rtl ? Icons.chevron_left : Icons.chevron_right,
+          label: _korean
               ? (week ? '다음 주' : '다음 달')
               : (week ? 'Next week' : 'Next month'),
           onPressed: !_isDisabled && !_showMonthPicker && _canShow(next)
               ? () => _setView(next)
               : null,
-          splashRadius: 20,
         ),
       ],
     );
@@ -1265,7 +1340,7 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
                     customHeader: _twoMonthHeader(month, isFirst: true),
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: SeedDimension.x6),
                 Expanded(
                   child: _monthCalendar(
                     secondMonth,
@@ -1276,7 +1351,10 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
             ),
             SeedDatePickerLayout.week => Column(
               mainAxisSize: MainAxisSize.min,
-              children: [_weekdays(), _grid(_view, week: true)],
+              children: [
+                _weekdays(height: SeedDimension.x6),
+                _grid(_view, week: true),
+              ],
             ),
             SeedDatePickerLayout.continuous => Expanded(
               child: _continuousCalendar(),
@@ -1298,24 +1376,20 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
           height: continuous
               ? (widget.height ?? widget.maxHeight ?? widget.minHeight)
               : null,
-          padding: const EdgeInsets.all(SeedDimension.x4),
-          decoration: BoxDecoration(
-            color: colors.bg.layerFloating,
-            borderRadius: SeedBorderRadius.r3,
-          ),
+          color: colors.bg.layerFloating,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (!continuous && !twoMonths) ...[
-                header,
-                const SizedBox(height: 8),
-              ] else if (continuous)
+              if (!continuous && !twoMonths)
+                header
+              else if (continuous)
                 _weekdays(),
               body,
               if (widget.showReset)
                 Align(
                   alignment: AlignmentDirectional.centerEnd,
-                  child: TextButton(
+                  child: SeedTextButton(
+                    label: _korean ? '초기화' : 'Reset',
                     onPressed: _isDisabled || widget.readOnly
                         ? null
                         : () {
@@ -1348,10 +1422,87 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
                             }
                             widget.onReset?.call();
                           },
-                    child: Text(_korean ? '초기화' : 'Reset'),
                   ),
                 ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SeedDateCellGesture extends StatefulWidget {
+  const _SeedDateCellGesture({required this.onTap, required this.builder});
+  final VoidCallback? onTap;
+  final Widget Function(bool engaged) builder;
+
+  @override
+  State<_SeedDateCellGesture> createState() => _SeedDateCellGestureState();
+}
+
+class _SeedDateCellGestureState extends State<_SeedDateCellGesture> {
+  bool _pressed = false, _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = widget.onTap != null;
+    return MouseRegion(
+      cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      onEnter: (event) {
+        if (enabled && event.kind != PointerDeviceKind.touch) {
+          setState(() => _hovered = true);
+        }
+      },
+      onExit: (_) {
+        if (_hovered) setState(() => _hovered = false);
+      },
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: enabled ? (_) => setState(() => _pressed = true) : null,
+        onTapUp: enabled ? (_) => setState(() => _pressed = false) : null,
+        onTapCancel: enabled ? () => setState(() => _pressed = false) : null,
+        onTap: widget.onTap,
+        child: widget.builder(enabled && (_pressed || _hovered)),
+      ),
+    );
+  }
+}
+
+class _SeedDateNavButton extends StatelessWidget {
+  const _SeedDateNavButton({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
+  final IconData icon;
+  final String label;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.seedColor;
+    return Tooltip(
+      message: label,
+      child: SeedPressable(
+        enabled: onPressed != null,
+        semanticsLabel: label,
+        focusBorderRadius: SeedBorderRadius.r2,
+        onTap: onPressed,
+        builder: (context, engaged) => Container(
+          width: SeedDimension.x10,
+          height: SeedDimension.x10,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: engaged
+                ? colors.bg.transparentPressed
+                : colors.bg.transparent,
+            borderRadius: SeedBorderRadius.r2,
+          ),
+          child: Icon(
+            icon,
+            size: 20,
+            color: onPressed != null ? colors.fg.neutral : colors.fg.disabled,
           ),
         ),
       ),

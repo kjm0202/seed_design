@@ -1,5 +1,6 @@
+import '../../localization/seed_localizations.dart';
 import '../feedback/seed_progress_circle.dart';
-import 'seed_text_field.dart';
+import '../../foundations/state/seed_uncontrolled_value.dart';
 
 import 'package:material_ui/material_ui.dart';
 
@@ -13,7 +14,9 @@ import '../../theme/seed_theme.dart';
 /// Size options for [SeedQuantityPicker].
 enum SeedQuantityPickerSize {
   small,
+
   medium,
+
   large;
 
   double get height {
@@ -28,6 +31,7 @@ enum SeedQuantityPickerSize {
   }
 
   double get buttonWidth => height;
+
   double get iconSize => switch (this) {
     SeedQuantityPickerSize.small => 16,
     SeedQuantityPickerSize.medium => 18,
@@ -35,35 +39,59 @@ enum SeedQuantityPickerSize {
   };
 }
 
-enum SeedQuantityPickerLayout { hug, fill }
+enum SeedQuantityPickerLayout {
+  hug,
+
+  fill,
+}
 
 /// Quantity picker component of SEED Design System.
 ///
 /// Increments or decrements numerical values step by step with boundary constraints.
 class SeedQuantityPicker extends StatelessWidget {
   final int? value;
-  final int defaultValue;
+
+  final int? defaultValue;
+
   @Deprecated('Use onValueChange instead.')
   final ValueChanged<int>? onChanged;
+
   ValueChanged<int>? get onValueChange => onChanged;
+
   final int min;
+
   final int max;
+
   final int step;
+
   final SeedQuantityPickerSize size;
+
   final bool enabled;
+
   final bool readOnly;
+
+  @Deprecated('Use invalid instead.')
   final bool hasError;
+
+  bool get invalid => hasError;
+
   final bool removable, loading, decrementLoading, incrementLoading;
+
   final VoidCallback? onRemove;
+
   final SeedQuantityPickerLayout layout;
+
   final String Function(int)? valueFormatter;
+
   final Widget? valueChild;
-  final String removeSemanticsLabel;
+  final String? _removeSemanticsLabel;
+
+  String get removeSemanticsLabel => _removeSemanticsLabel ?? '상품 삭제';
 
   const SeedQuantityPicker({
     super.key,
     this.value,
-    this.defaultValue = 1,
+    this.defaultValue,
     ValueChanged<int>? onValueChange,
     @Deprecated('Use onValueChange instead.') ValueChanged<int>? onChanged,
     this.min = 1,
@@ -72,7 +100,8 @@ class SeedQuantityPicker extends StatelessWidget {
     this.size = SeedQuantityPickerSize.medium,
     this.enabled = true,
     this.readOnly = false,
-    this.hasError = false,
+    bool? invalid,
+    @Deprecated('Use invalid instead.') bool? hasError,
     this.removable = false,
     this.onRemove,
     this.loading = false,
@@ -81,20 +110,26 @@ class SeedQuantityPicker extends StatelessWidget {
     this.layout = SeedQuantityPickerLayout.hug,
     this.valueFormatter,
     this.valueChild,
-    this.removeSemanticsLabel = '상품 삭제',
-  }) : onChanged = onValueChange ?? onChanged,
+    String? removeSemanticsLabel,
+    // Preserve the public named parameter and getter.
+    // ignore: prefer_initializing_formals
+  }) : _removeSemanticsLabel = removeSemanticsLabel,
+       hasError = invalid ?? hasError ?? false,
+       assert(invalid == null || hasError == null),
+       onChanged = onValueChange ?? onChanged,
        assert(onValueChange == null || onChanged == null),
        assert(min <= max),
        assert(step > 0),
        assert(value == null || (value >= min && value <= max));
 
+  int get _currentValue => value ?? defaultValue ?? min;
   bool get _canDecrement =>
       enabled &&
       !readOnly &&
       !loading &&
       !decrementLoading &&
-      ((removable && (value ?? defaultValue) <= min && onRemove != null) ||
-          (onChanged != null && step > 0 && (value ?? defaultValue) > min));
+      ((removable && _currentValue <= min && onRemove != null) ||
+          (onChanged != null && step > 0 && _currentValue > min));
   bool get _canIncrement =>
       enabled &&
       !readOnly &&
@@ -102,17 +137,17 @@ class SeedQuantityPicker extends StatelessWidget {
       !incrementLoading &&
       onChanged != null &&
       step > 0 &&
-      (value ?? defaultValue) < max;
+      _currentValue < max;
 
   @override
   Widget build(BuildContext context) {
     if (this.value == null) {
-      return SeedFormField<int>(
-        initialValue: defaultValue.clamp(min, max),
-        builder: (field) => SeedQuantityPicker(
-          value: field.value!,
+      return SeedUncontrolledValue<int>(
+        initialValue: (defaultValue ?? min).clamp(min, max),
+        builder: (context, value, setValue) => SeedQuantityPicker(
+          value: value,
           onChanged: (next) {
-            field.didChange(next);
+            setValue(next);
             onChanged?.call(next);
           },
           min: min,
@@ -130,7 +165,7 @@ class SeedQuantityPicker extends StatelessWidget {
           layout: layout,
           valueFormatter: valueFormatter,
           valueChild: valueChild,
-          removeSemanticsLabel: removeSemanticsLabel,
+          removeSemanticsLabel: _removeSemanticsLabel,
         ),
       );
     }
@@ -155,7 +190,28 @@ class SeedQuantityPicker extends StatelessWidget {
         alignment: Alignment.center,
         child:
             valueChild ??
-            Text(valueFormatter?.call(value) ?? '$value', style: textStyle),
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                // Reserve the widest value so buttons stay put as digits change.
+                ExcludeSemantics(
+                  child: Visibility(
+                    visible: false,
+                    maintainSize: true,
+                    maintainAnimation: true,
+                    maintainState: true,
+                    child: Text(
+                      (valueFormatter?.call(max) ?? '$max').replaceAll(
+                        RegExp(r'\d'),
+                        '0',
+                      ),
+                      style: textStyle,
+                    ),
+                  ),
+                ),
+                Text(valueFormatter?.call(value) ?? '$value', style: textStyle),
+              ],
+            ),
       ),
     );
     if (layout == SeedQuantityPickerLayout.fill) {
@@ -165,6 +221,12 @@ class SeedQuantityPicker extends StatelessWidget {
       height: size.height,
       decoration: BoxDecoration(
         color: colors.bg.layerDefault,
+        borderRadius: size == SeedQuantityPickerSize.large
+            ? SeedBorderRadius.r3
+            : SeedBorderRadius.r2,
+      ),
+      // The official stroke is painted over the content without moving it.
+      foregroundDecoration: BoxDecoration(
         borderRadius: size == SeedQuantityPickerSize.large
             ? SeedBorderRadius.r3
             : SeedBorderRadius.r2,
@@ -180,7 +242,10 @@ class SeedQuantityPicker extends StatelessWidget {
             icon: removable && value <= min
                 ? Icons.delete_outline
                 : Icons.remove_rounded,
-            label: removable && value <= min ? removeSemanticsLabel : '수량 줄이기',
+            label: removable && value <= min
+                ? (_removeSemanticsLabel ??
+                      SeedLocalizations.label(context, SeedLabel.removeItem))
+                : SeedLocalizations.label(context, SeedLabel.decreaseQuantity),
             loading: loading || decrementLoading,
             canAction: _canDecrement,
             onPressed: () {
@@ -212,7 +277,7 @@ class SeedQuantityPicker extends StatelessWidget {
           // Increment Button
           _buildButton(
             icon: Icons.add_rounded,
-            label: '수량 늘리기',
+            label: SeedLocalizations.label(context, SeedLabel.increaseQuantity),
             loading: loading || incrementLoading,
             canAction: _canIncrement,
             onPressed: () => onChanged?.call((value + step).clamp(min, max)),
