@@ -11,6 +11,8 @@
 - **Breaking migration:** Button textColor and fontWeight overrides apply only to ghost variants.
 - Align with the official recipes: `SeedPageBanner` prefix icons stay on the first line, text-attached notification badges sit at the top of the line, the attachment remove button overhangs its item with a cut-out, and the default back button is a chevron on every platform.
 - **Breaking migration:** List dividers are hidden by default. Choice controls use official visual sizes. RadioGroup no longer registers implicitly with Form.
+- **Breaking migration:** Float offset defaults to zero, the large breakpoint is 1280 and AspectRatio defaults to 4/3. SeedAspectRatio composes AspectRatio instead of inheriting it. Footer has no default copyright.
+- Fix `SeedScrollFog` opacity, which was weaker than the official mask, and the inverted `SeedScrollFogMask`. WheelPicker uses the mask, as the official one does.
 
 ## 1.0.0
 

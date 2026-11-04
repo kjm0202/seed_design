@@ -179,6 +179,37 @@ void main() {
     },
   );
 
+  testWidgets('image reaction uses pressed defaults and controlled proposals', (
+    tester,
+  ) async {
+    final changes = <bool>[];
+    await tester.pumpWidget(
+      host(
+        SeedImageFrameReactionButton(
+          defaultPressed: true,
+          onPressedChange: changes.add,
+        ),
+      ),
+    );
+    await tester.tap(find.byType(SeedImageFrameReactionButton));
+    await tester.pump();
+    expect(changes, [false]);
+    await tester.pumpWidget(
+      host(
+        SeedImageFrameReactionButton(
+          key: const ValueKey('controlled'),
+          pressed: true,
+          onPressedChange: changes.add,
+        ),
+      ),
+    );
+    for (var i = 0; i < 2; i++) {
+      await tester.tap(find.byType(SeedImageFrameReactionButton));
+      await tester.pump();
+    }
+    expect(changes, [false, false, false]);
+  });
+
   testWidgets('select box checked API supports local and parent-owned values', (
     tester,
   ) async {

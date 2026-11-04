@@ -1,3 +1,5 @@
+import '../../localization/seed_localizations.dart';
+
 import 'dart:ui' as ui;
 
 import 'package:material_ui/material_ui.dart';
@@ -59,6 +61,7 @@ class SeedImageFrame extends StatelessWidget {
 
   /// Called once if the current provider fails to load.
   final void Function(Object error, StackTrace? stackTrace)? onError;
+
   final String? semanticLabel;
 
   /// Aspect ratio preset (square 1:1, standard 4:3, wide 16:9).
@@ -84,7 +87,9 @@ class SeedImageFrame extends StatelessWidget {
 
   /// Fallback widget when image is absent. Defaults to [SeedContentPlaceholder].
   final Widget? fallback;
+
   final Widget? loading, topLeading, topTrailing, bottomLeading, bottomTrailing;
+
   final bool stroke;
 
   @override
@@ -164,7 +169,10 @@ class SeedImageFrame extends StatelessWidget {
                 top: SeedDimension.x1,
                 right: SeedDimension.x1,
                 child: SeedPressable(
-                  semanticsLabel: '이미지 삭제',
+                  semanticsLabel: SeedLocalizations.label(
+                    context,
+                    SeedLabel.deleteImage,
+                  ),
                   enableScale: false,
                   onTap: onRemove,
                   child: ConstrainedBox(
@@ -308,8 +316,11 @@ class SeedImageFrameReactionButton extends StatefulWidget {
     ValueChanged<bool>? onPressedChange,
     @Deprecated('Use onPressedChange instead.') ValueChanged<bool>? onChanged,
     this.enabled = true,
-    this.semanticsLabel = '좋아요',
-  }) : selected = pressed ?? selected,
+    String? semanticsLabel,
+    // Preserve the public named parameter and getter.
+    // ignore: prefer_initializing_formals
+  }) : _semanticsLabel = semanticsLabel,
+       selected = pressed ?? selected,
        defaultSelected = defaultPressed ?? defaultSelected ?? false,
        onChanged = onPressedChange ?? onChanged,
        assert(pressed == null || selected == null),
@@ -325,7 +336,8 @@ class SeedImageFrameReactionButton extends StatefulWidget {
   final ValueChanged<bool>? onChanged;
   ValueChanged<bool>? get onPressedChange => onChanged;
   final bool enabled;
-  final String semanticsLabel;
+  final String? _semanticsLabel;
+  String get semanticsLabel => _semanticsLabel ?? '좋아요';
 
   @override
   State<SeedImageFrameReactionButton> createState() =>
@@ -345,7 +357,9 @@ class _SeedImageFrameReactionButtonState
       child: SeedPressable(
         enabled: widget.enabled,
         selected: selected,
-        semanticsLabel: widget.semanticsLabel,
+        semanticsLabel:
+            widget._semanticsLabel ??
+            SeedLocalizations.label(context, SeedLabel.like),
         focusBorderRadius: SeedBorderRadius.r1,
         onTap: () {
           if (widget.selected == null) setState(() => _selected = !selected);

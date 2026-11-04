@@ -537,5 +537,44 @@ void main() {
 
   group('ReactionButton target', () {
     setUpAll(loadSeedTestFonts);
+
+    testWidgets(
+      'reaction icon keeps a 24px layout with a working 40px touch target',
+      (tester) async {
+        var changes = 0;
+        await tester.pumpWidget(
+          hostComponentAccessibilityOv(
+            SeedImageFrameReactionButton(onChanged: (_) => changes++),
+          ),
+        );
+        final rect = tester.getRect(find.byType(SeedImageFrameReactionButton));
+        expect(rect.size, const Size(24, 24));
+        await tester.tapAt(rect.topLeft - const Offset(7, 7));
+        await tester.pumpAndSettle();
+        expect(changes, 1);
+        await tester.pumpWidget(
+          hostComponentAccessibilityOv(
+            SizedBox(
+              width: 200,
+              child: SeedImageFrame(
+                overlay: SeedImageFrameFloater(
+                  alignment: Alignment.topRight,
+                  child: SeedImageFrameReactionButton(
+                    onChanged: (_) => changes++,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        final frame = tester.getRect(find.byType(SeedImageFrame));
+        final heart = tester.getRect(find.byType(SeedImageFrameReactionButton));
+        expect(frame.right - heart.right, 6);
+        expect(heart.top - frame.top, 6);
+        await tester.tapAt(heart.topLeft - const Offset(5, 5));
+        await tester.pumpAndSettle();
+        expect(changes, 2);
+      },
+    );
   });
 }

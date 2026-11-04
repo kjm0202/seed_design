@@ -6,7 +6,10 @@ import 'seed_divider.dart';
 import '../../foundations/feedback/seed_scale_feedback.dart';
 import '../../foundations/motion/seed_motion.dart';
 
-enum SeedFooterLinkTextSize { medium, large }
+enum SeedFooterLinkTextSize {
+  medium,
+  large,
+}
 
 /// SEED Footer.LinkText, independent of the full page [SeedFooter] layout.
 /// The caller handles navigation in [onTap]; [uri] exposes the link destination
@@ -76,10 +79,12 @@ class SeedFooterLinkText extends StatelessWidget {
 
 /// A link item in [SeedFooter].
 class SeedFooterLink {
-  const SeedFooterLink({required this.label, this.onTap});
+  const SeedFooterLink({required this.label, this.onTap, this.uri});
 
   final String label;
   final VoidCallback? onTap;
+
+  final Uri? uri;
 }
 
 /// A sitemap column of links in [SeedFooter].
@@ -102,7 +107,7 @@ class SeedFooter extends StatelessWidget {
     this.sitemapColumns,
     this.policyLinks,
     this.companyInfo,
-    this.copyright = '© Danggeun Market Inc. All rights reserved.',
+    this.copyright,
     this.socialLinks,
     this.countrySelector,
     this.contactLinks,
@@ -139,6 +144,7 @@ class SeedFooter extends StatelessWidget {
     final hasTopArea =
         brandLogo != null ||
         brandName != null ||
+        countrySelector != null ||
         (sitemapColumns != null && sitemapColumns!.isNotEmpty);
 
     return LayoutBuilder(
@@ -146,7 +152,8 @@ class SeedFooter extends StatelessWidget {
         final stacked =
             constraints.maxWidth < 600 ||
             MediaQuery.textScalerOf(context).scale(14) > 21;
-        final brand = Row(
+        final hasBrand = brandLogo != null || brandName != null;
+        final brandRow = Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             ?brandLogo,
@@ -159,6 +166,17 @@ class SeedFooter extends StatelessWidget {
                   style: typography.t6Bold.copyWith(color: colors.fg.neutral),
                 ),
               ),
+          ],
+        );
+        // The official navigation area: logo, country selector, then sitemap.
+        final brand = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (hasBrand) brandRow,
+            if (hasBrand && countrySelector != null)
+              const SizedBox(height: SeedDimension.x3),
+            ?countrySelector,
           ],
         );
         final sitemap = Wrap(
@@ -178,24 +196,24 @@ class SeedFooter extends StatelessWidget {
                   for (final link in col.links)
                     Padding(
                       padding: const EdgeInsets.only(bottom: SeedDimension.x1),
-                      child: InkWell(
+                      child: SeedFooterLinkText(
+                        label: link.label,
                         onTap: link.onTap,
-                        child: Text(
-                          link.label,
-                          style: typography.t3Regular.copyWith(
-                            color: colors.fg.neutralSubtle,
-                          ),
-                        ),
+                        uri: link.uri,
                       ),
                     ),
                 ],
               ),
           ],
         );
-        final copyrightText = Text(
-          copyright ?? '',
-          style: typography.t2Regular.copyWith(color: colors.fg.neutralMuted),
-        );
+        final copyrightText = copyright == null
+            ? const SizedBox.shrink()
+            : Text(
+                copyright!,
+                style: typography.t2Regular.copyWith(
+                  color: colors.fg.neutralMuted,
+                ),
+              );
         final socials = Wrap(
           runSpacing: SeedDimension.x1,
           children: socialLinks ?? [],
@@ -216,7 +234,7 @@ class SeedFooter extends StatelessWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (brandLogo != null || brandName != null) brand,
+                      if (hasBrand || countrySelector != null) brand,
                       if (sitemapColumns?.isNotEmpty ?? false) ...[
                         const SizedBox(height: SeedDimension.x4),
                         sitemap,
@@ -227,7 +245,7 @@ class SeedFooter extends StatelessWidget {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (brandLogo != null || brandName != null)
+                      if (hasBrand || countrySelector != null)
                         Expanded(flex: 2, child: brand),
                       if (sitemapColumns?.isNotEmpty ?? false)
                         Expanded(flex: 3, child: sitemap),
@@ -244,14 +262,10 @@ class SeedFooter extends StatelessWidget {
                   spacing: SeedDimension.x3,
                   runSpacing: SeedDimension.x2,
                   children: policyLinks!.map((link) {
-                    return InkWell(
+                    return SeedFooterLinkText(
+                      label: link.label,
                       onTap: link.onTap,
-                      child: Text(
-                        link.label,
-                        style: typography.t3Bold.copyWith(
-                          color: colors.fg.neutral,
-                        ),
-                      ),
+                      uri: link.uri,
                     );
                   }).toList(),
                 ),
@@ -275,16 +289,12 @@ class SeedFooter extends StatelessWidget {
                   spacing: 12,
                   children: [
                     for (final link in contactLinks!)
-                      TextButton(
-                        onPressed: link.onTap,
-                        child: Text(link.label),
+                      SeedFooterLinkText(
+                        label: link.label,
+                        onTap: link.onTap,
+                        uri: link.uri,
                       ),
                   ],
-                ),
-              if (countrySelector != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: countrySelector,
                 ),
               // Bottom row: Copyright & Social links
               if (stacked)

@@ -22,7 +22,10 @@ class SeedGrid extends MultiChildRenderObjectWidget {
   final Axis autoFlow;
   int get _columnCount =>
       columns ??
-      (rows == null ? 1 : (children.length / rows!).ceil().clamp(1, 1000000));
+      // Row flow without columns is a single implicit column, as in CSS Grid.
+      (rows == null || autoFlow == Axis.horizontal
+          ? 1
+          : (children.length / rows!).ceil().clamp(1, 1000000));
   final double gap;
   final double? rowGap, columnGap;
   final bool fillHeight;
@@ -54,14 +57,36 @@ class SeedGrid extends MultiChildRenderObjectWidget {
 }
 
 class SeedGridItem extends ParentDataWidget<SeedGridParentData> {
+  static const int full = -1;
+
   const SeedGridItem({
     super.key,
     required super.child,
-    this.column,
-    this.row,
-    this.columnSpan = 1,
-    this.rowSpan = 1,
-  }) : assert(columnSpan > 0 && rowSpan > 0);
+    int? column,
+    int? row,
+    int? columnSpan,
+    int? rowSpan,
+    int? colSpan,
+    int? colStart,
+    int? colEnd,
+    int? rowStart,
+    int? rowEnd,
+  }) : column = colSpan == full
+           ? 0
+           : colStart != null
+           ? colStart - 1
+           : column,
+       row = rowSpan == full
+           ? 0
+           : rowStart != null
+           ? rowStart - 1
+           : row,
+       columnSpan = colStart != null && colEnd != null
+           ? colEnd - colStart
+           : colSpan ?? columnSpan ?? 1,
+       rowSpan = rowStart != null && rowEnd != null
+           ? rowEnd - rowStart
+           : rowSpan ?? 1;
   final int? column, row;
   final int columnSpan, rowSpan;
   @override
@@ -154,52 +179,131 @@ class RenderSeedGrid extends RenderBox
     }
   }
 
+  // CSS Grid auto-placement: definite items first, then the rest in order with a
+  // sparse cursor that never goes back to fill earlier holes.
   List<_SeedPlacement> _placements() {
     final occupied = <(int, int)>{};
     final placed = <_SeedPlacement>[];
-    for (var child = firstChild; child != null; child = childAfter(child)) {
-      final data = child.parentData! as SeedGridParentData;
-      final span = data.columnSpan.clamp(1, _columns);
-      var row = math.max(0, data.row ?? 0),
-          column = (data.column ?? 0).clamp(0, _columns - span);
-      bool available() {
-        for (var y = row; y < row + data.rowSpan; y++) {
-          for (var x = column; x < column + span; x++) {
-            if (occupied.contains((y, x))) return false;
-          }
+    int spanOf(SeedGridParentData data) => data.columnSpan == SeedGridItem.full
+        ? _columns
+        : data.columnSpan.clamp(1, _columns);
+    int rowSpanOf(SeedGridParentData data) =>
+        data.rowSpan == SeedGridItem.full ? (_rows ?? 1) : data.rowSpan;
+    int columnOf(SeedGridParentData data) =>
+        data.column!.clamp(0, _columns - spanOf(data));
+    bool free(int row, int column, int rowSpan, int span) {
+      for (var y = row; y < row + rowSpan; y++) {
+        for (var x = column; x < column + span; x++) {
+          if (occupied.contains((y, x))) return false;
         }
-        return true;
       }
+      return true;
+    }
 
-      if (data.row == null || data.column == null) {
-        while (!available()) {
-          if (_flow == Axis.vertical &&
-              _rows != null &&
-              data.row == null &&
-              data.column == null &&
-              row + data.rowSpan < _rows!) {
-            row++;
-          } else if (_flow == Axis.vertical &&
-              _rows != null &&
-              data.row == null &&
-              data.column == null &&
-              column + span < _columns) {
-            column++;
-            row = 0;
-          } else if (data.column != null || column + span >= _columns) {
-            row++;
-            column = (data.column ?? 0).clamp(0, _columns - span);
-          } else {
-            column++;
-          }
-        }
-      }
-      for (var y = row; y < row + data.rowSpan; y++) {
+    void place(RenderBox child, int row, int column) {
+      final data = child.parentData! as SeedGridParentData;
+      final span = spanOf(data);
+      for (var y = row; y < row + rowSpanOf(data); y++) {
         for (var x = column; x < column + span; x++) {
           occupied.add((y, x));
         }
       }
-      placed.add(_SeedPlacement(child, row, column, data.rowSpan, span));
+      placed.add(_SeedPlacement(child, row, column, rowSpanOf(data), span));
+    }
+
+    final locked = <RenderBox>[], automatic = <RenderBox>[];
+    final columnFlow = _flow == Axis.vertical && _rows != null;
+    for (var child = firstChild; child != null; child = childAfter(child)) {
+      final data = child.parentData! as SeedGridParentData;
+      if (data.row != null && data.column != null) {
+        place(child, math.max(0, data.row!), columnOf(data));
+      } else if (columnFlow ? data.column != null : data.row != null) {
+        locked.add(child);
+      } else {
+        automatic.add(child);
+      }
+    }
+
+    // Items locked to the flow's major line keep a separate cursor per line.
+    final lineCursors = <int, int>{};
+    for (final child in locked) {
+      final data = child.parentData! as SeedGridParentData;
+      final span = spanOf(data);
+      if (columnFlow) {
+        final column = columnOf(data);
+        var row = lineCursors[column] ?? 0;
+        while (!free(row, column, rowSpanOf(data), span)) {
+          row++;
+        }
+        place(child, row, column);
+        lineCursors[column] = row + rowSpanOf(data);
+      } else {
+        var row = math.max(0, data.row!);
+        var column = lineCursors[row] ?? 0;
+        while (column + span > _columns ||
+            !free(row, column, rowSpanOf(data), span)) {
+          if (column + span >= _columns) {
+            row++;
+            column = lineCursors[row] ?? 0;
+          } else {
+            column++;
+          }
+        }
+        place(child, row, column);
+        lineCursors[row] = column + span;
+      }
+    }
+
+    var cursorRow = 0, cursorColumn = 0;
+    // Column flow continues in implicit rows once the fixed columns are full.
+    var implicitRows = false;
+    for (final child in automatic) {
+      final data = child.parentData! as SeedGridParentData;
+      final span = spanOf(data);
+      if (columnFlow && !implicitRows) {
+        while (!implicitRows) {
+          if (cursorRow + rowSpanOf(data) > _rows!) {
+            cursorRow = 0;
+            cursorColumn++;
+          }
+          if (cursorColumn + span > _columns) {
+            implicitRows = true;
+            cursorRow = _rows!;
+            cursorColumn = 0;
+          } else if (free(cursorRow, cursorColumn, rowSpanOf(data), span)) {
+            break;
+          } else {
+            cursorRow++;
+          }
+        }
+        if (!implicitRows) {
+          place(child, cursorRow, cursorColumn);
+          cursorRow += rowSpanOf(data);
+          continue;
+        }
+      }
+      if (data.column != null) {
+        // Row flow with a definite column: the cursor moves to that column,
+        // advancing a row if the column is behind the cursor.
+        final column = columnOf(data);
+        if (column < cursorColumn) cursorRow++;
+        cursorColumn = column;
+        while (!free(cursorRow, cursorColumn, rowSpanOf(data), span)) {
+          cursorRow++;
+        }
+      } else {
+        while (cursorColumn + span > _columns ||
+            !free(cursorRow, cursorColumn, rowSpanOf(data), span)) {
+          if (cursorColumn + span >= _columns) {
+            cursorRow++;
+            cursorColumn = 0;
+          } else {
+            cursorColumn++;
+          }
+        }
+      }
+      place(child, cursorRow, cursorColumn);
+      cursorColumn += span;
     }
     return placed;
   }

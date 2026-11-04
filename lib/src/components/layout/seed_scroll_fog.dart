@@ -4,7 +4,12 @@ import '../../theme/seed_theme.dart';
 import '../../foundations/gradient/seed_gradient.dart';
 
 /// Placement of [SeedScrollFog].
-enum SeedScrollFogPlacement { top, bottom, left, right }
+enum SeedScrollFogPlacement {
+  top,
+  bottom,
+  left,
+  right,
+}
 
 /// Scroll Fog component of SEED Design System.
 ///
@@ -70,17 +75,73 @@ class SeedScrollFog extends StatelessWidget {
           gradient: LinearGradient(
             begin: begin,
             end: end,
-            colors: SeedGradients.fadeMask().colors.reversed
+            // Covers what the official mask would hide: 1 - mask at each stop.
+            colors: SeedGradients.fadeMask().colors
                 .map(
-                  (color) => fogColor.withValues(alpha: color.a * fogColor.a),
+                  (color) =>
+                      fogColor.withValues(alpha: (1 - color.a) * fogColor.a),
                 )
                 .toList(),
-            stops: SeedGradients.fadeMask().stops!.reversed
-                .map((stop) => 1 - stop)
-                .toList(),
+            stops: SeedGradients.fadeMask().stops,
           ),
         ),
       ),
     );
+  }
+}
+
+class SeedScrollFogMask extends StatelessWidget {
+  const SeedScrollFogMask({
+    super.key,
+    required this.child,
+    this.placement = const {
+      SeedScrollFogPlacement.top,
+      SeedScrollFogPlacement.bottom,
+    },
+    this.size = 20,
+    this.sizes = const {},
+  });
+
+  final Widget child;
+  final Set<SeedScrollFogPlacement> placement;
+  final double size;
+
+  final Map<SeedScrollFogPlacement, double> sizes;
+
+  @override
+  Widget build(BuildContext context) {
+    final fade = SeedGradients.fadeMask();
+    var masked = child;
+    for (final side in placement) {
+      final extent = sizes[side] ?? size;
+      final vertical =
+          side == SeedScrollFogPlacement.top ||
+          side == SeedScrollFogPlacement.bottom;
+      final start =
+          side == SeedScrollFogPlacement.top ||
+          side == SeedScrollFogPlacement.left;
+      masked = ShaderMask(
+        blendMode: BlendMode.dstIn,
+        shaderCallback: (bounds) {
+          final length = vertical ? bounds.height : bounds.width;
+          final fraction = length <= 0
+              ? 1.0
+              : (extent / length).clamp(0.0, 1.0);
+          return LinearGradient(
+            begin: vertical
+                ? (start ? Alignment.topCenter : Alignment.bottomCenter)
+                : (start ? Alignment.centerLeft : Alignment.centerRight),
+            end: vertical
+                ? (start ? Alignment.bottomCenter : Alignment.topCenter)
+                : (start ? Alignment.centerRight : Alignment.centerLeft),
+            // Transparent at the edge, opaque once [extent] is reached.
+            colors: [...fade.colors, const Color(0xFF000000)],
+            stops: [for (final stop in fade.stops!) stop * fraction, 1],
+          ).createShader(bounds);
+        },
+        child: masked,
+      );
+    }
+    return masked;
   }
 }
