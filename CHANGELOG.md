@@ -61,6 +61,7 @@
 - Uncontrolled `SeedRadioGroup` and `SeedQuantityPicker` no longer register with an enclosing `Form`, so `Form.reset()` no longer resets them while leaving other SEED inputs alone. Only `SeedTextField`, `SeedSelectFormField` and `SeedFormField` take part in a Form; wrap other inputs in `SeedFormField` to validate, save or reset them.
 - Add Flutter migration adapters: `SeedSelectFormField` for validation/save/reset and `SeedTabBar` for existing Material controllers and tab views.
 - Add English/Korean migration guides and a runnable Material migration example.
+- Fix mixed fixed/flexible WheelPicker columns and stale Select pointer state after clear or abandoned gestures. Preserve Step history restoration while isolating fresh Activities in the SPA example.
 
 ## 1.0.0
 

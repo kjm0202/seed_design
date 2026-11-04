@@ -16,10 +16,14 @@ class SpaHistory {
     this.fromExternalUrl = false,
     this.sessionId,
     this.localActivityIds = const [],
+    this.activityStateIds = const [],
   });
   final List<RouteSettings> activities;
   final String? sessionId;
   final List<int?> localActivityIds;
+
+  /// Ephemeral UI owners, independent of browser-back provenance. Includes roots.
+  final List<int?> activityStateIds;
 
   /// A platform URL visit without serialized SPA activity history. Unlike
   /// Stackflow's own PUSH/Back/Forward, this is a fresh address-navigation
@@ -114,12 +118,17 @@ class SpaHistoryParser extends RouteInformationParser<SpaHistory> {
           _uriForRoute(entries.last).toString() ==
               routeInformation.uri.toString()) {
         final rawIds = state['seedLocalActivityIds'];
+        final rawStateIds = state['seedActivityStateIds'];
         return SynchronousFuture(
           SpaHistory(
             entries,
             sessionId: state['seedSessionId'] is String
                 ? state['seedSessionId'] as String
                 : null,
+            activityStateIds:
+                rawStateIds is List && rawStateIds.length == entries.length
+                ? rawStateIds.map((id) => id is int ? id : null).toList()
+                : const [],
             localActivityIds: rawIds is List && rawIds.length == entries.length
                 ? rawIds.map((id) => id is int ? id : null).toList()
                 : const [],
@@ -147,6 +156,7 @@ class SpaHistoryParser extends RouteInformationParser<SpaHistory> {
           if (configuration.sessionId != null) ...{
             'seedSessionId': configuration.sessionId,
             'seedLocalActivityIds': configuration.localActivityIds,
+            'seedActivityStateIds': configuration.activityStateIds,
           },
         },
       );
@@ -186,14 +196,21 @@ class SpaHistoryDelegate extends RouterDelegate<SpaHistory>
   // app merely because a direct URL initially contains ?key=open.
   final Set<Route<dynamic>> _locallyPushedSteps = {};
   // A real browser Back/Forward can reconstruct the named Activity route.
-  // Remember which Step slots were actually pushed by this live SPA session,
+  // Remember which Activity-owned Steps were actually pushed by this live SPA session,
   // so the restored route can still history.back() rather than replaceState.
   final Set<String> _knownLocallyPushedStepSlots = {};
   // React keeps a controlled Step's local open=false state when its Activity
   // is covered by a pushed Detail and restored through browser Back. Flutter
   // Router may reconstruct that Activity's State, so retain this transient
-  // (non-URL, non-serialized) value for the Activity slot in this SPA session.
+  // (non-URL, non-serialized) value for that Activity owner in this SPA session.
   final Set<String> _locallyClosedStepSlots = {};
+  // UI state must distinguish fresh pushes at the same stack depth/path.
+  // Its ID also survives reconstruction of a root Activity, which has no
+  // local-PUSH provenance ID. Keep the two ownership systems independent.
+  int _nextActivityStateId = 0;
+  final Map<Route<dynamic>, int> _activityStateIds = {};
+  final Map<int, String> _knownActivityStateStacks = {};
+  final List<int?> _restoredActivityStateIds = [];
   // A live Route is trusted only after a local PUSH or restoration of a
   // matching, session-owned browser entry.
   final Set<Route<dynamic>> _locallyPushedActivities = {};
@@ -215,10 +232,36 @@ class SpaHistoryDelegate extends RouterDelegate<SpaHistory>
   bool _sameUriActivityPushPending = false;
   bool _disposed = false;
 
+  String _stateStackSignature(Iterable<RouteSettings> activities) =>
+      jsonEncode([
+        for (final activity in activities)
+          {
+            'path': _normalizedActivityPath(Uri.tryParse(activity.name ?? '/')),
+            'arguments': activity.arguments,
+          },
+      ]);
+
+  int _activityStateId(Route<dynamic> route, {int? restoredId}) =>
+      _activityStateIds.putIfAbsent(route, () {
+        if (restoredId != null) return restoredId;
+        final id = _nextActivityStateId++;
+        final named = _observer.routes
+            .where((route) => route.settings.name != null)
+            .toList();
+        _knownActivityStateStacks[id] = _stateStackSignature(
+          named.take(named.indexOf(route) + 1).map((route) => route.settings),
+        );
+        return id;
+      });
+
   void _observedPush(Route<dynamic> route, Route<dynamic>? previous) {
     if (_restorePushesToIgnore > 0) {
       _restorePushesToIgnore--;
       final id = _restoredActivityIds.removeAt(0);
+      final stateId = _restoredActivityStateIds.removeAt(0);
+      if (route.settings.name != null) {
+        _activityStateId(route, restoredId: stateId);
+      }
       if (id != null && _knownLocalActivityIds.contains(id)) {
         _localActivityIds[route] = id;
         _locallyPushedActivities.add(route);
@@ -226,6 +269,7 @@ class SpaHistoryDelegate extends RouterDelegate<SpaHistory>
       }
       return;
     }
+    if (route.settings.name != null) _activityStateId(route);
     if (_restoring || previous == null || route.settings.name == null) return;
     _locallyPushedActivities.add(route);
     final id = _nextLocalActivityId++;
@@ -248,6 +292,7 @@ class SpaHistoryDelegate extends RouterDelegate<SpaHistory>
   bool _observedPop(Route<dynamic> route, Route<dynamic>? previous) {
     final local = _locallyPushedActivities.remove(route);
     _localActivityIds.remove(route);
+    _activityStateIds.remove(route);
     final canBrowserBack =
         local &&
         _onBrowserBack != null &&
@@ -305,16 +350,8 @@ class SpaHistoryDelegate extends RouterDelegate<SpaHistory>
   }
 
   String? _localStepSlot(String key) {
-    final routes = _observer.routes
-        .where((route) => route.settings.name != null)
-        .toList();
-    if (routes.isEmpty) return null;
-    final path = _normalizedActivityPath(
-      Uri.tryParse(routes.last.settings.name ?? '/'),
-    );
-    // Browser Back reconstructs routes but preserves their Activity position.
-    // Ignore query parameters: Step open and local close share one Activity.
-    return '${routes.length}:$path:$key';
+    final route = _activeNamedRoute;
+    return route == null ? null : '${_activityStateId(route)}:$key';
   }
 
   bool wasStepClosedLocally(String key) {
@@ -371,6 +408,7 @@ class SpaHistoryDelegate extends RouterDelegate<SpaHistory>
     final routes = _observer.routes
         .where((route) => route.settings.name != null)
         .toList();
+    _activityStateIds.removeWhere((route, _) => !routes.contains(route));
     final activities = [
       for (final route in routes)
         if (identical(route, routes.last) &&
@@ -388,6 +426,9 @@ class SpaHistoryDelegate extends RouterDelegate<SpaHistory>
         : SpaHistory(
             activities,
             sessionId: _sessionId,
+            activityStateIds: [
+              for (final route in routes) _activityStateId(route),
+            ],
             localActivityIds: [
               for (final route in routes) _localActivityIds[route],
             ],
@@ -433,6 +474,8 @@ class SpaHistoryDelegate extends RouterDelegate<SpaHistory>
     if (configuration.fromExternalUrl) {
       _locallyClosedStepSlots.clear();
       _knownLocallyPushedStepSlots.clear();
+      _activityStateIds.clear();
+      _knownActivityStateStacks.clear();
       // React's full-document /form/ → / → /form/ address navigation
       // remounts the root SnackbarProvider. Flutter hash navigation keeps
       // the Dart app alive, so reset only this incoming *unserialized* visit.
@@ -465,9 +508,27 @@ class SpaHistoryDelegate extends RouterDelegate<SpaHistory>
     final named = _observer.routes
         .where((route) => route.settings.name != null)
         .toList();
+    int? restoredStateId(int index) {
+      if (configuration.fromExternalUrl ||
+          configuration.sessionId != _sessionId ||
+          index >= configuration.activityStateIds.length) {
+        return null;
+      }
+      final id = configuration.activityStateIds[index];
+      if (id == null) return null;
+      // Query values are Steps, not new Activity identities. Require the same
+      // session-owned path/argument stack before reusing transient UI state.
+      final signature = _stateStackSignature(
+        configuration.activities.take(index + 1),
+      );
+      return _knownActivityStateStacks[id] == signature ? id : null;
+    }
+
     var common = 0;
     var stepChanged = false;
     while (common < named.length && common < configuration.activities.length) {
+      final owner = restoredStateId(common);
+      if (owner != null && _activityStateIds[named[common]] != owner) break;
       final before = named[common].settings;
       final after = configuration.activities[common];
       final sameArgs =
@@ -500,6 +561,9 @@ class SpaHistoryDelegate extends RouterDelegate<SpaHistory>
     _localActivityIds.removeWhere(
       (route, _) => configuration.fromExternalUrl || !retained.contains(route),
     );
+    _activityStateIds.removeWhere(
+      (route, _) => configuration.fromExternalUrl || !retained.contains(route),
+    );
     int? restoredId(int index) {
       if (configuration.fromExternalUrl ||
           configuration.sessionId != _sessionId ||
@@ -517,6 +581,16 @@ class SpaHistoryDelegate extends RouterDelegate<SpaHistory>
     void markRestoredPush(int index) {
       _restorePushesToIgnore++;
       _restoredActivityIds.add(restoredId(index));
+      var stateId = restoredStateId(index);
+      if (stateId == null) {
+        stateId = _nextActivityStateId++;
+        // A replacement root is pushed before the old root is removed.
+        // Its owner belongs to the incoming stack, not that temporary stack.
+        _knownActivityStateStacks[stateId] = _stateStackSignature(
+          configuration.activities.take(index + 1),
+        );
+      }
+      _restoredActivityStateIds.add(stateId);
     }
 
     _restoring = true;
@@ -538,11 +612,20 @@ class SpaHistoryDelegate extends RouterDelegate<SpaHistory>
       // CategorySheet's showSeedBottomSheet continuation calls Navigator.pop
       // while mounted; completing that modal in the same frame as a browser
       // Back can otherwise pop the retained Form as well.
+      // Stackflow animates a pop that browser Back starts, so the top route
+      // leaves with its own transition. Routes beneath it go without one.
+      final animateTop =
+          removed.isNotEmpty &&
+          common == configuration.activities.length &&
+          !configuration.fromExternalUrl &&
+          !navigator.userGestureInProgress;
       final modalRoutes = <Route<dynamic>>[];
       for (final route in removed) {
         _locallyPushedSteps.remove(route);
         if (route.settings.name == null) {
           modalRoutes.add(route);
+        } else if (animateTop && identical(route, removed.last)) {
+          navigator.pop();
         } else {
           navigator.removeRoute(route);
         }
@@ -550,7 +633,11 @@ class SpaHistoryDelegate extends RouterDelegate<SpaHistory>
       if (modalRoutes.isNotEmpty) {
         await WidgetsBinding.instance.endOfFrame;
         for (final route in modalRoutes.reversed) {
-          navigator.removeRoute(route);
+          if (animateTop && identical(route, removed.last) && route.isCurrent) {
+            navigator.pop();
+          } else {
+            navigator.removeRoute(route);
+          }
         }
       }
       for (
@@ -606,6 +693,9 @@ class SpaHistoryDelegate extends RouterDelegate<SpaHistory>
         ];
         _restorePushesToIgnore += initial.length;
         _restoredActivityIds.addAll(List<int?>.filled(initial.length, null));
+        _restoredActivityStateIds.addAll(
+          List<int?>.filled(initial.length, null),
+        );
         return initial;
       },
     ),
@@ -622,6 +712,9 @@ class SpaHistoryDelegate extends RouterDelegate<SpaHistory>
     _knownLocalActivityIds.clear();
     _localActivityStacks.clear();
     _restoredActivityIds.clear();
+    _restoredActivityStateIds.clear();
+    _activityStateIds.clear();
+    _knownActivityStateStacks.clear();
     _stepRevision.dispose();
     super.dispose();
   }
