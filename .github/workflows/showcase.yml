@@ -45,7 +45,10 @@ jobs:
         run: flutter test --no-pub
       - name: Build WASM showcase
         working-directory: example
-        run: flutter build web --release --wasm --no-pub --base-href /seed_design/
+        run: |
+          flutter build web --release --wasm --no-pub --base-href /seed_design/
+          # Path URLs need the app shell for routes opened directly.
+          cp build/web/index.html build/web/404.html
       - name: Upload site
         uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
         with:
