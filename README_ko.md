@@ -86,6 +86,95 @@ const SeedMaterialBridge(child: ExistingScreen());
 
 기존 앱도 `material_ui`를 사용해야 합니다. `SeedMaterialBridge`가 예전 머티리얼 타입을 변환해 주지는 않습니다.
 
+## Material 앱에서 점진적으로 이전하기
+
+기존 `MaterialApp`, `Scaffold`, Router와 필요한 Material 위젯을 유지하면서 테마부터 적용하세요. 기존 버튼 padding·모양, 입력 padding 같은 component theme 설정을 보존하려면 아래 옵션을 사용합니다. 앱이 지정한 필드는 그대로 유지되고 지정하지 않은 필드만 SEED 값으로 채워지므로, dialog의 `insetPadding`만 바꾼 경우에도 SEED dialog 모양과 색상은 유지됩니다. 기본값은 SEED component theme으로 교체하는 `false`입니다.
+
+```dart
+final light = existingLightTheme.withSeedDesign(preserveComponentThemes: true);
+final dark = existingDarkTheme.withSeedDesign(preserveComponentThemes: true);
+// 화면 단위에서도 동일한 옵션을 사용할 수 있습니다.
+SeedMaterialBridge(preserveComponentThemes: true, child: ExistingScreen());
+```
+
+Material component theme은 Material 위젯에 적용됩니다. SEED 위젯은 SEED 토큰과 각 위젯의 props로 조정합니다.
+
+| 기존 위젯/동작 | 이전 방법 |
+| --- | --- |
+| `TextField` | `SeedTextInput`: controller, `hintText`, `onSubmitted` 유지 |
+| `TextFormField` | `SeedTextField`: `defaultValue`, `placeholder`, validator/onSaved/onReset, `onFieldSubmitted` |
+| `DropdownButtonFormField` | `SeedSelectFormField`: 검증·저장·reset을 지원하며 단일 선택도 리스트 값을 사용 |
+| `TabBar` + `TabBarView` | `SeedTabBar` + 기존 `TabBarView`: controller 또는 `DefaultTabController`로 양방향 연결 |
+| `AppBar` | `SeedTopNavigation`: Drawer/뒤로가기 자동 연결, `bottom: SeedTabBar(...)` 지원 |
+| `SnackBar` | `showSeedSnackbar`: 액션 종료 사유는 `action`, 액션이 있으면 기본 유지. 시간 제한이 필요하면 `persist: false` |
+| `FloatingActionButton` | `SeedFloatingActionButton`: 기존 `heroTag`, `tooltip`을 명시적으로 전달 |
+| 고급 Material 기능 | 기존 Material 위젯을 SEED 테마 아래 유지하고 필요한 부분부터 교체 |
+
+폼에는 `SeedTextField`와 `SeedSelectFormField`를 사용하세요. 예를 들어 기존 `Form`의 자식으로 다음 필드를 배치할 수 있습니다.
+
+```dart
+SeedTextField(
+  label: '이메일',
+  autofillHints: const [AutofillHints.email],
+  keyboardType: TextInputType.emailAddress,
+  textInputAction: TextInputAction.done,
+  validator: (value) => value?.contains('@') == true ? null : '이메일 확인',
+  onFieldSubmitted: (_) => submit(),
+  onSaved: (value) => saveEmail(value),
+);
+
+SeedSelectFormField<String>(
+  label: '연락 방법',
+  groups: const [SeedSelectGroup(items: [
+    SeedSelectItem(value: 'chat', label: '채팅'),
+    SeedSelectItem(value: 'email', label: '이메일'),
+  ])],
+  validator: (values) => values == null || values.isEmpty ? '선택해 주세요' : null,
+  onSaved: (values) => saveContact(values),
+);
+```
+
+`SeedTextField.errorMessage`와 `forceErrorText`는 `Form.validate()`를 실패시키며, 둘 다 지정하면 `forceErrorText`가 우선합니다. `maxGraphemeCount` 초과도 검증에 반영되지만 원문은 유지합니다. 입력 자체를 제한하려면 `enforceMaxLength: true`를 지정하세요. `required`는 표시·접근성 정보이므로 필수 검증은 validator로 작성합니다. `SeedSelect` 자체는 폼에 등록되지 않으므로 폼에서는 전용 `SeedSelectFormField`를 사용하세요.
+
+폼에 등록되는 위젯은 `SeedTextField`, `SeedSelectFormField`, `SeedFormField`뿐이며, 다른 SEED 입력은 `Form.reset()`·`save()`의 영향을 받지 않습니다. 다른 입력을 검증·저장·초기화하려면 Material `Checkbox`를 `FormField`로 감싸듯이 `SeedFormField`로 감싸세요.
+
+```dart
+SeedFormField<bool>(
+  initialValue: false,
+  validator: (agreed) => agreed == true ? null : '약관에 동의해 주세요',
+  onSaved: (agreed) => saveConsent(agreed),
+  builder: (field) => SeedCheckbox(
+    label: '약관 동의',
+    checked: field.value ?? false,
+    onCheckedChange: field.didChange,
+  ),
+);
+```
+
+입력은 autofill, IME 액션, 편집 완료, 자동 수정·대문자화, 외부 탭, undo, context menu 등의 Flutter 옵션을 전달합니다. `restorationId`와 앱의 `restorationScopeId`를 지정하면 내부 텍스트 컨트롤러가 복원됩니다. 외부 컨트롤러의 저장·복원·해제는 앱이 담당합니다.
+
+Dialog/BottomSheet helper는 `child` 또는 `builder` 중 하나를 받으며 `useRootNavigator`, `routeSettings`, `requestFocus`를 지원합니다. BottomSheet의 `constraints`로 기본 최대 폭 480을 변경할 수 있습니다. 일반 provider가 필요한 경우 해당 Navigator 위에 provider를 설치하세요. 테마와 SEED 문구 override는 자동 캡처되지만 일반 provider를 복제하지는 않습니다.
+
+기본 문구는 앱 locale을 따릅니다. 한국어·영어 SEED 문구와 Material 공통 번역을 제공하고, 다른 번역은 다음처럼 지정할 수 있습니다. 명시적으로 전달한 위젯 문구는 그대로 유지합니다.
+
+```dart
+SeedLocalizations(
+  labels: const {SeedLabel.clearInput: 'Effacer', SeedLabel.selectPlaceholder: 'Choisir'},
+  child: MyScreen(),
+);
+```
+
+DatePicker/TimePicker의 `locale` 기본값은 공식 SEED와 같은 `ko_KR`입니다. 앱 언어를 따르게 하려면 `locale: Localizations.localeOf(context)`를 명시하세요.
+
+Switch/Checkbox의 콜백을 null로 만드는 것과 SEED의 비활성화는 다릅니다. 권한·로딩에 따라 잠그려면 `enabled: false`를 명시하세요. SEED Slider는 기본 0~100, step 1입니다. 기존 연속 0~1 Slider 동작이 필요하면 Material Slider를 유지하고, SEED로 교체할 때는 범위·step/divisions를 명시하세요. 이 기본값은 공식 SEED 계약을 유지합니다.
+
+실행 가능한 이전 예제인 `example/lib/material_migration.dart`는 Form 검증·저장·초기화·Undo, 기존 Material 탭·Drawer·Switch, SEED dialog를 함께 보여줍니다.
+
+```sh
+cd example
+flutter run -t lib/material_migration.dart
+```
+
 ## 버튼과 입력창
 
 ```dart

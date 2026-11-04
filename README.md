@@ -107,6 +107,94 @@ from the form field, tooltip and numeric progress widgets above.
 The themed Material Checkbox, Switch and Radio use the same brand selection
 colors as the default Seed controls, including contrasting checked marks.
 
+## Migrate a Material app incrementally
+
+Keep your `MaterialApp`, `Scaffold`, Router and the Material widgets your app needs. Start with themes. To preserve existing component overrides such as button padding, shapes and input padding, opt in below. Each field your theme sets wins, and SEED fills the fields it leaves unset, so a partial override such as a dialog's `insetPadding` keeps the SEED dialog shape and colors. The default `false` installs SEED component themes.
+
+```dart
+final light = existingLightTheme.withSeedDesign(preserveComponentThemes: true);
+final dark = existingDarkTheme.withSeedDesign(preserveComponentThemes: true);
+SeedMaterialBridge(preserveComponentThemes: true, child: ExistingScreen());
+```
+
+Material component themes style Material widgets. SEED widgets use SEED tokens and their own props.
+
+| Existing widget/behavior | Migration |
+| --- | --- |
+| `TextField` | `SeedTextInput`: retain controller, `hintText`, `onSubmitted` |
+| `TextFormField` | `SeedTextField`: `defaultValue`, `placeholder`, validator/onSaved/onReset and `onFieldSubmitted` |
+| `DropdownButtonFormField` | `SeedSelectFormField`: validation, save and reset; single selection also uses a list |
+| `TabBar` + `TabBarView` | `SeedTabBar` + existing `TabBarView`, sharing a controller or `DefaultTabController` |
+| `AppBar` | `SeedTopNavigation`: automatic Drawer/back controls and `bottom: SeedTabBar(...)` |
+| `SnackBar` | `showSeedSnackbar`: action close reason; actions persist by default, or use `persist: false` |
+| `FloatingActionButton` | `SeedFloatingActionButton`: explicitly forward `heroTag` and `tooltip` |
+| Advanced Material features | Keep existing Material widgets under a SEED theme and replace incrementally |
+
+Use `SeedTextField` and `SeedSelectFormField` inside your existing `Form`:
+
+```dart
+SeedTextField(
+  label: 'Email',
+  autofillHints: const [AutofillHints.email],
+  keyboardType: TextInputType.emailAddress,
+  textInputAction: TextInputAction.done,
+  validator: (value) => value?.contains('@') == true ? null : 'Check email',
+  onFieldSubmitted: (_) => submit(),
+  onSaved: (value) => saveEmail(value),
+);
+
+SeedSelectFormField<String>(
+  label: 'Contact method',
+  groups: const [SeedSelectGroup(items: [
+    SeedSelectItem(value: 'chat', label: 'Chat'),
+    SeedSelectItem(value: 'email', label: 'Email'),
+  ])],
+  validator: (values) => values == null || values.isEmpty ? 'Choose a method' : null,
+  onSaved: (values) => saveContact(values),
+);
+```
+
+`SeedTextField.errorMessage` and `forceErrorText` make `Form.validate()` fail; `forceErrorText` takes precedence. Exceeding `maxGraphemeCount` also fails validation while retaining the original text. To limit input itself, set `enforceMaxLength: true`. `required` provides presentation and accessibility information; implement required validation in your validator. Plain `SeedSelect` does not register with a Form; use `SeedSelectFormField` for form behavior.
+
+Only `SeedTextField`, `SeedSelectFormField` and `SeedFormField` register with a Form; `Form.reset()` and `save()` leave other SEED inputs alone. To validate, save or reset another input, wrap it in `SeedFormField`, as you would wrap a Material `Checkbox` in a `FormField`:
+
+```dart
+SeedFormField<bool>(
+  initialValue: false,
+  validator: (agreed) => agreed == true ? null : 'Agree to continue',
+  onSaved: (agreed) => saveConsent(agreed),
+  builder: (field) => SeedCheckbox(
+    label: 'Agree to terms',
+    checked: field.value ?? false,
+    onCheckedChange: field.didChange,
+  ),
+);
+```
+
+Inputs forward Flutter options for autofill, IME actions, editing completion, capitalization, autocorrect, outside taps, undo and context menus. Set `restorationId` and the app's `restorationScopeId` to restore internally owned text controllers. The app owns restoration and disposal of external controllers.
+
+Dialog/BottomSheet helpers accept exactly one of `child` or `builder`, plus `useRootNavigator`, `routeSettings` and `requestFocus`. BottomSheet `constraints` can override its default maximum width of 480. Place ordinary providers above the selected Navigator when needed: captured themes and SEED label overrides do not clone arbitrary providers.
+
+Default labels follow the app locale. SEED-specific copy has Korean and English defaults; common labels also use Material translations. Override other translations using `SeedLocalizations`. Explicit widget labels are preserved.
+
+```dart
+SeedLocalizations(
+  labels: const {SeedLabel.clearInput: 'Effacer', SeedLabel.selectPlaceholder: 'Choisir'},
+  child: MyScreen(),
+);
+```
+
+DatePicker/TimePicker retain the official SEED `ko_KR` locale default. To follow the app language, explicitly pass `locale: Localizations.localeOf(context)`.
+
+A null callback does not disable SEED Switch/Checkbox controls: set `enabled: false` for permission/loading restrictions. SEED Slider defaults to 0–100 with step 1. Keep a Material Slider for continuous 0–1 behavior, or explicitly choose the SEED range and step/divisions. These defaults follow official SEED contracts.
+
+The runnable migration example at `example/lib/material_migration.dart` combines Form validation/save/reset/Undo, existing Material tabs/Drawer/Switch and a SEED dialog.
+
+```sh
+cd example
+flutter run -t lib/material_migration.dart
+```
+
 ## Buttons and inputs
 
 ```dart

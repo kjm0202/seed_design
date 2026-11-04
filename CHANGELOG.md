@@ -60,6 +60,7 @@
   - **Others:** `SeedRadioListItem` adds `tone` and uses the large mark.
 - Uncontrolled `SeedRadioGroup` and `SeedQuantityPicker` no longer register with an enclosing `Form`, so `Form.reset()` no longer resets them while leaving other SEED inputs alone. Only `SeedTextField`, `SeedSelectFormField` and `SeedFormField` take part in a Form; wrap other inputs in `SeedFormField` to validate, save or reset them.
 - Add Flutter migration adapters: `SeedSelectFormField` for validation/save/reset and `SeedTabBar` for existing Material controllers and tab views.
+- Add English/Korean migration guides and a runnable Material migration example.
 
 ## 1.0.0
 
