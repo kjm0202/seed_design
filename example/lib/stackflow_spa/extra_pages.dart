@@ -74,7 +74,8 @@ class _DetailPage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // The page title is already provided by host AppBarMain.
-              Text(body, style: context.seedTypography.articleBody),
+              if (body.isNotEmpty)
+                Text(body, style: context.seedTypography.articleBody),
               if (current != null) ...[
                 const SizedBox(height: 8),
                 Text(
@@ -223,11 +224,15 @@ class _CategorySheetContentState extends State<_CategorySheetContent> {
   Widget build(BuildContext context) => SeedBottomSheet(
     title: '카테고리 선택',
     showHandle: true,
-    maxHeight: MediaQuery.sizeOf(context).height * .85,
+    // Official BottomSheetContent caps the surface at 90% of the viewport
+    // (and below the top safe inset); SeedBottomSheet applies the latter.
+    maxHeight: MediaQuery.sizeOf(context).height * .9,
     contentPadding: EdgeInsets.zero,
-    content: SizedBox(
-      height: 400,
+    content: ConstrainedBox(
+      // React ActivityCategorySheet: maxHeight=400, not fixed height=400.
+      constraints: const BoxConstraints(maxHeight: 400),
       child: ListView.builder(
+        shrinkWrap: true,
         itemCount: _categories.length,
         itemBuilder: (context, index) {
           final category = _categories[index];
@@ -240,20 +245,18 @@ class _CategorySheetContentState extends State<_CategorySheetContent> {
               widget.onSelectionChanged?.call(next);
             },
             showDivider: false,
+            tone: SeedControlTone.neutral,
           );
         },
       ),
     ),
-    footer: Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      child: SeedButton(
-        label: '완료',
-        onPressed: selected == null ? null : _confirm,
-        enabled: selected != null,
-        size: SeedButtonSize.large,
-        variant: SeedButtonVariant.neutralSolid,
-        isFullWidth: true,
-      ),
+    footer: SeedButton(
+      label: '완료',
+      onPressed: selected == null ? null : _confirm,
+      enabled: selected != null,
+      size: SeedButtonSize.large,
+      variant: SeedButtonVariant.neutralSolid,
+      isFullWidth: true,
     ),
   );
 }
@@ -272,23 +275,34 @@ class _AppBarSlotPage extends StatelessWidget {
         leading: isRoot
             ? null
             : SeedTopNavigationIconButton(
-                icon: const Icon(Icons.chevron_left),
+                icon: const Icon(Icons.chevron_left_rounded),
                 semanticsLabel: '뒤로',
                 onPressed: goBack,
               ),
         centerTitle: false,
-        title: Container(
-          height: 36,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          alignment: Alignment.centerLeft,
-          decoration: BoxDecoration(
-            color: context.seedColor.bg.neutralWeak,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            '검색어를 입력하세요',
-            style: context.seedTypography.t4Regular.copyWith(
-              color: context.seedColor.fg.neutralMuted,
+        // React ActivityAppBarSlot FakeSearchBar: the AppBar is 56px tall.
+        // Its outer Flex has py=x2 / px=x2_5 and an inner growing field
+        // with px=x3, a 1px neutral-muted stroke and t4Medium placeholder.
+        // Do not compress content-height and padding into a 36px box.
+        // Official AppBarSlot is a growing flex item, not a centered AppBarMain
+        // title; use the shared slot contract to keep the full x4 gutter and
+        // icon-button edge margins without one-off width adjustments.
+        slot: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          child: Container(
+            height: 40,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            alignment: Alignment.centerLeft,
+            decoration: BoxDecoration(
+              color: context.seedColor.bg.neutralWeak,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: context.seedColor.stroke.neutralMuted),
+            ),
+            child: Text(
+              '검색어를 입력하세요',
+              style: context.seedTypography.t4Medium.copyWith(
+                color: context.seedColor.fg.placeholder,
+              ),
             ),
           ),
         ),
@@ -328,6 +342,8 @@ class _DialogPageState extends State<_DialogPage> {
   bool overflow = true;
 
   Future<void> _openDialog() => showSeedDialog<void>(
+    // The official Dialog snippet this page ports sets closeOnInteractOutside.
+    barrierDismissible: false,
     context: context,
     child: SeedDialog(
       size: SeedDialogSize.medium,
@@ -337,12 +353,16 @@ class _DialogPageState extends State<_DialogPage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (var i = 1; i <= (overflow ? 16 : 1); i++) ...[
+            // React VStack gap=x4 separates siblings, with no trailing gap.
+            if (i > 1) const SizedBox(height: 16),
             Text(
               '$i. 본문이 길어지면 Body 영역만 스크롤됩니다. '
               '오버플로 상태에서만 하단이 서서히 사라지는 마스크와 '
               'padding-bottom이 적용되고, 스크롤하면 헤더 아래에 구분선이 나타납니다.',
+              style: context.seedTypography.t4Regular.copyWith(
+                color: context.seedColor.fg.neutral,
+              ),
             ),
-            const SizedBox(height: 16),
           ],
         ],
       ),
@@ -427,11 +447,16 @@ class _IntersectionObserverPageState extends State<_IntersectionObserverPage> {
           ? SeedTopNavigationTone.transparent
           : SeedTopNavigationTone.layer,
       gradient: whiteVisible,
-      leading: SeedTopNavigationIconButton(
-        semanticsLabel: 'Close',
-        icon: const Icon(Icons.close),
-        onPressed: widget.goBack,
-      ),
+      // React AppBarCloseButton renders only for activity.isRoot. The SPA
+      // Navigator's isFirst corresponds to its retained Activity root, not
+      // to whether this route was reached through a deep link or a PUSH.
+      leading: (ModalRoute.of(context)?.isFirst ?? true)
+          ? SeedTopNavigationIconButton(
+              semanticsLabel: 'Close',
+              icon: const Icon(Icons.close),
+              onPressed: widget.goBack,
+            )
+          : null,
       actions: [
         SeedTopNavigationIconButton(
           semanticsLabel: 'Notification',
@@ -446,22 +471,27 @@ class _IntersectionObserverPageState extends State<_IntersectionObserverPage> {
     body: ListView(
       controller: scroll,
       padding: EdgeInsets.zero,
-      children: const [
-        SizedBox(
+      children: [
+        // The text inherits the page color, so it disappears in dark mode, as
+        // it does in the official example.
+        const SizedBox(
           height: 400,
           child: ColoredBox(
             color: Colors.white,
-            child: Center(
-              child: Text('하얀 이미지', style: TextStyle(color: Colors.black87)),
-            ),
+            child: Center(child: Text('하얀 이미지')),
           ),
         ),
         SizedBox(
           height: 1000,
           child: ColoredBox(
-            color: SeedPalette.gray800Light,
+            color: context.seedColor.isDark
+                ? SeedPalette.gray800Dark
+                : SeedPalette.gray800Light,
             child: Center(
-              child: Text('컨텐츠 영역', style: TextStyle(color: Colors.white)),
+              child: Text(
+                '컨텐츠 영역',
+                style: TextStyle(color: context.seedColor.fg.onNeutralSolid),
+              ),
             ),
           ),
         ),
@@ -533,7 +563,7 @@ class _ArticlePreventDragPage extends StatelessWidget {
         children: [
           const SeedPageBanner(
             prefixIcon: Icon(Icons.error),
-            description: '상위 요소에 user-select: none; 스타일 적용됨',
+            description: '상위 요소에 `user-select: none;` 스타일 적용됨',
             tone: SeedPageBannerTone.warning,
             variant: SeedPageBannerVariant.solid,
           ),
@@ -545,42 +575,36 @@ class _ArticlePreventDragPage extends StatelessWidget {
               // selection; the rest of the page can switch tabs by swiping.
               onHorizontalDragStart: (_) {},
               onHorizontalDragUpdate: (_) {},
-              child: const Column(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Article',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 23),
-                  ),
-                  SizedBox(height: 12),
+                  Text('Article', style: context.seedTypography.t6Bold),
+                  const SizedBox(height: 12),
                   SelectableText(
                     '이 요소는 Article 내부에 있으므로 텍스트 선택이 가능합니다. '
                     '이 Article은 Tabs 제스처를 호출하지 않도록 설정되어 있습니다. '
                     '여기를 왼쪽으로 스와이프하면 탭이 전환되는 대신 텍스트가 선택됩니다.',
-                    style: TextStyle(height: 1.5),
+                    style: context.seedTypography.articleBody,
                   ),
                 ],
               ),
             ),
           ),
           const SizedBox(height: 32),
-          const Divider(),
+          const SeedDivider(),
           const SizedBox(height: 32),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Article 외부',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 23),
-                ),
-                SizedBox(height: 12),
+                Text('Article 외부', style: context.seedTypography.t6Bold),
+                const SizedBox(height: 12),
                 Text(
                   '이 요소는 Article 외부에 있으므로 텍스트 선택이 불가능합니다. '
                   '이 요소는 탭 스와이프를 호출할 수 있습니다. '
                   '여기를 왼쪽으로 스와이프해보세요.',
-                  style: TextStyle(height: 1.5),
+                  style: context.seedTypography.articleBody,
                 ),
               ],
             ),

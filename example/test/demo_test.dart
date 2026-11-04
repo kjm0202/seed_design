@@ -47,32 +47,32 @@ void main() {
   });
 
   testWidgets(
-    'article AppBar shows Back when stacked and inert Close at root',
-    (tester) async {
-      tester.view.physicalSize = const Size(390, 960);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      await tester.pumpWidget(const StackflowSpaApp());
-      await tester.pumpAndSettle();
-      final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+      'article AppBar shows Back when stacked and inert Close at root',
+      (tester) async {
+        tester.view.physicalSize = const Size(390, 960);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(const StackflowSpaApp());
+        await tester.pumpAndSettle();
+        final navigator = tester.state<NavigatorState>(find.byType(Navigator));
 
-      navigator.pushNamed('/demo/article-detail', arguments: 1);
-      await tester.pumpAndSettle();
-      expect(find.byIcon(Icons.arrow_back_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.close_rounded), findsNothing);
+        navigator.pushNamed('/demo/article-detail', arguments: 1);
+        await tester.pumpAndSettle();
+        expect(find.byIcon(Icons.chevron_left_rounded), findsOneWidget);
+        expect(find.byIcon(Icons.close_rounded), findsNothing);
 
-      navigator.pop();
-      await tester.pumpAndSettle();
-      navigator.pushReplacementNamed('/demo/article-detail', arguments: 1);
-      await tester.pumpAndSettle();
-      expect(find.byIcon(Icons.arrow_back_rounded), findsNothing);
-      expect(find.byIcon(Icons.close_rounded), findsOneWidget);
-      await tester.tap(find.byIcon(Icons.close_rounded));
-      await tester.pumpAndSettle();
-      expect(find.text('산토리니의 일몰'), findsOneWidget);
-    },
-  );
+        navigator.pop();
+        await tester.pumpAndSettle();
+        navigator.pushReplacementNamed('/demo/article-detail', arguments: 1);
+        await tester.pumpAndSettle();
+        expect(find.byIcon(Icons.chevron_left_rounded), findsNothing);
+        expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+        await tester.tap(find.byIcon(Icons.close_rounded));
+        await tester.pumpAndSettle();
+        expect(find.text('산토리니의 일몰'), findsOneWidget);
+      },
+    );
 
   testWidgets('article ID survives actual platform Back Forward restoration', (
     tester,

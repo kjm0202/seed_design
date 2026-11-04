@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
+import 'spa_routes.dart' show spaIsRootRoute;
 import 'spa_types.dart';
 
 /// Mirrors `examples/stackflow-spa/src/demo-data.ts`.
@@ -147,31 +148,31 @@ class _SpaDemoHomePageState extends State<SpaDemoHomePage> {
       child: StatefulBuilder(
         builder: (sheetContext, update) => SeedBottomSheet(
           title: '카테고리',
-          showHandle: true,
-          content: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final option in spaCategories.entries)
-                  SeedChip(
-                    label: option.value,
-                    checked: selection.contains(option.key),
-                    variant: SeedChipVariant.outlineStrong,
-                    onCheckedChange: (checked) => update(() {
-                      if (checked) {
-                        selection.add(option.key);
-                      } else {
-                        selection.remove(option.key);
-                      }
-                    }),
-                  ),
-              ],
-            ),
+          // React FilterBottomSheet: BottomSheetBody > HStack gap=x2 wrap.
+          // The sheet supplies its own body inset; this Wrap has none.
+          content: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final option in spaCategories.entries)
+                SeedChip(
+                  label: option.value,
+                  checked: selection.contains(option.key),
+                  variant: SeedChipVariant.outlineStrong,
+                  onCheckedChange: (checked) => update(() {
+                    if (checked) {
+                      selection.add(option.key);
+                    } else {
+                      selection.remove(option.key);
+                    }
+                  }),
+                ),
+            ],
           ),
           footer: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            // React HStack pt=x3 is in addition to BottomSheetFooter's
+            // built-in top=x3 and bottom=x4.
+            padding: const EdgeInsets.only(top: 12),
             child: SeedButton(
               label: '완료',
               variant: SeedButtonVariant.neutralSolid,
@@ -202,7 +203,8 @@ class _SpaDemoHomePageState extends State<SpaDemoHomePage> {
         Padding(
           padding: const EdgeInsets.only(top: 16),
           child: SizedBox(
-            height: 40,
+            // React Chip.Button defaults to medium (36px), not Tabs size40.
+            height: 36,
             child: ListView(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -242,7 +244,8 @@ class _SpaDemoHomePageState extends State<SpaDemoHomePage> {
             ),
           ),
         ),
-        const SizedBox(height: 8),
+        // React Recommendations VStack uses spacingY.componentDefault=12.
+        const SizedBox(height: 12),
         for (var i = 0; i < articles.length; i++) ...[
           if (i > 0) const SizedBox(height: 16),
           _articleItem(articles[i]),
@@ -267,10 +270,16 @@ class _SpaDemoHomePageState extends State<SpaDemoHomePage> {
               children: [
                 const SeedAvatar(size: SeedAvatarSize.size20),
                 const SizedBox(width: 6),
-                Text(article.author, style: typography.t4Medium),
+                // React ArticleListItem nests the author in a growing HStack.
+                // At 2x system text on narrow screens the author must shrink
+                // and wrap rather than force the surrounding Row to overflow.
+                Flexible(
+                  child: Text(article.author, style: typography.t4Medium),
+                ),
               ],
             ),
-            const SizedBox(height: 8),
+            // React ArticleListItem uses gap=x2_5 between author and copy.
+            const SizedBox(height: 10),
             Text(
               article.title,
               maxLines: 1,
@@ -315,60 +324,81 @@ class _SpaDemoHomePageState extends State<SpaDemoHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final isCupertino = Theme.of(context).platform == TargetPlatform.iOS;
     return Scaffold(
       backgroundColor: context.seedColor.bg.layerDefault,
-      // React AppBarMain has neither a Back action nor a centered title.
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(56),
-        child: ColoredBox(
-          color: context.seedColor.bg.layerDefault,
-          child: SafeArea(
-            bottom: false,
-            child: SizedBox(
+      // Scaffold.appBar reserves a separate top MediaQuery inset on top of a
+      // PreferredSize child with SafeArea. Build the header/body together so
+      // their y positions are controlled by one SafeArea (React AppScreen
+      // app-bar offset = 56px + safe-area top), not two inset owners.
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            SizedBox(
               height: 56,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text('Demo', style: context.seedTypography.t6Bold),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-      body: SeedTabsView(
-        selectedIndex: _tabIndex,
-        items: const [
-          SeedTabItem(label: '추천'),
-          SeedTabItem(label: '구독'),
-        ],
-        onTabSelected: (tab) => setState(() => _tabIndex = tab),
-        carousel: true,
-        dynamicHeight: false,
-        children: [
-          SingleChildScrollView(child: _recommendations()),
-          Align(
-            alignment: Alignment.topCenter,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 48),
-              child: UnconstrainedBox(
-                constrainedAxis: Axis.horizontal,
-                alignment: Alignment.topCenter,
-                child: SeedResultSection(
-                  asset: const Padding(
-                    padding: EdgeInsets.only(bottom: 16),
-                    child: Icon(Icons.article_rounded, size: 40),
+              child: ColoredBox(
+                color: context.seedColor.bg.layerDefault,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Align(
+                    alignment: isCupertino
+                        ? Alignment.center
+                        : Alignment.centerLeft,
+                    child: Text('Demo', style: context.seedTypography.t6Bold),
                   ),
-                  title: '구독한 글이 없습니다.',
-                  description: '추천 글을 확인해보세요.',
-                  primaryActionLabel: '추천 글 보기',
-                  onPrimaryAction: () => setState(() => _tabIndex = 0),
                 ),
               ),
             ),
-          ),
-        ],
+            Expanded(
+              child: SeedTabsView(
+                selectedIndex: _tabIndex,
+                size: SeedTabsSize.medium,
+                items: const [
+                  SeedTabItem(label: '추천'),
+                  SeedTabItem(label: '구독'),
+                ],
+                onTabSelected: (tab) => setState(() => _tabIndex = tab),
+                carousel: true,
+                dynamicHeight: false,
+                children: [
+                  SingleChildScrollView(
+                    key: const PageStorageKey<String>('demo-recommendations'),
+                    // AppScreen's layerOffsetBottom=safeArea reserves its
+                    // bottom inset inside the scrollport, not below the bar.
+                    padding: EdgeInsets.only(
+                      bottom: MediaQuery.paddingOf(context).bottom,
+                    ),
+                    child: _recommendations(),
+                  ),
+                  // TabsContent in the React recipe owns overflow-y:auto even
+                  // for the empty-subscription panel. A fixed PageView with an
+                  // UnconstrainedBox made the CTA unreachable when the keyboard
+                  // reduced height or system text enlarged the result section.
+                  SingleChildScrollView(
+                    key: const PageStorageKey<String>('demo-subscriptions'),
+                    padding: EdgeInsets.only(
+                      bottom: MediaQuery.paddingOf(context).bottom,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 48),
+                      child: SeedResultSection(
+                        asset: const Padding(
+                          padding: EdgeInsets.only(bottom: 16),
+                          child: Icon(Icons.article_rounded, size: 40),
+                        ),
+                        title: '구독한 글이 없습니다.',
+                        description: '추천 글을 확인해보세요.',
+                        primaryActionLabel: '추천 글 보기',
+                        onPrimaryAction: () => setState(() => _tabIndex = 0),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -425,7 +455,7 @@ class _SpaArticleDetailPageState extends State<SpaArticleDetailPage> {
     // AppBarBackButton is shown only for stacked React activities, whereas
     // AppBarCloseButton is shown only for a root activity. The React close
     // button has no default navigation action.
-    final isRootActivity = !Navigator.of(context).canPop();
+    final isRootActivity = spaIsRootRoute(context);
     return Scaffold(
       backgroundColor: colors.bg.layerDefault,
       extendBodyBehindAppBar: true,
@@ -440,7 +470,7 @@ class _SpaArticleDetailPageState extends State<SpaArticleDetailPage> {
         leading: isRootActivity
             ? null
             : SeedTopNavigationIconButton(
-                icon: const Icon(Icons.arrow_back_rounded),
+                icon: const Icon(Icons.chevron_left_rounded),
                 semanticsLabel: '뒤로',
                 onPressed: widget.goBack,
               ),
@@ -466,7 +496,8 @@ class _SpaArticleDetailPageState extends State<SpaArticleDetailPage> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 36),
+            // React hero→content gap=x4 and detail bottom pb=x4.
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -487,7 +518,7 @@ class _SpaArticleDetailPageState extends State<SpaArticleDetailPage> {
                     color: colors.fg.neutralMuted,
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 12),
                 Row(
                   children: [
                     const SeedAvatar(size: SeedAvatarSize.size20),
@@ -496,6 +527,7 @@ class _SpaArticleDetailPageState extends State<SpaArticleDetailPage> {
                       child: Text(article.author, style: typography.t4Medium),
                     ),
                     SeedTagGroup(
+                      size: SeedTagGroupSize.t3,
                       items: [
                         SeedTagItem(label: spaCategories[article.categoryId]!),
                         SeedTagItem(label: _articleDate(article.createdAt)),
@@ -508,8 +540,9 @@ class _SpaArticleDetailPageState extends State<SpaArticleDetailPage> {
                   prefixIcon: Icon(Icons.info_rounded),
                   description: '따뜻한 댓글을 남겨주세요.',
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 12),
                 SeedSegmentedControl<String>(
+                  semanticsLabel: '댓글 정렬 방식',
                   value: _sort,
                   segments: const [
                     SeedSegment(value: 'popular', label: '인기'),
@@ -526,6 +559,7 @@ class _SpaArticleDetailPageState extends State<SpaArticleDetailPage> {
                     description: '댓글이 없습니다.',
                   ),
                 ),
+                const SizedBox(height: 12),
                 SeedTextField.textarea(
                   controller: _comment,
                   label: '댓글',
