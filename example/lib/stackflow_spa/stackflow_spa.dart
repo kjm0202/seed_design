@@ -1,3 +1,4 @@
+import 'package:flutter_localizations/flutter_localizations.dart' as flutter_localizations;
 import 'package:flutter/material.dart' as flutter_material;
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/rendering.dart' show RenderAbstractViewport;
@@ -79,6 +80,9 @@ class _StackflowSpaAppState extends State<StackflowSpaApp> {
   Widget build(BuildContext context) {
     return MaterialApp.router(
       title: 'SEED Design Stackflow SPA',
+      locale: const Locale('ko'),
+      supportedLocales: const [Locale('ko'), Locale('en')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       routerDelegate: _history,
       routeInformationParser: const SpaHistoryParser(),
       debugShowCheckedModeBanner: false,
@@ -88,7 +92,7 @@ class _StackflowSpaAppState extends State<StackflowSpaApp> {
       builder: (context, child) => flutter_material.Localizations.override(
         context: context,
         delegates: const [
-          flutter_material.DefaultMaterialLocalizations.delegate,
+          flutter_localizations.GlobalMaterialLocalizations.delegate,
         ],
         child: flutter_material.Theme(
           data: spaMaterialTheme(Theme.of(context)),
