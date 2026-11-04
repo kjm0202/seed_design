@@ -196,7 +196,15 @@ void main() {
         addTearDown(tester.view.reset);
         await _route(tester, '/alert-dialog-stackflow');
         expect(find.byType(SeedAlertDialog), findsOneWidget);
-        expect(find.byType(SeedTopNavigation), findsNothing);
+        // The retained parent keeps its AppBar; the modal has none of its own.
+        expect(find.byType(SeedTopNavigation), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byType(SpaOwnScaffold).last,
+            matching: find.byType(SeedTopNavigation),
+          ),
+          findsNothing,
+        );
         final action = find.widgetWithText(SeedButton, '확인');
         expect(
           tester.widget<SeedButton>(action).variant,
@@ -216,7 +224,7 @@ void main() {
         addTearDown(tester.view.reset);
         await _route(tester, '/category-sheet');
         expect(find.byType(SeedBottomSheet), findsOneWidget);
-        expect(find.byType(SeedTopNavigation), findsNothing);
+        expect(find.byType(SeedTopNavigation), findsOneWidget);
         final rows = find.byType(SeedRadioListItem<String>);
         expect(rows, findsWidgets);
         for (final row in tester.widgetList<SeedRadioListItem<String>>(rows)) {

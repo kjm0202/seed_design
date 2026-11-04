@@ -24,6 +24,17 @@ void main() {
 
       final entry = find.text('Side Navigation');
       await tester.ensureVisible(entry);
+      // React ActivityHome's sticky HStack is a real hit-test surface. The
+      // default ensureVisible may align an item immediately behind it, and
+      // taps must not fall through the pinned heading (see the sticky section
+      // title group below). Aim
+      // the intended visible list row inside the scroll viewport before
+      // tapping, as a user would scroll it below the sticky heading.
+      await Scrollable.ensureVisible(
+        tester.element(entry),
+        alignment: 0.30,
+        duration: Duration.zero,
+      );
       await tester.pumpAndSettle();
       await tester.tap(entry);
       await tester.pumpAndSettle();

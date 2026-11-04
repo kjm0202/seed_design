@@ -1,4 +1,80 @@
 import 'package:flutter/cupertino.dart';
+import 'package:material_ui/material_ui.dart' show Theme, TargetPlatform;
+import 'package:seed_design/seed_design.dart';
+
+/// The official AppScreen dim: the whole page for the iOS slide, a 160px top
+/// gradient for the Android fade. Like `seed-app-screen__dim`, it belongs to
+/// the entering Activity and sits under its layer, so it only shows while that
+/// layer animates in. Modal Activities have no AppScreen and therefore no dim.
+class SpaActivityDim extends StatelessWidget {
+  const SpaActivityDim({
+    super.key,
+    required this.animation,
+    required this.child,
+    this.gradient = false,
+  });
+  final Animation<double> animation;
+  final bool gradient;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final overlay = context.seedColor.bg.overlay;
+    return Stack(
+      fit: StackFit.passthrough,
+      children: [
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: gradient ? null : 0,
+          height: gradient ? 160 : null,
+          child: IgnorePointer(
+            child: FadeTransition(
+              opacity: animation,
+              child: DecoratedBox(
+                decoration: gradient
+                    ? BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [overlay, overlay.withValues(alpha: 0)],
+                        ),
+                      )
+                    : BoxDecoration(color: overlay),
+              ),
+            ),
+          ),
+        ),
+        child,
+      ],
+    );
+  }
+}
+
+/// React's android AppBar keeps an empty left slot when a directly entered
+/// Activity has no Back button, which moves its title 14px.
+/// Whether the page's own route is the stack root. Unlike
+/// `Navigator.canPop()`, this stays false for the root page while another
+/// Activity or overlay is pushed above it (e.g. during a push transition).
+bool spaIsRootRoute(BuildContext context) =>
+    !(ModalRoute.of(context)?.canPop ?? Navigator.of(context).canPop());
+
+bool spaHasEmptyAppBarLeft(BuildContext context) =>
+    spaIsRootRoute(context) && Theme.of(context).platform != TargetPlatform.iOS;
+
+Widget spaRootTitle(BuildContext context, String title, {Color? color}) =>
+    Padding(
+      padding: const EdgeInsets.only(left: 14),
+      child: Text(
+        title,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: context.seedTypography.t6Bold.copyWith(
+          color: color ?? context.seedColor.fg.neutral,
+        ),
+      ),
+    );
 
 /// Route controls act on Flutter's real interactive back transition.
 class SpaCupertinoRoute<T> extends CupertinoPageRoute<T> {
@@ -8,6 +84,21 @@ class SpaCupertinoRoute<T> extends CupertinoPageRoute<T> {
   bool swiping = false;
   @override
   bool get popGestureEnabled => !preventSwipeBack && super.popGestureEnabled;
+  @override
+  Widget buildTransitions(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) => SpaActivityDim(
+    animation: animation,
+    child: super.buildTransitions(
+      context,
+      animation,
+      secondaryAnimation,
+      child,
+    ),
+  );
   @override
   void dispose() {
     swipeEvent.dispose();

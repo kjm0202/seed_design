@@ -148,6 +148,26 @@ const spaSections = <SpaSection>[
 
 String spaActivityTitle(String activity) {
   const titles = {
+    'ActivityAlertDialogStep': 'Step',
+    'ActivityBottomSheetStep': 'Step',
+    'ActivityMenuSheetStep': 'Step',
+    'ActivityAttachmentDisplayField': 'AttachmentDisplayField',
+    'ActivityAttachmentField': 'AttachmentField',
+    'ActivityBottomSheetWithAlertDialogStep':
+        'BottomSheet × AlertDialog (Step)',
+    'ActivityChipButton': 'Chip.Button',
+    'ActivityChipToggle': 'Chip.Toggle',
+    'ActivityFontMultiplierLayout': 'Font Multiplier Layout',
+    'ActivityListImageFrame': 'ListImageFrame',
+    'ActivityListItem': 'ListItem',
+    'ActivityListButtonItem': 'ListButtonItem',
+    'ActivityListCheckItem': 'ListCheckItem',
+    'ActivityListLinkItem': 'ListLinkItem',
+    'ActivityListRadioItem': 'ListRadioItem',
+    'ActivityListSwitchItem': 'ListSwitchItem',
+    'ActivityMarginPlayground': 'Margin Playground',
+    'ActivityRadioGroup': 'RadioGroup',
+    'ActivityTypographyScale': 'Typography Scale',
     'ActivityE2ETextareaAutoresizeScroll': 'E2E Textarea Autoresize Scroll',
     'ActivityPullToRefreshPreview': 'Pull To Refresh',
     'ActivityPullToRefreshTabs': 'Pull To Refresh',

@@ -17,8 +17,10 @@ const spaModalActivities = {
   'ActivitySidePanel',
   'ActivityResponsiveSidePanel',
   'ActivityAlertDialog',
+  'ActivityAlertDialogStackflow',
   'ActivityResponsiveDialog',
   'ActivityBottomSheetModalTest',
+  'ActivityCategorySheet',
 };
 
 /// Activity pages are built by feature groups. Return null for unknown names.

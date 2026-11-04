@@ -142,18 +142,18 @@ void main() {
   }
 
   testWidgets('home remains reachable after replacing its root activity', (
-    tester,
-  ) async {
-    final navigator = await open(tester, '/action-button');
-    navigator.pop();
-    await tester.pumpAndSettle();
-    navigator.pushReplacementNamed('/action-button');
-    await tester.pumpAndSettle();
-    await tester.tap(find.bySemanticsLabel('홈으로'));
-    await tester.pumpAndSettle();
-    expect(find.text('Home'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
+      tester,
+    ) async {
+      final navigator = await open(tester, '/action-button');
+      navigator.pop();
+      await tester.pumpAndSettle();
+      navigator.pushReplacementNamed('/action-button');
+      await tester.pumpAndSettle();
+      await tester.tap(find.bySemanticsLabel('Home'));
+      await tester.pumpAndSettle();
+      expect(find.text('Home'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
 
   testWidgets('required Select blocks empty submit then accepts a fruit', (
     tester,
