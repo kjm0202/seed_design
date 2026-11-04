@@ -58,6 +58,7 @@
   - **Dialog:** A scrolling body is a keyboard stop with a focus ring and arrow-key scrolling. The dialog root is no longer an invisible Tab stop.
   - **Accordion:** Hover shows the engaged surface, and the surface insets without moving the content.
   - **Others:** `SeedRadioListItem` adds `tone` and uses the large mark.
+- Uncontrolled `SeedRadioGroup` and `SeedQuantityPicker` no longer register with an enclosing `Form`, so `Form.reset()` no longer resets them while leaving other SEED inputs alone. Only `SeedTextField`, `SeedSelectFormField` and `SeedFormField` take part in a Form; wrap other inputs in `SeedFormField` to validate, save or reset them.
 
 ## 1.0.0
 

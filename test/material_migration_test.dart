@@ -524,6 +524,87 @@ void main() {
     }
 
     testWidgets(
+      'select Form adapter validates saves and resets its single selection',
+      (tester) async {
+        final form = GlobalKey<FormState>();
+        List<String>? saved;
+        var resets = 0;
+        await tester.pumpWidget(
+          hostMaterialMigrationContrac(
+            Form(
+              key: form,
+              child: SeedSelectFormField<String>(
+                groups: const [
+                  SeedSelectGroup(
+                    items: [
+                      SeedSelectItem(value: 'a', label: 'Apple'),
+                      SeedSelectItem(value: 'b', label: 'Banana'),
+                    ],
+                  ),
+                ],
+                validator: (value) => value!.isEmpty ? 'Choose fruit' : null,
+                onSaved: (value) => saved = value,
+                onReset: () => resets++,
+              ),
+            ),
+          ),
+        );
+        expect(form.currentState!.validate(), isFalse);
+        await tester.pump();
+        expect(find.text('Choose fruit'), findsOneWidget);
+        await tester.tap(find.text('Select an option'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Banana'));
+        await tester.pumpAndSettle();
+        expect(form.currentState!.validate(), isTrue);
+        form.currentState!.save();
+        expect(saved, ['b']);
+        form.currentState!.reset();
+        await tester.pumpAndSettle();
+        expect(resets, 1);
+        expect(find.text('Select an option'), findsOneWidget);
+        expect(find.text('Banana'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'controlled empty Select proposals and reset preserve parent ownership',
+      (tester) async {
+        final form = GlobalKey<FormState>();
+        final changes = <List<String>>[];
+        List<String>? saved;
+        await tester.pumpWidget(
+          hostMaterialMigrationContrac(
+            Form(
+              key: form,
+              child: SeedSelectFormField<String>(
+                value: const [],
+                groups: const [
+                  SeedSelectGroup(
+                    items: [SeedSelectItem(value: 'a', label: 'Apple')],
+                  ),
+                ],
+                onValueChange: changes.add,
+                onSaved: (value) => saved = value,
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('Select an option'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Apple'));
+        await tester.pumpAndSettle();
+        expect(changes, [
+          ['a'],
+        ]);
+        expect(find.text('Select an option'), findsOneWidget);
+        form.currentState!.reset();
+        form.currentState!.save();
+        expect(saved, isEmpty);
+      },
+    );
+
+    testWidgets(
       'Snackbar Undo persists and reports action once, explicit timeout remains available',
       (tester) async {
         ScaffoldFeatureController<SnackBar, SnackBarClosedReason>? controller;
