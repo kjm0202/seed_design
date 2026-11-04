@@ -1,3 +1,11 @@
+## Unreleased
+
+- Overlays inside a barrier-dismissible route consume the outside tap, so one tap on the barrier closes only the Select, Menu or Popover on top.
+- Connect text field server/length errors to Form validation; forward autofill/IME/editing options and restore owned text controllers.
+- Preserve Drawer/back navigation and AppBar bottom content; support optional FAB Hero tags and tooltips.
+- Add route builders, Navigator selection, route settings and focus options to dialog/sheet helpers; allow sheet constraint overrides.
+- Fix Material Snackbar action close reasons and duplicate action execution. Action snackbars now persist by default; use `persist: false` to retain a timeout. The SEED Provider timer contract is unchanged.
+
 ## 1.0.0
 
 ### English

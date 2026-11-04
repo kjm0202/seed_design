@@ -30,6 +30,9 @@ export 'src/foundations/elevation/seed_shadow.dart';
 export 'src/foundations/feedback/seed_scale_feedback.dart';
 export 'src/foundations/feedback/seed_control.dart';
 
+// Localization
+export 'src/localization/seed_localizations.dart';
+
 // Theme
 export 'src/theme/seed_theme_data.dart';
 export 'src/theme/seed_theme.dart';
