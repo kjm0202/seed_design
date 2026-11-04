@@ -1,3 +1,5 @@
+import '../../localization/seed_localizations.dart';
+
 import 'dart:math' as math;
 import 'dart:ui' show SemanticsRole;
 
@@ -36,13 +38,19 @@ Future<T?> showSeedSidePanel<T>({
   double? width,
   double? maxWidth,
   bool barrierDismissible = true,
+  bool useRootNavigator = true,
+  RouteSettings? routeSettings,
+  bool? requestFocus,
 }) {
   final capturedThemes = InheritedTheme.capture(
     from: context,
-    to: Navigator.of(context, rootNavigator: true).context,
+    to: Navigator.of(context, rootNavigator: useRootNavigator).context,
   );
   return showGeneralDialog<T>(
     context: context,
+    useRootNavigator: useRootNavigator,
+    routeSettings: routeSettings,
+    requestFocus: requestFocus,
     barrierDismissible: barrierDismissible,
     barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
     barrierColor: context.seedColor.bg.overlay,
@@ -174,6 +182,15 @@ class _SeedSidePanelState extends State<SeedSidePanel> {
     final typography = context.seedTypography;
     final mediaQuery = MediaQuery.of(context);
     final insets = mediaQuery.padding;
+    // The official SidePanelContent snippet omits Header entirely if its
+    // title, description, and close button are all absent. Keeping the empty
+    // header would otherwise reserve its 70px minimum height above the body.
+    final showHeader =
+        widget.titleWidget != null ||
+        widget.title.isNotEmpty ||
+        widget.descriptionWidget != null ||
+        (widget.description?.isNotEmpty ?? false) ||
+        widget.showCloseButton;
 
     return Semantics(
       container: true,
@@ -226,96 +243,109 @@ class _SeedSidePanelState extends State<SeedSidePanel> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Stack(
-                          children: [
-                            ConstrainedBox(
-                              constraints: BoxConstraints(
-                                minHeight: 70 + insets.top,
-                              ),
-                              child: Padding(
-                                padding: EdgeInsets.fromLTRB(
-                                  24,
-                                  24 + insets.top,
-                                  !widget.showCloseButton ? 24 : 52,
-                                  16,
+                        if (showHeader)
+                          Stack(
+                            children: [
+                              ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  minHeight: 70 + insets.top,
                                 ),
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                    DefaultTextStyle(
-                                      style: typography.t8Bold.copyWith(
-                                        color: colors.fg.neutral,
-                                      ),
-                                      child:
-                                          widget.titleWidget ??
-                                          Text(
-                                            widget.title,
-                                            style: typography.t8Bold.copyWith(
-                                              color: colors.fg.neutral,
-                                            ),
-                                          ),
-                                    ),
-                                    if (widget.descriptionWidget != null ||
-                                        widget.description != null) ...[
-                                      const SizedBox(height: 6),
-                                      DefaultTextStyle(
-                                        style: typography.t5Regular.copyWith(
-                                          color: colors.fg.neutralMuted,
-                                        ),
-                                        child:
-                                            widget.descriptionWidget ??
-                                            Text(
-                                              widget.description!,
-                                              style: typography.t5Regular
-                                                  .copyWith(
-                                                    color:
-                                                        colors.fg.neutralMuted,
-                                                  ),
-                                            ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                            ),
-                            if (widget.showCloseButton)
-                              Positioned(
-                                // The 52px target extends 15px around the 22px icon.
-                                top: 13 + insets.top,
-                                right: 9,
-                                child: SeedPressable(
-                                  semanticsLabel: '닫기',
-                                  onTap: () => _handleClose(
-                                    context,
-                                    SeedOverlayDismissReason.closeButton,
+                                child: Padding(
+                                  padding: EdgeInsets.fromLTRB(
+                                    24,
+                                    24 + insets.top,
+                                    !widget.showCloseButton ? 24 : 52,
+                                    16,
                                   ),
-                                  builder: (context, pressed) =>
-                                      AnimatedContainer(
-                                        width: 52,
-                                        height: 52,
-                                        duration: mediaQuery.disableAnimations
-                                            ? Duration.zero
-                                            : SeedDuration.colorTransition,
-                                        curve: SeedCurves.easing,
-                                        decoration: BoxDecoration(
-                                          color: pressed
-                                              ? colors.bg.transparentPressed
-                                              : colors.bg.transparent,
-                                          borderRadius: SeedBorderRadius.r3,
-                                        ),
-                                        child: Center(
-                                          child: Icon(
-                                            Icons.close,
-                                            size: 22,
-                                            color: colors.fg.neutralSubtle,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      if (widget.titleWidget != null ||
+                                          widget.title.isNotEmpty)
+                                        DefaultTextStyle(
+                                          style: typography.t8Bold.copyWith(
+                                            color: colors.fg.neutral,
                                           ),
+                                          child:
+                                              widget.titleWidget ??
+                                              Text(
+                                                widget.title,
+                                                style: typography.t8Bold
+                                                    .copyWith(
+                                                      color: colors.fg.neutral,
+                                                    ),
+                                              ),
                                         ),
-                                      ),
+                                      if (widget.descriptionWidget != null ||
+                                          (widget.description?.isNotEmpty ??
+                                              false)) ...[
+                                        // CSS flex gap exists only between
+                                        // rendered header elements.
+                                        if (widget.titleWidget != null ||
+                                            widget.title.isNotEmpty)
+                                          const SizedBox(height: 6),
+                                        DefaultTextStyle(
+                                          style: typography.t5Regular.copyWith(
+                                            color: colors.fg.neutralMuted,
+                                          ),
+                                          child:
+                                              widget.descriptionWidget ??
+                                              Text(
+                                                widget.description!,
+                                                style: typography.t5Regular
+                                                    .copyWith(
+                                                      color: colors
+                                                          .fg
+                                                          .neutralMuted,
+                                                    ),
+                                              ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
                                 ),
                               ),
-                          ],
-                        ),
+                              if (widget.showCloseButton)
+                                Positioned(
+                                  // The 52px target extends 15px around the 22px icon.
+                                  top: 13 + insets.top,
+                                  right: 9,
+                                  child: SeedPressable(
+                                    semanticsLabel: SeedLocalizations.label(
+                                      context,
+                                      SeedLabel.close,
+                                    ),
+                                    onTap: () => _handleClose(
+                                      context,
+                                      SeedOverlayDismissReason.closeButton,
+                                    ),
+                                    builder: (context, pressed) =>
+                                        AnimatedContainer(
+                                          width: 52,
+                                          height: 52,
+                                          duration: mediaQuery.disableAnimations
+                                              ? Duration.zero
+                                              : SeedDuration.colorTransition,
+                                          curve: SeedCurves.easing,
+                                          decoration: BoxDecoration(
+                                            color: pressed
+                                                ? colors.bg.transparentPressed
+                                                : colors.bg.transparent,
+                                            borderRadius: SeedBorderRadius.r3,
+                                          ),
+                                          child: Center(
+                                            child: Icon(
+                                              Icons.close,
+                                              size: 22,
+                                              color: colors.fg.neutralSubtle,
+                                            ),
+                                          ),
+                                        ),
+                                  ),
+                                ),
+                            ],
+                          ),
                         Expanded(
                           child: Stack(
                             fit: StackFit.expand,

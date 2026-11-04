@@ -1,3 +1,5 @@
+import '../../localization/seed_localizations.dart';
+
 import 'dart:ui' show SemanticsRole;
 
 import 'dart:math' as math;
@@ -31,40 +33,74 @@ void _closeSeedDialog(
   }
 }
 
-/// Shows a standard SEED dialog, with independent outside/Escape policies.
+/// Pushes a modal SEED dialog route and completes with its Navigator result.
+///
+/// Supply exactly one of [child] or [builder]. [useRootNavigator] defaults to
+/// true; [routeSettings], [requestFocus], [anchorPoint],
+/// [traversalEdgeBehavior], and [useSafeArea] configure the Flutter route.
+/// [barrierDismissible] and [closeOnEscape] independently control outside-tap
+/// and Escape dismissal, both enabled by default. [barrierLabel] provides an
+/// accessible scrim label; [barrierColor] defaults to the theme overlay color.
+/// [onDismissed] receives the recorded [SeedOverlayDismissReason] after exit.
 Future<T?> showSeedDialog<T>({
   required BuildContext context,
-  required Widget child,
+  Widget? child,
+  WidgetBuilder? builder,
+  bool useRootNavigator = true,
+  RouteSettings? routeSettings,
+  bool useSafeArea = true,
+  bool? requestFocus,
+  Offset? anchorPoint,
+  TraversalEdgeBehavior? traversalEdgeBehavior,
+  String? barrierLabel,
+  Color? barrierColor,
   bool barrierDismissible = true,
   bool closeOnEscape = true,
   ValueChanged<SeedOverlayDismissReason>? onDismissed,
 }) {
+  assert(
+    (child == null) != (builder == null),
+    'Provide exactly one of child or builder.',
+  );
+  final navigator = Navigator.of(context, rootNavigator: useRootNavigator);
   final route = _SeedDialogRoute<T>(
     context: context,
-    child: child,
+    contentBuilder: builder ?? (_) => child!,
+    themes: InheritedTheme.capture(from: context, to: navigator.context),
+    settings: routeSettings,
+    useSafeArea: useSafeArea,
+    requestFocus: requestFocus ?? navigator.widget.requestFocus,
+    anchorPoint: anchorPoint,
+    traversalEdgeBehavior: traversalEdgeBehavior,
+    barrierLabel: barrierLabel,
+    barrierColor: barrierColor ?? context.seedColor.bg.overlay,
     dismissible: barrierDismissible,
     closeOnEscape: closeOnEscape,
   );
-  return Navigator.of(
-    context,
-    rootNavigator: true,
-  ).push<T>(route).whenComplete(() => onDismissed?.call(route.reason));
+  return navigator
+      .push<T>(route)
+      .whenComplete(() => onDismissed?.call(route.reason));
 }
 
 class _SeedDialogRoute<T> extends DialogRoute<T> {
   _SeedDialogRoute({
     required super.context,
-    required Widget child,
+    required WidgetBuilder contentBuilder,
+    required CapturedThemes themes,
+    super.settings,
+    super.useSafeArea,
+    super.requestFocus,
+    super.anchorPoint,
+    super.traversalEdgeBehavior,
+    super.barrierLabel,
+    required Color barrierColor,
     required bool dismissible,
     required bool closeOnEscape,
   }) : reduceMotion = MediaQuery.disableAnimationsOf(context),
        super(
          barrierDismissible: dismissible,
-         barrierColor: context.seedColor.bg.overlay,
-         themes: InheritedTheme.capture(
-           from: context,
-           to: Navigator.of(context, rootNavigator: true).context,
-         ),
+         barrierColor: barrierColor,
+         themes: themes,
          builder: (routeContext) => CallbackShortcuts(
            bindings: {
              const SingleActivator(LogicalKeyboardKey.escape): () {
@@ -75,11 +111,29 @@ class _SeedDialogRoute<T> extends DialogRoute<T> {
                }
              },
            },
-           child: Focus(autofocus: true, child: child),
+           child: Focus(
+             // Holds initial focus without being a Tab stop of its own.
+             skipTraversal: true,
+             autofocus: requestFocus ?? true,
+             child: Builder(builder: contentBuilder),
+           ),
          ),
        );
   final bool reduceMotion;
   SeedOverlayDismissReason reason = SeedOverlayDismissReason.programmatic;
+  // The official backdrop enters in d2 while the content takes d4.
+  late final CurvedAnimation _barrierAnimation = CurvedAnimation(
+    parent: animation!,
+    curve: const Interval(0, 0.5),
+    reverseCurve: Curves.linear,
+  );
+
+  @override
+  void dispose() {
+    _barrierAnimation.dispose();
+    super.dispose();
+  }
+
   void dismiss(SeedOverlayDismissReason reason, [Object? result]) {
     this.reason = reason;
     navigator?.pop(result);
@@ -93,7 +147,7 @@ class _SeedDialogRoute<T> extends DialogRoute<T> {
       reduceMotion ? Duration.zero : SeedDuration.d2;
   @override
   Widget buildModalBarrier() => AnimatedModalBarrier(
-    color: animation!.drive(
+    color: _barrierAnimation.drive(
       ColorTween(begin: Colors.transparent, end: barrierColor),
     ),
     dismissible: barrierDismissible,
@@ -120,19 +174,35 @@ class _SeedDialogRoute<T> extends DialogRoute<T> {
   );
 }
 
-/// Shows a standard SEED Alert Dialog.
+const _automaticCancelText = '\u0000seed.cancel';
+
+/// Pushes a SEED alert dialog and completes with the user's action result.
+///
+/// [title] is required; [description] is optional. [confirmText] defaults to
+/// `확인`, while omitted [cancelText] defaults to `취소`; passing null to
+/// [cancelText] omits the cancel action. [isCritical] applies critical action
+/// styling. The modal backdrop is not dismissible by default, while Escape
+/// closes unless [closeOnEscape] is false. Route ownership is chosen by
+/// [useRootNavigator] (true by default); [routeSettings] and [requestFocus]
+/// are Flutter Navigator options.
 Future<bool?> showSeedAlertDialog({
   required BuildContext context,
   required String title,
   String? description,
-  String confirmText = '확인',
-  String? cancelText = '취소',
+  String? confirmText,
+  String? cancelText = _automaticCancelText,
+  bool useRootNavigator = true,
+  RouteSettings? routeSettings,
+  bool? requestFocus,
   bool isCritical = false,
   bool barrierDismissible = false,
   bool closeOnEscape = true,
 }) {
   return showSeedDialog<bool>(
     context: context,
+    useRootNavigator: useRootNavigator,
+    routeSettings: routeSettings,
+    requestFocus: requestFocus,
     barrierDismissible: barrierDismissible,
     closeOnEscape: closeOnEscape,
     child: SeedAlertDialog(
@@ -145,36 +215,61 @@ Future<bool?> showSeedAlertDialog({
   );
 }
 
-/// Alert Dialog component of SEED Design System.
+/// Composable confirmation/alert dialog content, with optional action slots.
+///
+/// Use [showSeedAlertDialog] or `SeedAlertDialogTrigger` for route lifecycle.
+/// This widget renders content only; [onConfirm] and [onCancel] customize
+/// the corresponding actions. Default labels are localized Korean fallbacks.
 class SeedAlertDialog extends StatelessWidget {
+  /// Visible alert heading.
   final String title;
+  /// Optional supporting message under [title].
   final String? description;
-  final String confirmText;
-  final String? cancelText;
+  final String? _confirmText;
+  final String? _cancelText;
+  /// Confirm button label, `확인` when unspecified.
+  String get confirmText => _confirmText ?? '확인';
+  /// Cancel label, `취소` when omitted and null when explicitly suppressed.
+  String? get cancelText =>
+      _cancelText == _automaticCancelText ? '취소' : _cancelText;
+  /// Whether the confirmation action has critical/destructive emphasis.
   final bool isCritical;
+  /// Optional confirmation callback, invoked when the user confirms.
   final VoidCallback? onConfirm;
+  /// Optional cancellation callback, invoked when the user cancels.
   final VoidCallback? onCancel;
+  /// Optional replacement header, content, and footer composition slots.
   final Widget? header, body, footer;
 
+  /// Creates alert content, allowing explicit null [cancelText] to hide cancel.
   const SeedAlertDialog({
     super.key,
     required this.title,
     this.description,
-    this.confirmText = '확인',
-    this.cancelText = '취소',
+    String? confirmText,
+    String? cancelText = _automaticCancelText,
     this.isCritical = false,
     this.onConfirm,
     this.onCancel,
     this.header,
     this.body,
     this.footer,
-  });
+    // Keep public named parameters and non-nullable getters compatible.
+    // ignore: prefer_initializing_formals
+  }) : _confirmText = confirmText,
+       // Preserve the public named parameter.
+       // ignore: prefer_initializing_formals
+       _cancelText = cancelText;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.seedColor;
     final typography = context.seedTypography;
-    final shadows = context.seedShadows;
+    final confirmText =
+        _confirmText ?? SeedLocalizations.label(context, SeedLabel.confirm);
+    final cancelText = _cancelText == _automaticCancelText
+        ? SeedLocalizations.label(context, SeedLabel.cancel)
+        : _cancelText;
 
     return Semantics(
       role: SemanticsRole.alertDialog,
@@ -190,7 +285,6 @@ class SeedAlertDialog extends StatelessWidget {
             decoration: BoxDecoration(
               color: colors.bg.layerFloating,
               borderRadius: SeedBorderRadius.r5,
-              boxShadow: shadows.s3,
             ),
             child: Material(
               color: Colors.transparent,
@@ -240,7 +334,7 @@ class SeedAlertDialog extends StatelessWidget {
                         children: [
                           if (cancelText != null)
                             SeedButton(
-                              label: cancelText!,
+                              label: cancelText,
                               variant: SeedButtonVariant.neutralWeak,
                               onPressed: () {
                                 if (onCancel != null) {
@@ -284,7 +378,13 @@ class SeedAlertDialog extends StatelessWidget {
   }
 }
 
-enum SeedDialogSize { medium, large }
+/// Dialog width presets: `medium` is 480px, `large` is 800px.
+enum SeedDialogSize {
+  /// Maximum width 480px.
+  medium,
+  /// Maximum width 800px.
+  large,
+}
 
 /// Equal-width actions, folding the primary action above the secondary action.
 class _SeedAlertActions extends StatelessWidget {
@@ -338,24 +438,48 @@ class _SeedAlertActions extends StatelessWidget {
   );
 }
 
-/// Dialog component of SEED Design System with Header, Content, and Footer.
+/// Composable SEED dialog surface with header, body, and footer.
+///
+/// [size] chooses a default maximum width of 480px (`medium`) or 800px
+/// (`large`); explicit [maxWidth] overrides it. The body scrolls by default,
+/// while footer actions remain outside the scroll region. Route behavior,
+/// focus trapping, backdrop dismissal, and Escape are provided by
+/// [showSeedDialog] or `SeedDialogTrigger`, not by this surface itself.
 class SeedDialog extends StatelessWidget {
+  /// Optional custom header that replaces automatic heading composition.
   final Widget? header;
+  /// Optional heading text if [header] is absent.
   final String? title;
+  /// Optional explanatory text below [title].
   final String? description;
+  /// Required main dialog content.
   final Widget content;
+  /// Optional custom footer, overriding auto-composed actions.
   final Widget? footer;
+  /// Optional leading footer action in the auto-composed footer.
   final Widget? subAction;
+  /// Optional secondary footer action.
   final Widget? secondaryAction;
+  /// Optional primary footer action.
   final Widget? primaryAction;
+  /// Displays the title-area close button; true by default.
   final bool showCloseButton;
+  /// Effective maximum width, based on [size] unless explicitly overridden.
   final double maxWidth;
   final bool _hasCustomMaxWidth;
+  /// Default width preset used when [maxWidth] is omitted.
   final SeedDialogSize size;
+  /// Optional body height cap; defaults to 80% of the viewport height.
   final double? maxHeight;
+  /// Body scrolling and scroll-fog visibility policies (both true by default).
   final bool scrollBody, showScrollFog;
+  /// Content padding; horizontal 24px by default.
   final EdgeInsetsGeometry bodyPadding;
 
+  /// Creates the dialog card without pushing a route.
+  ///
+  /// [content] is required; [footer] takes precedence over individual
+  /// [subAction], [secondaryAction], and [primaryAction] slots.
   const SeedDialog({
     super.key,
     this.header,
@@ -380,7 +504,6 @@ class SeedDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.seedColor;
     final typography = context.seedTypography;
-    final shadows = context.seedShadows;
     final mediaQuery = MediaQuery.of(context);
     final double maxHeight = this.maxHeight ?? mediaQuery.size.height * 0.8;
 
@@ -434,7 +557,6 @@ class SeedDialog extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: colors.bg.layerFloating,
                     borderRadius: SeedBorderRadius.r5,
-                    boxShadow: shadows.s3,
                   ),
                   child: Material(
                     color: Colors.transparent,
@@ -500,6 +622,7 @@ class SeedDialog extends StatelessWidget {
                                       padding: bodyPadding,
                                       showFog: showScrollFog,
                                       fogOnlyWhenScrollable: true,
+                                      focusableWhenScrollable: true,
                                       fogSize: 48,
                                       showScrolledDivider: true,
                                       child: content,
@@ -525,9 +648,15 @@ class SeedDialog extends StatelessWidget {
                             top: 13,
                             right: 9,
                             child: Tooltip(
-                              message: '닫기',
+                              message: SeedLocalizations.label(
+                                context,
+                                SeedLabel.close,
+                              ),
                               child: SeedPressable(
-                                semanticsLabel: '닫기',
+                                semanticsLabel: SeedLocalizations.label(
+                                  context,
+                                  SeedLabel.close,
+                                ),
                                 onTap: () => _closeSeedDialog(
                                   context,
                                   SeedOverlayDismissReason.closeButton,
@@ -539,7 +668,7 @@ class SeedDialog extends StatelessWidget {
                                     color: pressed
                                         ? colors.bg.transparentPressed
                                         : colors.bg.transparent,
-                                    shape: BoxShape.circle,
+                                    borderRadius: SeedBorderRadius.r3,
                                   ),
                                   child: Icon(
                                     Icons.close_rounded,

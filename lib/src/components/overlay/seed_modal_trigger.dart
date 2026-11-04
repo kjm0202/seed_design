@@ -1,3 +1,4 @@
+import 'seed_sheet_drag.dart';
 import 'seed_side_panel.dart';
 
 import 'package:material_ui/material_ui.dart';
@@ -9,7 +10,11 @@ import 'seed_anchored_overlay.dart';
 import 'seed_bottom_sheet.dart';
 import 'seed_dialog.dart';
 
-enum SeedModalType { dialog, bottomSheet, sidePanel }
+enum SeedModalType {
+  dialog,
+  bottomSheet,
+  sidePanel,
+}
 
 /// Controlled modal lifecycle, shared by dialogs, sheets and panels.
 class SeedModalTrigger extends StatefulWidget {
@@ -502,14 +507,20 @@ class _SeedManagedRoute extends PopupRoute<Object?> {
           animationController: controller,
           backgroundColor: Colors.transparent,
           elevation: 0,
-          enableDrag: dismissible && enableDrag,
+          enableDrag: false,
           showDragHandle: false,
           onClosing: () => onDismissRequest(SeedOverlayDismissReason.drag),
           builder: (_) => Padding(
             padding: EdgeInsets.only(
               bottom: MediaQuery.viewInsetsOf(context).bottom,
             ),
-            child: Builder(builder: builder),
+            child: dismissible && enableDrag
+                ? SeedSheetDragDismiss(
+                    onDismiss: () =>
+                        onDismissRequest(SeedOverlayDismissReason.drag),
+                    child: Builder(builder: builder),
+                  )
+                : Builder(builder: builder),
           ),
         ),
       );

@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/gestures.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
@@ -84,5 +85,31 @@ void main() {
     await tester.tap(find.text('Beta'));
     await tester.pumpAndSettle();
     expect(proposals, ['b', 'b', 'b']);
+  });
+
+  testWidgets('tooltip visibility uses the same reason-bearing callback', (
+    tester,
+  ) async {
+    final events = <(bool, SeedOverlayDismissReason)>[];
+    await tester.pumpWidget(
+      host(
+        SeedHelpBubbleTooltip(
+          open: false,
+          openDelay: Duration.zero,
+          closeDelay: Duration.zero,
+          title: 'Tooltip',
+          onOpenChanged: (open, reason) => events.add((open, reason)),
+          child: const Text('Hover me'),
+        ),
+      ),
+    );
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: tester.getCenter(find.text('Hover me')));
+    await tester.pumpAndSettle();
+    expect(events, [(true, SeedOverlayDismissReason.trigger)]);
+    expect(find.text('Tooltip'), findsNothing);
+    await mouse.removePointer();
+    await tester.pumpAndSettle();
+    expect(events, hasLength(1));
   });
 }

@@ -4,6 +4,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
 Widget host(Widget child) => MaterialApp(
+locale: const Locale('ko'), supportedLocales: const [Locale('ko'), Locale('en')], localizationsDelegates: GlobalMaterialLocalizations.delegates,
+
   theme: SeedThemeData.light().toThemeData(),
   home: Scaffold(body: Center(child: child)),
 );
@@ -352,35 +354,35 @@ void main() {
   );
 
   testWidgets(
-    'custom header dialog exposes dismiss action and Escape dismisses route',
-    (tester) async {
-      await tester.pumpWidget(
-        host(
-          Builder(
-            builder: (context) => TextButton(
-              onPressed: () => showSeedDialog<void>(
-                context: context,
-                child: const SeedDialog(
-                  header: Text('Custom header'),
-                  content: Text('Body'),
+      'custom header dialog exposes dismiss action and Escape dismisses route',
+      (tester) async {
+        await tester.pumpWidget(
+          host(
+            Builder(
+              builder: (context) => TextButton(
+                onPressed: () => showSeedDialog<void>(
+                  context: context,
+                  child: const SeedDialog(
+                    header: Text('Custom header'),
+                    content: Text('Body'),
+                  ),
                 ),
+                child: const Text('Open'),
               ),
-              child: const Text('Open'),
             ),
           ),
-        ),
-      );
-      await tester.tap(find.text('Open'));
-      await tester.pumpAndSettle();
-      expect(find.byTooltip('닫기'), findsOneWidget);
-      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
-      await tester.pumpAndSettle();
-      expect(find.byType(SeedDialog), findsNothing);
-      await tester.tap(find.text('Open'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('닫기'));
-      await tester.pumpAndSettle();
-      expect(find.byType(SeedDialog), findsNothing);
-    },
-  );
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+        expect(find.byTooltip('닫기'), findsOneWidget);
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pumpAndSettle();
+        expect(find.byType(SeedDialog), findsNothing);
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byTooltip('닫기'));
+        await tester.pumpAndSettle();
+        expect(find.byType(SeedDialog), findsNothing);
+      },
+    );
 }

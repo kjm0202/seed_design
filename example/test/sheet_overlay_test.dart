@@ -22,23 +22,22 @@ Future<NavigatorState> _open(
 
 void main() {
   testWidgets('MenuSheet Simple is swipeable and selection notifies parent', (
-    tester,
-  ) async {
-    final navigator = await _open(tester, '/menu-sheet-activity');
-    navigator.pushNamed('/menu-sheet-activity/simple');
-    await tester.pumpAndSettle();
-    final route = ModalRoute.of(tester.element(find.byType(SeedMenuSheet)))!;
-    expect(route, isA<mui.ModalBottomSheetRoute>());
-    expect((route as mui.ModalBottomSheetRoute).enableDrag, isTrue);
-    final widget = tester.widget<SeedMenuSheet>(find.byType(SeedMenuSheet));
-    expect(widget.showCancelButton, isFalse);
-    expect(find.text('닫기'), findsNothing);
-    await tester.tap(find.text('수정'));
-    await tester.pumpAndSettle();
-    expect(find.byType(SeedMenuSheet), findsNothing);
-    expect(find.textContaining('선택한 액션: edit'), findsWidgets);
-    expect(tester.takeException(), isNull);
-  });
+      tester,
+    ) async {
+      final navigator = await _open(tester, '/menu-sheet-activity');
+      navigator.pushNamed('/menu-sheet-activity/simple');
+      await tester.pumpAndSettle();
+      final route = ModalRoute.of(tester.element(find.byType(SeedMenuSheet)))!;
+      expect(route, isA<mui.ModalBottomSheetRoute>());
+      final widget = tester.widget<SeedMenuSheet>(find.byType(SeedMenuSheet));
+      expect(widget.showCancelButton, isFalse);
+      expect(find.text('닫기'), findsNothing);
+      await tester.tap(find.text('수정'));
+      await tester.pumpAndSettle();
+      expect(find.byType(SeedMenuSheet), findsNothing);
+      expect(find.textContaining('선택한 액션: edit'), findsWidgets);
+      expect(tester.takeException(), isNull);
+    });
 
   testWidgets('MenuSheet Simple handle drag dismisses its activity', (
     tester,

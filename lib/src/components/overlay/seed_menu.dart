@@ -9,13 +9,19 @@ import 'seed_anchored_overlay.dart';
 
 import '../../foundations/colors/seed_color_scheme.dart';
 import '../../foundations/dimensions/seed_dimension.dart';
+import '../../foundations/feedback/seed_scale_feedback.dart';
+import '../../foundations/motion/seed_motion.dart';
 import '../../foundations/radius/seed_radius.dart';
 import '../../foundations/typography/seed_typography.dart';
 import '../../theme/seed_theme.dart';
 import '../badge/seed_badge.dart';
 import '../layout/seed_divider.dart';
 
-enum SeedMenuSize { small, medium, responsive }
+enum SeedMenuSize {
+  small,
+  medium,
+  responsive,
+}
 
 /// An individual action or selectable item in [SeedMenu].
 class SeedMenuItemData {
@@ -83,6 +89,7 @@ class SeedMenu extends StatefulWidget {
 
 class _SeedMenuState extends State<SeedMenu> {
   final List<FocusNode> _nodes = [];
+  final FocusNode _rootFocus = FocusNode(debugLabel: 'SeedMenu');
   String _search = '';
   Timer? _searchReset;
   List<SeedMenuItemData> get _items =>
@@ -96,10 +103,15 @@ class _SeedMenuState extends State<SeedMenu> {
   @override
   void initState() {
     super.initState();
-    // The overlay itself initially receives keyboard focus. Advance it to the
-    // first enabled action, matching React Menu's list-navigation entry point.
+    // The overlay itself initially receives keyboard focus. As in React Menu's
+    // list navigation, a keyboard open focuses the first enabled action while
+    // a pointer open focuses the root, so the first arrow key lands on it.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || SeedOverlayScope.maybeOf(context)?.isOpen != true) return;
+      if (seedLastInputWasPointer) {
+        _rootFocus.requestFocus();
+        return;
+      }
       final index = _items.indexWhere((item) => item.enabled);
       if (index >= 0 && index < _nodes.length) {
         _nodes[index].requestFocus();
@@ -110,6 +122,7 @@ class _SeedMenuState extends State<SeedMenu> {
   @override
   void dispose() {
     _searchReset?.cancel();
+    _rootFocus.dispose();
     for (final node in _nodes) {
       node.dispose();
     }
@@ -188,28 +201,28 @@ class _SeedMenuState extends State<SeedMenu> {
     return Semantics(
       role: SemanticsRole.menu,
       label: widget.semanticsLabel,
-      child: Focus(
-        onKeyEvent: _typeahead,
-        child: Container(
-          constraints: BoxConstraints(maxHeight: widget.maxHeight),
-          width: widget.width ?? (size == SeedMenuSize.small ? 200 : 240),
-          decoration: BoxDecoration(
-            color: colors.bg.layerFloating,
-            borderRadius: SeedBorderRadius.r5,
-            boxShadow: shadows.s3,
-          ),
-          padding: const EdgeInsets.symmetric(vertical: SeedDimension.x2),
-          child: CallbackShortcuts(
-            bindings: {
-              const SingleActivator(LogicalKeyboardKey.arrowDown): () =>
-                  _move(1),
-              const SingleActivator(LogicalKeyboardKey.arrowUp): () =>
-                  _move(-1),
-              const SingleActivator(LogicalKeyboardKey.home): () =>
-                  _move(1, edge: true),
-              const SingleActivator(LogicalKeyboardKey.end): () =>
-                  _move(-1, edge: true),
-            },
+      // Above the root Focus so the keys also work before any item is active.
+      child: CallbackShortcuts(
+        bindings: {
+          const SingleActivator(LogicalKeyboardKey.arrowDown): () => _move(1),
+          const SingleActivator(LogicalKeyboardKey.arrowUp): () => _move(-1),
+          const SingleActivator(LogicalKeyboardKey.home): () =>
+              _move(1, edge: true),
+          const SingleActivator(LogicalKeyboardKey.end): () =>
+              _move(-1, edge: true),
+        },
+        child: Focus(
+          focusNode: _rootFocus,
+          onKeyEvent: _typeahead,
+          child: Container(
+            constraints: BoxConstraints(maxHeight: widget.maxHeight),
+            width: widget.width ?? (size == SeedMenuSize.small ? 200 : 240),
+            decoration: BoxDecoration(
+              color: colors.bg.layerFloating,
+              borderRadius: SeedBorderRadius.r5,
+              boxShadow: shadows.s3,
+            ),
+            padding: const EdgeInsets.symmetric(vertical: SeedDimension.x2),
             child: SingleChildScrollView(
               primary: false,
               child: Column(
@@ -274,102 +287,122 @@ class _SeedMenuState extends State<SeedMenu> {
       labelColor = colors.fg.neutral;
     }
 
-    return Semantics(
-      role: SemanticsRole.menuItem,
+    return SeedPressable(
+      focusNode: focusNode,
       enabled: item.enabled,
-      child: InkWell(
-        focusNode: focusNode,
-        canRequestFocus: item.enabled,
-        overlayColor: WidgetStatePropertyAll(colors.bg.transparentPressed),
-        onTap: item.enabled
-            ? () {
-                item.onTap?.call();
-                if (widget.closeOnSelect && context.mounted) {
-                  SeedOverlayScope.maybeOf(context)
-                      ?.close(SeedOverlayDismissReason.itemClick);
-                }
-              }
-            : null,
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: size == SeedMenuSize.small ? 10 : 12,
-          ),
-          child: Row(
-            children: [
-              if (item.prefixIcon != null) ...[
-                IconTheme(
-                  data: IconThemeData(
-                    size: size == SeedMenuSize.small ? 18 : 22,
-                    color: !item.enabled
-                        ? colors.fg.disabled
-                        : (item.isDestructive
-                              ? colors.fg.critical
-                              : colors.fg.neutral),
-                  ),
-                  child: item.prefixIcon!,
-                ),
-                SizedBox(
-                  width: size == SeedMenuSize.small
-                      ? SeedDimension.x2
-                      : SeedDimension.x3,
-                ),
-              ],
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      item.label,
-                      style:
-                          (size == SeedMenuSize.small
-                                  ? typography.t4Regular
-                                  : typography.t5Regular)
-                              .copyWith(color: labelColor),
-                    ),
-                    if (item.description != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        item.description!,
-                        style:
-                            (size == SeedMenuSize.small
-                                    ? typography.t2Regular
-                                    : typography.t3Regular)
-                                .copyWith(
-                                  color: item.enabled
-                                      ? colors.fg.neutralSubtle
-                                      : colors.fg.disabled,
-                                ),
-                      ),
-                    ],
-                  ],
-                ),
+      enableScale: false,
+      semanticButton: false,
+      semanticsRole: SemanticsRole.menuItem,
+      focusRingInside: true,
+      focusBorderRadius: SeedBorderRadius.r3,
+      onTap: () {
+        item.onTap?.call();
+        if (widget.closeOnSelect && context.mounted) {
+          SeedOverlayScope.maybeOf(context)
+              ?.close(SeedOverlayDismissReason.itemClick);
+        }
+      },
+      builder: (context, engaged) => Stack(
+        children: [
+          // The official highlight insets from the menu while pressed.
+          Positioned.fill(
+            child: AnimatedContainer(
+              duration: SeedDuration.d3,
+              curve: SeedCurves.easing,
+              margin: EdgeInsets.symmetric(
+                horizontal: engaged ? SeedDimension.x2 : 0,
               ),
-              if (item.badge != null) ...[
-                SeedBadge(
-                  label: item.badge!,
-                  tone: item.isDestructive
-                      ? SeedBadgeTone.critical
-                      : SeedBadgeTone.neutral,
-                ),
-                const SizedBox(width: SeedDimension.x2),
-              ],
-              if (item.suffixIcon != null)
-                IconTheme(
-                  data: IconThemeData(
-                    size: size == SeedMenuSize.small ? 16 : 18,
-                    color: item.enabled
-                        ? (item.isDestructive
-                              ? colors.fg.critical
-                              : colors.fg.neutral)
-                        : colors.fg.disabled,
-                  ),
-                  child: item.suffixIcon!,
-                ),
-            ],
+              decoration: BoxDecoration(
+                color: engaged
+                    ? colors.bg.transparentPressed
+                    : colors.bg.transparent,
+                borderRadius: SeedBorderRadius.r3,
+              ),
+            ),
           ),
-        ),
+          SeedContentScale(
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: size == SeedMenuSize.small ? 10 : 12,
+              ),
+              child: Row(
+                children: [
+                  if (item.prefixIcon != null) ...[
+                    IconTheme(
+                      data: IconThemeData(
+                        size: size == SeedMenuSize.small ? 18 : 22,
+                        color: !item.enabled
+                            ? colors.fg.disabled
+                            : (item.isDestructive
+                                  ? colors.fg.critical
+                                  : colors.fg.neutral),
+                      ),
+                      child: item.prefixIcon!,
+                    ),
+                    SizedBox(
+                      width: size == SeedMenuSize.small
+                          ? SeedDimension.x2
+                          : SeedDimension.x3,
+                    ),
+                  ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          item.label,
+                          style:
+                              (size == SeedMenuSize.small
+                                      ? typography.t4Regular
+                                      : typography.t5Regular)
+                                  .copyWith(color: labelColor),
+                        ),
+                        if (item.description != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            item.description!,
+                            style:
+                                (size == SeedMenuSize.small
+                                        ? typography.t2Regular
+                                        : typography.t3Regular)
+                                    .copyWith(
+                                      color: item.enabled
+                                          ? colors.fg.neutralSubtle
+                                          : colors.fg.disabled,
+                                    ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  if (item.badge != null) ...[
+                    SeedBadge(
+                      label: item.badge!,
+                      tone: item.isDestructive
+                          ? SeedBadgeTone.critical
+                          : SeedBadgeTone.neutral,
+                    ),
+                    const SizedBox(width: SeedDimension.x2),
+                  ],
+                  if (item.suffixIcon != null)
+                    IconTheme(
+                      data: IconThemeData(
+                        size: size == SeedMenuSize.small ? 16 : 18,
+                        color: item.enabled
+                            ? (item.isDestructive
+                                  ? colors.fg.critical
+                                  : colors.fg.neutral)
+                            : colors.fg.disabled,
+                      ),
+                      child: item.suffixIcon!,
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -396,5 +429,10 @@ class SeedMenuTrigger extends SeedAnchoredOverlay {
     super.maxWidth,
     super.maxHeight,
     super.skipAnimation,
-  }) : super(overlayBuilder: builder, tabExitsContent: true);
+  }) : super(
+         overlayBuilder: builder,
+         tabExitsContent: true,
+         // MIN_HEIGHT in React's useMenu.
+         fitMinExtent: 200,
+       );
 }

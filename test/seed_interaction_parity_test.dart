@@ -4,6 +4,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
 Widget host(Widget child) => MaterialApp(
+locale: const Locale('ko'), supportedLocales: const [Locale('ko'), Locale('en')], localizationsDelegates: GlobalMaterialLocalizations.delegates,
+
   theme: SeedThemeData.light().toThemeData(),
   home: Scaffold(body: child),
 );
@@ -88,39 +90,41 @@ void main() {
   );
 
   testWidgets('dialog close respects prevention and closes with reason', (
-    tester,
-  ) async {
-    var prevent = true;
-    final reasons = <SeedOverlayDismissReason>[];
-    await tester.pumpWidget(
-      host(
-        Center(
-          child: SeedDialogTrigger(
-            responsive: false,
-            canClose: (_) => !prevent,
-            onOpenChanged: (_, reason) => reasons.add(reason),
-            triggerBuilder: (_, open, toggle) =>
-                TextButton(onPressed: toggle, child: const Text('Dialog open')),
-            builder: (_) => const SeedDialog(
-              title: 'Dialog title',
-              content: Text('Dialog body'),
+      tester,
+    ) async {
+      var prevent = true;
+      final reasons = <SeedOverlayDismissReason>[];
+      await tester.pumpWidget(
+        host(
+          Center(
+            child: SeedDialogTrigger(
+              responsive: false,
+              canClose: (_) => !prevent,
+              onOpenChanged: (_, reason) => reasons.add(reason),
+              triggerBuilder: (_, open, toggle) => TextButton(
+                onPressed: toggle,
+                child: const Text('Dialog open'),
+              ),
+              builder: (_) => const SeedDialog(
+                title: 'Dialog title',
+                content: Text('Dialog body'),
+              ),
             ),
           ),
         ),
-      ),
-    );
-    await tester.tap(find.text('Dialog open'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('닫기'));
-    await tester.pumpAndSettle();
-    expect(find.text('Dialog body'), findsOneWidget);
-    prevent = false;
-    await tester.tap(find.byTooltip('닫기'));
-    await tester.pumpAndSettle();
-    expect(find.text('Dialog body'), findsNothing);
-    expect(reasons.last, SeedOverlayDismissReason.closeButton);
-    expect(tester.takeException(), isNull);
-  });
+      );
+      await tester.tap(find.text('Dialog open'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('닫기'));
+      await tester.pumpAndSettle();
+      expect(find.text('Dialog body'), findsOneWidget);
+      prevent = false;
+      await tester.tap(find.byTooltip('닫기'));
+      await tester.pumpAndSettle();
+      expect(find.text('Dialog body'), findsNothing);
+      expect(reasons.last, SeedOverlayDismissReason.closeButton);
+      expect(tester.takeException(), isNull);
+    });
 
   testWidgets('sheet supports min and max programmatic snap without overflow', (
     tester,

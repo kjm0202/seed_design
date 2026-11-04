@@ -1,3 +1,5 @@
+import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
@@ -209,6 +211,40 @@ void main() {
   }
 
   testWidgets(
+    'Tooltip replacement opens after hover delay and on keyboard focus',
+    (tester) async {
+      await tester.pumpWidget(
+        host(
+          SeedHelpBubbleTooltip(
+            title: 'Migration tip',
+            openDelay: const Duration(milliseconds: 100),
+            closeDelay: const Duration(milliseconds: 50),
+            child: TextButton(onPressed: () {}, child: const Text('Target')),
+          ),
+        ),
+      );
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: Offset.zero);
+      await mouse.moveTo(tester.getCenter(find.text('Target')));
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(find.text('Migration tip'), findsNothing);
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.pumpAndSettle();
+      expect(find.text('Migration tip'), findsOneWidget);
+      await mouse.moveTo(Offset.zero);
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.pumpAndSettle();
+      expect(find.text('Migration tip'), findsNothing);
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
+      expect(find.text('Migration tip'), findsOneWidget);
+      await mouse.removePointer();
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
+  testWidgets(
     'retained linear progress preserves numeric values and announcements',
     (tester) async {
       Widget progress(double value, String announcement) => host(
@@ -230,6 +266,139 @@ void main() {
     },
   );
   group('Form, Navigator and theme contracts', () {
+
+    testWidgets(
+      'overlay builders select Navigator, preserve scoped theme and return route results',
+      (tester) async {
+        final outer = RouteLog();
+        final inner = RouteLog();
+        int? result;
+        await tester.pumpWidget(
+          MaterialApp(
+            navigatorObservers: [outer],
+            home: SeedTheme(
+              data: SeedThemeData.dark(),
+              child: SeedLocalizations(
+                labels: const {SeedLabel.confirm: 'Proceed'},
+                child: Navigator(
+                  observers: [inner],
+                  onGenerateRoute: (_) => MaterialPageRoute<void>(
+                    builder: (context) => Scaffold(
+                      body: Column(
+                        children: [
+                          TextButton(
+                            onPressed: () async {
+                              result = await showSeedDialog<int>(
+                                context: context,
+                                useRootNavigator: false,
+                                routeSettings: const RouteSettings(
+                                  name: '/confirmation',
+                                ),
+                                builder: (routeContext) {
+                                  expect(routeContext.seedIsDark, isTrue);
+                                  expect(
+                                    SeedLocalizations.label(
+                                      routeContext,
+                                      SeedLabel.confirm,
+                                    ),
+                                    'Proceed',
+                                  );
+                                  return SeedDialog(
+                                    content: TextButton(
+                                      onPressed: () =>
+                                          Navigator.of(routeContext).pop(7),
+                                      child: const Text('Return result'),
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                            child: const Text('Dialog'),
+                          ),
+                          TextButton(
+                            onPressed: () => showSeedBottomSheet<void>(
+                              context: context,
+                              useRootNavigator: true,
+                              routeSettings: const RouteSettings(
+                                name: '/wide-sheet',
+                              ),
+                              constraints: const BoxConstraints(maxWidth: 600),
+                              builder: (_) => const SizedBox(
+                                width: 600,
+                                height: 100,
+                                child: Text('Wide sheet'),
+                              ),
+                            ),
+                            child: const Text('Sheet'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        final outerCount = outer.pushed.length;
+        await tester.tap(find.text('Dialog'));
+        await tester.pumpAndSettle();
+        expect(inner.pushed.last.settings.name, '/confirmation');
+        expect(outer.pushed.length, outerCount);
+        await tester.tap(find.text('Return result'));
+        await tester.pumpAndSettle();
+        expect(result, 7);
+        await tester.tap(find.text('Sheet'));
+        await tester.pumpAndSettle();
+        expect(outer.pushed.last.settings.name, '/wide-sheet');
+        expect(
+          tester
+              .getSize(
+                find
+                    .ancestor(
+                      of: find.text('Wide sheet'),
+                      matching: find.byType(SizedBox),
+                    )
+                    .first,
+              )
+              .width,
+          600,
+        );
+      },
+    );
+
+    testWidgets(
+      'default copy follows locale and explicit alert labels are never translated',
+      (tester) async {
+        for (final locale in [const Locale('en'), const Locale('ko')]) {
+          await tester.pumpWidget(
+            hostMaterialMigrationContrac(
+              const SeedAlertDialog(title: 'Confirm'),
+              locale: locale,
+            ),
+          );
+          expect(
+            find.text(locale.languageCode == 'ko' ? '확인' : 'OK'),
+            findsOneWidget,
+          );
+          expect(
+            find.text(locale.languageCode == 'ko' ? '취소' : 'Cancel'),
+            findsOneWidget,
+          );
+        }
+        await tester.pumpWidget(
+          hostMaterialMigrationContrac(
+            const SeedAlertDialog(
+              title: 'Confirm',
+              confirmText: '확인',
+              cancelText: null,
+            ),
+          ),
+        );
+        expect(find.text('확인'), findsOneWidget);
+        expect(find.text('Cancel'), findsNothing);
+      },
+    );
 
     test('theme bridge can preserve Material component overrides while installing SEED tokens', () {
       final original = ThemeData(
@@ -326,5 +495,61 @@ void main() {
         'Compose message',
       );
     });
+  });
+
+  group('material_ui integration', () {
+    for (final brightness in Brightness.values) {
+      testWidgets('bottom sheet supports ListTile in $brightness mode', (
+        tester,
+      ) async {
+        final seedTheme = brightness == Brightness.light
+            ? SeedThemeData.light()
+            : SeedThemeData.dark();
+        String? selection;
+        await tester.pumpWidget(
+          MaterialApp(
+            locale: const Locale('ko'),
+            localizationsDelegates: GlobalMaterialLocalizations.delegates,
+            theme: seedTheme.toThemeData(),
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => SeedButton(
+                  label: 'Open sheet',
+                  onPressed: () async {
+                    selection = await showSeedBottomSheet<String>(
+                      context: context,
+                      child: SeedBottomSheet(
+                        title: 'Sort',
+                        content: Builder(
+                          builder: (sheetContext) => ListTile(
+                            selected: true,
+                            selectedTileColor:
+                                seedTheme.colorScheme.bg.brandWeak,
+                            title: const Text('Latest'),
+                            onTap: () =>
+                                Navigator.of(sheetContext).pop('latest'),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        );
+
+        await tester.tap(find.text('Open sheet'));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        expect(find.text('Sort'), findsOneWidget);
+
+        await tester.tap(find.text('Latest'));
+        await tester.pumpAndSettle();
+        expect(selection, 'latest');
+        expect(find.text('Sort'), findsNothing);
+        expect(tester.takeException(), isNull);
+      });
+    }
   });
 }

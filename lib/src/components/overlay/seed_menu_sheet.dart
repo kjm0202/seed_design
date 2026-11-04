@@ -1,3 +1,5 @@
+import '../../localization/seed_localizations.dart';
+
 import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart' show PointerDeviceKind;
@@ -14,13 +16,21 @@ import 'seed_bottom_sheet.dart';
 import 'seed_menu.dart';
 import 'seed_anchored_overlay.dart';
 
-/// Shows a SEED Menu Sheet centered within the available safe area.
+/// Shows a grouped SEED Menu Sheet using a bottom-sheet Navigator route.
+///
+/// [groups] supplies ordered actions and optional group labels. [title] and
+/// [description] supply optional introductory text; [cancelLabel] defaults to
+/// `닫기` and [showCancelButton] enables the cancel affordance. [closeOnSelect]
+/// requests dismissal before calling the selected item action, and defaults
+/// to true. [labelAlign] defaults to start; [groupLabelAlignments] overrides
+/// individual groups. [isDismissible] controls route dismissal; [enableDrag]
+/// enables dragging when dismissible; [showHandle] controls the visual handle.
 Future<T?> showSeedMenuSheet<T>({
   required BuildContext context,
   String? title,
   String? description,
   required List<SeedMenuGroupData> groups,
-  String cancelLabel = '닫기',
+  String? cancelLabel,
   bool showCancelButton = true,
   bool closeOnSelect = true,
   TextAlign labelAlign = TextAlign.start,
@@ -47,14 +57,24 @@ Future<T?> showSeedMenuSheet<T>({
   ),
 );
 
-/// A grouped action menu with a fixed header/footer and a scrolling list.
+/// A grouped action sheet with fixed header/footer and scrollable menu items.
+///
+/// This widget renders the sheet and relies on its overlay scope or Navigator
+/// for dismissal. [swipeable] and [handleDragDismissible] are Flutter-specific
+/// composition options used by [showSeedMenuSheet], not React Root props.
 class SeedMenuSheet extends StatelessWidget {
+  /// Creates a menu-sheet surface from ordered [groups].
+  ///
+  /// [showCancelButton], [closeOnSelect], [showHandle], [swipeable] and
+  /// [handleDragDismissible] are true by default. [cancelLabel] defaults to
+  /// `닫기`. [labelAlign] is used unless an entry in [groupLabelAlignments]
+  /// overrides the corresponding group.
   const SeedMenuSheet({
     super.key,
     this.title,
     this.description,
     required this.groups,
-    this.cancelLabel = '닫기',
+    String? cancelLabel,
     this.showCancelButton = true,
     this.closeOnSelect = true,
     this.labelAlign = TextAlign.start,
@@ -62,17 +82,27 @@ class SeedMenuSheet extends StatelessWidget {
     this.swipeable = true,
     this.handleDragDismissible = true,
     this.groupLabelAlignments,
-  });
+    // Preserve the public named parameter and getter.
+    // ignore: prefer_initializing_formals
+  }) : _cancelLabel = cancelLabel;
 
+  /// Optional heading centered above the groups.
   final String? title;
+  /// Optional supporting paragraph below [title].
   final String? description;
+  /// Ordered groups of action rows.
   final List<SeedMenuGroupData> groups;
-  final String cancelLabel;
+  final String? _cancelLabel;
+  /// Effective cancel action text; `닫기` when unspecified.
+  String get cancelLabel => _cancelLabel ?? '닫기';
+  /// Whether a fixed cancel action appears below the list.
   final bool showCancelButton;
 
   /// Keep the sheet open for multi-selection or asynchronous confirmation.
   final bool closeOnSelect;
+  /// Default horizontal alignment for item labels.
   final TextAlign labelAlign;
+  /// Whether the top drag-handle indicator is visible.
   final bool showHandle;
 
   /// The swipeable variant uses 24px header inset; the legacy non-drawer
@@ -251,7 +281,11 @@ class SeedMenuSheet extends StatelessWidget {
                                     ),
                                     alignment: Alignment.center,
                                     child: Text(
-                                      cancelLabel,
+                                      _cancelLabel ??
+                                          SeedLocalizations.label(
+                                            context,
+                                            SeedLabel.close,
+                                          ),
                                       style: typography.t5Medium.copyWith(
                                         color: colors.fg.neutral,
                                       ),
@@ -263,6 +297,27 @@ class SeedMenuSheet extends StatelessWidget {
                         ],
                       ),
                     ),
+                    // Official SwipeableMenuSheet keeps a VisuallyHidden
+                    // CloseButton for assistive technology when no visible
+                    // one is shown.
+                    if (!showCancelButton)
+                      Positioned(
+                        left: 0,
+                        bottom: 0,
+                        width: 1,
+                        height: 1,
+                        child: Semantics(
+                          button: true,
+                          label:
+                              _cancelLabel ??
+                              SeedLocalizations.label(context, SeedLabel.close),
+                          onTap: () => _close(
+                            context,
+                            SeedOverlayDismissReason.closeButton,
+                          ),
+                          child: const SizedBox.expand(),
+                        ),
+                      ),
                     if (showHandle)
                       Positioned(
                         top: 0,
@@ -312,65 +367,69 @@ class SeedMenuSheet extends StatelessWidget {
               item.onTap?.call();
             }
           : null,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: SeedDimension.x4,
-          vertical: SeedDimension.x3_5,
-        ),
-        child: Row(
-          children: [
-            if (item.prefixIcon != null) ...[
-              IconTheme(
-                data: IconThemeData(
-                  size: 22,
-                  color: !item.enabled
-                      ? colors.fg.disabled
-                      : (item.isDestructive
-                            ? colors.fg.critical
-                            : colors.fg.neutral),
-                ),
-                child: item.prefixIcon!,
-              ),
-              const SizedBox(width: SeedDimension.x3_5),
-            ],
-            Expanded(
-              child: Column(
-                crossAxisAlignment: itemLabelAlign == TextAlign.center
-                    ? CrossAxisAlignment.center
-                    : CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    item.label,
-                    textAlign: itemLabelAlign,
-                    style: typography.t5Regular.copyWith(
-                      color: labelColor,
-                      fontWeight: FontWeight.w400,
-                    ),
+      // Official menu-sheet item: min-height 52px with 14px vertical padding.
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 52),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: SeedDimension.x4,
+            vertical: SeedDimension.x3_5,
+          ),
+          child: Row(
+            children: [
+              if (item.prefixIcon != null) ...[
+                IconTheme(
+                  data: IconThemeData(
+                    size: 22,
+                    color: !item.enabled
+                        ? colors.fg.disabled
+                        : (item.isDestructive
+                              ? colors.fg.critical
+                              : colors.fg.neutral),
                   ),
-                  if (item.description != null) ...[
-                    const SizedBox(height: 2),
+                  child: item.prefixIcon!,
+                ),
+                const SizedBox(width: SeedDimension.x3_5),
+              ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: itemLabelAlign == TextAlign.center
+                      ? CrossAxisAlignment.center
+                      : CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                     Text(
-                      item.description!,
+                      item.label,
                       textAlign: itemLabelAlign,
-                      style: typography.t3Medium.copyWith(
-                        color: item.enabled
-                            ? colors.fg.neutralSubtle
-                            : colors.fg.disabled,
+                      style: typography.t5Regular.copyWith(
+                        color: labelColor,
+                        fontWeight: FontWeight.w400,
                       ),
                     ),
+                    if (item.description != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        item.description!,
+                        textAlign: itemLabelAlign,
+                        style: typography.t3Medium.copyWith(
+                          color: item.enabled
+                              ? colors.fg.neutralSubtle
+                              : colors.fg.disabled,
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-            if (item.badge != null)
-              SeedBadge(
-                label: item.badge!,
-                tone: item.isDestructive
-                    ? SeedBadgeTone.critical
-                    : SeedBadgeTone.neutral,
-              ),
-          ],
+              if (item.badge != null)
+                SeedBadge(
+                  label: item.badge!,
+                  tone: item.isDestructive
+                      ? SeedBadgeTone.critical
+                      : SeedBadgeTone.neutral,
+                ),
+            ],
+          ),
         ),
       ),
     );

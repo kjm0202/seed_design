@@ -13,6 +13,9 @@
 - **Breaking migration:** List dividers are hidden by default. Choice controls use official visual sizes. RadioGroup no longer registers implicitly with Form.
 - **Breaking migration:** Float offset defaults to zero, the large breakpoint is 1280 and AspectRatio defaults to 4/3. SeedAspectRatio composes AspectRatio instead of inheriting it. Footer has no default copyright.
 - Fix `SeedScrollFog` opacity, which was weaker than the official mask, and the inverted `SeedScrollFogMask`. WheelPicker uses the mask, as the official one does.
+- `SeedHelpBubbleTrigger` content is a named `dialog` node whose bounds stop at the card, like the official `HelpBubble.Content`; the arrow is outside it. Finders that read semantics from `find.byType(SeedHelpBubble)` should look up the dialog `Semantics` inside it.
+- `SeedMenu` stays on its requested side when its content fits there, even with less than 200px of room, like the official size-then-flip order.
+- `SeedPopover` with plain text now hugs that text within `minWidth`/`maxWidth` like the official `width: auto`, and reserves its 48px scroll fade only while the body overflows. Custom widgets keep `maxWidth`.
 
 ## 1.0.0
 

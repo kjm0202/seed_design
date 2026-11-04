@@ -1,7 +1,6 @@
-import 'dart:ui' show PointerDeviceKind;
-
-import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
 Widget _tooltipApp({
@@ -54,6 +53,14 @@ Future<TestGesture> _enterTrigger(WidgetTester tester) async {
   await tester.pump();
   return mouse;
 }
+
+Widget host(Widget child) => MaterialApp(
+  supportedLocales: const [Locale('en'), Locale('ko')],
+  locale: const Locale('ko'),
+  localizationsDelegates: GlobalMaterialLocalizations.delegates,
+  theme: SeedThemeData.light().toThemeData(),
+  home: Scaffold(body: child),
+);
 
 void main() {
   testWidgets(
@@ -193,4 +200,34 @@ void main() {
       await mouse.removePointer();
     },
   );
+  group('pointer exit', () {
+    testWidgets('tooltip honors delay and closes after pointer exit', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          const Center(
+            child: SeedHelpBubbleTooltip(
+              title: 'Tooltip content',
+              openDelay: Duration(milliseconds: 300),
+              child: Text('Hover here'),
+            ),
+          ),
+        ),
+      );
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: const Offset(0, 0));
+      await mouse.moveTo(tester.getCenter(find.text('Hover here')));
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(find.text('Tooltip content'), findsNothing);
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pumpAndSettle();
+      expect(find.text('Tooltip content'), findsOneWidget);
+      await mouse.moveTo(const Offset(0, 0));
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pumpAndSettle();
+      expect(find.text('Tooltip content'), findsNothing);
+      await mouse.removePointer();
+    });
+  });
 }

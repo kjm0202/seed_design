@@ -1,5 +1,8 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show listEquals;
+import 'package:flutter/rendering.dart'
+    show BoxParentData, RenderBox, RenderShiftedBox;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
@@ -7,9 +10,18 @@ import '../disclosure/seed_accordion.dart';
 import '../../foundations/motion/seed_motion.dart';
 import '../button/seed_button.dart';
 
-enum SeedOverlaySide { top, bottom, left, right }
+enum SeedOverlaySide {
+  top,
+  bottom,
+  left,
+  right,
+}
 
-enum SeedOverlayAlign { start, center, end }
+enum SeedOverlayAlign {
+  start,
+  center,
+  end,
+}
 
 enum SeedOverlayDismissReason {
   trigger,
@@ -103,9 +115,11 @@ class SeedAnchoredOverlay extends StatefulWidget {
     this.overflowPadding = 16,
     this.arrowPadding = 12,
     this.flip = true,
+    this.flipFallbackSides,
     this.shift = true,
     this.maxWidth,
     this.maxHeight,
+    this.fitMinExtent,
     this.autoFocus = true,
     this.contentFocusable = true,
     this.restoreFocus = true,
@@ -137,7 +151,12 @@ class SeedAnchoredOverlay extends StatefulWidget {
   final SeedOverlayAlign align;
   final double gap, overflowPadding, arrowPadding;
   final bool flip, shift;
+
+  final List<SeedOverlaySide>? flipFallbackSides;
+
   final double? maxWidth, maxHeight;
+
+  final double? fitMinExtent;
 
   /// Whether the overlay content can receive keyboard or accessibility focus.
   /// Disable for descriptive content such as a tooltip.
@@ -237,6 +256,40 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
   final FocusNode _contentFocus = FocusNode(debugLabel: 'Seed overlay content');
   final FocusNode _triggerFocus = FocusNode();
   final List<ScrollPosition> _scrollPositions = [];
+  // OverlayPortal does not rebuild its overlay when only the anchor's render
+  // position changes (e.g. AnimatedPositioned). React floating-ui observes
+  // layout shifts through autoUpdate; sample after *existing* Flutter frames
+  // while open. This callback never schedules frames merely to poll.
+  Rect? _lastRenderedAnchorRect;
+  bool _anchorCheckQueued = false;
+  Rect? _readAnchorRect() {
+    final anchor = _anchorKey.currentContext?.findRenderObject() as RenderBox?;
+    final overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox?;
+    if (anchor == null ||
+        overlay == null ||
+        !anchor.attached ||
+        !overlay.attached) {
+      return null;
+    }
+    return overlay.globalToLocal(anchor.localToGlobal(Offset.zero)) &
+        anchor.size;
+  }
+
+  void _observeAnchorAfterFrame() {
+    if (_anchorCheckQueued || !_open || !mounted) return;
+    _anchorCheckQueued = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _anchorCheckQueued = false;
+      if (!mounted || !_open) return;
+      final rect = _readAnchorRect();
+      if (rect != null && rect != _lastRenderedAnchorRect) {
+        setState(() => _lastRenderedAnchorRect = rect);
+      }
+      _observeAnchorAfterFrame();
+    });
+  }
+
   bool _accordionContentHidden = false;
   bool _accordionWasHiddenWhileOpen = false;
   late final AnimationController _animation = AnimationController(
@@ -405,6 +458,7 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
     _returnFocus = FocusManager.instance.primaryFocus;
     setState(() => _open = true);
     _portal.show();
+    _observeAnchorAfterFrame();
     _bindMenuEscapeScope();
     _animation.duration =
         widget.skipAnimation || MediaQuery.disableAnimationsOf(context)
@@ -513,23 +567,30 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
       final rect =
           overlay.globalToLocal(anchor.localToGlobal(Offset.zero)) &
           anchor.size;
-      final media = MediaQuery.of(overlayContext);
+      _lastRenderedAnchorRect = rect;
+      // OverlayPortal builds in the root overlay, whose MediaQuery may not
+      // include the anchor subtree's safe-area or keyboard insets. Collision
+      // bounds belong to the reference viewport's MediaQuery, not a default
+      // MediaQuery inherited by the portal's overlay child.
+      final media = MediaQuery.of(context);
       return Positioned.fill(
         child: Offstage(
           offstage: !_open && !_animation.isAnimating,
           child: TickerMode(
             enabled: _open || _animation.isAnimating,
-            child: CustomSingleChildLayout(
+            child: _SeedFloatingLayout(
               delegate: SeedOverlayPositionDelegate(
                 anchor: rect,
                 side: widget.side,
                 align: widget.align,
                 gap: widget.gap,
                 flip: widget.flip,
+                flipFallbackSides: widget.flipFallbackSides,
                 shift: widget.shift,
                 textDirection: Directionality.of(context),
                 maxWidth: widget.maxWidth,
                 maxHeight: widget.maxHeight,
+                fitMinExtent: widget.fitMinExtent,
                 insets: EdgeInsets.fromLTRB(
                   math.max(media.padding.left, media.viewInsets.left) +
                       widget.overflowPadding,
@@ -595,6 +656,15 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
               child: TapRegion(
                 enabled: _open,
                 groupId: _tapGroup,
+                // Only the topmost official layer dismisses on an outside
+                // press, so one tap on a modal's barrier closes just this.
+                consumeOutsideTaps:
+                    widget.closeOnInteractOutside &&
+                    switch (ModalRoute.of(context)) {
+                      final PopupRoute<dynamic> route =>
+                        route.barrierDismissible,
+                      _ => false,
+                    },
                 onTapOutside: widget.closeOnInteractOutside
                     ? (_) => _request(false, SeedOverlayDismissReason.outside)
                     : null,
@@ -773,22 +843,32 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
             _contentFocus.requestFocus();
             return KeyEventResult.handled;
           },
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (widget.anchor != null)
-                KeyedSubtree(key: _anchorKey, child: widget.anchor!),
-              KeyedSubtree(
-                key: widget.anchor == null ? _anchorKey : null,
-                child: widget.triggerBuilder(
-                  context,
-                  _open,
-                  () => _request(!_open, SeedOverlayDismissReason.trigger),
+          // A single trigger must receive its parent's *vertical* constraints.
+          // Wrapping it in a Column would measure it with an unbounded main
+          // axis: a 50px intrinsic InputButton then overflows a 40px toolbar
+          // (e.g. TablePagination at a large text scale). Only use a Column
+          // when the caller explicitly supplies a separate anchor widget.
+          child: widget.anchor == null
+              ? KeyedSubtree(
+                  key: _anchorKey,
+                  child: widget.triggerBuilder(
+                    context,
+                    _open,
+                    () => _request(!_open, SeedOverlayDismissReason.trigger),
+                  ),
+                )
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    KeyedSubtree(key: _anchorKey, child: widget.anchor!),
+                    widget.triggerBuilder(
+                      context,
+                      _open,
+                      () => _request(!_open, SeedOverlayDismissReason.trigger),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
         ),
       ),
     ),
@@ -803,10 +883,12 @@ class SeedOverlayPositionDelegate extends SingleChildLayoutDelegate {
     this.align = SeedOverlayAlign.center,
     this.gap = 8,
     this.flip = true,
+    this.flipFallbackSides,
     this.shift = true,
     this.textDirection = TextDirection.ltr,
     this.maxWidth,
     this.maxHeight,
+    this.fitMinExtent,
     this.onResolved,
     this.onPosition,
   });
@@ -816,8 +898,10 @@ class SeedOverlayPositionDelegate extends SingleChildLayoutDelegate {
   final SeedOverlayAlign align;
   final double gap;
   final bool flip, shift;
+
+  final List<SeedOverlaySide>? flipFallbackSides;
   final TextDirection textDirection;
-  final double? maxWidth, maxHeight;
+  final double? maxWidth, maxHeight, fitMinExtent;
   final ValueChanged<SeedOverlaySide>? onResolved;
   final void Function(Offset, Size)? onPosition;
   Rect bounds(Size size) {
@@ -846,7 +930,19 @@ class SeedOverlayPositionDelegate extends SingleChildLayoutDelegate {
   @override
   BoxConstraints getConstraintsForChild(BoxConstraints constraints) {
     final b = bounds(constraints.biggest);
-    final available = flip
+    if (flip && flipFallbackSides != null) {
+      // With perpendicular fallbacks, constraining width to the requested
+      // horizontal side would crush the bubble before the vertical candidates
+      // are evaluated. Measure within the viewport instead.
+      return BoxConstraints.loose(
+        Size(
+          math.min(maxWidth ?? double.infinity, b.width),
+          math.min(maxHeight ?? double.infinity, b.height),
+        ),
+      );
+    }
+    final fits = fitMinExtent != null && space(side, b) >= fitMinExtent!;
+    final available = flip && !fits
         ? math.max(space(side, b), space(opposite(side), b))
         : space(side, b);
     final vertical =
@@ -859,19 +955,7 @@ class SeedOverlayPositionDelegate extends SingleChildLayoutDelegate {
     );
   }
 
-  @override
-  Offset getPositionForChild(Size size, Size childSize) {
-    final b = bounds(size);
-    final vertical =
-        side == SeedOverlaySide.top || side == SeedOverlaySide.bottom;
-    final extent = vertical ? childSize.height : childSize.width;
-    final resolved =
-        flip &&
-            extent > space(side, b) &&
-            space(opposite(side), b) > space(side, b)
-        ? opposite(side)
-        : side;
-    onResolved?.call(resolved);
+  Offset _unshiftedPosition(SeedOverlaySide candidate, Size childSize) {
     final start = align == SeedOverlayAlign.start;
     final end = align == SeedOverlayAlign.end;
     final leading = textDirection == TextDirection.rtl
@@ -880,17 +964,19 @@ class SeedOverlayPositionDelegate extends SingleChildLayoutDelegate {
     final trailing = textDirection == TextDirection.rtl
         ? anchor.left
         : anchor.right - childSize.width;
-    var x = vertical
+    final vertical =
+        candidate == SeedOverlaySide.top || candidate == SeedOverlaySide.bottom;
+    final x = vertical
         ? (start
               ? leading
               : end
               ? trailing
               : anchor.center.dx - childSize.width / 2)
-        : resolved == SeedOverlaySide.left
+        : candidate == SeedOverlaySide.left
         ? anchor.left - gap - childSize.width
         : anchor.right + gap;
-    var y = vertical
-        ? (resolved == SeedOverlaySide.top
+    final y = vertical
+        ? (candidate == SeedOverlaySide.top
               ? anchor.top - gap - childSize.height
               : anchor.bottom + gap)
         : start
@@ -898,13 +984,104 @@ class SeedOverlayPositionDelegate extends SingleChildLayoutDelegate {
         : end
         ? anchor.bottom - childSize.height
         : anchor.center.dy - childSize.height / 2;
+    return Offset(x, y);
+  }
+
+  SeedOverlaySide _resolveSide(Size size, Size childSize) {
+    final b = bounds(size);
+    final SeedOverlaySide resolved;
+    if (flip && flipFallbackSides != null) {
+      final candidates = <SeedOverlaySide>{
+        side,
+        for (final candidate in flipFallbackSides!)
+          if (candidate != side) candidate,
+      }.toList();
+      // React's floating-ui flip runs before shift and checks both the main
+      // axis and cross-axis overflows. A candidate may have room on its side
+      // but still project beyond the top/bottom (or left/right) edge.
+      //
+      // Preserve the caller's order for the first fully fitting candidate;
+      // with no perfect candidate, use floating-ui's bestFit approach:
+      // minimize the sum of positive overflow distances.
+      var best = candidates.first;
+      var leastOverflow = double.infinity;
+      for (final candidate in candidates) {
+        final vertical =
+            candidate == SeedOverlaySide.top ||
+            candidate == SeedOverlaySide.bottom;
+        final requiredExtent =
+            fitMinExtent ?? (vertical ? childSize.height : childSize.width);
+        final mainOverflow = math.max(
+          0.0,
+          requiredExtent - space(candidate, b),
+        );
+        final raw = _unshiftedPosition(candidate, childSize);
+        final crossOverflow = vertical
+            ? math.max(0.0, b.left - raw.dx) +
+                  math.max(0.0, raw.dx + childSize.width - b.right)
+            : math.max(0.0, b.top - raw.dy) +
+                  math.max(0.0, raw.dy + childSize.height - b.bottom);
+        final totalOverflow = mainOverflow + crossOverflow;
+        if (totalOverflow <= 0) {
+          best = candidate;
+          break;
+        }
+        if (totalOverflow < leastOverflow) {
+          leastOverflow = totalOverflow;
+          best = candidate;
+        }
+      }
+      resolved = best;
+    } else {
+      final vertical =
+          side == SeedOverlaySide.top || side == SeedOverlaySide.bottom;
+      final extent = vertical ? childSize.height : childSize.width;
+      // With fitMinExtent, React's size() first caps the content at
+      // max(fitMinExtent, available). Content shorter than the requested
+      // side's space never overflows, so flip() keeps that side.
+      resolved =
+          flip &&
+              extent > space(side, b) &&
+              (fitMinExtent == null || space(side, b) < fitMinExtent!) &&
+              space(opposite(side), b) > space(side, b)
+          ? opposite(side)
+          : side;
+    }
+    return resolved;
+  }
+
+  Offset _positionForSide(Size size, Size childSize, SeedOverlaySide resolved) {
+    final b = bounds(size);
+    onResolved?.call(resolved);
+    final vertical =
+        resolved == SeedOverlaySide.top || resolved == SeedOverlaySide.bottom;
+    final raw = _unshiftedPosition(resolved, childSize);
+    var x = raw.dx;
+    var y = raw.dy;
     if (shift) {
-      x = x.clamp(b.left, math.max(b.left, b.right - childSize.width));
-      y = y.clamp(b.top, math.max(b.top, b.bottom - childSize.height));
+      // floating-ui's shift(mainAxis:true) is along the axis perpendicular
+      // to placement. Clamping the placement axis instead would detach the
+      // bubble from its anchor when even the best candidate has too little
+      // room, breaking the directional arrow and requested gutter.
+      // Its limitShift() limiter also prevents a viewport collision from
+      // shifting the entire popup past the reference. During nested scrolling
+      // the reference can be only partly visible: prefer attachment over
+      // pushing the popup completely inside the viewport safe padding.
+      if (vertical) {
+        x = x.clamp(b.left, math.max(b.left, b.right - childSize.width));
+        x = x.clamp(anchor.left - childSize.width, anchor.right);
+      } else {
+        y = y.clamp(b.top, math.max(b.top, b.bottom - childSize.height));
+        y = y.clamp(anchor.top - childSize.height, anchor.bottom);
+      }
     }
     onPosition?.call(Offset(x, y), childSize);
     return Offset(x, y);
   }
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) =>
+      _positionForSide(size, childSize, _resolveSide(size, childSize));
 
   @override
   bool shouldRelayout(SeedOverlayPositionDelegate oldDelegate) =>
@@ -915,9 +1092,103 @@ class SeedOverlayPositionDelegate extends SingleChildLayoutDelegate {
       textDirection != oldDelegate.textDirection ||
       gap != oldDelegate.gap ||
       flip != oldDelegate.flip ||
+      !listEquals(flipFallbackSides, oldDelegate.flipFallbackSides) ||
       shift != oldDelegate.shift ||
       maxWidth != oldDelegate.maxWidth ||
-      maxHeight != oldDelegate.maxHeight;
+      maxHeight != oldDelegate.maxHeight ||
+      fitMinExtent != oldDelegate.fitMinExtent ||
+      onResolved != oldDelegate.onResolved ||
+      onPosition != oldDelegate.onPosition;
+}
+
+class _SeedFloatingLayout extends StatelessWidget {
+  const _SeedFloatingLayout({required this.delegate, required this.child});
+
+  final SeedOverlayPositionDelegate delegate;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) =>
+      delegate.flip && delegate.flipFallbackSides != null
+      ? _SeedAdaptiveFloatingLayout(delegate: delegate, child: child)
+      : CustomSingleChildLayout(delegate: delegate, child: child);
+}
+
+class _SeedAdaptiveFloatingLayout extends SingleChildRenderObjectWidget {
+  const _SeedAdaptiveFloatingLayout({
+    required this.delegate,
+    required super.child,
+  });
+
+  final SeedOverlayPositionDelegate delegate;
+
+  @override
+  _RenderSeedAdaptiveFloatingLayout createRenderObject(BuildContext context) =>
+      _RenderSeedAdaptiveFloatingLayout(delegate);
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    _RenderSeedAdaptiveFloatingLayout renderObject,
+  ) {
+    renderObject.delegate = delegate;
+  }
+}
+
+class _RenderSeedAdaptiveFloatingLayout extends RenderShiftedBox {
+  _RenderSeedAdaptiveFloatingLayout(this._delegate) : super(null);
+
+  SeedOverlayPositionDelegate _delegate;
+  set delegate(SeedOverlayPositionDelegate next) {
+    if (!_delegate.shouldRelayout(next) && !next.shouldRelayout(_delegate)) {
+      _delegate = next;
+      return;
+    }
+    _delegate = next;
+    markNeedsLayout();
+  }
+
+  @override
+  Size computeDryLayout(BoxConstraints constraints) => constraints.biggest;
+
+  @override
+  void performLayout() {
+    size = constraints.biggest;
+    final content = child;
+    if (content == null) return;
+
+    final b = _delegate.bounds(size);
+    final fullWidth = math.min(_delegate.maxWidth ?? double.infinity, b.width);
+    final fullHeight = math.min(
+      _delegate.maxHeight ?? double.infinity,
+      b.height,
+    );
+    content.layout(
+      BoxConstraints.loose(Size(fullWidth, fullHeight)),
+      parentUsesSize: true,
+    );
+    final resolved = _delegate._resolveSide(size, content.size);
+    final vertical =
+        resolved == SeedOverlaySide.top || resolved == SeedOverlaySide.bottom;
+    final remaining = _delegate.space(resolved, b);
+    // Always use the measured placement, even when content shrinks enough
+    // that a *different* placement could now fit. Re-flipping after size()
+    // would reverse the middleware order and oscillate between sides.
+    content.layout(
+      BoxConstraints.loose(
+        Size(
+          vertical ? fullWidth : math.min(fullWidth, remaining),
+          vertical ? math.min(fullHeight, remaining) : fullHeight,
+        ),
+      ),
+      parentUsesSize: true,
+    );
+    (content.parentData! as BoxParentData).offset = _delegate._positionForSide(
+      size,
+      content.size,
+      resolved,
+    );
+  }
 }
 
 /// An action which participates in its nearest overlay's controlled close policy.

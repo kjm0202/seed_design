@@ -82,5 +82,132 @@ void main() {
   });
   group('overlay roles', () {
     setUpAll(loadSeedTestFonts);
+
+    testWidgets('SeedPopover exposes native dialog semantics', (tester) async {
+      final handle = tester.ensureSemantics();
+      final controller = SeedOverlayController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: SeedThemeData.light(fontFamily: seedTestFontFamily)
+              .toThemeData(),
+          home: Scaffold(
+            body: SeedPopoverTrigger(
+              controller: controller,
+              triggerBuilder: (_, _, toggle) => TextButton(
+                onPressed: toggle,
+                child: const Text('Open popup'),
+              ),
+              builder: (_) => const SeedPopover(
+                titleText: 'Accessible popup',
+                body: Text('body'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open popup'));
+      await tester.pumpAndSettle();
+      final semantics = tester.getSemantics(find.byType(SeedPopover));
+      expect(semantics.getSemanticsData().role, SemanticsRole.dialog);
+      expect(semantics.getSemanticsData().label, 'Accessible popup');
+      handle.dispose();
+    });
+
+    testWidgets('headerless Popover supports an explicit dialog name', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: SeedThemeData.light(fontFamily: seedTestFontFamily)
+              .toThemeData(),
+          home: const Scaffold(
+            body: SeedPopover(
+              semanticsLabel: '필터',
+              body: Text('Headerless body'),
+            ),
+          ),
+        ),
+      );
+      final data = tester
+          .getSemantics(find.byType(SeedPopover))
+          .getSemanticsData();
+      expect(data.role, SemanticsRole.dialog);
+      expect(data.label, '필터');
+      handle.dispose();
+    });
+
+    testWidgets('SeedMenu exposes a native menu role', (tester) async {
+      final handle = tester.ensureSemantics();
+      final controller = SeedOverlayController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: SeedThemeData.light(fontFamily: seedTestFontFamily)
+              .toThemeData(),
+          home: Scaffold(
+            body: SeedMenuTrigger(
+              controller: controller,
+              triggerBuilder: (_, _, toggle) => TextButton(
+                onPressed: toggle,
+                child: const Text('Open native menu'),
+              ),
+              builder: (_) => const SeedMenu(
+                groups: [
+                  SeedMenuGroupData(
+                    items: [SeedMenuItemData(label: 'Entry A')],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open native menu'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.getSemantics(find.byType(SeedMenu)).getSemanticsData().role,
+        SemanticsRole.menu,
+      );
+      handle.dispose();
+    });
+
+    testWidgets('Menu exposes an explicit accessible name', (tester) async {
+      final handle = tester.ensureSemantics();
+      final controller = SeedOverlayController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: SeedThemeData.light(fontFamily: seedTestFontFamily)
+              .toThemeData(),
+          home: Scaffold(
+            body: SeedMenuTrigger(
+              controller: controller,
+              triggerBuilder: (_, _, toggle) => TextButton(
+                onPressed: toggle,
+                child: const Text('Open named menu'),
+              ),
+              builder: (_) => const SeedMenu(
+                semanticsLabel: 'Open named menu',
+                groups: [
+                  SeedMenuGroupData(
+                    items: [SeedMenuItemData(label: 'Entry A')],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open named menu'));
+      await tester.pumpAndSettle();
+      final data = tester
+          .getSemantics(find.byType(SeedMenu))
+          .getSemanticsData();
+      expect(data.role, SemanticsRole.menu);
+      expect(data.label, 'Open named menu');
+      handle.dispose();
+    });
   });
 }

@@ -1,8 +1,11 @@
+import '../../localization/seed_localizations.dart';
 import 'seed_anchored_overlay.dart';
+import 'seed_sheet_drag.dart';
 
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show listEquals, ValueListenable;
+import 'package:flutter/rendering.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../foundations/colors/seed_palette.dart';
@@ -16,9 +19,30 @@ import '../layout/seed_scroll_fog.dart';
 /// Shows a standard SEED Bottom Sheet.
 ///
 /// The keyboard reduces the available height and appears below the sheet.
+///
+/// Supply exactly one of [child] or [builder]. [useRootNavigator] defaults to
+/// false; [routeSettings], [requestFocus], [anchorPoint], [constraints],
+/// [useSafeArea], [barrierLabel] and [barrierColor] configure the Flutter route.
+/// [modal] adds a scrim by default; [modalListenable] changes its visibility
+/// while the route is open. [isDismissible] controls backdrop dismissal and
+/// snap-to-close behavior; [enableDrag] enables downward drag gestures.
+/// [snapPoints] enables fractional/pixel snapping, [initialSnapIndex] chooses
+/// the initial stop, [fadeFromIndex] controls scrim fade, and [snapController]
+/// drives indices programmatically; [onSnapChanged] observes index changes.
+/// [isScrollControlled] defaults true, [handleOnly] limits snap dragging to
+/// the handle, and [skipAnimation] disables the entrance/exit transition.
 Future<T?> showSeedBottomSheet<T>({
   required BuildContext context,
-  required Widget child,
+  Widget? child,
+  WidgetBuilder? builder,
+  bool useRootNavigator = false,
+  RouteSettings? routeSettings,
+  bool? requestFocus,
+  Offset? anchorPoint,
+  BoxConstraints? constraints = const BoxConstraints(maxWidth: 480),
+  bool useSafeArea = true,
+  String? barrierLabel,
+  Color? barrierColor,
   bool modal = true,
   ValueListenable<bool>? modalListenable,
   bool isDismissible = true,
@@ -42,8 +66,12 @@ Future<T?> showSeedBottomSheet<T>({
   ValueChanged<int>? onSnapChanged,
   bool skipAnimation = false,
 }) {
+  assert(
+    (child == null) != (builder == null),
+    'Provide exactly one of child or builder.',
+  );
   assert(snapContentHeightFraction > 0 && snapContentHeightFraction <= 1);
-  final navigator = Navigator.of(context);
+  final navigator = Navigator.of(context, rootNavigator: useRootNavigator);
   final localizations = MaterialLocalizations.of(context);
   final reduceMotion = skipAnimation || MediaQuery.disableAnimationsOf(context);
   late final _SeedBottomSheetRoute<T> route;
@@ -52,6 +80,9 @@ Future<T?> showSeedBottomSheet<T>({
       from: context,
       to: navigator.context,
     ),
+    settings: routeSettings,
+    requestFocus: requestFocus,
+    anchorPoint: anchorPoint,
     modal: modal,
     modalListenable: modalListenable,
     initialSnapFade:
@@ -60,15 +91,15 @@ Future<T?> showSeedBottomSheet<T>({
         ? 1
         : 0,
     isDismissible: isDismissible,
-    enableDrag: snapPoints == null && enableDrag,
+    enableDrag: false,
     isScrollControlled: isScrollControlled,
     backgroundColor: Colors.transparent,
     elevation: 0,
-    constraints: const BoxConstraints(maxWidth: 480),
+    constraints: constraints,
     showDragHandle: false,
-    useSafeArea: true,
-    modalBarrierColor: context.seedColor.bg.overlay,
-    barrierLabel: localizations.scrimLabel,
+    useSafeArea: useSafeArea,
+    modalBarrierColor: barrierColor ?? context.seedColor.bg.overlay,
+    barrierLabel: barrierLabel ?? localizations.scrimLabel,
     barrierOnTapHint: localizations.scrimOnTapHint(
       localizations.bottomSheetLabel,
     ),
@@ -79,6 +110,7 @@ Future<T?> showSeedBottomSheet<T>({
       reverseCurve: SeedCurves.exit.flipped,
     ),
     builder: (context) {
+      final content = builder?.call(context) ?? child!;
       final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
       return Padding(
         padding: EdgeInsets.only(
@@ -86,11 +118,19 @@ Future<T?> showSeedBottomSheet<T>({
           bottom: !fixed && repositionInputs ? keyboardInset : 0,
         ),
         child: snapPoints == null
-            ? child
+            ? (enableDrag
+                  ? SeedSheetDragDismiss(
+                      onProgress: route.setSnapFade,
+                      onDismiss: () {
+                        if (route.isCurrent) navigator.pop();
+                      },
+                      child: content,
+                    )
+                  : content)
             : SeedSnappingBottomSheet(
-                sheet: child is SeedBottomSheet
-                    ? child
-                    : SeedBottomSheet(content: child, showHandle: true),
+                sheet: content is SeedBottomSheet
+                    ? content
+                    : SeedBottomSheet(content: content, showHandle: true),
                 snapPoints: snapPoints,
                 initialSnapIndex: initialSnapIndex,
                 controller: snapController,
@@ -109,6 +149,9 @@ Future<T?> showSeedBottomSheet<T>({
 
 class _SeedBottomSheetRoute<T> extends ModalBottomSheetRoute<T> {
   _SeedBottomSheetRoute({
+    super.settings,
+    super.requestFocus,
+    super.anchorPoint,
     required this.modal,
     required double initialSnapFade,
     this.modalListenable,
@@ -174,11 +217,22 @@ class _SeedBarrierCurve extends Curve {
           .transform(t);
 }
 
-/// Alignment of the standard bottom sheet title and description.
-enum SeedBottomSheetHeaderAlign { left, center }
+/// Alignment of the standard bottom-sheet header: `left` or `center`.
+enum SeedBottomSheetHeaderAlign {
+  /// Align title and description to the left.
+  left,
+  /// Center title and description.
+  center,
+}
 
-/// Placement of the header relative to the body (the Figma header layouts).
-enum SeedBottomSheetHeaderPosition { top, bottom }
+/// Header placement for the Figma variants: `top` before body, or `bottom`
+/// after body.
+enum SeedBottomSheetHeaderPosition {
+  /// Place the header before the body.
+  top,
+  /// Place the header after the body.
+  bottom,
+}
 
 /// Bottom Sheet container component of SEED Design System.
 ///
@@ -186,27 +240,51 @@ enum SeedBottomSheetHeaderPosition { top, bottom }
 /// its title/description layout; the handle and close button remain independent.
 /// Only the body scrolls; the header and footer stay in place.
 /// Use SeedSnappingBottomSheet or showSeedBottomSheet(snapPoints:) for resizing.
+///
+/// This is a composable content surface: wrap it in [showSeedBottomSheet] or a
+/// modal trigger for a route, Escape behavior, and backdrop dismissal.
 class SeedBottomSheet extends StatefulWidget {
+  /// Optional title above the main [content].
   final String? title;
+  /// Optional description (requires [title] or a custom [header]).
   final String? description;
+  /// Title/description alignment, left by default.
   final SeedBottomSheetHeaderAlign headerAlign;
+  /// Header order relative to body, top by default.
   final SeedBottomSheetHeaderPosition headerPosition;
+  /// Custom header replacing automatic title/description composition.
   final Widget? header;
+  /// Required scrollable body content.
   final Widget content;
+  /// Optional fixed footer below content.
   final Widget? footer;
+  /// Whether to display the top drag-handle indicator (false by default).
   final bool showHandle;
+  /// Whether to display the close button (true by default).
   final bool showCloseButton;
+
   /// Overrides the close button action. When null, uses the standard overlay
   /// or Navigator dismissal behavior.
   final VoidCallback? onClosePressed;
+  /// Padding around the body; 16px horizontally by default.
   final EdgeInsetsGeometry contentPadding;
+  /// Optional externally-owned body scroll controller.
   final ScrollController? scrollController;
+  /// Fills available height when true; otherwise shrink-wraps up to 90vh.
   final bool expand;
+  /// Optional explicit height cap in logical pixels.
   final double? maxHeight;
+  /// Receives vertical handle drag deltas, in logical pixels.
   final ValueChanged<double>? onHandleDrag;
+  /// Called when a handle drag gesture finishes.
   final VoidCallback? onHandleDragEnd;
+  /// Called when the handle is tapped.
   final VoidCallback? onHandleTap;
 
+  /// Creates sheet contents with independent header, body, footer and handle.
+  ///
+  /// [expand] defaults false; [maxHeight] can override the intrinsic height
+  /// limit. [scrollController] remains owned by the caller when supplied.
   const SeedBottomSheet({
     super.key,
     this.title,
@@ -368,64 +446,76 @@ class _SeedBottomSheetState extends State<SeedBottomSheet> {
                           padding: EdgeInsets.only(
                             bottom: mediaQuery.padding.bottom,
                           ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              if (sheetHeader != null &&
-                                  widget.headerPosition ==
-                                      SeedBottomSheetHeaderPosition.top)
-                                sheetHeader,
-                              Flexible(
-                                child: Stack(
-                                  fit: StackFit.passthrough,
-                                  children: [
-                                    NotificationListener<
-                                      ScrollMetricsNotification
-                                    >(
-                                      onNotification: (_) {
-                                        WidgetsBinding.instance
-                                            .addPostFrameCallback(
-                                              (_) => _updateFog(),
-                                            );
-                                        return false;
-                                      },
-                                      child: SingleChildScrollView(
-                                        controller: _scrollController,
-                                        primary: false,
-                                        padding: widget.contentPadding,
-                                        child: widget.content,
-                                      ),
+                          child: _SeedSheetSections(
+                            // The body keeps at least one real text line so
+                            // long headers/footers never consume its entire
+                            // scrollport. No fixed viewport percentage.
+                            minBodyHeight: mediaQuery.textScaler.scale(
+                              (typography.t5Regular.fontSize ?? 16) *
+                                  (typography.t5Regular.height ?? 1),
+                            ),
+                            hasHeader: sheetHeader != null,
+                            headerAfterBody:
+                                widget.headerPosition ==
+                                SeedBottomSheetHeaderPosition.bottom,
+                            header: sheetHeader == null
+                                ? const SizedBox.shrink()
+                                : CustomScrollView(
+                                    shrinkWrap: true,
+                                    primary: false,
+                                    slivers: [
+                                      SliverToBoxAdapter(child: sheetHeader),
+                                    ],
+                                  ),
+                            body: Stack(
+                              fit: StackFit.passthrough,
+                              children: [
+                                NotificationListener<ScrollMetricsNotification>(
+                                  onNotification: (_) {
+                                    WidgetsBinding.instance
+                                        .addPostFrameCallback(
+                                          (_) => _updateFog(),
+                                        );
+                                    return false;
+                                  },
+                                  child: SingleChildScrollView(
+                                    controller: _scrollController,
+                                    primary: false,
+                                    padding: widget.contentPadding,
+                                    child: widget.content,
+                                  ),
+                                ),
+                                if (_showBottomFog)
+                                  Positioned(
+                                    left: 0,
+                                    right: 0,
+                                    bottom: 0,
+                                    child: SeedScrollFog(
+                                      placement: SeedScrollFogPlacement.bottom,
+                                      color: colors.bg.layerFloating,
                                     ),
-                                    if (_showBottomFog)
-                                      Positioned(
-                                        left: 0,
-                                        right: 0,
-                                        bottom: 0,
-                                        child: SeedScrollFog(
-                                          placement:
-                                              SeedScrollFogPlacement.bottom,
-                                          color: colors.bg.layerFloating,
+                                  ),
+                              ],
+                            ),
+                            footer: widget.footer == null
+                                ? const SizedBox.shrink()
+                                : CustomScrollView(
+                                    shrinkWrap: true,
+                                    primary: false,
+                                    slivers: [
+                                      SliverToBoxAdapter(
+                                        child: Padding(
+                                          padding: const EdgeInsets.fromLTRB(
+                                            16,
+                                            12,
+                                            16,
+                                            16,
+                                          ),
+                                          child: widget.footer!,
                                         ),
                                       ),
-                                  ],
-                                ),
-                              ),
-                              if (sheetHeader != null &&
-                                  widget.headerPosition ==
-                                      SeedBottomSheetHeaderPosition.bottom)
-                                sheetHeader,
-                              if (widget.footer != null)
-                                Padding(
-                                  padding: const EdgeInsets.fromLTRB(
-                                    16,
-                                    12,
-                                    16,
-                                    16,
+                                    ],
                                   ),
-                                  child: widget.footer!,
-                                ),
-                            ],
                           ),
                         ),
                       ),
@@ -437,6 +527,9 @@ class _SeedBottomSheetState extends State<SeedBottomSheet> {
                           child: Center(
                             child: GestureDetector(
                               behavior: HitTestBehavior.opaque,
+                              // The official handle is presentational; the
+                              // sheet's own close action stays accessible.
+                              excludeFromSemantics: true,
                               onTap: widget.onHandleTap,
                               // A long press must not cycle the snap points.
                               onLongPress: widget.onHandleTap == null
@@ -472,6 +565,155 @@ class _SeedBottomSheetState extends State<SeedBottomSheet> {
       ),
     );
   }
+}
+
+/// Measures the non-flexing footer first, then the header, and gives the body
+/// the exact remaining space. The ordinary Column measures both fixed regions
+/// without a height budget, so large text can overflow a 90vh sheet before
+/// Flexible(body) is laid out. This uses no arbitrary fixed-height percentage.
+///
+/// Headers/footers smaller than their budget retain their intrinsic height.
+/// Only when one is oversized does its containing shrink-wrap viewport scroll.
+class _SeedSheetSections extends MultiChildRenderObjectWidget {
+  _SeedSheetSections({
+    required Widget header,
+    required Widget body,
+    required Widget footer,
+    required this.hasHeader,
+    required this.headerAfterBody,
+    required this.minBodyHeight,
+  }) : super(children: [header, body, footer]);
+
+  final bool hasHeader;
+  final bool headerAfterBody;
+  final double minBodyHeight;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderSeedSheetSections(
+        hasHeader: hasHeader,
+        headerAfterBody: headerAfterBody,
+        minBodyHeight: minBodyHeight,
+      );
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    _RenderSeedSheetSections renderObject,
+  ) {
+    renderObject
+      ..hasHeader = hasHeader
+      ..headerAfterBody = headerAfterBody
+      ..minBodyHeight = minBodyHeight;
+  }
+}
+
+class _SeedSheetParentData extends ContainerBoxParentData<RenderBox> {}
+
+class _RenderSeedSheetSections extends RenderBox
+    with
+        ContainerRenderObjectMixin<
+          RenderBox,
+          ContainerBoxParentData<RenderBox>
+        >,
+        RenderBoxContainerDefaultsMixin<
+          RenderBox,
+          ContainerBoxParentData<RenderBox>
+        > {
+  _RenderSeedSheetSections({
+    required this._hasHeader,
+    required this._headerAfterBody,
+    required this._minBodyHeight,
+  });
+
+  bool _hasHeader;
+  bool get hasHeader => _hasHeader;
+  set hasHeader(bool value) {
+    if (_hasHeader == value) return;
+    _hasHeader = value;
+    markNeedsLayout();
+  }
+
+  bool _headerAfterBody;
+  bool get headerAfterBody => _headerAfterBody;
+  set headerAfterBody(bool value) {
+    if (_headerAfterBody == value) return;
+    _headerAfterBody = value;
+    markNeedsLayout();
+  }
+
+  double _minBodyHeight;
+  double get minBodyHeight => _minBodyHeight;
+  set minBodyHeight(double value) {
+    if (_minBodyHeight == value) return;
+    _minBodyHeight = value;
+    markNeedsLayout();
+  }
+
+  @override
+  void setupParentData(RenderBox child) {
+    if (child.parentData is! _SeedSheetParentData) {
+      child.parentData = _SeedSheetParentData();
+    }
+  }
+
+  @override
+  void performLayout() {
+    final header = firstChild!;
+    final body = childAfter(header)!;
+    final footer = childAfter(body)!;
+    final width = constraints.maxWidth;
+    final height = constraints.maxHeight;
+    assert(width.isFinite && height.isFinite);
+
+    final line = math.min(height, math.max(0, minBodyHeight));
+    // Keep a readable body line even when both header and footer contain
+    // multi-line text. A present header also needs a line when the footer
+    // itself must scroll. Both reserves come from the current SEED type token.
+    final headerReserve = hasHeader ? math.min(line, height - line) : 0.0;
+    final footerLimit = math.max(0.0, height - line - headerReserve);
+    void layoutSection(RenderBox child, double maxHeight) => child.layout(
+      BoxConstraints(minWidth: width, maxWidth: width, maxHeight: maxHeight),
+      parentUsesSize: true,
+    );
+
+    layoutSection(footer, footerLimit);
+    layoutSection(header, math.max(0.0, height - footer.size.height - line));
+    final bodyLimit = math.max(
+      0.0,
+      height - footer.size.height - header.size.height,
+    );
+    layoutSection(body, bodyLimit);
+    final bodyHeight = body.size.height;
+    // Expanded (snapping) sheets still fill their viewport, but like the
+    // official recipe the body is not flex-grow: the footer follows the
+    // content and any spare height stays below it.
+    size = constraints.constrain(
+      Size(width, header.size.height + bodyHeight + footer.size.height),
+    );
+
+    var top = 0.0;
+    void place(RenderBox child) {
+      (child.parentData! as ContainerBoxParentData<RenderBox>).offset = Offset(
+        0,
+        top,
+      );
+      top += child.size.height;
+    }
+
+    if (!headerAfterBody) place(header);
+    place(body);
+    if (headerAfterBody) place(header);
+    place(footer);
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) =>
+      defaultPaint(context, offset);
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) =>
+      defaultHitTestChildren(result, position: position);
 }
 
 class _SeedBottomSheetHandle extends StatefulWidget {
@@ -533,7 +775,7 @@ class _SeedBottomSheetCloseButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.seedColor;
     return SeedPressable(
-      semanticsLabel: '닫기',
+      semanticsLabel: SeedLocalizations.label(context, SeedLabel.close),
       enableScale: false,
       onTap: () {
         if (onPressed != null) {
@@ -578,24 +820,39 @@ class _SeedBottomSheetCloseButton extends StatelessWidget {
   }
 }
 
+/// One bottom-sheet snap stop, expressed as viewport fraction or pixel height.
+///
+/// Fraction values must be greater than zero and at most one; pixel values
+/// must be positive. [resolve] converts a stop into a clamped viewport fraction.
 class SeedSheetSnapPoint {
+  /// Creates a stop at [value] of the viewport height (`0 < value <= 1`).
   const SeedSheetSnapPoint.fraction(double value)
     : assert(value > 0 && value <= 1),
       fraction = value,
       pixels = null;
+  /// Creates a stop at positive [value] logical pixels from the bottom.
   const SeedSheetSnapPoint.pixels(double value)
     : assert(value > 0),
       pixels = value,
       fraction = null;
+  /// Exactly one underlying representation, with the other member null.
   final double? fraction, pixels;
+  /// Resolves the point against viewport [height] to a fraction in `[.01, 1]`.
   double resolve(double height) =>
       (fraction ?? pixels! / height).clamp(0.01, 1);
 }
 
+/// Imperative controller for a snapping sheet's selected stop.
+///
+/// The caller owns disposal. When connected to [SeedSnappingBottomSheet], the
+/// controller stays synchronized with user-selected snap positions.
 class SeedSheetController extends ChangeNotifier {
+  /// Creates a controller starting at [initialIndex] (zero by default).
   SeedSheetController({int initialIndex = 0}) : _index = initialIndex;
   int _index;
+  /// Current selected snap stop index.
   int get index => _index;
+  /// Requests a snap to [index] and notifies listeners.
   void snapTo(int index) {
     _index = index;
     notifyListeners();
@@ -609,7 +866,17 @@ class SeedSheetController extends ChangeNotifier {
 }
 
 /// Fraction/pixel snap points, scroll-to-expand, and handle-only resizing.
+///
+/// [snapPoints] defaults to 10%, 50%, and 90% of viewport height; the sheet
+/// starts at [initialSnapIndex] unless [controller] selects a different stop.
+/// [handleOnly] restricts resize gestures; [dismissible] controls dragging
+/// below the smallest stop. [onSnapChanged] reports selected indices, while
+/// [onFadeChanged] reports scrim opacity based on [fadeFromIndex].
 class SeedSnappingBottomSheet extends StatefulWidget {
+  /// Wraps a [sheet] in a draggable multi-stop bottom sheet.
+  ///
+  /// [contentHeightFraction] defaults to `1`; route helpers can use `.9`
+  /// to preserve React's viewport-based snap offsets under a 90vh limit.
   const SeedSnappingBottomSheet({
     super.key,
     required this.sheet,
@@ -627,19 +894,28 @@ class SeedSnappingBottomSheet extends StatefulWidget {
     this.onFadeChanged,
     this.dismissible = true,
   });
+  /// Composed sheet surface to resize.
   final SeedBottomSheet sheet;
+  /// Nonempty ordered snap stops (fractions or positive pixel heights).
   final List<SeedSheetSnapPoint> snapPoints;
+  /// Initially selected stop, index zero by default.
   final int initialSnapIndex;
+  /// Optional externally-owned snap controller.
   final SeedSheetController? controller;
+  /// Notified when the resolved snap stop changes.
   final ValueChanged<int>? onSnapChanged;
+  /// Whether only the handle can resize the sheet.
   final bool handleOnly;
+  /// Whether dragging below the minimum stop can close the sheet.
   final bool dismissible;
+  /// Index where backdrop fade reaches full strength; nullable to disable it.
   final int? fadeFromIndex;
 
   /// Offsets fraction snap positions for content capped below viewport height.
   /// A .9-height surface translated by React's viewport snap points reveals
   /// (fraction - .1) of the viewport.
   final double contentHeightFraction;
+  /// Receives a fade fraction from 0 to 1 as the sheet moves across stops.
   final ValueChanged<double>? onFadeChanged;
   @override
   State<SeedSnappingBottomSheet> createState() =>

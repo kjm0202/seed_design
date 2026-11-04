@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../theme/seed_theme.dart';
@@ -20,6 +21,7 @@ class SeedScrollArea extends StatefulWidget {
     this.hideScrollbar = true,
     this.showFog = true,
     this.fogOnlyWhenScrollable = false,
+    this.focusableWhenScrollable = false,
   });
   final Widget child;
   final ScrollController? controller;
@@ -33,6 +35,8 @@ class SeedScrollArea extends StatefulWidget {
 
   /// Show the fade and reserve its padding only when content exceeds the viewport.
   final bool fogOnlyWhenScrollable;
+
+  final bool focusableWhenScrollable;
   @override
   State<SeedScrollArea> createState() => _SeedScrollAreaState();
 }
@@ -41,6 +45,26 @@ class _SeedScrollAreaState extends State<SeedScrollArea> {
   late ScrollController _controller = widget.controller ?? ScrollController();
   bool _scrolled = false;
   bool _overflow = false;
+  bool _focused = false;
+
+  KeyEventResult _handleKey(FocusNode node, KeyEvent event) {
+    if (event is KeyUpEvent) return KeyEventResult.ignored;
+    final delta = switch (event.logicalKey) {
+      LogicalKeyboardKey.arrowDown => 40.0,
+      LogicalKeyboardKey.arrowUp => -40.0,
+      _ => null,
+    };
+    if (delta == null || !_controller.hasClients) return KeyEventResult.ignored;
+    final position = _controller.position;
+    _controller.jumpTo(
+      (position.pixels + delta).clamp(
+        position.minScrollExtent,
+        position.maxScrollExtent,
+      ),
+    );
+    return KeyEventResult.handled;
+  }
+
   Set<SeedScrollFogPlacement> get _fog =>
       widget.showFog && (!widget.fogOnlyWhenScrollable || _overflow)
       ? widget.placements
@@ -101,8 +125,23 @@ class _SeedScrollAreaState extends State<SeedScrollArea> {
     super.dispose();
   }
 
+  // The first layout may report no metrics change, which would leave the area
+  // out of the Tab order until it next resizes.
+  void _syncOverflow() {
+    if (!mounted ||
+        !widget.focusableWhenScrollable ||
+        !_controller.hasClients) {
+      return;
+    }
+    final overflow = _controller.position.maxScrollExtent > 0;
+    if (overflow != _overflow) setState(() => _overflow = overflow);
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (widget.focusableWhenScrollable) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _syncOverflow());
+    }
     final fog = _fog;
     final pad =
         widget.padding.resolve(Directionality.of(context)) +
@@ -127,14 +166,35 @@ class _SeedScrollAreaState extends State<SeedScrollArea> {
           ScrollConfiguration(
             behavior: ScrollConfiguration.of(context)
                 .copyWith(scrollbars: !widget.hideScrollbar),
-            child: SingleChildScrollView(
-              controller: _controller,
-              primary: false,
-              scrollDirection: widget.direction,
-              padding: pad,
-              child: widget.child,
+            child: Focus(
+              canRequestFocus: widget.focusableWhenScrollable && _overflow,
+              skipTraversal: !(widget.focusableWhenScrollable && _overflow),
+              onFocusChange: (value) => setState(() => _focused = value),
+              onKeyEvent: _handleKey,
+              child: SingleChildScrollView(
+                controller: _controller,
+                primary: false,
+                scrollDirection: widget.direction,
+                padding: pad,
+                child: widget.child,
+              ),
             ),
           ),
+          if (_focused &&
+              FocusManager.instance.highlightMode ==
+                  FocusHighlightMode.traditional)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: context.seedColor.stroke.focusRing,
+                      width: 2,
+                    ),
+                  ),
+                ),
+              ),
+            ),
           if (_scrolled && widget.showScrolledDivider)
             const Positioned(top: 0, left: 0, right: 0, child: SeedDivider()),
           for (final placement in fog)

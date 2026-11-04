@@ -27,41 +27,40 @@ void main() {
   for (final width in [390.0, 800.0]) {
     for (final closeActor in ['footer', 'header']) {
       testWidgets(
-        'direct root nested sheet retains content on $closeActor close $width',
-        (tester) async {
-          tester.view.physicalSize = Size(width, 844);
-          tester.view.devicePixelRatio = 1;
-          addTearDown(tester.view.reset);
-          await tester.pumpWidget(const StackflowSpaApp());
-          await tester.pumpAndSettle();
-          await _directNested(tester);
-          final close = closeActor == 'footer'
-              ? find.widgetWithText(SeedButton, '닫기')
-              : find.byWidgetPredicate(
-                  (w) =>
-                      w is SeedPressable &&
-                      w.semanticsLabel == '닫기' &&
-                      !w.enableScale,
-                );
-          expect(close.hitTestable(), findsOneWidget);
-          await tester.tap(close);
-          await tester.pumpAndSettle();
-          expect(
-            find.byType(SeedBottomSheet),
-            findsOneWidget,
-            reason:
-                'React pop() does nothing for a directly entered root Activity',
-          );
-          expect(
-            find.widgetWithText(SeedButton, 'Open AlertDialog').hitTestable(),
-            findsOneWidget,
-          );
-          await tester.sendKeyEvent(LogicalKeyboardKey.escape);
-          await tester.pumpAndSettle();
-          expect(find.byType(SeedBottomSheet), findsOneWidget);
-          expect(tester.takeException(), isNull);
-        },
-      );
+          'direct root nested sheet retains content on $closeActor close $width',
+          (tester) async {
+            tester.view.physicalSize = Size(width, 844);
+            tester.view.devicePixelRatio = 1;
+            addTearDown(tester.view.reset);
+            await tester.pumpWidget(const StackflowSpaApp());
+            await tester.pumpAndSettle();
+            await _directNested(tester);
+            final close = closeActor == 'footer'
+                ? find.widgetWithText(SeedButton, '닫기')
+                : find.byWidgetPredicate(
+                    (w) =>
+                        w is SeedPressable &&
+                        w.semanticsLabel == '닫기' &&
+                        !w.enableScale,
+                  );
+            expect(close.hitTestable(), findsOneWidget);
+            await tester.tap(close);
+            await tester.pumpAndSettle();
+            expect(
+              find.byType(SeedBottomSheet),
+              findsOneWidget,
+              reason: 'React pop() does nothing for a directly entered root Activity',
+            );
+            expect(
+              find.widgetWithText(SeedButton, 'Open AlertDialog').hitTestable(),
+              findsOneWidget,
+            );
+            await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+            await tester.pumpAndSettle();
+            expect(find.byType(SeedBottomSheet), findsOneWidget);
+            expect(tester.takeException(), isNull);
+          },
+        );
     }
 
     testWidgets('nested modal paints retained parent beneath child $width', (

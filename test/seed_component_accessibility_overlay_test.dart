@@ -9,6 +9,8 @@ import 'package:seed_design/seed_design.dart';
 import 'support/seed_test_fonts.dart';
 
 Widget host(Widget child, {double scale = 1, bool dark = false}) => MaterialApp(
+locale: const Locale('ko'), supportedLocales: const [Locale('ko'), Locale('en')], localizationsDelegates: GlobalMaterialLocalizations.delegates,
+
   theme:
       (dark
               ? SeedThemeData.dark(fontFamily: seedTestFontFamily)
@@ -259,115 +261,119 @@ void main() {
 
   for (final managed in [false, true]) {
     testWidgets('dialog fades out at unit scale ($managed)', (tester) async {
-      final overlay = SeedOverlayController();
-      await tester.pumpWidget(
-        host(
-          managed
-              ? SeedDialogTrigger(
-                  controller: overlay,
-                  triggerBuilder: (_, _, toggle) =>
-                      TextButton(onPressed: toggle, child: const Text('Open')),
-                  builder: (_) =>
-                      const SeedDialog(title: 'Dialog', content: Text('Body')),
-                )
-              : Builder(
-                  builder: (context) => TextButton(
-                    onPressed: () => showSeedDialog<void>(
-                      context: context,
-                      child: const SeedDialog(
-                        title: 'Dialog',
-                        content: Text('Body'),
-                      ),
+        final overlay = SeedOverlayController();
+        await tester.pumpWidget(
+          host(
+            managed
+                ? SeedDialogTrigger(
+                    controller: overlay,
+                    triggerBuilder: (_, _, toggle) => TextButton(
+                      onPressed: toggle,
+                      child: const Text('Open'),
                     ),
-                    child: const Text('Open'),
+                    builder: (_) => const SeedDialog(
+                      title: 'Dialog',
+                      content: Text('Body'),
+                    ),
+                  )
+                : Builder(
+                    builder: (context) => TextButton(
+                      onPressed: () => showSeedDialog<void>(
+                        context: context,
+                        child: const SeedDialog(
+                          title: 'Dialog',
+                          content: Text('Body'),
+                        ),
+                      ),
+                      child: const Text('Open'),
+                    ),
                   ),
-                ),
-        ),
-      );
-      await tester.tap(find.text('Open'));
-      await tester.pumpAndSettle();
-      await tester.tap(closeButton);
-      await tester.pump();
-      for (var i = 0; i < 4; i++) {
-        await tester.pump(const Duration(milliseconds: 20));
-        final scales = tester.widgetList<ScaleTransition>(
-          find.ancestor(
-            of: find.byType(SeedDialog),
-            matching: find.byType(ScaleTransition),
           ),
         );
-        for (final scale in scales) {
-          expect(scale.scale.value, 1);
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+        await tester.tap(closeButton);
+        await tester.pump();
+        for (var i = 0; i < 4; i++) {
+          await tester.pump(const Duration(milliseconds: 20));
+          final scales = tester.widgetList<ScaleTransition>(
+            find.ancestor(
+              of: find.byType(SeedDialog),
+              matching: find.byType(ScaleTransition),
+            ),
+          );
+          for (final scale in scales) {
+            expect(scale.scale.value, 1);
+          }
         }
-      }
-      await tester.pumpAndSettle();
-      expect(find.byType(SeedDialog), findsNothing);
-      overlay.dispose();
-    });
+        await tester.pumpAndSettle();
+        expect(find.byType(SeedDialog), findsNothing);
+        overlay.dispose();
+      });
   }
 
   testWidgets('headerless dialog reserves space for close button', (
-    tester,
-  ) async {
-    for (final scroll in [false, true]) {
-      await tester.pumpWidget(
-        host(
-          SeedDialog(
-            scrollBody: scroll,
-            content: const SizedBox(
-              key: Key('body'),
-              width: double.infinity,
-              height: 100,
+      tester,
+    ) async {
+      for (final scroll in [false, true]) {
+        await tester.pumpWidget(
+          host(
+            SeedDialog(
+              scrollBody: scroll,
+              content: const SizedBox(
+                key: Key('body'),
+                width: double.infinity,
+                height: 100,
+              ),
             ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(
-        tester
-            .getRect(find.byKey(const Key('body')))
-            .overlaps(tester.getRect(closeButton)),
-        isFalse,
-      );
-      expect(tester.takeException(), isNull);
-    }
-  });
+        );
+        await tester.pumpAndSettle();
+        expect(
+          tester
+              .getRect(find.byKey(const Key('body')))
+              .overlaps(tester.getRect(closeButton)),
+          isFalse,
+        );
+        expect(tester.takeException(), isNull);
+      }
+    });
 
   testWidgets('alert Escape policy is independent of outside dismissal', (
-    tester,
-  ) async {
-    for (final escape in [false, true]) {
-      await tester.pumpWidget(
-        host(
-          Builder(
-            builder: (context) => TextButton(
-              onPressed: () => showSeedAlertDialog(
-                context: context,
-                title: 'Alert',
-                closeOnEscape: escape,
+      tester,
+    ) async {
+      for (final escape in [false, true]) {
+        await tester.pumpWidget(
+          host(
+            Builder(
+              builder: (context) => TextButton(
+                onPressed: () => showSeedAlertDialog(
+                  context: context,
+                  title: 'Alert',
+                  closeOnEscape: escape,
+                ),
+                child: const Text('Open'),
               ),
-              child: const Text('Open'),
             ),
           ),
-        ),
-      );
-      await tester.tap(find.text('Open'));
-      await tester.pumpAndSettle();
-      await tester.tapAt(const Offset(5, 5));
-      await tester.pumpAndSettle();
-      expect(find.byType(SeedAlertDialog), findsOneWidget);
-      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
-      await tester.pumpAndSettle();
-      expect(
-        find.byType(SeedAlertDialog),
-        escape ? findsNothing : findsOneWidget,
-      );
-      if (!escape) {
-        await tester.tap(find.text('확인'));
+        );
+        await tester.tap(find.text('Open'));
         await tester.pumpAndSettle();
+        await tester.tapAt(const Offset(5, 5));
+        await tester.pumpAndSettle();
+        expect(find.byType(SeedAlertDialog), findsOneWidget);
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pumpAndSettle();
+        expect(
+          find.byType(SeedAlertDialog),
+          escape ? findsNothing : findsOneWidget,
+        );
+        if (!escape) {
+          await tester.tap(find.text('확인'));
+          await tester.pumpAndSettle();
+        }
       }
-    }
-  });
+    });
 
   testWidgets('sheet keeps requested duplicate index throughout animation', (
     tester,
@@ -487,45 +493,45 @@ void main() {
   });
 
   testWidgets(
-    'help bubble close target fits the 38px body and works at its edges',
-    (tester) async {
-      var closed = 0;
-      for (final dark in [false, true]) {
+      'help bubble close target fits the 38px body and works at its edges',
+      (tester) async {
+        var closed = 0;
+        for (final dark in [false, true]) {
+          await tester.pumpWidget(
+            host(
+              SeedHelpBubble(
+                title: 'Tip',
+                onClose: () => closed++,
+                arrowPlacement: SeedHelpBubbleArrowPlacement.none,
+              ),
+              dark: dark,
+            ),
+          );
+          final body = tester.getRect(find.byType(SeedHelpBubble));
+          final close = tester.getRect(closeButton);
+          expect(body.height, 38);
+          expect(close.size, const Size(38, 38));
+          expect(close.top, body.top);
+          expect(close.right, body.right);
+          await tester.tapAt(close.topRight + const Offset(-1, 1));
+          await tester.pumpAndSettle();
+        }
+        expect(closed, 2);
         await tester.pumpWidget(
           host(
             SeedHelpBubble(
-              title: 'Tip',
-              onClose: () => closed++,
-              arrowPlacement: SeedHelpBubbleArrowPlacement.none,
+              title: 'A long title that wraps on a narrow screen',
+              description: 'A longer description',
+              maxWidth: 140,
+              onClose: () {},
             ),
-            dark: dark,
+            scale: 2,
           ),
         );
-        final body = tester.getRect(find.byType(SeedHelpBubble));
-        final close = tester.getRect(closeButton);
-        expect(body.height, 38);
-        expect(close.size, const Size(38, 38));
-        expect(close.top, body.top);
-        expect(close.right, body.right);
-        await tester.tapAt(close.topRight + const Offset(-1, 1));
         await tester.pumpAndSettle();
-      }
-      expect(closed, 2);
-      await tester.pumpWidget(
-        host(
-          SeedHelpBubble(
-            title: 'A long title that wraps on a narrow screen',
-            description: 'A longer description',
-            maxWidth: 140,
-            onClose: () {},
-          ),
-          scale: 2,
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
-    },
-  );
+        expect(tester.takeException(), isNull);
+      },
+    );
 
   testWidgets('composed field labels focus implicit and explicit input nodes', (
     tester,

@@ -115,6 +115,63 @@ void main() {
     });
   });
   group('theme boundaries', () {
+    testWidgets('MaterialApp dark theme overrides an outer legacy SeedTheme', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        SeedTheme(
+          data: SeedThemeData.light(),
+          child: MaterialApp(
+            locale: const Locale('ko'),
+            localizationsDelegates: GlobalMaterialLocalizations.delegates,
+            theme: SeedThemeData.light().toThemeData(),
+            darkTheme: SeedThemeData.dark().toThemeData(),
+            themeMode: ThemeMode.dark,
+            home: Builder(
+              builder: (context) {
+                expect(Theme.of(context).brightness, Brightness.dark);
+                expect(context.seedIsDark, isTrue);
+                return const SizedBox();
+              },
+            ),
+          ),
+        ),
+      );
+    });
+
+    testWidgets('subtree override synchronizes Material and modal themes', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          SeedTheme(
+            data: SeedThemeData.dark(),
+            child: Builder(
+              builder: (context) {
+                expect(context.seedIsDark, isTrue);
+                expect(Theme.of(context).brightness, Brightness.dark);
+                return TextButton(
+                  onPressed: () => showSeedDialog<void>(
+                    context: context,
+                    child: Builder(
+                      builder: (context) {
+                        expect(context.seedIsDark, isTrue);
+                        expect(Theme.of(context).brightness, Brightness.dark);
+                        return const Center(child: Text('themed dialog'));
+                      },
+                    ),
+                  ),
+                  child: const Text('Open'),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      expect(find.text('themed dialog'), findsOneWidget);
+    });
 
     test('migration preserves fonts, fallbacks and unrelated extensions', () {
       final original = ThemeData(

@@ -1,4 +1,7 @@
+import '../../localization/seed_localizations.dart';
+
 import 'dart:async';
+import 'dart:ui' show SemanticsRole;
 
 import '../overlay/seed_anchored_overlay.dart';
 import '../../foundations/motion/seed_motion.dart';
@@ -11,7 +14,17 @@ import '../../theme/seed_theme.dart';
 import '../../foundations/feedback/seed_scale_feedback.dart';
 
 /// Arrow orientation for [SeedHelpBubble].
-enum SeedHelpBubbleArrowPlacement { top, bottom, left, right, none }
+enum SeedHelpBubbleArrowPlacement {
+  top,
+
+  bottom,
+
+  left,
+
+  right,
+
+  none,
+}
 
 /// Help Bubble (Tooltip speech bubble) component of SEED Design System.
 ///
@@ -19,12 +32,19 @@ enum SeedHelpBubbleArrowPlacement { top, bottom, left, right, none }
 /// directional indicator arrows and close actions.
 class SeedHelpBubble extends StatelessWidget {
   final String title;
+
   final String? description;
+
   final VoidCallback? onClose;
+
   final SeedHelpBubbleArrowPlacement arrowPlacement;
+
   final double arrowOffset;
+
   final bool isBrand;
+
   final double maxWidth;
+  final bool _dialogSemantics;
 
   const SeedHelpBubble({
     super.key,
@@ -35,7 +55,19 @@ class SeedHelpBubble extends StatelessWidget {
     this.arrowOffset = 24.0,
     this.isBrand = false,
     this.maxWidth = 280,
-  });
+  }) : _dialogSemantics = false;
+
+  // Interactive HelpBubble.Content has a dialog role. Tooltip reuses the
+  // painted card but must not inherit that role; keep this constructor private.
+  const SeedHelpBubble._dialog({
+    required this.title,
+    this.description,
+    this.onClose,
+    this.arrowPlacement = SeedHelpBubbleArrowPlacement.top,
+    this.arrowOffset = 24.0,
+    this.isBrand = false,
+    this.maxWidth = 280,
+  }) : _dialogSemantics = true;
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +89,7 @@ class SeedHelpBubble extends StatelessWidget {
       ),
     );
 
-    Widget bubbleBody = Container(
+    final card = Container(
       constraints: BoxConstraints(maxWidth: maxWidth),
       decoration: BoxDecoration(
         color: bgColor,
@@ -73,27 +105,59 @@ class SeedHelpBubble extends StatelessWidget {
               onClose != null ? 30 : 12,
               10,
             ),
-            child: Semantics(
-              label: title,
-              hint: description,
-              excludeSemantics: true,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    title,
-                    style: typography.t3Bold.copyWith(color: fgColor),
+            // Ordinary tooltips keep their original intrinsic height and do
+            // not introduce an extra scroll target. Only when scaled text
+            // exceeds floating-ui's available height is the text scrollable;
+            // the close button stays fixed outside that scrolling surface.
+            child: LayoutBuilder(
+              builder: (context, limits) {
+                final titleStyle = typography.t3Bold.copyWith(color: fgColor);
+                final descriptionStyle = typography.t3Regular.copyWith(
+                  color: fgColor,
+                );
+                final content = Semantics(
+                  label: title,
+                  hint: description,
+                  excludeSemantics: true,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(title, style: titleStyle),
+                      if (description != null) ...[
+                        const SizedBox(height: SeedDimension.x0_5),
+                        Text(description!, style: descriptionStyle),
+                      ],
+                    ],
                   ),
-                  if (description != null) ...[
-                    const SizedBox(height: SeedDimension.x0_5),
-                    Text(
-                      description!,
-                      style: typography.t3Regular.copyWith(color: fgColor),
-                    ),
-                  ],
-                ],
-              ),
+                );
+                if (!limits.hasBoundedHeight) return content;
+                double textHeight(String value, TextStyle style) {
+                  final painter =
+                      TextPainter(
+                        text: TextSpan(text: value, style: style),
+                        textDirection: Directionality.of(context),
+                        textScaler: MediaQuery.textScalerOf(context),
+                      )..layout(
+                        maxWidth: limits.hasBoundedWidth
+                            ? limits.maxWidth
+                            : maxWidth,
+                      );
+                  final measured = painter.height;
+                  painter.dispose();
+                  return measured;
+                }
+
+                final contentHeight =
+                    textHeight(title, titleStyle) +
+                    (description == null
+                        ? 0
+                        : SeedDimension.x0_5 +
+                              textHeight(description!, descriptionStyle));
+                return contentHeight > limits.maxHeight + 0.5
+                    ? SingleChildScrollView(child: content)
+                    : content;
+              },
             ),
           ),
           if (onClose != null)
@@ -101,7 +165,10 @@ class SeedHelpBubble extends StatelessWidget {
               top: 0,
               end: 0,
               child: SeedPressable(
-                semanticsLabel: '닫기',
+                semanticsLabel: SeedLocalizations.label(
+                  context,
+                  SeedLabel.close,
+                ),
                 behavior: HitTestBehavior.opaque,
                 onTap: onClose,
                 child: SizedBox.square(
@@ -119,6 +186,21 @@ class SeedHelpBubble extends StatelessWidget {
         ],
       ),
     );
+
+    final Widget bubbleBody = _dialogSemantics
+        ? Semantics(
+            // React gives role=dialog to HelpBubble.Content (the painted card),
+            // while its separate arrow lives outside those semantic bounds.
+            // A container keeps this node from merging into the parent that
+            // also lays out the arrow.
+            container: true,
+            role: SemanticsRole.dialog,
+            explicitChildNodes: true,
+            namesRoute: true,
+            label: title,
+            child: card,
+          )
+        : card;
 
     if (arrowPlacement == SeedHelpBubbleArrowPlacement.none) {
       return bubbleBody;
@@ -160,7 +242,7 @@ class SeedHelpBubble extends StatelessWidget {
             child: arrow,
           ),
         ],
-        bubbleBody,
+        Flexible(child: bubbleBody),
         if (arrowPlacement == SeedHelpBubbleArrowPlacement.bottom) ...[
           Padding(
             padding: EdgeInsets.only(left: arrowOffset),
@@ -243,6 +325,7 @@ class SeedHelpBubbleTrigger extends StatelessWidget {
     this.side = SeedOverlaySide.top,
     this.align = SeedOverlayAlign.center,
     this.flip = true,
+    this.flipFallbackSides,
     this.maxWidth = 280,
     this.showCloseButton = true,
     this.closeOnInteractOutside = true,
@@ -252,11 +335,17 @@ class SeedHelpBubbleTrigger extends StatelessWidget {
   }) : onOpenChanged = onOpenChange ?? onOpenChanged,
        assert(onOpenChange == null || onOpenChanged == null);
   final Widget Function(BuildContext, bool, VoidCallback) triggerBuilder;
+
   final String title;
+
   final String? description;
+
   final Widget? anchor;
+
   final SeedOverlayController? controller;
+
   final bool? open;
+
   final bool defaultOpen,
       flip,
       showCloseButton,
@@ -264,11 +353,17 @@ class SeedHelpBubbleTrigger extends StatelessWidget {
       autoFocus,
       isBrand,
       skipAnimation;
+
+  final List<SeedOverlaySide>? flipFallbackSides;
   final double maxWidth;
+
   @Deprecated('Use onOpenChange instead.')
   final SeedOverlayOpenChanged? onOpenChanged;
+
   SeedOverlayOpenChanged? get onOpenChange => onOpenChanged;
+
   final SeedOverlaySide side;
+
   final SeedOverlayAlign align;
   @override
   Widget build(BuildContext context) => SeedAnchoredOverlay(
@@ -283,6 +378,7 @@ class SeedHelpBubbleTrigger extends StatelessWidget {
     arrowPadding: 14,
     align: align,
     flip: flip,
+    flipFallbackSides: flipFallbackSides,
     maxWidth: maxWidth,
     autoFocus: autoFocus,
     closeOnInteractOutside: closeOnInteractOutside,
@@ -294,7 +390,7 @@ class SeedHelpBubbleTrigger extends StatelessWidget {
     enterDuration: SeedDuration.d4,
     exitDuration: SeedDuration.d4,
     skipAnimation: skipAnimation,
-    overlayBuilder: (context) => SeedHelpBubble(
+    overlayBuilder: (context) => SeedHelpBubble._dialog(
       title: title,
       description: description,
       isBrand: isBrand,
@@ -319,7 +415,9 @@ class SeedTooltipDelayGroup extends StatefulWidget {
     this.skipDelay = const Duration(milliseconds: 800),
   });
   final Widget child;
+
   final Duration openDelay, closeDelay, skipDelay;
+
   @override
   State<SeedTooltipDelayGroup> createState() => _SeedTooltipDelayGroupState();
 }
@@ -359,16 +457,27 @@ class SeedHelpBubbleTooltip extends StatefulWidget {
     this.isBrand = false,
   });
   final Widget child;
+
   final String title;
+
   final String? description;
+
   final bool? open;
+
   final ValueChanged<bool>? onOpenChange;
+
   final SeedOverlayOpenChanged? onOpenChanged;
+
   final Duration? openDelay, closeDelay;
+
   final SeedOverlaySide side;
+
   final SeedOverlayAlign align;
+
   final bool flip, keepOpenOnContentHover, isBrand;
+
   final double maxWidth;
+
   @override
   State<SeedHelpBubbleTooltip> createState() => _SeedHelpBubbleTooltipState();
 }

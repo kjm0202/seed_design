@@ -1,3 +1,7 @@
+import 'package:flutter/rendering.dart' show OverflowBoxFit;
+
+import '../../localization/seed_localizations.dart';
+
 import 'dart:ui' show SemanticsRole;
 
 import '../layout/seed_scroll_fog.dart';
@@ -55,16 +59,53 @@ class SeedPopover extends StatelessWidget {
     this.showCloseButton = false,
   });
 
+  double? _fittedWidth(
+    BuildContext context,
+    Widget? title,
+    Widget? description, {
+    required bool hasCloseButton,
+  }) {
+    final base = DefaultTextStyle.of(context).style;
+    double? measure(Widget? widget) {
+      if (widget == null) return 0;
+      if (widget is! Text || widget.data == null) return null;
+      final painter = TextPainter(
+        text: TextSpan(text: widget.data, style: base.merge(widget.style)),
+        textDirection: Directionality.of(context),
+        textScaler: MediaQuery.textScalerOf(context),
+        locale: Localizations.maybeLocaleOf(context),
+      )..layout();
+      final width = painter.maxIntrinsicWidth;
+      painter.dispose();
+      return width;
+    }
+
+    final titleWidth = measure(title);
+    final descriptionWidth = measure(description);
+    final bodyWidth = measure(body);
+    if (titleWidth == null || descriptionWidth == null || bodyWidth == null) {
+      return null;
+    }
+    final headerInset =
+        SeedDimension.x6 + (hasCloseButton ? 52 : SeedDimension.x6);
+    return math
+        .max(
+          math.max(titleWidth, descriptionWidth) + headerInset,
+          bodyWidth + SeedDimension.x6 * 2,
+        )
+        .ceilToDouble();
+  }
+
   @override
   Widget build(BuildContext context) => Semantics(
     role: SemanticsRole.dialog,
     explicitChildNodes: true,
     // Flutter Web's route-role bridge only transfers the label to aria-label
     // when the same semantics node explicitly names its route.
-    namesRoute: (semanticsLabel?.isNotEmpty ?? false) ||
+    namesRoute:
+        (semanticsLabel?.isNotEmpty ?? false) ||
         (titleText?.isNotEmpty ?? false),
-    label: semanticsLabel ??
-        (titleText?.isNotEmpty == true ? titleText : null),
+    label: semanticsLabel ?? (titleText?.isNotEmpty == true ? titleText : null),
     child: _buildSurface(context),
   );
 
@@ -102,10 +143,18 @@ class SeedPopover extends StatelessWidget {
     final bool hasHeader =
         titleWidget != null || descriptionWidget != null || onClose != null;
 
+    final fitted = _fittedWidth(
+      context,
+      titleWidget,
+      descriptionWidget,
+      hasCloseButton: onClose != null,
+    );
     return Container(
       constraints: BoxConstraints(
         minWidth: minWidth,
-        maxWidth: maxWidth,
+        maxWidth: fitted == null
+            ? maxWidth
+            : fitted.clamp(minWidth, maxWidth).toDouble(),
         maxHeight: maxHeight,
       ),
       decoration: BoxDecoration(
@@ -114,22 +163,31 @@ class SeedPopover extends StatelessWidget {
         boxShadow: shadows.s3,
       ),
       clipBehavior: Clip.antiAlias,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Stack(
         children: [
-          if (hasHeader)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                SeedDimension.x6,
-                SeedDimension.x6,
-                SeedDimension.x4,
-                SeedDimension.x4,
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (hasHeader)
+                Padding(
+                  // The end inset reserves the 22px icon and its official 6px gap.
+                  padding: EdgeInsetsDirectional.fromSTEB(
+                    SeedDimension.x6,
+                    SeedDimension.x6,
+                    onClose != null ? 52 : SeedDimension.x6,
+                    SeedDimension.x4,
+                  ),
+                  child: ConstrainedBox(
+                    // A close button without text still needs its own room.
+                    constraints: BoxConstraints(
+                      minHeight:
+                          onClose != null &&
+                              titleWidget == null &&
+                              descriptionWidget == null
+                          ? 25
+                          : 0,
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
@@ -142,65 +200,85 @@ class SeedPopover extends StatelessWidget {
                       ],
                     ),
                   ),
-                  if (onClose != null) ...[
-                    const SizedBox(width: SeedDimension.x1_5),
-                    SeedPressable(
-                      semanticsLabel: '닫기',
-                      focusBorderRadius: SeedBorderRadius.r3,
-                      onTap: onClose,
-                      builder: (context, isPressed) => AnimatedContainer(
-                        duration: SeedDuration.colorTransition,
-                        curve: SeedCurves.easing,
-                        width: 52.0,
-                        height: 52.0,
-                        decoration: BoxDecoration(
-                          color: isPressed
-                              ? colors.bg.transparentPressed
-                              : colors.bg.transparent,
-                          borderRadius: SeedBorderRadius.r3,
-                        ),
-                        child: Center(
-                          child: Icon(
-                            Icons.close_rounded,
-                            size: 22.0,
-                            color: colors.fg.neutralSubtle,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          if (body != null)
-            Flexible(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(
-                  SeedDimension.x6,
-                  0,
-                  SeedDimension.x6,
-                  footer != null ? 0 : SeedDimension.x12,
                 ),
-                child: scrollBody
-                    ? SeedScrollArea(
-                        placements: showScrollFog
-                            ? const {SeedScrollFogPlacement.bottom}
-                            : const {},
-                        showScrolledDivider: true,
-                        child: body!,
-                      )
-                    : body!,
+              if (body != null)
+                Flexible(
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      SeedDimension.x6,
+                      0,
+                      SeedDimension.x6,
+                      footer != null ? 0 : SeedDimension.x12,
+                    ),
+                    child: scrollBody
+                        ? SeedScrollArea(
+                            placements: showScrollFog
+                                ? const {SeedScrollFogPlacement.bottom}
+                                : const {},
+                            // The official band exists only while overflowing.
+                            fogOnlyWhenScrollable: true,
+                            fogSize: SeedDimension.x12,
+                            showScrolledDivider: true,
+                            child: body!,
+                          )
+                        : body!,
+                  ),
+                ),
+              if (footer != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    SeedDimension.x6,
+                    SeedDimension.x4,
+                    SeedDimension.x6,
+                    SeedDimension.x6,
+                  ),
+                  // CSS lets min-content overflow, which keeps labels readable.
+                  child: LayoutBuilder(
+                    builder: (context, constraints) => constraints.maxWidth < 72
+                        ? OverflowBox(
+                            fit: OverflowBoxFit.deferToChild,
+                            maxWidth: double.infinity,
+                            alignment: AlignmentDirectional.centerEnd,
+                            child: IntrinsicWidth(child: footer!),
+                          )
+                        : footer!,
+                  ),
+                ),
+            ],
+          ),
+          if (onClose != null)
+            // The icon sits at top 27 / end 24; the 52px target extends 15px
+            // around the 22px icon, as in React.
+            PositionedDirectional(
+              top: 12,
+              end: 9,
+              child: SeedPressable(
+                semanticsLabel: SeedLocalizations.label(
+                  context,
+                  SeedLabel.close,
+                ),
+                focusBorderRadius: SeedBorderRadius.r3,
+                onTap: onClose,
+                builder: (context, isPressed) => AnimatedContainer(
+                  duration: SeedDuration.colorTransition,
+                  curve: SeedCurves.easing,
+                  width: 52.0,
+                  height: 52.0,
+                  decoration: BoxDecoration(
+                    color: isPressed
+                        ? colors.bg.transparentPressed
+                        : colors.bg.transparent,
+                    borderRadius: SeedBorderRadius.r3,
+                  ),
+                  child: Center(
+                    child: Icon(
+                      Icons.close_rounded,
+                      size: 22.0,
+                      color: colors.fg.neutralSubtle,
+                    ),
+                  ),
+                ),
               ),
-            ),
-          if (footer != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                SeedDimension.x6,
-                SeedDimension.x4,
-                SeedDimension.x6,
-                SeedDimension.x6,
-              ),
-              child: footer!,
             ),
         ],
       ),

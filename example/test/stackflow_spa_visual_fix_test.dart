@@ -195,53 +195,53 @@ void main() {
   );
 
   testWidgets(
-    'ResponsiveDialog entered as root retains open selected size on Escape',
-    (tester) async {
-      tester.view.physicalSize = const Size(390, 844);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      await tester.pumpWidget(const StackflowSpaApp());
-      await tester.pumpAndSettle();
-      tester
-          .state<NavigatorState>(find.byType(Navigator))
-          .pushReplacementNamed('/responsive-dialog');
-      await tester.pumpAndSettle();
-      final sizeControl = find.byType(SeedSegmentedControl<String>);
-      expect(sizeControl, findsOneWidget);
-      await tester.tap(find.text('Large'));
-      await tester.pumpAndSettle();
-      expect(
-        tester.widget<SeedSegmentedControl<String>>(sizeControl).value,
-        'large',
-      );
-      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
-      await tester.pumpAndSettle();
-      expect(find.text('Responsive Dialog'), findsWidgets);
-      expect(sizeControl, findsOneWidget);
-      expect(
-        tester.widget<SeedSegmentedControl<String>>(sizeControl).value,
-        'large',
-      );
-      await tester.tap(find.text('취소'));
-      await tester.pumpAndSettle();
-      expect(sizeControl, findsOneWidget);
-      await tester.tap(find.text('확인'));
-      await tester.pumpAndSettle();
-      expect(sizeControl, findsOneWidget);
-      await tester.tap(
-        find
-            .byWidgetPredicate(
-              (widget) =>
-                  widget is SeedPressable && widget.semanticsLabel == '닫기',
-            )
-            .last,
-      );
-      await tester.pumpAndSettle();
-      expect(sizeControl, findsOneWidget);
-      expect(tester.takeException(), isNull);
-    },
-  );
+      'ResponsiveDialog entered as root retains open selected size on Escape',
+      (tester) async {
+        tester.view.physicalSize = const Size(390, 844);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(const StackflowSpaApp());
+        await tester.pumpAndSettle();
+        tester
+            .state<NavigatorState>(find.byType(Navigator))
+            .pushReplacementNamed('/responsive-dialog');
+        await tester.pumpAndSettle();
+        final sizeControl = find.byType(SeedSegmentedControl<String>);
+        expect(sizeControl, findsOneWidget);
+        await tester.tap(find.text('Large'));
+        await tester.pumpAndSettle();
+        expect(
+          tester.widget<SeedSegmentedControl<String>>(sizeControl).value,
+          'large',
+        );
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pumpAndSettle();
+        expect(find.text('Responsive Dialog'), findsWidgets);
+        expect(sizeControl, findsOneWidget);
+        expect(
+          tester.widget<SeedSegmentedControl<String>>(sizeControl).value,
+          'large',
+        );
+        await tester.tap(find.text('취소'));
+        await tester.pumpAndSettle();
+        expect(sizeControl, findsOneWidget);
+        await tester.tap(find.text('확인'));
+        await tester.pumpAndSettle();
+        expect(sizeControl, findsOneWidget);
+        await tester.tap(
+          find
+              .byWidgetPredicate(
+                (widget) =>
+                    widget is SeedPressable && widget.semanticsLabel == '닫기',
+              )
+              .last,
+        );
+        await tester.pumpAndSettle();
+        expect(sizeControl, findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
 
   testWidgets('ResponsiveDialog pushed from Home still dismisses with Escape', (
     tester,
