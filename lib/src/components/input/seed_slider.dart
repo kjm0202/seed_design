@@ -521,23 +521,8 @@ class _SeedSliderState extends State<SeedSlider> {
           end = math.min(widget.max, start + gap);
         }
       }
-    } else if (widget.minStepsBetweenThumbs > 0) {
-      final gap = widget.minStepsBetweenThumbs
-          .clamp(0, math.max(0, allowed.length - 1))
-          .toInt();
-      var startIndex = allowed.indexOf(start), endIndex = allowed.indexOf(end);
-      if (startIndex >= 0 && endIndex >= 0 && endIndex - startIndex < gap) {
-        if (v.start != range.start) {
-          startIndex = (endIndex - gap).clamp(0, allowed.length - 1);
-          endIndex = (startIndex + gap).clamp(0, allowed.length - 1);
-        } else {
-          endIndex = (startIndex + gap).clamp(0, allowed.length - 1);
-          startIndex = (endIndex - gap).clamp(0, allowed.length - 1);
-        }
-        start = allowed[startIndex];
-        end = allowed[endIndex];
-      }
     }
+    // React's updateValues skips minStepsBetweenThumbs with allowedValues.
     final next = RangeValues(math.min(start, end), math.max(start, end));
     _lastRange = next;
     if (next == range) return;
@@ -583,7 +568,10 @@ class _SeedSliderState extends State<SeedSlider> {
       final updated = index == 0
           ? RangeValues(next, current.end)
           : RangeValues(current.start, next);
-      final gap = widget.minStepsBetweenThumbs * _step;
+      // React checks the thumb gap only without allowedValues.
+      final gap = _sortedAllowed.isEmpty
+          ? widget.minStepsBetweenThumbs * _step
+          : 0.0;
       if (updated.start > updated.end || updated.end - updated.start < gap) {
         _gestureStart = null;
         return;

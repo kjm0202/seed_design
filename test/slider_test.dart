@@ -301,5 +301,38 @@ void main() {
       expect(value, const RangeValues(40, 60));
       expect(committed, value);
     });
+
+    testWidgets('allowed values ignore the thumb gap like React', (
+      tester,
+    ) async {
+      final changes = <List<double>>[];
+      await tester.pumpWidget(
+        _appValues(
+          SizedBox(
+            width: 300,
+            child: SeedSlider.range(
+              defaultValues: const RangeValues(0, 50),
+              step: 10,
+              allowedValues: const [0, 45, 50],
+              minStepsBetweenThumbs: 1,
+              jumpMultiplier: 1,
+              onValuesChange: changes.add,
+            ),
+          ),
+        ),
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.pageUp);
+      await tester.pump();
+      expect(changes, [
+        [45.0, 50.0],
+      ]);
+
+      final slider = tester.widget<RangeSlider>(find.byType(RangeSlider));
+      slider.onChanged!(const RangeValues(50, 50));
+      await tester.pump();
+      expect(changes.last, [50.0, 50.0]);
+    });
   });
 }
