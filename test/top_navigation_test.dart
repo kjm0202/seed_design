@@ -1,3 +1,4 @@
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
@@ -68,4 +69,30 @@ void main() {
       throwsAssertionError,
     );
   });
+
+  for (final (scale, expected) in [(0.8, 1.0), (2.0, 1.2)]) {
+    testWidgets('title and subtitle clamp text scale $scale like React', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        _app(
+          scale: scale,
+          appBar: const SeedTopNavigation(
+            titleText: 'Title',
+            subtitle: 'Subtitle',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      for (final text in ['Title', 'Subtitle']) {
+        final paragraph = tester.renderObject<RenderParagraph>(find.text(text));
+        expect(paragraph.textScaler.scale(10), closeTo(10 * expected, 1e-9));
+      }
+      expect(tester.getSize(find.byType(SeedTopNavigation)).height, 56);
+      expect(tester.takeException(), isNull);
+    });
+  }
 }

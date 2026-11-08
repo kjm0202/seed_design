@@ -45,7 +45,9 @@ class SeedTopNavigation extends StatelessWidget implements PreferredSizeWidget {
   final bool automaticallyImplyLeading;
   /// Additional preferred-size widget placed below the 56-pixel bar.
   final PreferredSizeWidget? bottom;
-  /// Text-scaling override for [titleText] and [subtitle].
+  /// Text-scaling override for [titleText] and [subtitle]. By default the
+  /// ambient scaler is clamped to 1.0-1.2, as React's app bar CSS clamps the
+  /// title and subtitle font sizes so they fit the fixed bar height.
   final TextScaler? titleTextScaler;
   /// Draws a bottom divider inside the 56-pixel bar; defaults false.
   final bool showBottomDivider;
@@ -128,7 +130,10 @@ class SeedTopNavigation extends StatelessWidget implements PreferredSizeWidget {
     final bool hasSubtitle = subtitle != null || subtitleWidget != null;
     final bool isTransparent = tone == SeedTopNavigationButtonTone.transparent;
     final TextScaler clampedScaler =
-        titleTextScaler ?? MediaQuery.textScalerOf(context);
+        titleTextScaler ??
+        MediaQuery.textScalerOf(
+          context,
+        ).clamp(minScaleFactor: 1.0, maxScaleFactor: 1.2);
     final scaffold = Scaffold.maybeOf(context);
 
     Widget? effectiveLeading = leading;
