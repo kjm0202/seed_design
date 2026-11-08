@@ -131,6 +131,7 @@ class _SeedAccordionItemState extends State<SeedAccordionItem>
   late final AnimationController _controller;
   late final Animation<double> _iconTurns;
   late final Animation<double> _heightFactor;
+  final GlobalKey _contentKey = GlobalKey();
 
   @override
   void initState() {
@@ -148,6 +149,27 @@ class _SeedAccordionItemState extends State<SeedAccordionItem>
       ).chain(CurveTween(curve: SeedCurves.easing)),
     );
     _heightFactor = _controller.drive(CurveTween(curve: SeedCurves.easing));
+    _controller.addStatusListener(_releaseHiddenFocus);
+  }
+
+  // React's collapsible applies `hidden` once the exit finishes, and browsers
+  // drop focus from hidden elements. Excluding traversal alone would leave an
+  // already focused control in the body able to receive Enter or Space.
+  // Overlay portals render outside this subtree, so an open menu keeps focus.
+  void _releaseHiddenFocus(AnimationStatus status) {
+    if (status != AnimationStatus.dismissed || _isExpanded) return;
+    final focus = FocusManager.instance.primaryFocus;
+    final content = _contentKey.currentContext?.findRenderObject();
+    for (
+      RenderObject? node = focus?.context?.findRenderObject();
+      node != null;
+      node = node.parent
+    ) {
+      if (identical(node, content)) {
+        focus!.unfocus();
+        return;
+      }
+    }
   }
 
   @override
@@ -343,6 +365,7 @@ class _SeedAccordionItemState extends State<SeedAccordionItem>
           explicitChildNodes: true,
           label: widget.title,
           child: Container(
+            key: _contentKey,
             width: double.infinity,
             color: colors.bg.layerDefault,
             padding: EdgeInsets.fromLTRB(

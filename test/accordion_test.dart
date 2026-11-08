@@ -374,4 +374,36 @@ void main() {
       },
     );
   });
+  testWidgets('collapsing an item releases focus held inside its content', (
+    tester,
+  ) async {
+    var presses = 0;
+    final buttonFocus = FocusNode();
+    addTearDown(buttonFocus.dispose);
+    Widget build(bool expanded) => _host(
+      SeedAccordionItem(
+        title: 'Details',
+        expanded: expanded,
+        content: SeedButton(
+          label: 'Inside',
+          focusNode: buttonFocus,
+          onPressed: () => presses++,
+        ),
+      ),
+    );
+    await tester.pumpWidget(build(true));
+    buttonFocus.requestFocus();
+    await tester.pump();
+    expect(buttonFocus.hasPrimaryFocus, isTrue);
+
+    // The parent collapses the item while the inner button is focused.
+    await tester.pumpWidget(build(false));
+    await tester.pumpAndSettle();
+    expect(buttonFocus.hasFocus, isFalse);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.sendKeyEvent(LogicalKeyboardKey.space);
+    await tester.pump();
+    expect(presses, 0);
+  });
 }
