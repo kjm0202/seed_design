@@ -285,6 +285,24 @@ class RenderSeedGrid extends RenderBox
     for (final child in automatic) {
       final data = child.parentData! as SeedGridParentData;
       final span = spanOf(data);
+      if (columnFlow && !implicitRows && data.row != null) {
+        // CSS column flow with a definite row: the cursor moves to that row,
+        // advancing a column if the row is above the cursor.
+        final row = math.max(0, data.row!);
+        if (row < cursorRow) cursorColumn++;
+        while (cursorColumn + span <= _columns &&
+            !free(row, cursorColumn, rowSpanOf(data), span)) {
+          cursorColumn++;
+        }
+        if (cursorColumn + span <= _columns) {
+          place(child, row, cursorColumn);
+          cursorRow = row + rowSpanOf(data);
+          continue;
+        }
+        implicitRows = true;
+        cursorRow = _rows!;
+        cursorColumn = 0;
+      }
       if (columnFlow && !implicitRows) {
         while (!implicitRows) {
           if (cursorRow + rowSpanOf(data) > _rows!) {

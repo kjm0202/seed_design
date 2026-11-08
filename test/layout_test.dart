@@ -216,6 +216,29 @@ void main() {
       expect(at('D'), const Offset(150, 20));
     });
 
+    testWidgets('Grid column flow keeps an item on its given row', (
+      tester,
+    ) async {
+      final at = await grid(
+        tester,
+        SeedGrid(
+          rows: 2,
+          autoFlow: Axis.vertical,
+          children: [
+            cell('A'),
+            const SeedGridItem(
+              row: 0,
+              child: SizedBox(height: 20, child: Text('B')),
+            ),
+            cell('C'),
+          ],
+        ),
+      );
+      expect(at('A'), Offset.zero);
+      expect(at('B'), const Offset(150, 0));
+      expect(at('C'), const Offset(150, 20));
+    });
+
     testWidgets('ResponsivePair shares the row equally', (tester) async {
       await tester.pumpWidget(
         _appFlow(
