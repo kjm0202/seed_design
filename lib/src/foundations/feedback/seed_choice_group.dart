@@ -19,6 +19,9 @@ class SeedChoiceGroup extends StatefulWidget {
   final Widget Function(BuildContext, List<FocusNode>) builder;
   /// Direction of arrow-key navigation: horizontal, vertical, or null for both.
   final Axis? axis;
+  /// Receives the index that keyboard navigation just focused, before
+  /// [onSelected] proposes it. A controlled parent may reject the proposal.
+  final ValueChanged<int>? onFocusMoved;
 
   /// Creates a roving-keyboard-focus selection group.
   ///
@@ -33,6 +36,7 @@ class SeedChoiceGroup extends StatefulWidget {
     this.revealOnMove = true,
     required this.builder,
     this.axis,
+    this.onFocusMoved,
   });
 
   /// Creates the state that owns focus nodes and handles roving keyboard selection.
@@ -95,6 +99,7 @@ class _SeedChoiceGroupState extends State<SeedChoiceGroup> {
         if (widget.revealOnMove) {
           Scrollable.ensureVisible(_nodes[next].context!);
         }
+        widget.onFocusMoved?.call(next);
         widget.onSelected(next);
         break;
       }

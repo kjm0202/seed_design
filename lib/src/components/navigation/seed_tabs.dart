@@ -216,6 +216,20 @@ class _SeedTabsState extends State<SeedTabs> {
     });
   }
 
+  // React's arrow keys call trigger.focus() after proposing the selection,
+  // and the browser scrolls the focused trigger into view. When a controlled
+  // parent rejects or delays the proposal, the selection reveal never runs,
+  // so reveal the focused tab instead.
+  void _revealFocusedTab(int index) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || widget.selectedIndex == index) return;
+      final keys = widget.variant == SeedTabsVariant.line
+          ? _hugItemKeys
+          : _chipItemKeys;
+      if (index < keys.length) _revealSelectedTab(keys[index]);
+    });
+  }
+
   void _revealSelectedTab(GlobalKey itemKey) {
     final itemContext = itemKey.currentContext;
     final itemBox = itemContext?.findRenderObject();
@@ -318,6 +332,7 @@ class _SeedTabsState extends State<SeedTabs> {
       onSelected: widget.onTabSelected,
       // scrollTabIntoView below reveals the selection with React's buffer.
       revealOnMove: false,
+      onFocusMoved: _revealFocusedTab,
       builder: (context, nodes) => widget.variant == SeedTabsVariant.line
           ? _buildLineTabs(context, nodes)
           : widget.showScrollFog

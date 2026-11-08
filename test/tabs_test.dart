@@ -1236,4 +1236,46 @@ void main() {
       },
     );
   });
+  testWidgets('a rejected keyboard selection still reveals the focused tab', (
+    tester,
+  ) async {
+    final proposals = <int>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: SeedThemeData.light(fontFamily: seedTestFontFamily)
+            .toThemeData(),
+        home: Scaffold(
+          body: Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox(
+              width: 320,
+              child: SeedTabs(
+                items: _longTabs,
+                selectedIndex: 0,
+                onTabSelected: proposals.add,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+    for (var i = 0; i < 4; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pumpAndSettle();
+    }
+    expect(proposals, [1, 2, 3, 4]);
+    final viewport = tester.getRect(
+      find
+          .descendant(
+            of: find.byType(SeedTabs),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    final focused = tester.getRect(find.text('Long tab title 5'));
+    expect(focused.left, greaterThanOrEqualTo(viewport.left - 0.5));
+    expect(focused.right, lessThanOrEqualTo(viewport.right + 0.5));
+  });
 }
