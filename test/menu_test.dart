@@ -883,4 +883,93 @@ void main() {
       });
     }
   });
+
+  group('Tab leaves the menu', () {
+    Widget page({
+      required SeedOverlayController menu,
+      required FocusNode after,
+      bool skipTrigger = false,
+      bool ownScope = false,
+      bool ordered = false,
+    }) {
+      Widget trigger = SeedMenuTrigger(
+        controller: menu,
+        skipAnimation: true,
+        triggerBuilder: (_, _, toggle) => skipTrigger
+            ? Focus(
+                skipTraversal: true,
+                child: GestureDetector(
+                  onTap: toggle,
+                  child: const Text('Open'),
+                ),
+              )
+            : TextButton(onPressed: toggle, child: const Text('Open')),
+        builder: (_) => const SeedMenu(
+          groups: [
+            SeedMenuGroupData(items: [SeedMenuItemData(label: 'Item')]),
+          ],
+        ),
+      );
+      if (ownScope) trigger = FocusScope(child: trigger);
+      final next = TextButton(
+        focusNode: after,
+        onPressed: () {},
+        child: const Text('After'),
+      );
+      return MaterialApp(
+        theme: SeedThemeData.light().toThemeData(),
+        home: Scaffold(
+          body: FocusTraversalGroup(
+            policy: OrderedTraversalPolicy(),
+            child: Column(
+              children: [
+                if (ordered)
+                  FocusTraversalOrder(
+                    order: const NumericFocusOrder(2),
+                    child: next,
+                  ),
+                FocusTraversalOrder(
+                  order: const NumericFocusOrder(1),
+                  child: trigger,
+                ),
+                if (!ordered) next,
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    for (final (name, skip, scope, ordered) in [
+      ('trigger skips traversal', true, false, false),
+      ('trigger in its own scope', false, true, false),
+      ('custom traversal order', false, false, true),
+    ]) {
+      testWidgets('closes and moves on: $name', (tester) async {
+        final menu = SeedOverlayController();
+        final after = FocusNode(debugLabel: 'after');
+        addTearDown(() {
+          menu.dispose();
+          after.dispose();
+        });
+        await tester.pumpWidget(
+          page(
+            menu: menu,
+            after: after,
+            skipTrigger: skip,
+            ownScope: scope,
+            ordered: ordered,
+          ),
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+        expect(menu.isOpen, isTrue);
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pumpAndSettle();
+        expect(menu.isOpen, isFalse);
+        if (!scope) expect(after.hasPrimaryFocus, isTrue);
+        expect(find.text('Item'), findsNothing);
+      });
+    }
+  });
 }

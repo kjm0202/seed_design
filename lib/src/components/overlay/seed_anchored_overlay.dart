@@ -487,8 +487,9 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
           (node) =>
               node.canRequestFocus &&
               !node.skipTraversal &&
-              !identical(node, _contentFocus) &&
-              !node.ancestors.contains(_contentFocus),
+              // The floating scope wraps the content and is not a page stop.
+              !identical(node, _overlayFocus) &&
+              !node.ancestors.contains(_overlayFocus),
         )
         .toList();
     final trigger = _triggerFocus.descendants.where(
@@ -501,6 +502,25 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
     if (destination >= outside.length) return false;
     outside[destination].requestFocus();
     return true;
+  }
+
+  // React's non-modal FloatingFocusManager always lets Tab leave the menu
+  // for the tab stop after its trigger. Once the closed content leaves
+  // traversal, Flutter's own traversal from the trigger finds that stop,
+  // including FocusTraversalOrder, a trigger that skips traversal, and a
+  // trigger inside its own FocusScope.
+  void _focusAfterTriggerWhenClosed() {
+    final trigger = _triggerFocus.descendants
+        .where((node) => node.canRequestFocus)
+        .firstOrNull;
+    if (trigger == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || trigger.context == null || !trigger.canRequestFocus) {
+        return;
+      }
+      trigger.requestFocus();
+      trigger.nextFocus();
+    });
   }
 
   @override
@@ -825,9 +845,12 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
                                     return KeyEventResult.handled;
                                   }
                                 }
-                              } else if (_focusAtTriggerBoundary(
-                                backwards: false,
-                              )) {
+                              } else {
+                                if (_accordionContentHidden) {
+                                  _focusAtTriggerBoundary(backwards: false);
+                                } else {
+                                  _focusAfterTriggerWhenClosed();
+                                }
                                 _request(
                                   false,
                                   SeedOverlayDismissReason.focusOut,
