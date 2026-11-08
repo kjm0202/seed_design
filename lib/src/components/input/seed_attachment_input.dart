@@ -2,6 +2,7 @@ import '../../localization/seed_localizations.dart';
 
 import 'dart:math' as math;
 
+import 'package:flutter/rendering.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../foundations/colors/seed_color_scheme.dart';
@@ -328,7 +329,10 @@ class SeedAttachmentInput extends StatelessWidget {
   final bool enabled;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      _RemoveButtonHitScope(child: _buildList(context));
+
+  Widget _buildList(BuildContext context) {
     final colors = context.seedColor;
     final typography = context.seedTypography;
     final canAdd = enabled && !readOnly && items.length < maxCount;
@@ -788,31 +792,131 @@ class SeedAttachmentInput extends StatelessWidget {
     SeedAttachmentItem item,
     SeedColorScheme colors,
   ) {
-    return SeedPressable(
-      semanticsLabel: SeedLocalizations.label(context, SeedLabel.deleteFile),
-      enableScale: true,
-      onTap: () => onRemove?.call(item),
-      builder: (context, isPressed) {
-        return Container(
-          width: SeedDimension.x5,
-          height: SeedDimension.x5,
-          decoration: BoxDecoration(
-            color: isPressed
-                ? colors.bg.layerDefaultPressed
-                : colors.bg.layerDefault,
-            shape: BoxShape.circle,
-            border: Border.all(color: colors.stroke.neutralWeak, width: 1.0),
-          ),
-          child: Center(
-            child: Icon(
-              Icons.close_rounded,
-              size: SeedDimension.x2_5,
-              color: colors.fg.neutral,
+    return _RemoveButtonHitTarget(
+      child: SeedPressable(
+        semanticsLabel: SeedLocalizations.label(context, SeedLabel.deleteFile),
+        enableScale: true,
+        onTap: () => onRemove?.call(item),
+        builder: (context, isPressed) {
+          return Container(
+            width: SeedDimension.x5,
+            height: SeedDimension.x5,
+            decoration: BoxDecoration(
+              color: isPressed
+                  ? colors.bg.layerDefaultPressed
+                  : colors.bg.layerDefault,
+              shape: BoxShape.circle,
+              border: Border.all(color: colors.stroke.neutralWeak, width: 1.0),
             ),
-          ),
-        );
-      },
+            child: Center(
+              child: Icon(
+                Icons.close_rounded,
+                size: SeedDimension.x2_5,
+                color: colors.fg.neutral,
+              ),
+            ),
+          );
+        },
+      ),
     );
+  }
+}
+
+/// Lets a remove button's overhang receive pointers. React positions the
+/// button 4px past the item's top-right corner, and the browser hit tests that
+/// overhang because the item does not clip it. Flutter stops at the item's
+/// bounds, so this list-level scope routes those points to the button.
+class _RemoveButtonHitScope extends SingleChildRenderObjectWidget {
+  const _RemoveButtonHitScope({required super.child});
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderRemoveButtonHitScope();
+}
+
+class _RenderRemoveButtonHitScope extends RenderProxyBox {
+  final Set<_RenderRemoveButtonHitTarget> _targets = {};
+
+  Offset? _toLocal(RenderBox box, Offset position) {
+    final inverse = Matrix4.tryInvert(box.getTransformTo(this));
+    return inverse == null
+        ? null
+        : MatrixUtils.transformPoint(inverse, position);
+  }
+
+  // Whether the ordinary hit test reaches [target] through every ancestor box.
+  bool _reachable(_RenderRemoveButtonHitTarget target, Offset position) {
+    for (
+      var node = target.parent;
+      node != null && node != this;
+      node = node.parent
+    ) {
+      if (node is! RenderBox || !node.hasSize) continue;
+      final local = _toLocal(node, position);
+      if (local == null || !node.size.contains(local)) return false;
+    }
+    return true;
+  }
+
+  @override
+  bool hitTest(BoxHitTestResult result, {required Offset position}) {
+    final overhang = Rect.fromLTRB(
+      0,
+      -SeedDimension.x1,
+      size.width + SeedDimension.x1,
+      size.height,
+    );
+    if (overhang.contains(position)) {
+      for (final target in _targets) {
+        if (!target.hasSize) continue;
+        final local = _toLocal(target, position);
+        if (local == null ||
+            !target.size.contains(local) ||
+            _reachable(target, position)) {
+          continue;
+        }
+        final hit = result.addWithPaintTransform(
+          transform: target.getTransformTo(this),
+          position: position,
+          hitTest: (result, local) => target.hitTest(result, position: local),
+        );
+        if (hit) {
+          result.add(BoxHitTestEntry(this, position));
+          return true;
+        }
+      }
+    }
+    return super.hitTest(result, position: position);
+  }
+}
+
+class _RemoveButtonHitTarget extends SingleChildRenderObjectWidget {
+  const _RemoveButtonHitTarget({required super.child});
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderRemoveButtonHitTarget();
+}
+
+class _RenderRemoveButtonHitTarget extends RenderProxyBox {
+  _RenderRemoveButtonHitScope? _scope;
+
+  @override
+  void attach(PipelineOwner owner) {
+    super.attach(owner);
+    var node = parent;
+    while (node != null && node is! _RenderRemoveButtonHitScope) {
+      node = node.parent;
+    }
+    _scope = node as _RenderRemoveButtonHitScope?;
+    _scope?._targets.add(this);
+  }
+
+  @override
+  void detach() {
+    _scope?._targets.remove(this);
+    _scope = null;
+    super.detach();
   }
 }
 

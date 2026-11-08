@@ -459,4 +459,48 @@ void main() {
       expect(find.byIcon(Icons.camera_alt_outlined), findsOneWidget);
     });
   });
+
+  group('remove button overhang', () {
+    for (final type in SeedAttachmentType.values) {
+      for (final reorderable in [false, true]) {
+        testWidgets(
+          '$type reorderable=$reorderable removes from the overhang',
+          (tester) async {
+            final removed = <String>[];
+            await tester.pumpWidget(
+              MaterialApp(
+                theme: SeedThemeData.light().toThemeData(),
+                home: Scaffold(
+                  body: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: SeedAttachmentInput(
+                      items: [
+                        SeedAttachmentItem(id: 'a', name: 'a.pdf', type: type),
+                        SeedAttachmentItem(id: 'b', name: 'b.pdf', type: type),
+                      ],
+                      onRemove: (item) => removed.add(item.id),
+                      onReorder: reorderable ? (_, _) {} : null,
+                    ),
+                  ),
+                ),
+              ),
+            );
+            final button = tester.getRect(
+              find
+                  .ancestor(
+                    of: find.byIcon(Icons.close_rounded).first,
+                    matching: find.byType(Container),
+                  )
+                  .first,
+            );
+            // The button sits 4px past the item's top-right corner.
+            await tester.tapAt(Offset(button.right - 2, button.top + 2));
+            await tester.pump();
+            expect(removed, ['a']);
+            expect(tester.takeException(), isNull);
+          },
+        );
+      }
+    }
+  });
 }
