@@ -117,16 +117,22 @@ class SeedPopover extends StatelessWidget {
         .ceilToDouble();
   }
 
+  // React labels the dialog by the rendered Title only. A [titleText]
+  // hidden behind a custom [title] must not name it.
+  String? get _accessibleName {
+    if (semanticsLabel?.isNotEmpty ?? false) return semanticsLabel;
+    if (title == null && (titleText?.isNotEmpty ?? false)) return titleText;
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) => Semantics(
     role: SemanticsRole.dialog,
     explicitChildNodes: true,
     // Flutter Web's route-role bridge only transfers the label to aria-label
     // when the same semantics node explicitly names its route.
-    namesRoute:
-        (semanticsLabel?.isNotEmpty ?? false) ||
-        (titleText?.isNotEmpty ?? false),
-    label: semanticsLabel ?? (titleText?.isNotEmpty == true ? titleText : null),
+    namesRoute: _accessibleName != null,
+    label: _accessibleName,
     child: _buildSurface(context),
   );
 

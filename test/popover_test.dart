@@ -445,4 +445,21 @@ void main() {
       );
     }
   });
+  testWidgets('dialog name comes from the rendered title only', (tester) async {
+    final semantics = tester.ensureSemantics();
+    Widget build(SeedPopover popover) => MaterialApp(
+      theme: SeedThemeData.light().toThemeData(),
+      home: Scaffold(body: Center(child: popover)),
+    );
+    await tester.pumpWidget(
+      build(const SeedPopover(title: Text('Visible'), titleText: 'Hidden')),
+    );
+    expect(find.text('Visible'), findsOneWidget);
+    expect(find.bySemanticsLabel('Hidden'), findsNothing);
+
+    await tester.pumpWidget(build(const SeedPopover(titleText: 'Shown')));
+    final dialog = tester.getSemantics(find.byType(SeedPopover));
+    expect(dialog.label, 'Shown');
+    semantics.dispose();
+  });
 }
