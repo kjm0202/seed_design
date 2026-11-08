@@ -197,6 +197,26 @@ class _SeedPullToRefreshState extends State<SeedPullToRefresh> {
     if (ready) widget.onReady?.call();
   }
 
+  // Whether [position] is the outermost vertical scrollable of this widget.
+  bool _isPullRoot(ScrollMetrics position) {
+    if (position is! ScrollPosition || position.axis != Axis.vertical) {
+      return false;
+    }
+    final scrollable = position.context;
+    if (scrollable is! ScrollableState || !scrollable.mounted) return false;
+    var root = false;
+    scrollable.context.visitAncestorElements((element) {
+      if (element is! StatefulElement) return true;
+      final state = element.state;
+      if (identical(state, this)) {
+        root = true;
+        return false;
+      }
+      return !(state is ScrollableState && state.widget.axis == Axis.vertical);
+    });
+    return root;
+  }
+
   bool _scrollNotification(ScrollNotification notification) {
     if (!(widget.notificationPredicate?.call(notification) ??
             notification.depth == 0) ||
@@ -341,6 +361,7 @@ class _SeedPullToRefreshState extends State<SeedPullToRefresh> {
                   },
                   physics: _PullScrollPhysics(
                     hold: () => _offset > 0 && _dragging,
+                    isRoot: _isPullRoot,
                     parent: const ClampingScrollPhysics(),
                   ),
                 ),
@@ -382,13 +403,29 @@ class _SeedPullToRefreshState extends State<SeedPullToRefresh> {
 /// Keep native scrolling from consuming the retreat of a pull. Once the pull
 /// reaches zero, the same drag can scroll the content normally again.
 class _PullScrollPhysics extends ScrollPhysics {
-  const _PullScrollPhysics({required this.hold, super.parent});
+  const _PullScrollPhysics({
+    required this.hold,
+    required this.isRoot,
+    super.parent,
+  });
 
   final bool Function() hold;
+  final bool Function(ScrollMetrics position) isRoot;
 
   @override
-  _PullScrollPhysics applyTo(ScrollPhysics? ancestor) =>
-      _PullScrollPhysics(hold: hold, parent: buildParent(ancestor));
+  _PullScrollPhysics applyTo(ScrollPhysics? ancestor) => _PullScrollPhysics(
+    hold: hold,
+    isRoot: isRoot,
+    parent: buildParent(ancestor),
+  );
+
+  // React starts a pull from the root's touch events whatever the content
+  // length. The pulled scrollable must accept a drag even when its content
+  // fits, as a primary scroll view does by default. Nested scrollables keep
+  // their own behavior so they never take drags from the outer list.
+  @override
+  bool shouldAcceptUserOffset(ScrollMetrics position) =>
+      isRoot(position) || super.shouldAcceptUserOffset(position);
 
   @override
   double applyPhysicsToUserOffset(ScrollMetrics position, double offset) =>

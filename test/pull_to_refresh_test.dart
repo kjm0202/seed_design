@@ -101,6 +101,63 @@ void main() {
     }
   }
 
+  for (final primary in [true, false]) {
+    testWidgets('short content still pulls (primary: $primary)', (
+      tester,
+    ) async {
+      final controller = ScrollController();
+      addTearDown(controller.dispose);
+      var refreshes = 0;
+      await tester.pumpWidget(
+        host(
+          SeedPullToRefresh(
+            onRefresh: () async => refreshes++,
+            child: ListView(
+              controller: primary ? null : controller,
+              primary: primary ? null : false,
+              children: const [SizedBox(height: 80, child: Text('Only row'))],
+            ),
+          ),
+        ),
+      );
+      final gesture = await startPull(tester);
+      await gesture.moveBy(const Offset(0, 160));
+      await tester.pump();
+      expect(indicator(tester).value, 1);
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(refreshes, 1);
+    });
+  }
+
+  testWidgets('a short nested list leaves drags to the outer list', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      host(
+        SeedPullToRefresh(
+          onRefresh: () async {},
+          child: ListView(
+            children: [
+              SizedBox(
+                height: 100,
+                child: ListView(
+                  primary: false,
+                  children: const [SizedBox(height: 40)],
+                ),
+              ),
+              const SizedBox(height: 1600),
+            ],
+          ),
+        ),
+      ),
+    );
+    final outer = tester.state<ScrollableState>(find.byType(Scrollable).first);
+    await tester.drag(find.byType(ListView).last, const Offset(0, -300));
+    await tester.pumpAndSettle();
+    expect(outer.position.pixels, greaterThan(0));
+  });
+
   testWidgets('short pulls and ready pulls retreated below threshold cancel', (
     tester,
   ) async {
