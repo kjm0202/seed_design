@@ -187,6 +187,37 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
+  testWidgets('immediate request during exit replaces the waiting entry', (
+    tester,
+  ) async {
+    final controller = SeedSnackbarController();
+    addTearDown(controller.dispose);
+    final closed = <String>[];
+    await tester.pumpWidget(_host(controller: controller));
+    await _show(tester, controller, 'A', onClose: () => closed.add('A'));
+    // B is requested, so A starts its 200ms exit; C arrives inside it.
+    controller.show(
+      child: const SeedSnackbar(message: 'B'),
+      onClose: () => closed.add('B'),
+    );
+    await tester.pump(const Duration(milliseconds: 50));
+    controller.show(
+      child: const SeedSnackbar(message: 'C'),
+      onClose: () => closed.add('C'),
+    );
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pump(const Duration(milliseconds: 330));
+    expect(find.text('C'), findsOneWidget);
+    expect(find.text('B'), findsNothing);
+
+    controller.close();
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pump(const Duration(milliseconds: 330));
+    expect(find.text('B'), findsNothing);
+    expect(closed, ['B', 'A', 'C']);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets('root provider survives route change and new submission', (
     tester,
   ) async {

@@ -262,8 +262,16 @@ class SeedSnackbarController extends ChangeNotifier {
     final entry = _SeedSnackbarEntry(child, duration, removeDelay, onClose);
     if ((strategy ?? this.strategy) == SeedSnackbarStrategy.immediate &&
         _queue.isNotEmpty) {
-      // The current snackbar exits first; this one enters when it is removed.
-      _queue.insert(1, entry);
+      // React's immediate PUSH sets `queue: [option]`: everything waiting,
+      // including an earlier immediate entry, is replaced. The current
+      // snackbar exits first; this one enters when it is removed.
+      final replaced = _queue.sublist(1);
+      _queue
+        ..removeRange(1, _queue.length)
+        ..add(entry);
+      for (final dropped in replaced) {
+        dropped.onClose?.call();
+      }
       _dismiss(_queue.first);
     } else {
       _queue.add(entry);
