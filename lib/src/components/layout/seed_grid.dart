@@ -21,10 +21,12 @@ class SeedGrid extends MultiChildRenderObjectWidget {
     this.fillHeight = false,
   }) : assert(columns == null || columns > 0),
        assert(rows == null || rows > 0);
+
   /// [columns] fixes the column count; [rows] can fix the row count. Omitted
   /// columns default to one for row flow, or are inferred from rows in column
   /// flow. Both values, when supplied, must be positive.
   final int? columns, rows;
+
   /// Auto-placement direction; [Axis.horizontal] means CSS row flow (default).
   final Axis autoFlow;
   int get _columnCount =>
@@ -33,10 +35,13 @@ class SeedGrid extends MultiChildRenderObjectWidget {
       (rows == null || autoFlow == Axis.horizontal
           ? 1
           : (children.length / rows!).ceil().clamp(1, 1000000));
+
   /// Default spacing in logical pixels, used on both axes unless overridden.
   final double gap;
+
   /// Axis-specific spacing overrides for [gap], in logical pixels.
   final double? rowGap, columnGap;
+
   /// Distributes spare bounded height across rows when true; defaults to false.
   final bool fillHeight;
   @override
@@ -87,25 +92,39 @@ class SeedGridItem extends ParentDataWidget<SeedGridParentData> {
     int? colEnd,
     int? rowStart,
     int? rowEnd,
-  }) : column = colSpan == full
+  }) : column = (colSpan ?? columnSpan) == full
            ? 0
            : colStart != null
            ? colStart - 1
+           : colEnd != null
+           ? colEnd - 2
            : column,
        row = rowSpan == full
            ? 0
            : rowStart != null
            ? rowStart - 1
+           : rowEnd != null
+           ? rowEnd - 2
            : row,
-       columnSpan = colStart != null && colEnd != null
+       columnSpan = (colSpan ?? columnSpan) == full
+           ? full
+           : colStart != null && colEnd != null
            ? colEnd - colStart
+           : colStart != null || colEnd != null
+           ? 1
            : colSpan ?? columnSpan ?? 1,
-       rowSpan = rowStart != null && rowEnd != null
+       rowSpan = rowSpan == full
+           ? full
+           : rowStart != null && rowEnd != null
            ? rowEnd - rowStart
+           : rowStart != null || rowEnd != null
+           ? 1
            : rowSpan ?? 1;
+
   /// Zero-based [column] and [row] placement. Null leaves the axis to
   /// automatic placement; the constructor translates CSS grid lines.
   final int? column, row;
+
   /// Number of columns and rows occupied; [full] can indicate full span.
   final int columnSpan, rowSpan;
   @override
@@ -131,6 +150,7 @@ class SeedGridItem extends ParentDataWidget<SeedGridParentData> {
 class SeedGridParentData extends ContainerBoxParentData<RenderBox> {
   /// Optional zero-based column and row indices, or null for auto-placement.
   int? column, row;
+
   /// Column and row spans; each defaults to one.
   int columnSpan = 1, rowSpan = 1;
 }
@@ -168,6 +188,7 @@ class RenderSeedGrid extends RenderBox
   double _rowGap, _columnGap;
   bool _fill;
   TextDirection _direction;
+
   /// Updates layout configuration and marks the grid dirty when it changes.
   void configure(
     int columns,

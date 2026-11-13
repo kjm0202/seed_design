@@ -24,22 +24,31 @@ class SeedScrollArea extends StatefulWidget {
     this.fogOnlyWhenScrollable = false,
     this.focusableWhenScrollable = false,
   });
+
   /// Content of the single-child scroll view.
   final Widget child;
+
   /// Optional external scroll controller; retained and disposed by its owner.
   final ScrollController? controller;
+
   /// Scroll axis; defaults to [Axis.vertical].
   final Axis direction;
+
   /// Edges showing fog, initially the bottom edge.
   final Set<SeedScrollFogPlacement> placements;
+
   /// Default edge fade depth in logical pixels (20).
   final double fogSize;
+
   /// Per-edge fade depth overrides to [fogSize].
   final Map<SeedScrollFogPlacement, double>? fogSizes;
+
   /// Content padding, added to the reserved fog edge insets.
   final EdgeInsetsGeometry padding;
+
   /// Fog surface color; null uses the themed floating layer color.
   final Color? color;
+
   /// [showScrolledDivider] draws a top divider after scrolling;
   /// [hideScrollbar] (default true) hides the native scrollbar; [showFog]
   /// (default true) toggles edge fog.
@@ -88,10 +97,16 @@ class _SeedScrollAreaState extends State<SeedScrollArea> {
       widget.fogSizes?[placement] ?? widget.fogSize;
 
   bool _metricsChanged(ScrollMetricsNotification notification) {
-    if (!widget.fogOnlyWhenScrollable ||
-        notification.depth != 0 ||
-        notification.metrics.axis != widget.direction) {
-      return false;
+    if (notification.depth == 0 &&
+        notification.metrics.axis == widget.direction) {
+      _updateOverflow(notification.metrics);
+    }
+    return false;
+  }
+
+  void _updateOverflow(ScrollMetrics metrics) {
+    if (!widget.fogOnlyWhenScrollable && !widget.focusableWhenScrollable) {
+      return;
     }
     final axisPlacements = widget.direction == Axis.vertical
         ? {SeedScrollFogPlacement.top, SeedScrollFogPlacement.bottom}
@@ -100,11 +115,10 @@ class _SeedScrollAreaState extends State<SeedScrollArea> {
     final reserved = _fog
         .intersection(axisPlacements)
         .fold<double>(0.0, (sum, p) => sum + _sizeFor(p));
-    final metrics = notification.metrics;
     final overflow =
-        metrics.maxScrollExtent - metrics.minScrollExtent > reserved + .01;
+        metrics.maxScrollExtent - metrics.minScrollExtent >
+        (widget.fogOnlyWhenScrollable ? reserved + .01 : 0);
     if (_overflow != overflow) setState(() => _overflow = overflow);
-    return false;
   }
 
   void _update() {
@@ -142,18 +156,13 @@ class _SeedScrollAreaState extends State<SeedScrollArea> {
   // The first layout may report no metrics change, which would leave the area
   // out of the Tab order until it next resizes.
   void _syncOverflow() {
-    if (!mounted ||
-        !widget.focusableWhenScrollable ||
-        !_controller.hasClients) {
-      return;
-    }
-    final overflow = _controller.position.maxScrollExtent > 0;
-    if (overflow != _overflow) setState(() => _overflow = overflow);
+    if (!mounted || !_controller.hasClients) return;
+    _updateOverflow(_controller.position);
   }
 
   @override
   Widget build(BuildContext context) {
-    if (widget.focusableWhenScrollable) {
+    if (widget.focusableWhenScrollable || widget.fogOnlyWhenScrollable) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _syncOverflow());
     }
     final fog = _fog;
