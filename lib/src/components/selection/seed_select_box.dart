@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/semantics.dart' show SemanticsValidationResult;
 
 import '../../foundations/dimensions/seed_dimension.dart';
 import '../../foundations/radius/seed_radius.dart';
@@ -57,6 +58,7 @@ class SeedSelectBox extends StatefulWidget {
   /// Custom content region within the card.
   final Widget? customContent;
   final bool? _selected;
+
   /// Deprecated spelling of [defaultChecked].
   @Deprecated('Use defaultChecked instead.')
   final bool defaultSelected;
@@ -78,6 +80,7 @@ class SeedSelectBox extends StatefulWidget {
   final ValueChanged<bool>? onSelected;
   final SeedSelectBoxControl? _control;
   final SeedSelectBoxLayout? _layout;
+
   /// Whether the card accepts input; defaults to true.
   final bool enabled;
 
@@ -176,6 +179,10 @@ class _SeedSelectBoxState extends State<SeedSelectBox> {
   @override
   Widget build(BuildContext context) {
     final group = SeedSelectBoxGroupScope.maybeOf(context);
+    assert(
+      group?.isRadioGroup != true || widget.value != null,
+      'A radio select box must have a non-null value.',
+    );
     final inRadioGroup =
         group != null && group.isRadioGroup && widget.value != null;
     final effectiveControl =
@@ -187,11 +194,9 @@ class _SeedSelectBoxState extends State<SeedSelectBox> {
         widget._layout ??
         group?.defaultLayout ??
         SeedSelectBoxLayout.horizontal;
-    final effectiveSelected =
-        widget._selected ??
-        (inRadioGroup
-            ? group.selectedValue == widget.value
-            : _uncontrolledSelected);
+    final effectiveSelected = inRadioGroup
+        ? group.selectedValue == widget.value
+        : widget._selected ?? _uncontrolledSelected;
     final enabled =
         widget.enabled &&
         (group?.enabled ?? true) &&
@@ -213,12 +218,7 @@ class _SeedSelectBoxState extends State<SeedSelectBox> {
       _focusCoordinator?.unregister(_radioFocusNode);
       _focusCoordinator = coordinator;
     }
-    coordinator?.register(
-      _radioFocusNode,
-      widget.value!,
-      canInteract,
-      selectRadio,
-    );
+    coordinator?.register(_radioFocusNode, widget.value!, enabled, selectRadio);
 
     final colors = context.seedColor;
     final typography = context.seedTypography;
@@ -282,26 +282,23 @@ class _SeedSelectBoxState extends State<SeedSelectBox> {
     );
 
     return SeedPressable(
-      enabled: canInteract,
+      semanticsValidationResult: widget.invalid
+          ? SemanticsValidationResult.invalid
+          : SemanticsValidationResult.none,
+      semanticsReadOnly: readOnly,
+      enabled: enabled && (readOnly || canInteract),
       focusNode: inRadioGroup ? _radioFocusNode : null,
-      checked: effectiveControl == SeedSelectBoxControl.none
-          ? null
-          : (widget.indeterminate &&
-                    effectiveControl == SeedSelectBoxControl.checkmark
-                ? null
-                : effectiveSelected),
-      mixed:
-          widget.indeterminate &&
-              effectiveControl == SeedSelectBoxControl.checkmark
-          ? true
-          : null,
+      semanticButton: false,
+      activateOnEnter: false,
+      checked: !inRadioGroup && widget.indeterminate ? null : effectiveSelected,
+      mixed: !inRadioGroup && widget.indeterminate ? true : null,
       selected: effectiveSelected,
-      inMutuallyExclusiveGroup:
-          effectiveControl == SeedSelectBoxControl.radiomark ? true : null,
+      inMutuallyExclusiveGroup: inRadioGroup ? true : null,
       expanded: isFooterCollapsible ? isFooterOpen : null,
       focusBorderRadius: SeedBorderRadius.r3,
       enableScale: false,
       onTap: () {
+        if (!canInteract) return;
         if (inRadioGroup) {
           selectRadio();
           return;
@@ -372,6 +369,7 @@ class _SeedSelectBoxState extends State<SeedSelectBox> {
                       selected: effectiveSelected,
                       isPressed: isPressed,
                       control: effectiveControl,
+                      indeterminate: !inRadioGroup && widget.indeterminate,
                     ),
                   ],
                 ],
@@ -425,11 +423,12 @@ class _SeedSelectBoxState extends State<SeedSelectBox> {
     required bool selected,
     required bool isPressed,
     required SeedSelectBoxControl control,
+    required bool indeterminate,
   }) {
     if (control == SeedSelectBoxControl.checkmark) {
       final Color iconColor = !enabled
           ? colors.fg.disabled
-          : (selected
+          : (selected || indeterminate
                 ? colors.fg.neutral
                 : (isPressed
                       ? colors.fg.neutralSubtle
@@ -437,7 +436,11 @@ class _SeedSelectBoxState extends State<SeedSelectBox> {
       return SizedBox.square(
         dimension: 20,
         child: Center(
-          child: Icon(Icons.check_rounded, size: 15.0, color: iconColor),
+          child: Icon(
+            indeterminate ? Icons.remove_rounded : Icons.check_rounded,
+            size: 15.0,
+            color: iconColor,
+          ),
         ),
       );
     } else {

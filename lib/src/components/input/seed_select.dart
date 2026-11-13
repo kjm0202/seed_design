@@ -35,6 +35,8 @@ class SeedSelectItem<T> {
     this.prefixIcon,
     this.enabled = true,
     this.labelWidget,
+    this.textValue,
+    this.typeaheadLabel,
   });
 
   /// Flutter-specific replacement widget for the option's label content.
@@ -43,10 +45,16 @@ class SeedSelectItem<T> {
   /// Value reported by a selection callback.
   final T value;
 
-  /// Option text shown in the menu and searched by keyboard typeahead.
+  /// Option text shown in the menu and used by default for display and search.
   ///
   /// Selection identity is determined by [value], not by this label.
   final String label;
+
+  /// Plain trigger display text, defaulting to [label].
+  final String? textValue;
+
+  /// Keyboard search text, defaulting to [label].
+  final String? typeaheadLabel;
 
   /// Secondary descriptive text under the label.
   final String? description;
@@ -56,6 +64,24 @@ class SeedSelectItem<T> {
 
   /// Whether this option can be selected; defaults to true.
   final bool enabled;
+}
+
+/// A selected value and its option, if the option is currently available.
+class SeedSelectSelectedItem<T> {
+  /// Creates a projection of a selected value.
+  const SeedSelectSelectedItem({required this.value, this.item});
+
+  /// Selected value, including values whose options have not loaded yet.
+  final T value;
+
+  /// Matching option, or null while it is unresolved.
+  final SeedSelectItem<T>? item;
+
+  /// Whether an option currently resolves this value.
+  bool get resolved => item != null;
+
+  /// Trigger text, or an empty string for an unresolved value.
+  String get textValue => item?.textValue ?? item?.label ?? '';
 }
 
 /// A group of items in a [SeedSelect].
@@ -131,6 +157,7 @@ class SeedSelect<T> extends StatefulWidget {
     this.maxMenuHeight = 480,
     this.valueBuilder,
     this.formatValue,
+    this.formatSelectedValue,
     this.label,
     this.labelWeight = SeedFieldLabelWeight.medium,
     this.description,
@@ -166,6 +193,7 @@ class SeedSelect<T> extends StatefulWidget {
 
   /// Placeholder text when [value] is null.
   final String? _placeholder;
+
   /// Text shown when no options are selected (default `선택해주세요`).
   String get placeholder => _placeholder ?? '선택해주세요';
 
@@ -186,6 +214,7 @@ class SeedSelect<T> extends StatefulWidget {
   /// Whether the select trigger displays an error stroke.
   @Deprecated('Use invalid instead.')
   final bool isError;
+
   /// Whether the trigger displays invalid/error styling (default false).
   bool get invalid => isError;
 
@@ -225,6 +254,7 @@ class SeedSelect<T> extends StatefulWidget {
   /// Legacy set-valued seed; prefer the React-compatible list [defaultValue].
   @Deprecated('Use defaultValue instead.')
   Set<T> get defaultValues => initialValues;
+
   /// Initial uncontrolled selected values, as in the React Select API.
   final List<T>? defaultValue;
 
@@ -246,6 +276,7 @@ class SeedSelect<T> extends StatefulWidget {
 
   /// Optional visibility-only observer, alongside [onOpenChanged].
   final ValueChanged<bool>? onOpenStateChanged;
+
   /// Reports proposed popup visibility with a [SeedOverlayDismissReason].
   SeedOverlayOpenChanged? get onOpenChange => onOpenChanged;
 
@@ -261,11 +292,18 @@ class SeedSelect<T> extends StatefulWidget {
   /// Formats selected option labels into trigger text.
   final String Function(List<SeedSelectItem<T>>)? formatValue;
 
+  /// Formats selected values, including unresolved entries in selection order.
+  /// Called when selected options resolve, or when values are selected before
+  /// any options are available. An empty selection shows the placeholder.
+  /// When supplied, this takes precedence over [formatValue].
+  final String Function(List<SeedSelectSelectedItem<T>>)? formatSelectedValue;
+
   /// Optional field label above the Select.
   final String? label;
 
   /// The official `labelWeight`.
   final SeedFieldLabelWeight labelWeight;
+
   /// Supporting description below the field.
   final String? description;
 
@@ -347,6 +385,11 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
 
   List<SeedSelectItem<T>> get _selectedItems => [
     for (final value in _selectedValues) ?_findItem(value),
+  ];
+
+  List<SeedSelectSelectedItem<T>> get _selectedEntries => [
+    for (final value in _selectedValues)
+      SeedSelectSelectedItem(value: value, item: _findItem(value)),
   ];
 
   void _syncMenuItemFocusNodes() {
@@ -454,7 +497,10 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
     for (var step = query.length > 1 ? 0 : 1; step <= items.length; step++) {
       final index = (current + step) % items.length;
       final item = items[index];
-      if (!item.enabled || !item.label.toLowerCase().startsWith(query)) {
+      if (!item.enabled ||
+          !(item.typeaheadLabel ?? item.label).toLowerCase().startsWith(
+            query,
+          )) {
         continue;
       }
       if (open) {
@@ -693,7 +739,9 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
 
   SeedSelectItem<T>? get _selectedItem {
     final items = _selectedItems;
-    return items.length == 1 ? items.first : null;
+    return _selectedValues.length == 1 && items.length == 1
+        ? items.first
+        : null;
   }
 
   SeedInputButtonSize _effectiveSize(BuildContext context) {
@@ -883,18 +931,24 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
 
   String? get _displayValue {
     final items = _selectedItems;
-    // React never calls formatValue for an empty or unresolved selection.
-    if (items.isNotEmpty && widget.formatValue != null) {
-      return widget.formatValue!(items);
+    final waitingForOptions =
+        _selectedValues.isNotEmpty &&
+        widget.groups.every((g) => g.items.isEmpty);
+    if (widget.formatSelectedValue != null) {
+      final entries = _selectedEntries;
+      if (entries.isNotEmpty && (items.isNotEmpty || waitingForOptions)) {
+        return widget.formatSelectedValue!(List.unmodifiable(entries));
+      }
     }
-    return widget.multiple
-        ? items.map((item) => item.label).join(', ')
-        : _selectedItem?.label;
+    if (items.isEmpty) return waitingForOptions ? '' : null;
+    if (widget.formatValue != null) return widget.formatValue!(items);
+    return items.map((item) => item.textValue ?? item.label).join(', ');
   }
 
   Widget _trigger(BuildContext context, bool open, VoidCallback toggle) {
     final effectiveSize = _effectiveSize(context);
     final field = SeedFieldScope.maybeOf(context);
+    final displayValue = _displayValue;
     final trigger = SeedInputButton(
       size: widget.size,
       contentScale: true,
@@ -904,11 +958,13 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
           ? _readOnlyVisualFocus
           : field?.focusNode ?? _menuTriggerFocus,
       expanded: open,
-      value: _displayValue,
+      value: displayValue ?? '',
       // React SelectValue displays the selected labels joined by ", " for
       // both single and multiple selections. Chip-like custom rendering is
       // still available explicitly through valueBuilder, never by default.
-      valueChild: widget.valueBuilder?.call(context, _selectedItems),
+      valueChild:
+          widget.valueBuilder?.call(context, _selectedItems) ??
+          (displayValue == '' ? const SizedBox.shrink() : null),
       readOnly: widget.readOnly,
       showClear: widget.showClear,
       onClear: () {
@@ -1049,17 +1105,20 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
         );
       }
 
+      final groupChildren = <Widget>[];
       if (group.label != null) {
-        children.add(
-          Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: SeedDimension.x4,
-              vertical: isLarge ? SeedDimension.x2_5 : SeedDimension.x2,
-            ),
-            child: Text(
-              group.label!,
-              style: (isLarge ? typography.t4Medium : typography.t3Regular)
-                  .copyWith(color: colors.fg.neutralSubtle),
+        groupChildren.add(
+          ExcludeSemantics(
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: SeedDimension.x4,
+                vertical: isLarge ? SeedDimension.x2_5 : SeedDimension.x2,
+              ),
+              child: Text(
+                group.label!,
+                style: (isLarge ? typography.t4Medium : typography.t3Regular)
+                    .copyWith(color: colors.fg.neutralSubtle),
+              ),
             ),
           ),
         );
@@ -1070,7 +1129,7 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
         final itemEnabled = widget.enabled && item.enabled;
         final optionIndex = itemIndex++;
 
-        children.add(
+        groupChildren.add(
           Semantics(
             selected: isSelected,
             child: MenuItemButton(
@@ -1184,6 +1243,18 @@ class _SeedSelectState<T> extends State<SeedSelect<T>> {
           ),
         );
       }
+      children.add(
+        Semantics(
+          container: true,
+          explicitChildNodes: true,
+          label: group.label,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: groupChildren,
+          ),
+        ),
+      );
     }
 
     return children;

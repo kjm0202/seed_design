@@ -388,10 +388,9 @@ class _SeedSwitchState extends State<SeedSwitch> {
   Widget _buildControl(BuildContext context) {
     if (widget.label == null) {
       return SeedSwitchMark(
-        value: widget.value,
-        defaultValue: widget.defaultValue,
+        checked: _checked,
         tone: widget.tone,
-        onChanged: widget.onChanged,
+        onCheckedChange: (_) => _toggle(),
         size: widget.size,
         enabled: widget.enabled,
         semanticsLabel: widget.semanticsLabel,

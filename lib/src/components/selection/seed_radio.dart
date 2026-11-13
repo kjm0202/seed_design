@@ -134,7 +134,7 @@ class _SeedRadioState<T> extends State<SeedRadio<T>> with RadioClient<T> {
       widget.value ==
       (registry != null ? registry!.groupValue : widget.groupValue);
   void _handleTap() {
-    if (!enabled) return;
+    if (!enabled || _isSelected) return;
     (registry?.onChanged ?? widget.onChanged)?.call(widget.value);
   }
 
@@ -324,9 +324,7 @@ class _SeedRadioState<T> extends State<SeedRadio<T>> with RadioClient<T> {
         children: [
           if (topAligned)
             Padding(
-              padding: EdgeInsets.only(
-                top: markTop,
-              ),
+              padding: EdgeInsets.only(top: markTop),
               child: focusedMark,
             )
           else
@@ -336,9 +334,7 @@ class _SeedRadioState<T> extends State<SeedRadio<T>> with RadioClient<T> {
             child:
                 widget.customLabel ??
                 Padding(
-                  padding: EdgeInsets.only(
-                    top: labelTop,
-                  ),
+                  padding: EdgeInsets.only(top: labelTop),
                   child: Text(widget.label!, style: textStyle),
                 ),
           ),

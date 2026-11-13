@@ -61,6 +61,7 @@ class SeedSelectFormField<T> extends SeedFormField<List<T>> {
     SeedOverlayOpenChanged? onOpenChange,
     Widget Function(BuildContext, List<SeedSelectItem<T>>)? valueBuilder,
     String Function(List<SeedSelectItem<T>>)? formatValue,
+    String Function(List<SeedSelectSelectedItem<T>>)? formatSelectedValue,
   }) : super(
          value: value == null ? null : List<T>.unmodifiable(value),
          initialValue: List<T>.unmodifiable(defaultValue),
@@ -90,6 +91,7 @@ class SeedSelectFormField<T> extends SeedFormField<List<T>> {
            onOpenChange: onOpenChange,
            valueBuilder: valueBuilder,
            formatValue: formatValue,
+           formatSelectedValue: formatSelectedValue,
          ),
        );
 }

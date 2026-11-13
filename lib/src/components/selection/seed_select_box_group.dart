@@ -64,6 +64,7 @@ class SeedSelectBoxFocusCoordinator {
   final FocusNode root = FocusNode(canRequestFocus: false);
   final _items =
       <FocusNode, ({Object value, bool enabled, VoidCallback select})>{};
+
   /// Currently selected identifier; influences the group's single Tab stop.
   Object? selectedValue;
   bool _scheduled = false;
@@ -105,6 +106,14 @@ class SeedSelectBoxFocusCoordinator {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scheduled = false;
       if (_disposed) return;
+      assert(() {
+        final values = _items.values.map((item) => item.value).toList();
+        assert(
+          values.toSet().length == values.length,
+          'Radio select boxes must have unique values within a group.',
+        );
+        return true;
+      }());
       final enabled = _ordered.where((node) => _items[node]!.enabled).toList();
       final entry =
           enabled
@@ -194,6 +203,9 @@ class SeedSelectBoxGroup extends StatefulWidget {
 
   /// Keeps [value], including null (no selection), under parent control.
   final bool controlled;
+
+  final bool _explicitRadio;
+
   /// Deprecated spelling of [onValueChange].
   @Deprecated('Use onValueChange instead.')
   final ValueChanged<Object?>? onValueChanged;
@@ -233,6 +245,30 @@ class SeedSelectBoxGroup extends StatefulWidget {
     this.readOnly = false,
     this.semanticsLabel,
   }) : onValueChanged = onValueChange ?? onValueChanged,
+       _explicitRadio = false,
+       assert(onValueChange == null || onValueChanged == null);
+
+  /// Creates a radio group even when the initial selection and callback are null.
+  ///
+  /// Each descendant card must have a unique non-null value, and its selection
+  /// is owned by the group. The default constructor retains layout-only mode.
+  const SeedSelectBoxGroup.radio({
+    super.key,
+    required this.children,
+    this.direction = Axis.vertical,
+    this.columns,
+    this.crossAxisAlignment = WrapCrossAlignment.start,
+    this.value,
+    this.defaultValue,
+    this.controlled = false,
+    ValueChanged<Object?>? onValueChange,
+    @Deprecated('Use onValueChange instead.')
+    ValueChanged<Object?>? onValueChanged,
+    this.enabled = true,
+    this.readOnly = false,
+    this.semanticsLabel,
+  }) : onValueChanged = onValueChange ?? onValueChanged,
+       _explicitRadio = true,
        assert(onValueChange == null || onValueChanged == null);
 
   /// Creates state for group selection and keyboard focus coordination.
@@ -251,6 +287,7 @@ class _SeedSelectBoxGroupState extends State<SeedSelectBoxGroup> {
   }
 
   bool get _isRadioGroup =>
+      widget._explicitRadio ||
       widget.controlled ||
       widget.value != null ||
       widget.defaultValue != null ||
