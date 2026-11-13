@@ -209,12 +209,14 @@ class SeedSlider extends StatefulWidget {
        _rangeMode = true;
 
   final List<double>? _values, _defaultValues;
+
   /// Controlled thumb values, as a list of one or two numbers.
   List<double>? get values =>
       _values ??
       (rangeValues == null
           ? null
           : List.unmodifiable([rangeValues!.start, rangeValues!.end]));
+
   /// Initial uncontrolled thumb values, as a list of one or two numbers.
   List<double>? get defaultValues =>
       _defaultValues ??
@@ -224,6 +226,7 @@ class SeedSlider extends StatefulWidget {
               defaultRangeValues!.start,
               defaultRangeValues!.end,
             ]));
+
   /// Callbacks for proposed thumb positions and final committed positions.
   ///
   /// Both receive a list of one or two values; commit occurs after a gesture.
@@ -285,6 +288,7 @@ class SeedSlider extends StatefulWidget {
       invalid,
       showActiveTrack,
       hideValueIndicator;
+
   /// Numeric step size; if absent, the widget uses a step of one.
   final double? step;
 
@@ -426,7 +430,7 @@ class _SeedSliderState extends State<SeedSlider> {
       widget.valueFormatter?.call(value) ??
       (value == value.roundToDouble()
           ? value.toInt().toString()
-          : value.toStringAsFixed(1));
+          : value.toString());
   double snap(double value) {
     final allowed = widget.allowedValues
         ?.where((v) => v >= widget.min && v <= widget.max)
@@ -452,31 +456,48 @@ class _SeedSliderState extends State<SeedSlider> {
         .clamp(widget.min, widget.max);
   }
 
-  // Material reports keyboard and accessibility steps as a small value change.
-  // With allowed values, those must move to the neighbor (React's
-  // getNextAllowedValue) instead of snapping back to the current value.
+  // Material reports keyboard and accessibility steps as a value change.
+  // Preserve an untouched range thumb, and translate continuous-slider
+  // increments to React's step or next allowed value.
   bool _pointerActive = false;
   double _nextValue(double proposed, double current) {
+    if (proposed == current) return current;
+    if (_pointerActive) return snap(proposed);
     final allowed = widget.allowedValues
         ?.where((v) => v >= widget.min && v <= widget.max)
         .toSet()
         .toList();
-    if (allowed == null ||
-        allowed.isEmpty ||
-        _pointerActive ||
-        proposed == current) {
-      return snap(proposed);
+    if (allowed == null || allowed.isEmpty) {
+      if (_effectiveDivisions != null) return snap(proposed);
+      return snap(current + (proposed > current ? _step : -_step));
     }
     allowed.sort();
-    return proposed > current
-        ? allowed.firstWhere((v) => v > current, orElse: () => current)
-        : allowed.lastWhere((v) => v < current, orElse: () => current);
+    return _nextAllowed(current, proposed > current ? 1 : -1, allowed);
+  }
+
+  double _nextAllowed(double current, int direction, List<double> allowed) {
+    var index = allowed.indexOf(current);
+    final exact = index >= 0;
+    if (!exact) {
+      var closest = allowed.first;
+      for (final candidate in allowed.skip(1)) {
+        if ((candidate - current).abs() < (closest - current).abs()) {
+          closest = candidate;
+        }
+      }
+      index = allowed.indexOf(closest);
+    }
+    final nextIndex = index + direction;
+    if (nextIndex >= 0 && nextIndex < allowed.length) {
+      return allowed[nextIndex];
+    }
+    return exact ? current : allowed[index];
   }
 
   // Keep Material's keyboard and accessibility increments in the same units
   // as pointer snapping, rather than its continuous-slider default of 5%.
   int? get _effectiveDivisions {
-    if (widget.allowedValues != null) return null;
+    if (_sortedAllowed.isNotEmpty) return null;
     final step =
         widget.step ??
         (widget.divisions == null
@@ -552,9 +573,7 @@ class _SeedSliderState extends State<SeedSlider> {
     }
     var next = current;
     for (var i = 0; i < widget.jumpMultiplier; i++) {
-      next = direction > 0
-          ? allowed.firstWhere((v) => v > next, orElse: () => next)
-          : allowed.lastWhere((v) => v < next, orElse: () => next);
+      next = _nextAllowed(next, direction, allowed);
     }
     return next;
   }

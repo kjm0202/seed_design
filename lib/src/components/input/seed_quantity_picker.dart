@@ -1,6 +1,5 @@
 import '../../localization/seed_localizations.dart';
 import '../feedback/seed_progress_circle.dart';
-import '../../foundations/state/seed_uncontrolled_value.dart';
 
 import 'package:material_ui/material_ui.dart';
 
@@ -186,7 +185,9 @@ class SeedQuantityPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (this.value == null) {
-      return SeedUncontrolledValue<int>(
+      return _QuantityValue(
+        min: min,
+        max: max,
         initialValue: (defaultValue ?? min).clamp(min, max),
         builder: (context, value, setValue) => SeedQuantityPicker(
           value: value,
@@ -390,4 +391,36 @@ class SeedQuantityPicker extends StatelessWidget {
       },
     );
   }
+}
+
+// Reconcile locally held values when bounds change without notifying the parent.
+class _QuantityValue extends StatefulWidget {
+  const _QuantityValue({
+    required this.min,
+    required this.max,
+    required this.initialValue,
+    required this.builder,
+  });
+
+  final int min, max, initialValue;
+  final Widget Function(BuildContext, int, ValueChanged<int>) builder;
+
+  @override
+  State<_QuantityValue> createState() => _QuantityValueState();
+}
+
+class _QuantityValueState extends State<_QuantityValue> {
+  late int _value = widget.initialValue;
+
+  @override
+  void didUpdateWidget(_QuantityValue oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _value = _value.clamp(widget.min, widget.max);
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      widget.builder(context, _value, (value) {
+        setState(() => _value = value);
+      });
 }
