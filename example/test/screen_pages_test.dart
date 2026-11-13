@@ -515,12 +515,15 @@ void main() {
     );
   });
   group('TransparentBar', () {
+    setUpAll(() async {
+      await (FontLoader('WantedSans')
+            ..addFont(rootBundle.load('assets/fonts/WantedSansVariable.ttf')))
+          .load();
+    });
+
     testWidgets(
       'transparent bar matches React segmented labels and switch tone',
       (tester) async {
-        await (FontLoader('WantedSans')
-              ..addFont(rootBundle.load('assets/fonts/WantedSansVariable.ttf')))
-            .load();
         tester.view.physicalSize = const Size(500, 844);
         tester.view.devicePixelRatio = 1;
         addTearDown(tester.view.resetPhysicalSize);
