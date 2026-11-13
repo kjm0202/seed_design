@@ -3,6 +3,7 @@ import '../../localization/seed_localizations.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../foundations/colors/seed_color_scheme.dart';
@@ -19,14 +20,19 @@ import '../button/seed_button.dart';
 enum SeedAttachmentStatus {
   /// Attachment is pending external processing.
   pending,
+
   /// Attachment has completed its display processing.
   completed,
+
   /// Success status retained for application compatibility.
   success,
+
   /// Attachment is currently loading.
   loading,
+
   /// Attachment is being uploaded by the application.
   uploading,
+
   /// Attachment has failed and may expose retry.
   error;
 
@@ -74,29 +80,40 @@ class SeedAttachmentItem {
 
   /// Stable identifier used by controller updates and list keys.
   final String id;
+
   /// Displayed attachment file name.
   final String? name;
+
   /// Application-formatted file size; this model does not format bytes.
   final String? sizeText;
+
   /// Which preview tile variant to render.
   final SeedAttachmentType type;
+
   /// Flutter preview image; preferred over [thumbnailUrl].
   final ImageProvider? imageProvider;
+
   /// Current app-reported item status (default completed).
   final SeedAttachmentStatus status;
+
   /// Whether this thumbnail carries the representative badge.
   final bool isRepresentative;
+
   /// Remote preview URL used when [imageProvider] is absent.
   final String? thumbnailUrl;
+
   /// Optional application-supplied upload progress.
   final double? progress;
+
   /// Item flags for read-only, enabled, dragging and removal permission.
   /// Defaults: false, true, false and true, respectively.
   final bool readOnly, enabled, isDragging, removeEnabled;
+
   /// Returns [imageProvider], a [NetworkImage] for [thumbnailUrl], or null.
   ImageProvider? get effectiveImageProvider =>
       imageProvider ??
       (thumbnailUrl == null ? null : NetworkImage(thumbnailUrl!));
+
   /// Copies display values and status while preserving the original ID/type.
   /// Null arguments keep existing values; [clearProgress] explicitly clears
   /// [progress] instead of retaining its previous value.
@@ -135,12 +152,16 @@ class SeedAttachmentDropzone extends StatelessWidget {
   /// Select-files button callback; the dropzone surface itself is not clickable.
   final VoidCallback? onTap;
   final String? _label;
+
   /// Custom hint or legacy Korean fallback label.
   String get label => _label ?? '또는 여기로 드래그해서 업로드';
+
   /// Icon for the internal select-files button.
   final Widget? icon;
+
   /// Externally supplied drag-over state for border styling.
   final bool isDraggingOver;
+
   /// Whether the select-files button is enabled (default true).
   final bool enabled;
 
@@ -301,6 +322,7 @@ class SeedAttachmentInput extends StatelessWidget {
 
   /// Label for representative thumbnail (e.g. '대표').
   final String? _representativeLabel;
+
   /// Representative image badge text (default '대표').
   String get representativeLabel => _representativeLabel ?? '대표';
 
@@ -310,8 +332,10 @@ class SeedAttachmentInput extends StatelessWidget {
 
   /// Whether to include the tile trigger beside previews (false for dropzones).
   final bool showTrigger;
+
   /// Whether the attachment list blocks add, remove and retry actions.
   final bool readOnly;
+
   /// Reorder handler; null disables dragging.
   /// The destination index follows ReorderableListView's before-removal convention.
   final ReorderCallback? onReorder;
@@ -417,7 +441,12 @@ class SeedAttachmentInput extends StatelessWidget {
           : _buildImageItem(context, item, colors, typography),
     );
     if (!showTrigger && items.isEmpty) return const SizedBox.shrink();
-    if (onReorder != null) {
+    // Flutter attaches reorder semantics to every child of its reorderable
+    // list, even when a particular child cannot start a drag. If no child can
+    // move, use the ordinary list so it does not advertise unusable actions.
+    final hasMovableItems =
+        items.isEmpty || items.any((item) => item.enabled && !item.readOnly);
+    if (onReorder != null && enabled && !readOnly && hasMovableItems) {
       return SizedBox(
         height: math.max(
           showTrigger ? triggerHeight : 0,
@@ -444,7 +473,10 @@ class SeedAttachmentInput extends StatelessWidget {
           header: showTrigger ? trigger : null,
           itemCount: items.length,
           onReorderItem: (from, to) {
-            if (enabled && !readOnly) onReorder!(from, to > from ? to + 1 : to);
+            final item = items[from];
+            if (item.enabled && !item.readOnly) {
+              onReorder!(from, to > from ? to + 1 : to);
+            }
           },
           itemBuilder: (context, index) {
             final item = items[index];
@@ -461,7 +493,12 @@ class SeedAttachmentInput extends StatelessWidget {
               child: enabled && !readOnly && item.enabled && !item.readOnly
                   ? ReorderableDelayedDragStartListener(
                       index: index,
-                      child: child,
+                      child: _AttachmentKeyboardReorder(
+                        index: index,
+                        count: items.length,
+                        onReorder: onReorder!,
+                        child: child,
+                      ),
                     )
                   : child,
             );
@@ -817,6 +854,140 @@ class SeedAttachmentInput extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+// Keep keyboard moves provisional until Space commits them, as in the
+// upstream sortable example. The consumer still owns the actual list.
+class _AttachmentKeyboardReorder extends StatefulWidget {
+  const _AttachmentKeyboardReorder({
+    required this.index,
+    required this.count,
+    required this.onReorder,
+    required this.child,
+  });
+
+  final int index;
+  final int count;
+  final ReorderCallback onReorder;
+  final Widget child;
+
+  @override
+  State<_AttachmentKeyboardReorder> createState() =>
+      _AttachmentKeyboardReorderState();
+}
+
+class _AttachmentKeyboardReorderState
+    extends State<_AttachmentKeyboardReorder> {
+  final FocusNode _focusNode = FocusNode();
+  int? _target;
+
+  @override
+  void didUpdateWidget(_AttachmentKeyboardReorder oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.index != widget.index || oldWidget.count != widget.count) {
+      _target = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (!node.hasPrimaryFocus ||
+        (event is! KeyDownEvent && event is! KeyRepeatEvent)) {
+      return KeyEventResult.ignored;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.space && event is KeyDownEvent) {
+      final target = _target;
+      setState(() => _target = target == null ? widget.index : null);
+      if (target != null && target != widget.index) {
+        widget.onReorder(
+          widget.index,
+          target > widget.index ? target + 1 : target,
+        );
+      }
+      return KeyEventResult.handled;
+    }
+    if (_target == null) return KeyEventResult.ignored;
+    if (event.logicalKey == LogicalKeyboardKey.escape) {
+      setState(() => _target = null);
+      return KeyEventResult.handled;
+    }
+    final isRight = event.logicalKey == LogicalKeyboardKey.arrowRight;
+    final isLeft = event.logicalKey == LogicalKeyboardKey.arrowLeft;
+    if (!isRight && !isLeft) return KeyEventResult.ignored;
+    final forward =
+        isRight == (Directionality.of(context) == TextDirection.ltr);
+    setState(() {
+      _target = (_target! + (forward ? 1 : -1)).clamp(0, widget.count - 1);
+    });
+    return KeyEventResult.handled;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final korean = Localizations.localeOf(context).languageCode == 'ko';
+    final target = _target;
+    final hint = target == null
+        ? (korean ? '스페이스를 눌러 순서 변경' : 'Press Space to reorder')
+        : (korean
+              ? '${target + 1}번째 위치. 방향키로 이동, 스페이스로 완료, Escape로 취소'
+              : 'Position ${target + 1}. Use arrow keys, Space to finish, Escape to cancel');
+    return Focus(
+      focusNode: _focusNode,
+      onKeyEvent: _onKey,
+      onFocusChange: (focused) {
+        setState(() {
+          if (!focused) _target = null;
+        });
+      },
+      child: Semantics(
+        hint: hint,
+        child: DecoratedBox(
+          position: DecorationPosition.foreground,
+          decoration: BoxDecoration(
+            border: _focusNode.hasPrimaryFocus
+                ? Border.all(
+                    color: context.seedColor.stroke.focusRing,
+                    width: 2,
+                  )
+                : null,
+          ),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              widget.child,
+              if (target != null)
+                PositionedDirectional(
+                  bottom: 0,
+                  end: 0,
+                  child: ExcludeSemantics(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: context.seedColor.bg.neutralSolid,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Text(
+                          '${target + 1} / ${widget.count}',
+                          style: TextStyle(
+                            color: context.seedColor.fg.onNeutralSolid,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }

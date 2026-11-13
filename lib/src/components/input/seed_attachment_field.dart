@@ -16,19 +16,25 @@ class SeedAttachmentController extends ChangeNotifier {
   }) : _items = List.of(items),
        assert(maxCount > 0);
   List<SeedAttachmentItem> _items;
+
   /// Maximum number of entries [addEntries] accepts; existing entries are not pruned.
   int maxCount;
+
   /// Interaction gates: enabled blocks additions/reordering when false; readOnly also blocks removal.
   bool enabled, readOnly;
+
   /// Unmodifiable snapshot of the ordered entries.
   List<SeedAttachmentItem> get items => List.unmodifiable(_items);
+
   /// Whether adding or reordering is allowed.
   bool get canEdit => enabled && !readOnly;
 
   /// Disabling the trigger still allows pruning existing entries.
   bool get canRemove => !readOnly;
+
   /// Whether the controller is editable and below [maxCount].
   bool get canAdd => canEdit && _items.length < maxCount;
+
   /// Replaces all entries; entry IDs must be unique.
   /// [notify] defaults to true and controls whether listeners are notified.
   void replaceItems(List<SeedAttachmentItem> items, {bool notify = true}) {
@@ -72,6 +78,7 @@ class SeedAttachmentController extends ChangeNotifier {
       else
         item,
   ]);
+
   /// Removes the entry matching [id] when item and controller allow removal.
   /// Disabled controllers can still remove; read-only controllers cannot.
   void remove(String id) {
@@ -161,8 +168,10 @@ class SeedAttachmentDisplayField extends StatefulWidget {
                  initialEntries == null),
          'A controller cannot be combined with entries or an initial seed.',
        );
+
   /// Optional externally owned controller; it is not disposed by the field.
   final SeedAttachmentController? controller;
+
   /// Controlled attachment list; the parent commits proposed updates.
   final List<SeedAttachmentItem>? entries;
   @Deprecated('Use defaultEntries instead.')
@@ -174,28 +183,37 @@ class SeedAttachmentDisplayField extends StatefulWidget {
   @Deprecated('Use onEntriesChange instead.')
   /// Deprecated callback alias; use [onEntriesChange].
   final ValueChanged<List<SeedAttachmentItem>>? onEntriesChanged;
+
   /// React-aligned callback receiving proposed attachment lists.
   ValueChanged<List<SeedAttachmentItem>>? get onEntriesChange =>
       onEntriesChanged;
+
   /// Add-trigger callback; caller uses controller to add selected entries.
   final ValueChanged<SeedAttachmentController>? onTrigger;
+
   /// Retry intent callback receiving the affected entry and active controller.
   final void Function(SeedAttachmentItem, SeedAttachmentController)? onRetry;
+
   /// Maximum number of entries permitted by the add control (default 1).
   final int maxEntries;
+
   /// Flags for add availability, read-only protection, drag reordering,
   /// dropzone visibility and external drag-over feedback, respectively.
   /// Only [enabled] defaults to true; the other flags default to false.
   final bool enabled, readOnly, reorderable, showDropzone, isDraggingOver;
+
   /// Square preview width and height, in logical pixels (default 80).
   final double itemSize;
+
   /// Optional custom icon for the add tile.
   final Widget? triggerIcon;
 
   /// Badge text for the representative item. Existing callers retain '대표'.
   final String? _representativeLabel;
+
   /// Representative image badge text; defaults to '대표'.
   String get representativeLabel => _representativeLabel ?? '대표';
+
   /// Optional field label, helper description and error message.
   final String? label, description, errorMessage;
 
@@ -208,10 +226,13 @@ class SeedAttachmentDisplayField extends StatefulWidget {
 
   /// Text beside [label], as in React AttachmentDisplayField.
   final String? indicator;
+
   /// Label type weight; defaults to [SeedFieldLabelWeight.medium].
   final SeedFieldLabelWeight labelWeight;
+
   /// Custom item-list builder, called with the live attachment controller.
   final Widget Function(BuildContext, SeedAttachmentController)? itemBuilder;
+
   /// Padding around attachment content (default [EdgeInsets.zero]).
   final EdgeInsetsGeometry inset;
   @override
@@ -313,7 +334,9 @@ class _SeedAttachmentDisplayFieldState
                   showTrigger: !widget.showDropzone,
                   onAdd: () => widget.onTrigger?.call(_controller),
                   onRemove: (item) => _controller.remove(item.id),
-                  onRetry: (item) => widget.onRetry?.call(item, _controller),
+                  onRetry: widget.onRetry == null
+                      ? null
+                      : (item) => widget.onRetry!(item, _controller),
                   onReorder: widget.reorderable ? _controller.reorder : null,
                 ),
           ],
