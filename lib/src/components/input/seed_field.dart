@@ -37,20 +37,25 @@ class SeedFieldScope extends InheritedWidget {
     this.unregisterFocusNode,
     required super.child,
   });
+
   /// Inherited interaction, validation, and required states.
   ///
   /// The required flag is semantic; it does not install a validator.
   final bool disabled, readOnly, isInvalid, required;
+
   /// Optional identifier inherited by child controls.
   final String? name;
 
   /// The field label, which names a button-like control (React `<label for>`).
   /// Visible label inherited for input accessibility names.
   final String? label;
+
   /// Optional input focus target.
   final FocusNode? focusNode;
+
   /// Callbacks that register and unregister child focus nodes.
   final ValueChanged<FocusNode>? registerFocusNode, unregisterFocusNode;
+
   /// Reads the nearest [SeedFieldScope], returning null when outside a Field.
   static SeedFieldScope? maybeOf(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<SeedFieldScope>();
@@ -73,45 +78,66 @@ class SeedFieldScope extends InheritedWidget {
 class SeedField extends StatefulWidget {
   /// Optional displayed field label; tapping it forwards focus to a child.
   final String? label;
+
   /// Label font weight; defaults to medium.
   final SeedFieldLabelWeight labelWeight;
+
   /// Shows a required marker and required semantics (default false).
   final bool required;
+
+  /// Overrides the required marker visibility independently of [required].
+  /// Null preserves the existing behavior of showing it when required.
+  final bool? showRequiredIndicator;
+
   /// Shows the localized optional label suffix (default false).
   final bool optional;
+
   /// Custom widget replacing the required mark.
   final Widget? indicator;
 
   /// Text beside the label, such as React's `Field.IndicatorText`.
   final String? indicatorText;
+
   /// Optional header action opposite the label.
   final Widget? subAction;
+
   /// Required input or custom control body.
   final Widget child;
 
   /// React's `description`; [helperText] is the Material-style alias.
   final String? helperText;
+
   /// Official description getter alias for [helperText].
   String? get description => helperText;
+
   /// Optional icon preceding the helper description.
   final Widget? descriptionIcon;
+
   /// Validation message displayed below the control.
   final String? errorMessage;
+
   /// Icon preceding an error message, replacing the default critical icon.
   final Widget? errorIcon;
+
   /// Current character count displayed in the footer.
   final String? characterCount;
+
   /// Maximum count displayed after [characterCount].
   final String? maxCharacterCount;
+
   /// Legacy stored invalid flag; prefer [invalid].
   @Deprecated('Use invalid instead.')
   final bool isInvalid;
+
   /// React-aligned name for the deprecated [isInvalid] field.
   bool get invalid => isInvalid;
+
   /// Disabled/read-only modes inherited by child controls; default false.
   final bool disabled, readOnly;
+
   /// Optional semantic identifier for the input body.
   final String? name;
+
   /// Optional focus target used when tapping the field label.
   final FocusNode? focusNode;
 
@@ -129,6 +155,7 @@ class SeedField extends StatefulWidget {
     this.label,
     this.labelWeight = SeedFieldLabelWeight.medium,
     this.required = false,
+    this.showRequiredIndicator,
     this.optional = false,
     this.indicator,
     this.indicatorText,
@@ -165,7 +192,10 @@ class SeedField extends StatefulWidget {
     final typography = context.seedTypography;
     final textScaler = MediaQuery.textScalerOf(context);
 
-    final bool hasHeader = label != null || subAction != null;
+    final bool showRequired = showRequiredIndicator ?? required;
+    final descriptions = [?helperText, ?errorMessage];
+    final bool hasHeader =
+        label != null || subAction != null || indicatorText != null || optional;
     final bool hasFooter =
         errorMessage != null ||
         helperText != null ||
@@ -205,7 +235,7 @@ class SeedField extends StatefulWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       // The required mark is offset from the label's top edge.
-                      crossAxisAlignment: required
+                      crossAxisAlignment: showRequired
                           ? CrossAxisAlignment.start
                           : CrossAxisAlignment.center,
                       children: [
@@ -226,7 +256,7 @@ class SeedField extends StatefulWidget {
                               ),
                             ),
                           ),
-                        if (required) ...[
+                        if (showRequired) ...[
                           Padding(
                             padding: EdgeInsets.only(
                               left: textScaler.scale(2.0),
@@ -296,7 +326,7 @@ class SeedField extends StatefulWidget {
           Semantics(
             identifier: name,
             label: label,
-            hint: errorMessage ?? helperText,
+            hint: descriptions.isEmpty ? null : descriptions.join('\n'),
             isRequired: required,
             validationResult: isInvalid || errorMessage != null
                 ? SemanticsValidationResult.invalid

@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../foundations/colors/seed_color_scheme.dart';
 import '../../foundations/colors/seed_palette.dart';
 import '../../foundations/dimensions/seed_dimension.dart';
+import '../../foundations/feedback/seed_control.dart';
 import '../../foundations/feedback/seed_scale_feedback.dart';
 import '../../foundations/motion/seed_motion.dart';
 import '../../foundations/radius/seed_radius.dart';
@@ -14,16 +15,22 @@ import '../feedback/seed_progress_circle.dart';
 enum SeedButtonVariant {
   /// Prominent brand-filled action.
   brandSolid,
+
   /// Strong neutral-filled action.
   neutralSolid,
+
   /// Subtle neutral-filled action.
   neutralWeak,
+
   /// Brand foreground over a transparent outlined surface.
   brandOutline,
+
   /// Neutral foreground over a transparent outlined surface.
   neutralOutline,
+
   /// Destructive or critical filled action.
   criticalSolid,
+
   /// Transparent text/icon action without a resting fill.
   ghost,
 }
@@ -32,10 +39,13 @@ enum SeedButtonVariant {
 enum SeedButtonSize {
   /// Compact 32 px button.
   xsmall,
+
   /// Small 36 px button.
   small,
+
   /// Medium 40 px button, the default.
   medium,
+
   /// Large 52 px button.
   large;
 
@@ -120,24 +130,34 @@ enum SeedButtonSize {
 class SeedButton extends StatelessWidget {
   /// Text displayed on the button; an icon is required when null.
   final String? label;
+
   /// Standalone icon for icon-only presentation when [label] is null.
   final Widget? icon;
+
   /// Leading icon used alongside text.
   final Widget? prefixIcon;
+
   /// Trailing icon used alongside text.
   final Widget? suffixIcon;
+
   /// Activation callback; null makes the button noninteractive.
   final VoidCallback? onPressed;
+
   /// Visual recipe, defaulting to [SeedButtonVariant.brandSolid].
   final SeedButtonVariant variant;
+
   /// Size recipe, defaulting to [SeedButtonSize.medium].
   final SeedButtonSize size;
+
   /// Expands a text button to its parent's available width (default false).
   final bool isFullWidth;
+
   /// Replaces content with a spinner while retaining the button dimensions.
   final bool loading;
+
   /// Explicit interaction flag; false disables pressing.
   final bool enabled;
+
   /// Prevents presses during [loading] when true (the default).
   final bool disableOnLoading;
 
@@ -150,10 +170,13 @@ class SeedButton extends StatelessWidget {
 
   /// Label weight. Applies only to [SeedButtonVariant.ghost], as in React.
   final FontWeight? fontWeight;
+
   /// Accessible name override; defaults to [label] if available.
   final String? semanticsLabel;
+
   /// Optional externally managed keyboard focus node.
   final FocusNode? focusNode;
+
   /// Requests initial keyboard focus when true (default false).
   final bool autofocus;
 
@@ -210,13 +233,13 @@ class SeedButton extends StatelessWidget {
        suffixIcon = null,
        isFullWidth = false;
 
-  bool get _effectiveEnabled =>
-      enabled && (!disableOnLoading || !loading) && onPressed != null;
-
   @override
   Widget build(BuildContext context) {
     final colors = context.seedColor;
     final typography = context.seedTypography;
+    final scopeEnabled = enabled && SeedControlScope.enabledOf(context);
+    final effectiveEnabled =
+        scopeEnabled && (!disableOnLoading || !loading) && onPressed != null;
 
     TextStyle textStyle;
     switch (size) {
@@ -240,12 +263,12 @@ class SeedButton extends StatelessWidget {
     }
 
     final button = SeedPressable(
-      enabled: _effectiveEnabled,
+      enabled: effectiveEnabled,
       semanticsLabel: semanticsLabel ?? label,
       focusNode: focusNode,
       autofocus: autofocus,
       focusBorderRadius: size.borderRadius,
-      onTap: _effectiveEnabled ? onPressed : null,
+      onTap: effectiveEnabled ? onPressed : null,
       builder: (context, isPressed) {
         final (bgColor, fgColor, strokeColor) = _resolveColors(
           colors: colors,
@@ -254,10 +277,12 @@ class SeedButton extends StatelessWidget {
               (loading &&
                   variant != SeedButtonVariant.brandOutline &&
                   variant != SeedButtonVariant.neutralOutline),
-          enabled: enabled && (onPressed != null || loading),
+          enabled: scopeEnabled && (onPressed != null || loading),
         );
 
-        final effectiveFg = isGhost && enabled ? textColor ?? fgColor : fgColor;
+        final effectiveFg = isGhost && scopeEnabled
+            ? textColor ?? fgColor
+            : fgColor;
         final isIconOnly = icon != null && label == null;
         final normalContent = _buildContent(effectiveFg, textStyle);
         final content = Stack(

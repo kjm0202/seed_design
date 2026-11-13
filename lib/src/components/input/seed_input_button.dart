@@ -6,6 +6,7 @@ import 'seed_field.dart';
 
 import '../../foundations/dimensions/seed_dimension.dart';
 import '../../foundations/feedback/seed_scale_feedback.dart';
+import '../../foundations/feedback/seed_control.dart';
 import '../../foundations/motion/seed_motion.dart';
 import '../../foundations/radius/seed_radius.dart';
 import '../../theme/seed_theme.dart';
@@ -27,8 +28,10 @@ enum SeedInputButtonSize {
 
   /// Defines size metrics [height] and [paddingX] in logical pixels.
   const SeedInputButtonSize({required this.height, required this.paddingX});
+
   /// Minimum height of this size variant in logical pixels.
   final double height;
+
   /// Horizontal padding of this size variant in logical pixels.
   final double paddingX;
 }
@@ -102,24 +105,33 @@ class SeedInputButton extends StatelessWidget {
 
   /// False when the button has no affordance of its own, as in FieldButton.
   final bool showDefaultSuffix;
+
   /// Legacy stored invalid-state flag; prefer [invalid].
   @Deprecated('Use invalid instead.')
   final bool isError;
+
   /// React-aligned invalid state, default false.
   bool get invalid => isError;
 
-  /// Whether the button is enabled for interaction.
+  /// Whether the button is enabled for interaction; an enclosing Field or
+  /// Fieldset may also disable it.
   final bool enabled;
+
   /// When true, blocks activation and clearing while showing content.
   final bool readOnly;
+
   /// Optional [SeedPressable] expansion behavior.
   final bool? expanded;
+
   /// Text prefix placed before the selected value.
   final String? prefixText;
+
   /// Text suffix placed after the selected value.
   final String? suffixText;
+
   /// Custom displayed value widget instead of ordinary text.
   final Widget? valueChild;
+
   /// Optional focus node; defaults to an enclosing Field focus node.
   final FocusNode? focusNode;
 
@@ -129,20 +141,27 @@ class SeedInputButton extends StatelessWidget {
 
   // The official trigger is named by its <label>, with the shown text as its
   // value, instead of being named by the value alone.
-  static Widget _labelled(String? label, String? shown, Widget child) =>
-      label == null
+  static Widget _labelled(
+    String? label,
+    String? shown,
+    Widget child, {
+    required bool preserveChildSemantics,
+  }) => label == null
       ? child
       : Semantics(
           label: label,
           value: shown,
-          excludeSemantics: true,
+          excludeSemantics: !preserveChildSemantics,
           child: child,
         );
 
   @override
   Widget build(BuildContext context) {
     final field = SeedFieldScope.maybeOf(context);
-    final enabled = this.enabled && !(field?.disabled ?? false);
+    final enabled =
+        this.enabled &&
+        !(field?.disabled ?? false) &&
+        SeedControlScope.enabledOf(context);
     final readOnly = this.readOnly || (field?.readOnly ?? false);
     final isError = this.isError || (field?.isInvalid ?? false);
     final size = this.size == SeedInputButtonSize.responsive
@@ -223,6 +242,7 @@ class SeedInputButton extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
+                  preserveChildSemantics: valueChild != null,
                 ),
               ),
               if (showClear &&

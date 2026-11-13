@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../../localization/seed_localizations.dart';
+import '../../foundations/feedback/seed_control.dart';
 import 'seed_field.dart';
 import 'seed_text_input.dart';
 import 'seed_input_button.dart';
@@ -37,8 +38,10 @@ class SeedFormField<T> extends FormField<T> {
 
   /// Includes a null [value] in parent-controlled state.
   final bool controlled;
+
   /// Parent-provided controlled value; null may be authoritative if [controlled] is true.
   final T? value;
+
   /// Called with each proposed form value, including controlled edits.
   final ValueChanged<T?>? onValueChanged;
   @override
@@ -95,6 +98,7 @@ class SeedTextField extends StatefulWidget {
     this.description,
     this.errorMessage,
     this.required = false,
+    this.showRequiredIndicator,
     this.indicator,
     this.enabled = true,
     this.readOnly = false,
@@ -104,6 +108,7 @@ class SeedTextField extends StatefulWidget {
     this.prefixText,
     this.suffixText,
     this.maxGraphemeCount,
+    this.hideCharacterCount = false,
     this.enforceMaxLength = false,
     this.onChanged,
     ValueChanged<SeedTextValueChange>? onValueChange,
@@ -173,6 +178,7 @@ class SeedTextField extends StatefulWidget {
     this.description,
     this.errorMessage,
     this.required = false,
+    this.showRequiredIndicator,
     this.indicator,
     this.enabled = true,
     this.readOnly = false,
@@ -182,6 +188,7 @@ class SeedTextField extends StatefulWidget {
     this.prefixText,
     this.suffixText,
     this.maxGraphemeCount,
+    this.hideCharacterCount = false,
     this.enforceMaxLength = false,
     this.onChanged,
     ValueChanged<SeedTextValueChange>? onValueChange,
@@ -238,6 +245,7 @@ class SeedTextField extends StatefulWidget {
   /// Externally owned text controller, mutually exclusive with [value]
   /// and [defaultValue]. Its text drives counter, validation and save behavior.
   final TextEditingController? controller;
+
   /// Value and display texts: [value] is controlled, [defaultValue] is
   /// an initial uncontrolled seed, [label] names the field, [description] provides
   /// helper text, [errorMessage] forces a Form error, and [placeholder] hints text.
@@ -250,6 +258,13 @@ class SeedTextField extends StatefulWidget {
 
   /// Text beside the label, as React TextField's `indicator`.
   final String? indicator;
+
+  /// Controls marker visibility independently of [required]; null follows it.
+  final bool? showRequiredIndicator;
+
+  /// Hides the displayed count without changing validation or input limits.
+  final bool hideCharacterCount;
+
   /// Field and editor flags: [required] shows semantics and a required mark;
   /// [enabled] allows typing; [readOnly] protects content; [enforceMaxLength]
   /// opts into Flutter length enforcement; [autoResize] grows the editor;
@@ -264,95 +279,133 @@ class SeedTextField extends StatefulWidget {
       clearable,
       obscureText,
       responsive;
+
   /// Icons decorating the editable text before and after its value.
   final Widget? prefixIcon, suffixIcon;
+
   /// Optional leading and trailing inline text.
   final String? prefixText, suffixText;
+
   /// Optional Unicode grapheme maximum and text line bounds.
   /// [maxGraphemeCount] drives the counter and form validation independently
   /// from [enforceMaxLength]. Default maxLines is 1, or null for textarea.
   final int? maxGraphemeCount, maxLines, minLines;
+
   /// Callbacks for user text edits and Flutter Form save, respectively.
   /// [onSaved] receives the live controller text.
   final ValueChanged<String>? onChanged, onSaved;
   @Deprecated('Use onValueChange instead.')
   /// Deprecated callback name; use [onValueChange].
   final ValueChanged<SeedTextValueChange>? onValueChanged;
+
   /// React-aligned grapheme callback with full and sliced value information.
   /// The original string is never truncated merely by this callback.
   ValueChanged<SeedTextValueChange>? get onValueChange => onValueChanged;
+
   /// Optional Form validation callback; grapheme-count validation also applies.
   /// The required marker alone does not install a nonempty-value validator.
   final FormFieldValidator<String>? validator;
+
   /// Flutter text edit formatters applied before change callbacks.
   final List<TextInputFormatter>? inputFormatters;
+
   /// Flutter custom editor builder receiving context, current controller
   /// and focus node in place of the built-in [SeedTextInput].
   final Widget Function(BuildContext, TextEditingController, FocusNode)?
   inputBuilder;
+
   /// Externally owned focus node, or null for an internal focus node.
   final FocusNode? focusNode;
+
   /// Input outline/underline appearance; defaults to outline.
   final SeedTextInputVariant variant;
+
   /// Input size; defaults to large.
   final SeedTextInputSize size;
+
   /// Maximum text editor height, chiefly useful for textarea inputs.
   final double? maxHeight;
+
   /// Flutter keyboard type (textarea defaults to multiline).
   final TextInputType? keyboardType;
+
   /// Flutter Form validation timing (default disabled).
   final AutovalidateMode autovalidateMode;
+
   /// Platform IME action sent to the inner editor.
   final TextInputAction? textInputAction;
+
   /// User submit callback forwarded to the inner text editor.
   final ValueChanged<String>? onFieldSubmitted;
+
   /// Whether the editor requests focus on mount (default false).
   final bool autofocus;
+
   /// Callback after Form reset restores the controlled/default/initial text.
   final VoidCallback? onReset;
+
   /// Flutter Form forced-error override, taking precedence over [errorMessage].
   /// When removed, ordinary [validator] outcomes apply again.
   final String? forceErrorText;
   // Flutter input extensions, independent of React value ownership.
   /// Flutter autofill hints for the inner editor.
   final Iterable<String>? autofillHints;
+
   /// Enable Flutter keyboard autocorrection (default true).
   final bool autocorrect;
+
   /// Enable platform suggestions (default true).
   final bool enableSuggestions;
+
   /// Text capitalization policy (default none).
   final TextCapitalization textCapitalization;
+
   /// Flutter state restoration ID for text editing.
   final String? restorationId;
+
   /// Editable text alignment (default start).
   final TextAlign textAlign;
+
   /// Explicit direction override for entered text.
   final TextDirection? textDirection;
+
   /// Keyboard-reveal scrolling padding (20 logical pixels per edge by default).
   final EdgeInsets scrollPadding;
+
   /// Flutter tap-outside callback forwarded to [SeedTextInput].
   final TapRegionCallback? onTapOutside;
+
   /// Callback fired on a text editor tap.
   final VoidCallback? onTap;
+
   /// Flutter editing-completion callback.
   final VoidCallback? onEditingComplete;
+
   /// Cursor color override for the editor.
   final Color? cursorColor;
+
   /// Whether Flutter text selection gestures and actions are available.
   final bool? enableInteractiveSelection;
+
   /// Custom Flutter text selection controls.
   final TextSelectionControls? selectionControls;
+
   /// Custom text selection context menu builder.
   /// Defaults to [SeedTextInput.defaultContextMenuBuilder]; null disables it.
   final EditableTextContextMenuBuilder? contextMenuBuilder;
+
   /// Flutter automatic dash substitution mode.
   final SmartDashesType? smartDashesType;
+
   /// Flutter automatic quote substitution mode.
   final SmartQuotesType? smartQuotesType;
+
   /// External Flutter undo history controller.
   final UndoHistoryController? undoController;
+
   /// Whether the editor is focusable (default true).
   final bool canRequestFocus;
+
   /// Flutter enforcement policy when [enforceMaxLength] supplies maxLength.
   final MaxLengthEnforcement? maxLengthEnforcement;
 
@@ -513,9 +566,15 @@ class _SeedTextFieldState extends State<SeedTextField> with RestorationMixin {
         helperText: widget.description,
         errorMessage: field.errorText ?? widget.errorMessage,
         required: widget.required,
+        showRequiredIndicator: widget.showRequiredIndicator,
         isInvalid: over || field.hasError || widget.errorMessage != null,
-        characterCount: widget.maxGraphemeCount == null ? null : '$count',
-        maxCharacterCount: widget.maxGraphemeCount?.toString(),
+        characterCount:
+            widget.hideCharacterCount || widget.maxGraphemeCount == null
+            ? null
+            : '$count',
+        maxCharacterCount: widget.hideCharacterCount
+            ? null
+            : widget.maxGraphemeCount?.toString(),
         child: SeedTextInput(
           controller: _controller,
           hintText: widget.placeholder,
@@ -624,19 +683,25 @@ class SeedFieldButton extends StatefulWidget {
     this.showClear = false,
     this.size = SeedInputButtonSize.large,
     this.required = false,
+    this.showRequiredIndicator,
   }) : onValuesChanged = onValuesChange ?? onValuesChanged,
        assert(onValuesChange == null || onValuesChanged == null);
+
   /// Parent-controlled selected values; null uses internal [defaultValues] state.
   final List<String>? values;
+
   /// Initial uncontrolled selections, a Flutter-only extension (default empty).
   final List<String> defaultValues;
   @Deprecated('Use onValuesChange instead.')
   /// Deprecated callback alias for [onValuesChange].
   final ValueChanged<List<String>>? onValuesChanged;
+
   /// React-style callback receiving the proposed list of selected values.
   ValueChanged<List<String>>? get onValuesChange => onValuesChanged;
+
   /// Called when the trigger is activated to open an app-owned selection UI.
   final VoidCallback? onPressed;
+
   /// Field/trigger text options: [label] is the accessible field name,
   /// [description] is helper text, [errorMessage] drives invalid styling,
   /// [placeholder] appears when empty, and [prefixText]/[suffixText] frame values.
@@ -650,12 +715,18 @@ class SeedFieldButton extends StatefulWidget {
   /// Flutter extension: removable chips. False shows the values as plain text,
   /// like React's `FieldButtonValue`.
   final bool showValueChips;
+
   /// Icons decorating the picker trigger before and after its value.
   final Widget? prefixIcon, suffixIcon;
+
   /// Control flags: enabled permits interaction (default true); readOnly
   /// blocks editing (default false); showClear exposes clearing when values
   /// exist (default false); required shows a marker (default false).
   final bool enabled, readOnly, showClear, required;
+
+  /// Controls marker visibility independently of [required]; null follows it.
+  final bool? showRequiredIndicator;
+
   /// Input trigger size, default large at 52 logical pixels.
   final SeedInputButtonSize size;
 
@@ -676,46 +747,50 @@ class _SeedFieldButtonState extends State<SeedFieldButton> {
   }
 
   @override
-  Widget build(BuildContext context) => SeedField(
-    label: widget.label,
-    labelWeight: widget.labelWeight,
-    helperText: widget.description,
-    errorMessage: widget.errorMessage,
-    required: widget.required,
-    child: SeedInputButton(
-      value: values.join(', '),
-      placeholder: widget.placeholder,
-      enabled: widget.enabled,
-      readOnly: widget.readOnly,
-      isError: widget.errorMessage != null,
-      prefixIcon: widget.prefixIcon,
-      suffixIcon: widget.suffixIcon,
-      // The official FieldButton renders a suffix icon only when one is given.
-      showDefaultSuffix: false,
-      prefixText: widget.prefixText,
-      suffixText: widget.suffixText,
-      size: widget.size,
-      showClear: widget.showClear,
-      onClear: () => update([]),
-      onPressed: widget.onPressed,
-      valueChild: values.isEmpty || !widget.showValueChips
-          ? null
-          : Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Wrap(
-                spacing: 4,
-                runSpacing: 4,
-                children: [
-                  for (var i = 0; i < values.length; i++)
-                    SeedChip(
-                      label: values[i],
-                      onDeleted: widget.readOnly || !widget.enabled
-                          ? null
-                          : () => update(List.of(values)..removeAt(i)),
-                    ),
-                ],
+  Widget build(BuildContext context) {
+    final enabled = widget.enabled && SeedControlScope.enabledOf(context);
+    return SeedField(
+      label: widget.label,
+      labelWeight: widget.labelWeight,
+      helperText: widget.description,
+      errorMessage: widget.errorMessage,
+      required: widget.required,
+      showRequiredIndicator: widget.showRequiredIndicator,
+      child: SeedInputButton(
+        value: values.join(', '),
+        placeholder: widget.placeholder,
+        enabled: enabled,
+        readOnly: widget.readOnly,
+        isError: widget.errorMessage != null,
+        prefixIcon: widget.prefixIcon,
+        suffixIcon: widget.suffixIcon,
+        // The official FieldButton renders a suffix icon only when one is given.
+        showDefaultSuffix: false,
+        prefixText: widget.prefixText,
+        suffixText: widget.suffixText,
+        size: widget.size,
+        showClear: widget.showClear,
+        onClear: () => update([]),
+        onPressed: widget.onPressed,
+        valueChild: values.isEmpty || !widget.showValueChips
+            ? null
+            : Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Wrap(
+                  spacing: 4,
+                  runSpacing: 4,
+                  children: [
+                    for (var i = 0; i < values.length; i++)
+                      SeedChip(
+                        label: values[i],
+                        onDeleted: widget.readOnly || !enabled
+                            ? null
+                            : () => update(List.of(values)..removeAt(i)),
+                      ),
+                  ],
+                ),
               ),
-            ),
-    ),
-  );
+      ),
+    );
+  }
 }

@@ -12,6 +12,7 @@ import '../../foundations/motion/seed_motion.dart';
 import '../../foundations/radius/seed_radius.dart';
 import '../../theme/seed_theme.dart';
 import '../../foundations/feedback/seed_scale_feedback.dart';
+import '../../foundations/feedback/seed_control.dart';
 
 /// Variant options for [SeedTextInput].
 enum SeedTextInputVariant {
@@ -48,12 +49,16 @@ class SeedTextValueChange {
             ? value.characters
             : value.characters.take(maxGraphemeCount),
       );
+
   /// Full untruncated proposed input string.
   final String value;
+
   /// Immutable list of Unicode grapheme clusters in [value].
   final List<String> graphemes;
+
   /// Immutable prefix of [graphemes] limited by the optional grapheme count.
   final List<String> slicedGraphemes;
+
   /// String formed by joining [slicedGraphemes].
   String get slicedValue => slicedGraphemes.join();
 }
@@ -77,11 +82,13 @@ class SeedTextInput extends StatefulWidget {
   /// Optional externally owned editing controller.
   /// Cannot be combined with [value], [defaultValue] or [initialValue].
   final TextEditingController? controller;
+
   /// Controlled input value; parent remains authoritative after edits.
   final String? value;
 
   /// React's `placeholder`; [hintText] is the Material-style alias.
   final String? hintText;
+
   /// React placeholder getter alias for [hintText].
   String? get placeholder => hintText;
 
@@ -89,116 +96,167 @@ class SeedTextInput extends StatefulWidget {
   @Deprecated('Use defaultValue instead.')
   /// Deprecated one-time input seed; use [defaultValue].
   final String? initialValue;
+
   /// Official one-time value seed, stored through [initialValue].
   String? get defaultValue => initialValue;
+
   /// Plain-string change callback, invoked for user edits.
   final ValueChanged<String>? onChanged;
+
   /// Callback for the editing action that submits text.
   final ValueChanged<String>? onSubmitted;
+
   /// Optional externally owned focus node, otherwise one is created internally.
   final FocusNode? focusNode;
-  /// Whether editing is enabled (default true); Field disabled also applies.
+
+  /// Whether editing is enabled (default true); Field and Fieldset disabled
+  /// states also apply to the default editor.
   final bool enabled;
+
   /// Whether text is read-only (default false); an enclosing Field can override.
   final bool readOnly;
+
   /// Required accessibility state; does not enforce a nonempty value.
   final bool required;
+
   /// Whether to request initial focus (default false).
   final bool autofocus;
+
   /// Whether to conceal displayed characters (default false).
   final bool obscureText;
+
   /// Flutter-only clear action; disabled by default.
   final bool clearable;
   @Deprecated('Use invalid instead.')
   /// Deprecated stored invalid flag; prefer [invalid].
   final bool hasError;
+
   /// React-aligned invalid getter backed by [hasError].
   bool get invalid => hasError;
+
   /// Maximum input lines (default 1; textarea defaults to null).
   final int? maxLines;
+
   /// Minimum displayed text lines, when supplied.
   final int? minLines;
+
   /// Flutter character-length limit delegated to TextField.
   /// Distinct from [maxGraphemeCount], which describes the change payload.
   final int? maxLength;
+
   /// Optional platform keyboard type (textarea defaults to multiline).
   final TextInputType? keyboardType;
+
   /// Platform IME action displayed on the keyboard.
   final TextInputAction? textInputAction;
+
   /// Icon displayed before input text.
   final Widget? prefixIcon;
+
   /// Icon displayed after input text.
   final Widget? suffixIcon;
+
   /// Outline or underline styling (default outline).
   final SeedTextInputVariant variant;
+
   /// Input visual size; defaults to large.
   final SeedTextInputSize size;
+
   /// When true, uses medium at viewport width 1280px and above; default false.
   final bool responsive;
+
   /// Text displayed before the editable value.
   final String? prefixText;
+
   /// Text displayed after the editable value.
   final String? suffixText;
+
   /// Flutter input formatters applied to native TextField edits.
   final List<TextInputFormatter>? inputFormatters;
+
   /// Flutter custom editor builder receiving the current controller and focus node.
-  /// When null, a configured Material [TextField] is used.
+  /// When null, a configured Material [TextField] is used. A custom editor is
+  /// responsible for applying the read-only state.
   final Widget Function(BuildContext, TextEditingController, FocusNode)?
   inputBuilder;
   @Deprecated('Use onValueChange instead.')
   /// Deprecated callback spelling; use [onValueChange].
   final ValueChanged<SeedTextValueChange>? onValueChanged;
+
   /// React-aligned change callback with full and sliced graphemes.
   /// The original [SeedTextValueChange.value] is not truncated.
   ValueChanged<SeedTextValueChange>? get onValueChange => onValueChanged;
+
   /// Limit used for the sliced grapheme payload; not automatic enforcement.
   final int? maxGraphemeCount;
+
   /// Whether multiline editing grows with its content (textarea default true).
   final bool autoResize;
+
   /// Optional maximum height for the editable area in logical pixels.
   final double? maxHeight;
+
   /// Accessible text-field label override when a surrounding Field label is absent.
   final String? semanticsLabel;
   // Flutter input extensions, independent of React value ownership.
   /// Flutter autofill hints passed to the underlying editor.
   final Iterable<String>? autofillHints;
+
   /// Whether platform autocorrection is enabled (default true).
   final bool autocorrect;
+
   /// Whether platform suggestions are enabled (default true).
   final bool enableSuggestions;
+
   /// Automatic capitalization policy (default none).
   final TextCapitalization textCapitalization;
+
   /// Flutter state restoration identifier for retained editing text.
   final String? restorationId;
+
   /// Horizontal alignment of input text (default start).
   final TextAlign textAlign;
+
   /// Optional explicit input text direction.
   final TextDirection? textDirection;
+
   /// Padding maintained around input on keyboard scroll (default 20px each side).
   final EdgeInsets scrollPadding;
+
   /// Flutter tap-outside callback for the text editing region.
   final TapRegionCallback? onTapOutside;
+
   /// Callback invoked on input tap.
   final VoidCallback? onTap;
+
   /// Callback invoked on completion of the current editing action.
   final VoidCallback? onEditingComplete;
+
   /// Optional text cursor color override.
   final Color? cursorColor;
+
   /// Whether text selection menus and gestures are enabled.
   final bool? enableInteractiveSelection;
+
   /// Optional platform text-selection handles and toolbar controls.
   final TextSelectionControls? selectionControls;
+
   /// Text selection menu builder, default [defaultContextMenuBuilder].
   /// Passing null explicitly disables a custom context menu.
   final EditableTextContextMenuBuilder? contextMenuBuilder;
+
   /// Whether smart dash substitutions are enabled by Flutter.
   final SmartDashesType? smartDashesType;
+
   /// Whether smart quote substitutions are enabled by Flutter.
   final SmartQuotesType? smartQuotesType;
+
   /// Optional externally owned undo/redo history controller.
   final UndoHistoryController? undoController;
+
   /// Whether this editor can request focus (default true).
   final bool canRequestFocus;
+
   /// Flutter enforcement policy applied with [maxLength].
   final MaxLengthEnforcement? maxLengthEnforcement;
 
@@ -517,7 +575,10 @@ class _SeedTextInputState extends State<SeedTextInput> with RestorationMixin {
 
   Widget _buildInput(BuildContext context) {
     final field = SeedFieldScope.maybeOf(context);
-    final enabled = widget.enabled && !(field?.disabled ?? false);
+    final enabled =
+        widget.enabled &&
+        !(field?.disabled ?? false) &&
+        SeedControlScope.enabledOf(context);
     final readOnly = widget.readOnly || (field?.readOnly ?? false);
     final hasError = widget.hasError || (field?.isInvalid ?? false);
     final effectiveSize = widget.responsive
@@ -647,6 +708,14 @@ class _SeedTextInputState extends State<SeedTextInput> with RestorationMixin {
             counterText: '',
           ),
         );
+    if (!enabled && widget.inputBuilder != null) {
+      fieldWidget = Semantics(
+        enabled: false,
+        textField: true,
+        excludeSemantics: true,
+        child: ExcludeFocus(child: IgnorePointer(child: fieldWidget)),
+      );
+    }
     if (widget.maxHeight != null) {
       fieldWidget = ConstrainedBox(
         constraints: BoxConstraints(maxHeight: widget.maxHeight!),

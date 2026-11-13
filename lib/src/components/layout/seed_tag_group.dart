@@ -23,8 +23,10 @@ enum SeedTagGroupSize {
 enum SeedTagTone {
   /// Muted neutral text.
   neutralSubtle,
+
   /// Primary neutral text.
   neutral,
+
   /// Brand-colored text.
   brand,
 }
@@ -33,20 +35,28 @@ enum SeedTagTone {
 class SeedTagItem {
   /// Text used for display and default accessibility semantics.
   final String label;
+
   /// Optional icon before [label], sized according to [size].
   final Widget? icon;
+
   /// Optional trailing icon/element.
   final Widget? suffix;
+
   /// Custom label widget replacing the standard text display.
   final Widget? labelWidget;
+
   /// Relative shrinking weight when [SeedTagGroup.truncate] is enabled.
   final double flexShrink;
+
   /// Size override; null inherits [SeedTagGroup.size].
   final SeedTagGroupSize? size;
+
   /// Foreground tone override; null inherits [SeedTagGroup.tone].
   final SeedTagTone? tone;
+
   /// Boldness override; null inherits [SeedTagGroup.bold].
   final bool? bold;
+
   /// Accessible label; null falls back to [label] for standard text.
   final String? semanticsLabel;
 
@@ -71,16 +81,22 @@ class SeedTagItem {
 class SeedTagGroup extends StatelessWidget {
   /// Tags rendered in order.
   final List<SeedTagItem> items;
+
   /// Default text size for each item; defaults to [SeedTagGroupSize.t2].
   final SeedTagGroupSize size;
+
   /// Default text tone for each item; defaults to [SeedTagTone.neutralSubtle].
   final SeedTagTone tone;
+
   /// Default boldness of labels, initially false.
   final bool bold;
+
   /// Text between adjacent tags; defaults to the centered dot.
   final String separator;
+
   /// Optional separator widget replacing [separator].
   final Widget? separatorWidget;
+
   /// Restricts labels to one line and shrinks them according to
   /// [SeedTagItem.flexShrink] in the width available to the group.
   final bool truncate;
@@ -137,6 +153,7 @@ class SeedTagGroup extends StatelessWidget {
     Widget tag(SeedTagItem item) {
       final itemStyle = style(item);
       final itemIconSize = iconSizeFor(item.size ?? size);
+      final customLabel = item.labelWidget;
       final content = Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -149,12 +166,17 @@ class SeedTagGroup extends StatelessWidget {
           ],
           Flexible(
             child:
-                item.labelWidget ??
-                Text(
-                  item.label,
-                  style: itemStyle,
-                  maxLines: truncate ? 1 : null,
-                  overflow: truncate ? TextOverflow.ellipsis : null,
+                (item.semanticsLabel != null &&
+                        (customLabel is Text || customLabel is RichText)
+                    ? ExcludeSemantics(child: customLabel)
+                    : customLabel) ??
+                ExcludeSemantics(
+                  child: Text(
+                    item.label,
+                    style: itemStyle,
+                    maxLines: truncate ? 1 : null,
+                    overflow: truncate ? TextOverflow.ellipsis : null,
+                  ),
                 ),
           ),
           if (item.suffix != null) ...[
@@ -168,10 +190,8 @@ class SeedTagGroup extends StatelessWidget {
       );
       if (item.semanticsLabel != null || item.labelWidget == null) {
         return Semantics(
-          // Keep the original label accessible even when its Text is allotted
-          // zero width beside an icon during truncation.
           label: item.semanticsLabel ?? item.label,
-          excludeSemantics: true,
+          explicitChildNodes: true,
           child: content,
         );
       }

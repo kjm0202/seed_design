@@ -23,14 +23,14 @@ enum SeedLabelWeight {
   bold,
 }
 
-/// Native equivalent of a labelled fieldset. Disabled state reaches all SEED controls.
+/// A labelled group whose disabled state reaches participating SEED controls.
 class SeedFieldset extends StatelessWidget {
   /// Groups a SEED control with optional [label], [description], and [indicator].
   ///
   /// [labelBold] defaults to false and uses a bold label. [required] adds the
   /// official Field required mark after the label. [enabled] defaults to true
-  /// and disables descendants via [SeedControlScope] when false; [child] is
-  /// required.
+  /// and disables controls that consume [SeedControlScope] when false; [child]
+  /// is required. Arbitrary Flutter widgets do not inherit this state.
   const SeedFieldset({
     super.key,
     this.label,
@@ -41,6 +41,7 @@ class SeedFieldset extends StatelessWidget {
     this.enabled = true,
     required this.child,
   });
+
   /// Optional fieldset legend, painted as a t5 label and exposed on the group Semantics node.
   final String? label;
 
@@ -61,6 +62,7 @@ class SeedFieldset extends StatelessWidget {
   ///
   /// Defaults to true and composes with any ancestor [SeedControlScope].
   final bool enabled;
+
   /// The grouped field control content.
   final Widget child;
 
@@ -155,12 +157,24 @@ class SeedControlScope extends InheritedWidget {
     required this.enabled,
     required super.child,
   });
-  /// Inherited enable flag; true means ancestor fieldsets have not disabled the descendant.
+
+  /// Whether this scope permits its descendant controls to be enabled.
   final bool enabled;
-  /// Returns the nearest inherited enabled state, defaulting to true when no scope exists.
-  static bool enabledOf(BuildContext context) =>
-      context.dependOnInheritedWidgetOfExactType<SeedControlScope>()?.enabled ??
-      true;
+
+  /// Returns whether every enclosing control scope is enabled.
+  static bool enabledOf(BuildContext context) {
+    var enabled = true;
+    context.visitAncestorElements((element) {
+      if (element is InheritedElement && element.widget is SeedControlScope) {
+        final scope =
+            context.dependOnInheritedElement(element) as SeedControlScope;
+        enabled = enabled && scope.enabled;
+      }
+      return true;
+    });
+    return enabled;
+  }
+
   /// Notifies dependent controls only when [enabled] changes.
   @override
   bool updateShouldNotify(SeedControlScope oldWidget) =>
