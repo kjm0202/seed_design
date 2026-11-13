@@ -77,7 +77,7 @@ class SeedField extends StatefulWidget {
   final SeedFieldLabelWeight labelWeight;
   /// Shows a required marker and required semantics (default false).
   final bool required;
-  /// Shows an optional label suffix '(선택)' (default false).
+  /// Shows the localized optional label suffix (default false).
   final bool optional;
   /// Custom widget replacing the required mark.
   final Widget? indicator;
@@ -270,7 +270,11 @@ class SeedField extends StatefulWidget {
                         if (indicatorText != null || optional) ...[
                           const SizedBox(width: SeedDimension.x1),
                           Text(
-                            indicatorText ?? '(선택)',
+                            indicatorText ??
+                                SeedLocalizations.label(
+                                  context,
+                                  SeedLabel.optionalInput,
+                                ),
                             style: typography.t4Regular.copyWith(
                               height: 22 / 14,
                               color: colors.fg.neutralSubtle,

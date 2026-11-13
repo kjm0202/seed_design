@@ -222,9 +222,9 @@ void main() {
     });
 
     for (final (input, step, output) in [
-      (const TimeOfDay(hour: 10, minute: 5), 10, const ['오전', '10', '10']),
-      (const TimeOfDay(hour: 10, minute: 45), 30, const ['오전', '11', '00']),
-      (const TimeOfDay(hour: 23, minute: 45), 30, const ['오전', '12', '00']),
+      (const TimeOfDay(hour: 10, minute: 5), 10, const ['AM', '10', '10']),
+      (const TimeOfDay(hour: 10, minute: 45), 30, const ['AM', '11', '00']),
+      (const TimeOfDay(hour: 23, minute: 45), 30, const ['AM', '12', '00']),
     ]) {
       testWidgets(
         'TimePicker rounds ${input.hour}:${input.minute} ties up at step $step',

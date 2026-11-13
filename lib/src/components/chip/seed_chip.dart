@@ -10,6 +10,7 @@ import '../../foundations/feedback/seed_scale_feedback.dart';
 import '../../theme/seed_theme.dart';
 import '../../foundations/feedback/seed_choice_group.dart';
 import '../../foundations/feedback/seed_control.dart';
+import '../../localization/seed_localizations.dart';
 
 /// Variant options for [SeedChip].
 enum SeedChipVariant {
@@ -481,7 +482,10 @@ class _SeedChipControl extends StatelessWidget {
                 if (onDeleted != null) ...[
                   const SizedBox(width: SeedDimension.x1_5),
                   SeedPressable(
-                    semanticsLabel: '$label 삭제',
+                    semanticsLabel: SeedLocalizations.label(
+                      context,
+                      SeedLabel.deleteChip,
+                    ).replaceAll('{label}', label),
                     enableScale: false,
                     behavior: HitTestBehavior.opaque,
                     onTap: enabled ? onDeleted : null,

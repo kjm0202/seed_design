@@ -1,8 +1,9 @@
-import 'package:intl/intl.dart' show DateFormat, NumberFormat;
+import 'package:intl/intl.dart' show DateFormat, Intl, NumberFormat;
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../foundations/dimensions/seed_dimension.dart';
+import '../../localization/seed_picker_locale.dart';
 import '../../theme/seed_theme.dart';
 import 'seed_wheel_picker.dart';
 
@@ -28,8 +29,9 @@ enum SeedTimePeriod {
 /// - Hour Column (1 ~ 12)
 /// - Minute Column (00 ~ 59 with optional [minuteStep])
 ///
-/// Like React's TimePicker, the default is 00:00, [minuteStep] is five,
-/// and [locale] is `ko_KR`. Flutter represents the value with [TimeOfDay].
+/// Like React's TimePicker, the default time is 00:00 and [minuteStep] is five.
+/// Flutter represents the value with [TimeOfDay] and follows the app locale
+/// when [locale] is omitted.
 class SeedTimePicker extends StatefulWidget {
   /// Creates a three-column [SeedWheelPicker]-based time selector.
   ///
@@ -51,7 +53,7 @@ class SeedTimePicker extends StatefulWidget {
     this.value,
     this.enabled = true,
     this.readOnly = false,
-    this.locale = const Locale('ko', 'KR'),
+    this.locale,
     this.semanticsLabel,
     this.periodSemanticsLabel,
     this.hourSemanticsLabel,
@@ -90,8 +92,10 @@ class SeedTimePicker extends StatefulWidget {
   /// view but not change the time (default false).
   final bool enabled, readOnly;
 
-  /// Locale for numerals, period labels, and column order (default `ko_KR`).
-  final Locale locale;
+  /// Locale for numerals, period labels, and column order. Null follows the
+  /// app locale, with English (`en_US`) as the fallback when locale data is
+  /// unavailable.
+  final Locale? locale;
 
   /// Optional accessible name of the entire picker.
   final String? semanticsLabel;
@@ -119,16 +123,13 @@ class _SeedTimePickerState extends State<SeedTimePicker> {
   @override
   void initState() {
     super.initState();
-    initializeDateFormatting(widget.locale.toString());
+    initializeDateFormatting();
     _initValues();
   }
 
   @override
   void didUpdateWidget(SeedTimePicker oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.locale != widget.locale) {
-      initializeDateFormatting(widget.locale.toString());
-    }
     if (oldWidget.minuteStep != widget.minuteStep ||
         (widget.value != null && oldWidget.value != widget.value)) {
       _initValues(widget.value ?? _currentTime);
@@ -182,18 +183,18 @@ class _SeedTimePickerState extends State<SeedTimePicker> {
       final mIndex = pattern.indexOf('m');
       return aIndex >= 0 && mIndex >= 0 && aIndex > mIndex;
     } catch (_) {
-      return widget.locale.languageCode != 'ko' &&
-          widget.locale.languageCode != 'ja';
+      final language = Intl.shortLocale(locale);
+      return language != 'ko' && language != 'ja';
     }
   }
 
   @override
   Widget build(BuildContext context) {
     if (widget.value != null) _initValues();
-    final lang = widget.locale.languageCode;
+    final locale = resolveSeedPickerLocale(context, widget.locale);
+    final lang = Intl.shortLocale(locale);
     final korean = lang == 'ko';
     final japanese = lang == 'ja';
-    final locale = widget.locale.toString();
     final colors = context.seedColor;
     final typography = context.seedTypography;
 
@@ -366,11 +367,13 @@ class _SeedTimePickerState extends State<SeedTimePicker> {
       },
     );
 
-    final orderedColumns = _periodFollowsMinute(locale)
+    final periodFollowsMinute = _periodFollowsMinute(locale);
+    final orderedColumns = periodFollowsMinute
         ? [hourColumn, minuteColumn, periodColumn]
         : [periodColumn, hourColumn, minuteColumn];
 
     return SeedWheelPicker(
+      key: ValueKey(periodFollowsMinute),
       height: widget.height,
       enabled: widget.enabled,
       readOnly: widget.readOnly,

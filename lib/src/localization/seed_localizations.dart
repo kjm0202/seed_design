@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show mapEquals;
 import 'package:material_ui/material_ui.dart';
 
 /// Built-in SEED copy that can be overridden for any application locale.
@@ -76,41 +77,53 @@ enum SeedLabel {
   pageNumber,
   /// Pagination total count; template retains {total}
   paginationTotal,
+  /// Optional field indicator.
+  optionalInput,
+  /// Delete a chip; template retains {label}.
+  deleteChip,
+  /// Singular unread notification; template retains {count}.
+  unreadNotification,
 }
 
 /// Optional, captured localization overrides for SEED widgets.
 ///
 /// Common labels use the app's MaterialLocalizations. SEED-specific copy has
-/// Korean and English defaults; supply [labels] for other translations. This is
-/// an InheritedTheme so scoped overrides follow dialogs and bottom sheets.
-class SeedLocalizations extends InheritedTheme {
+/// Korean and English defaults. Supply [labels] for other translations.
+/// Scoped overrides follow dialogs and bottom sheets through theme capture.
+class SeedLocalizations extends StatelessWidget {
   /// Installs [labels] as locale-sensitive copy overrides for [child].
   ///
-  /// Missing keys fall back to MaterialLocalizations, Korean, or English text; an inherited override is
-  /// captured across routes.
+  /// Missing keys inherit enclosing overrides before using built-in defaults.
   const SeedLocalizations({
     super.key,
     required this.labels,
-    required super.child,
+    required this.child,
   });
-  /// Per-key labels overriding built-in translations. Missing keys use locale-derived fallbacks.
+
+  /// Per-key labels overriding enclosing labels or built-in translations.
   final Map<SeedLabel, String> labels;
 
-  /// Resolves [key] from the closest [SeedLocalizations] overrides, Korean defaults for ko locale,
+  /// Widget subtree that receives these labels.
+  final Widget child;
+
+  static Map<SeedLabel, String>? _overridesOf(BuildContext context) => context
+      .dependOnInheritedWidgetOfExactType<_SeedLocalizationScope>()
+      ?.labels;
+
+  /// Resolves [key] from scoped overrides, Korean defaults for ko locale,
   /// MaterialLocalizations when supported, or English fallback.
   ///
-  /// Returned templates with {count}/{page}/{total}/{max} still require caller interpolation.
-  static String label(BuildContext context, SeedLabel key) {
-    final overrides = context
-        .dependOnInheritedWidgetOfExactType<SeedLocalizations>();
-    final override = overrides?.labels[key];
-    if (override != null) return override;
+  /// Returned templates still require caller interpolation.
+  static String label(BuildContext context, SeedLabel key) =>
+      _overridesOf(context)?[key] ?? _defaultLabel(context, key);
+
+  static String _defaultLabel(BuildContext context, SeedLabel key) {
+    final korean = Localizations.maybeLocaleOf(context)?.languageCode == 'ko';
+    if (korean) return _korean[key]!;
     final material = Localizations.of<MaterialLocalizations>(
       context,
       MaterialLocalizations,
     );
-    final korean = Localizations.maybeLocaleOf(context)?.languageCode == 'ko';
-    if (korean) return _korean[key]!;
     if (material != null) {
       final translated = switch (key) {
         SeedLabel.close => material.closeButtonTooltip,
@@ -128,22 +141,25 @@ class SeedLocalizations extends InheritedTheme {
     return _english[key]!;
   }
 
-  /// Captures this override across a new inherited theme boundary, merging enclosing labels with local
-  /// keys taking precedence.
-  @override
-  Widget wrap(BuildContext context, Widget child) {
-    final inherited = context
-        .dependOnInheritedWidgetOfExactType<SeedLocalizations>();
-    return SeedLocalizations(
-      labels: {...?inherited?.labels, ...labels},
-      child: child,
-    );
+  /// Formats an unread count. A singular override takes precedence for one
+  /// notification. The existing plural override can also cover that case.
+  static String unreadNotifications(BuildContext context, int count) {
+    final overrides = _overridesOf(context);
+    final key = count == 1
+        ? SeedLabel.unreadNotification
+        : SeedLabel.unreadNotifications;
+    final template =
+        overrides?[key] ??
+        overrides?[SeedLabel.unreadNotifications] ??
+        _defaultLabel(context, key);
+    return template.replaceAll('{count}', '$count');
   }
 
-  /// Invalidates dependents when the map instance [labels] changes.
   @override
-  bool updateShouldNotify(SeedLocalizations oldWidget) =>
-      oldWidget.labels != labels;
+  Widget build(BuildContext context) => _SeedLocalizationScope(
+    labels: {...?_overridesOf(context), ...labels},
+    child: child,
+  );
 
   static const _english = <SeedLabel, String>{
     SeedLabel.pageNumber: 'Page {page}',
@@ -183,6 +199,9 @@ class SeedLocalizations extends InheritedTheme {
     SeedLabel.unreadNotifications: '{count} unread notifications',
     SeedLabel.newNotification: 'New notification',
     SeedLabel.maxLengthExceeded: 'Use at most {max} characters',
+    SeedLabel.optionalInput: '(optional)',
+    SeedLabel.deleteChip: 'Delete {label}',
+    SeedLabel.unreadNotification: '{count} unread notification',
   };
   static const _korean = <SeedLabel, String>{
     SeedLabel.pageNumber: '{page}페이지',
@@ -222,5 +241,24 @@ class SeedLocalizations extends InheritedTheme {
     SeedLabel.unreadNotifications: '읽지 않은 알림 {count}개',
     SeedLabel.newNotification: '새 알림 있음',
     SeedLabel.maxLengthExceeded: '최대 {max}자까지 입력할 수 있습니다',
+    SeedLabel.optionalInput: '(선택)',
+    SeedLabel.deleteChip: '{label} 삭제',
+    SeedLabel.unreadNotification: '읽지 않은 알림 {count}개',
   };
+}
+
+// Flutter captures only the nearest theme of a given type. Store the merged
+// labels here so a route retains overrides from every enclosing scope.
+class _SeedLocalizationScope extends InheritedTheme {
+  const _SeedLocalizationScope({required this.labels, required super.child});
+
+  final Map<SeedLabel, String> labels;
+
+  @override
+  Widget wrap(BuildContext context, Widget child) =>
+      SeedLocalizations(labels: labels, child: child);
+
+  @override
+  bool updateShouldNotify(_SeedLocalizationScope oldWidget) =>
+      !mapEquals(oldWidget.labels, labels);
 }

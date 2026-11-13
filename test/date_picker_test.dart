@@ -4,6 +4,9 @@ import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
 Widget host(Widget child) => MaterialApp(
+  locale: const Locale('ko'),
+  supportedLocales: const [Locale('ko')],
+  localizationsDelegates: GlobalMaterialLocalizations.delegates,
   theme: SeedThemeData.light().toThemeData(),
   home: Scaffold(body: Center(child: child)),
 );
@@ -17,6 +20,9 @@ Future<void> moveWheel(WidgetTester tester, int column, int index) async {
 }
 
 Widget hostContinuousCalendar(Widget child) => MaterialApp(
+  locale: const Locale('ko'),
+  supportedLocales: const [Locale('ko')],
+  localizationsDelegates: GlobalMaterialLocalizations.delegates,
   theme: SeedThemeData.light().toThemeData(),
   home: Scaffold(
     body: Center(child: SizedBox(width: 360, child: child)),
@@ -51,6 +57,7 @@ Widget hostReactParity(Widget child) => MaterialApp(
 
 Widget hostRegression(Widget child, {ThemeData? theme}) => MaterialApp(
   locale: const Locale('ko'),
+  supportedLocales: const [Locale('ko')],
   localizationsDelegates: GlobalMaterialLocalizations.delegates,
   theme: theme ?? SeedThemeData.light().toThemeData(),
   home: Scaffold(body: Center(child: child)),

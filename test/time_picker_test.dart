@@ -6,6 +6,9 @@ import 'package:seed_design/seed_design.dart';
 import 'support/seed_test_fonts.dart';
 
 Widget _host(Widget child) => mui.MaterialApp(
+  locale: const Locale('ko'),
+  supportedLocales: const [Locale('ko')],
+  localizationsDelegates: GlobalMaterialLocalizations.delegates,
   theme: SeedThemeData.light().toThemeData(),
   home: mui.Scaffold(
     body: mui.Center(child: mui.SizedBox(width: 240, child: child)),
@@ -145,6 +148,7 @@ void main() {
                       width: 320,
                       child: SeedTimePicker(
                         height: height,
+                        locale: const Locale('ko', 'KR'),
                         onChanged: (value) => selected = value,
                       ),
                     ),

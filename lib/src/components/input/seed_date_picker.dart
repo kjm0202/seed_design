@@ -3,8 +3,10 @@ import 'dart:math' as math;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart' show DateFormat, NumberFormat;
+import 'package:intl/intl.dart' show DateFormat, Intl, NumberFormat;
 import 'package:intl/date_symbol_data_local.dart';
+
+import '../../localization/seed_picker_locale.dart';
 
 import '../../foundations/colors/seed_palette.dart';
 import '../../foundations/dimensions/seed_dimension.dart';
@@ -104,7 +106,7 @@ class SeedDatePicker extends StatefulWidget {
     this.readOnly = false,
     this.controlled = false,
     this.rangeStartReadOnly = false,
-    this.locale = const Locale('ko', 'KR'),
+    this.locale,
     this.weekStartsOn,
     this.viewDate,
     this.defaultViewDate,
@@ -174,7 +176,7 @@ class SeedDatePicker extends StatefulWidget {
     bool disabled = false,
     bool readOnly = false,
     bool controlled = false,
-    Locale locale = const Locale('ko', 'KR'),
+    Locale? locale,
     int? weekStartsOn,
     DateTime? viewDate,
     DateTime? defaultViewDate,
@@ -251,7 +253,7 @@ class SeedDatePicker extends StatefulWidget {
     bool disabled = false,
     bool readOnly = false,
     bool controlled = false,
-    Locale locale = const Locale('ko', 'KR'),
+    Locale? locale,
     int? weekStartsOn,
     DateTime? viewDate,
     DateTime? defaultViewDate,
@@ -388,8 +390,9 @@ class SeedDatePicker extends StatefulWidget {
   /// The latter four flags default to false.
   final bool enabled, disabled, readOnly, rangeStartReadOnly, controlled;
 
-  /// Locale used for calendar labels; defaults to `ko_KR`.
-  final Locale locale;
+  /// Locale for calendar formatting. Null follows the app locale, with
+  /// English (`en_US`) as the fallback when locale data is unavailable.
+  final Locale? locale;
 
   /// Uses DateTime weekday numbering: Monday=1 through Sunday=7.
   final int? weekStartsOn;
@@ -459,8 +462,8 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
   bool get _singleControlled => widget.controlled || widget.value != null;
   bool get _rangeControlled => widget.controlled || widget.rangeValue != null;
   bool get _multipleControlled => widget.controlled || widget.values != null;
-  String get _locale => widget.locale.toString();
-  bool get _korean => widget.locale.languageCode == 'ko';
+  late String _locale;
+  bool get _korean => Intl.shortLocale(_locale) == 'ko';
   int get _weekStartsOn =>
       widget.weekStartsOn ??
       DateFormat.E(_locale).dateSymbols.FIRSTDAYOFWEEK + 1;
@@ -500,7 +503,7 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
   @override
   void initState() {
     super.initState();
-    initializeDateFormatting(_locale);
+    initializeDateFormatting();
     final single = _singleControlled ? widget.value : widget.defaultValue;
     final start = _rangeControlled
         ? widget.rangeValue?.start
@@ -532,9 +535,17 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _locale = resolveSeedPickerLocale(context, widget.locale);
+  }
+
+  @override
   void didUpdateWidget(SeedDatePicker oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.locale != widget.locale) initializeDateFormatting(_locale);
+    if (oldWidget.locale != widget.locale) {
+      _locale = resolveSeedPickerLocale(context, widget.locale);
+    }
     if (oldWidget.controller != widget.controller) {
       oldWidget.controller?.removeListener(_controllerChanged);
       widget.controller?.addListener(_controllerChanged);

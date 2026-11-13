@@ -43,15 +43,12 @@ class SeedBottomNavigationItem {
   });
 
   String? _notificationValue(BuildContext context) {
-    if ((notificationCount ?? 0) > 0) {
+    final count = notificationCount;
+    if (count != null && count > 0) {
       return notificationSemanticsLabel ??
-          SeedLocalizations.label(
-            context,
-            SeedLabel.unreadNotifications,
-          ).replaceAll('{count}', '$notificationCount');
+          SeedLocalizations.unreadNotifications(context, count);
     }
-    if (showNotificationDot &&
-        (notificationCount == null || notificationCount == 0)) {
+    if (showNotificationDot && (count == null || count == 0)) {
       return notificationSemanticsLabel ??
           SeedLocalizations.label(context, SeedLabel.newNotification);
     }
