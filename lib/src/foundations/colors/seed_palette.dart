@@ -98,6 +98,65 @@ class SeedPalette {
   /// A raw scale token; use semantic colors for UI roles.
   static const Color gray1000Dark = Color(0xFFF3F4F5);
 
+  /// Light-mode gray alpha palette, scale step 100.
+  static const Color grayAlpha100Light = Color(0x08002040);
+
+  /// Light-mode gray alpha palette, scale step 200.
+  static const Color grayAlpha200Light = Color(0x0D14273B);
+
+  /// Light-mode gray alpha palette, scale step 300.
+  static const Color grayAlpha300Light = Color(0x11000F2D);
+
+  /// Light-mode gray alpha palette, scale step 400.
+  static const Color grayAlpha400Light = Color(0x23000F33);
+
+  /// Light-mode gray alpha palette, scale step 500.
+  static const Color grayAlpha500Light = Color(0x2F05102B);
+
+  /// Light-mode gray alpha palette, scale step 600.
+  static const Color grayAlpha600Light = Color(0x4F000A20);
+
+  /// Light-mode gray alpha palette, scale step 700.
+  static const Color grayAlpha700Light = Color(0x79000B1E);
+
+  /// Light-mode gray alpha palette, scale step 800.
+  static const Color grayAlpha800Light = Color(0xAB010D25);
+
+  /// Light-mode gray alpha palette, scale step 900.
+  static const Color grayAlpha900Light = Color(0xD5000711);
+
+  /// Light-mode gray alpha palette, scale step 1000.
+  static const Color grayAlpha1000Light = Color(0xE5000207);
+
+  /// Dark-mode gray alpha palette, scale step 100.
+  static const Color grayAlpha100Dark = Color(0x1BD0D9FF);
+
+  /// Dark-mode gray alpha palette, scale step 200.
+  static const Color grayAlpha200Dark = Color(0x25C8DDFF);
+
+  /// Dark-mode gray alpha palette, scale step 300.
+  static const Color grayAlpha300Dark = Color(0x35CFDDFF);
+
+  /// Dark-mode gray alpha palette, scale step 400.
+  static const Color grayAlpha400Dark = Color(0x46D0DEFF);
+
+  /// Dark-mode gray alpha palette, scale step 500.
+  static const Color grayAlpha500Dark = Color(0x6ADBE7FF);
+
+  /// Dark-mode gray alpha palette, scale step 600.
+  static const Color grayAlpha600Dark = Color(0x94E7EFFF);
+
+  /// Dark-mode gray alpha palette, scale step 700.
+  static const Color grayAlpha700Dark = Color(0xBAF1F5FF);
+
+  /// Dark-mode gray alpha palette, scale step 800.
+  static const Color grayAlpha800Dark = Color(0xE3F7F9FF);
+
+  /// Dark-mode gray alpha palette, scale step 900.
+  static const Color grayAlpha900Dark = Color(0xECFCFDFF);
+
+  /// Dark-mode gray alpha palette, scale step 1000.
+  static const Color grayAlpha1000Dark = Color(0xF5FDFEFF);
   // Carrot (Brand) Palette (Light)
   /// Light-mode carrot palette, scale step 100 (Color(0xFFFFF2EC)).
   ///

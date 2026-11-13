@@ -6,6 +6,7 @@ import 'seed_palette.dart';
 class SeedMannerTempColor {
   /// Manner-temperature badge background color.
   final Color bg;
+
   /// Manner-temperature badge foreground text color.
   final Color text;
 
@@ -29,46 +30,67 @@ class SeedMannerTempColor {
 class SeedFgColors {
   /// Brand foreground for emphasis (fg.brand).
   final Color brand;
+
   /// High-contrast brand foreground for weak surfaces (fg.brand-contrast).
   final Color brandContrast;
+
   /// Critical/error foreground (fg.critical).
   final Color critical;
+
   /// High-contrast critical foreground for weak surfaces (fg.critical-contrast).
   final Color criticalContrast;
+
   /// Foreground for disabled content (fg.disabled).
   final Color disabled;
+
   /// Informational foreground (fg.informative).
   final Color informative;
+
   /// High-contrast informative foreground for weak surfaces (fg.informative-contrast).
   final Color informativeContrast;
+
   /// Default body-text and icon foreground (fg.neutral).
   final Color neutral;
+
   /// Neutral foreground on inverse surfaces (fg.neutral-inverted).
   final Color neutralInverted;
+
   /// Muted secondary neutral foreground (fg.neutral-muted).
   final Color neutralMuted;
+
   /// Subtle tertiary neutral foreground (fg.neutral-subtle).
   final Color neutralSubtle;
+
   /// Text and icon foreground placed on the solid brand surface (fg.on-brand-solid).
   final Color onBrandSolid;
+
   /// Text and icon foreground placed on the solid critical surface (fg.on-critical-solid).
   final Color onCriticalSolid;
+
   /// Text and icon foreground placed on the solid informative surface (fg.on-informative-solid).
   final Color onInformativeSolid;
+
   /// Text and icon foreground placed on the solid neutral surface (fg.on-neutral-solid).
   final Color onNeutralSolid;
+
   /// Text and icon foreground placed on the solid positive surface (fg.on-positive-solid).
   final Color onPositiveSolid;
+
   /// Text and icon foreground placed on the solid warning surface (fg.on-warning-solid).
   final Color onWarningSolid;
+
   /// Placeholder foreground for inputs (fg.placeholder).
   final Color placeholder;
+
   /// Positive/success foreground (fg.positive).
   final Color positive;
+
   /// High-contrast positive foreground for weak surfaces (fg.positive-contrast).
   final Color positiveContrast;
+
   /// Warning foreground (fg.warning).
   final Color warning;
+
   /// High-contrast warning foreground for weak surfaces (fg.warning-contrast).
   final Color warningContrast;
 
@@ -189,92 +211,136 @@ class SeedFgColors {
 class SeedBgColors {
   /// High-emphasis brand-emphasis surface fill (bg.brand-solid).
   final Color brandSolid;
+
   /// Pressed feedback color for the solid brand-emphasis surface (bg.brand-solid-pressed).
   final Color brandSolidPressed;
+
   /// Low-emphasis brand-emphasis surface fill (bg.brand-weak).
   final Color brandWeak;
+
   /// Pressed feedback color for the weak brand-emphasis surface (bg.brand-weak-pressed).
   final Color brandWeakPressed;
+
   /// High-emphasis critical or destructive surface fill (bg.critical-solid).
   final Color criticalSolid;
+
   /// Pressed feedback color for the solid critical or destructive surface (bg.critical-solid-pressed).
   final Color criticalSolidPressed;
+
   /// Low-emphasis critical or destructive surface fill (bg.critical-weak).
   final Color criticalWeak;
+
   /// Pressed feedback color for the weak critical or destructive surface (bg.critical-weak-pressed).
   final Color criticalWeakPressed;
+
   /// Surface fill for a disabled control (bg.disabled).
   final Color disabled;
+
   /// High-emphasis informational surface fill (bg.informative-solid).
   final Color informativeSolid;
+
   /// Pressed feedback color for the solid informational surface (bg.informative-solid-pressed).
   final Color informativeSolidPressed;
+
   /// Low-emphasis informational surface fill (bg.informative-weak).
   final Color informativeWeak;
+
   /// Pressed feedback color for the weak informational surface (bg.informative-weak-pressed).
   final Color informativeWeakPressed;
+
   /// Lowest canvas layer behind screen content (bg.layer-basement).
   final Color layerBasement;
+
   /// Default content surface above the basement layer (bg.layer-default).
   final Color layerDefault;
+
   /// Pressed version of the default content surface (bg.layer-default-pressed).
   final Color layerDefaultPressed;
+
   /// Floating surface used by popovers and modal content (bg.layer-floating).
   final Color layerFloating;
+
   /// Pressed version of a floating surface (bg.layer-floating-pressed).
   final Color layerFloatingPressed;
+
   /// Low-emphasis decorative magic surface (bg.magic-weak).
   final Color magicWeak;
+
   /// Inverse neutral surface (bg.neutral-inverted).
   final Color neutralInverted;
+
   /// Pressed inverse neutral surface (bg.neutral-inverted-pressed).
   final Color neutralInvertedPressed;
+
   /// Muted neutral surface (bg.neutral-muted).
   final Color neutralMuted;
+
   /// High-emphasis neutral surface fill (bg.neutral-solid).
   final Color neutralSolid;
+
   /// Pressed feedback color for the solid neutral surface (bg.neutral-solid-pressed).
   final Color neutralSolidPressed;
+
   /// High-emphasis neutral surface fill (bg.neutral-solid-muted).
   final Color neutralSolidMuted;
+
   /// Pressed feedback color for the solid neutral surface (bg.neutral-solid-muted-pressed).
   final Color neutralSolidMutedPressed;
+
   /// Subtle neutral surface (bg.neutral-subtle).
   final Color neutralSubtle;
+
   /// Weak neutral surface fill (bg.neutral-weak).
   final Color neutralWeak;
+
   /// Translucent weak neutral surface (bg.neutral-weak-alpha).
   final Color neutralWeakAlpha;
+
   /// Pressed translucent weak neutral surface (bg.neutral-weak-alpha-pressed).
   final Color neutralWeakAlphaPressed;
+
   /// Pressed weak neutral surface (bg.neutral-weak-pressed).
   final Color neutralWeakPressed;
+
   /// Scrim covering background content behind an overlay (bg.overlay).
   final Color overlay;
+
   /// Reduced-opacity background overlay scrim (bg.overlay-muted).
   final Color overlayMuted;
+
   /// High-emphasis positive or success surface fill (bg.positive-solid).
   final Color positiveSolid;
+
   /// Pressed feedback color for the solid positive or success surface (bg.positive-solid-pressed).
   final Color positiveSolidPressed;
+
   /// Low-emphasis positive or success surface fill (bg.positive-weak).
   final Color positiveWeak;
+
   /// Pressed feedback color for the weak positive or success surface (bg.positive-weak-pressed).
   final Color positiveWeakPressed;
+
   /// Fully transparent background with no fill (bg.transparent).
   final Color transparent;
+
   /// Pressed-state transparent surface feedback (bg.transparent-pressed).
   final Color transparentPressed;
+
   /// Selected-state transparent surface feedback (bg.transparent-selected).
   final Color transparentSelected;
+
   /// Pressed, selected-state transparent surface feedback (bg.transparent-selected-pressed).
   final Color transparentSelectedPressed;
+
   /// High-emphasis warning surface fill (bg.warning-solid).
   final Color warningSolid;
+
   /// Pressed feedback color for the solid warning surface (bg.warning-solid-pressed).
   final Color warningSolidPressed;
+
   /// Low-emphasis warning surface fill (bg.warning-weak).
   final Color warningWeak;
+
   /// Pressed feedback color for the weak warning surface (bg.warning-weak-pressed).
   final Color warningWeakPressed;
 
@@ -559,34 +625,49 @@ class SeedBgColors {
 class SeedStrokeColors {
   /// Brand solid outline or border color (stroke.brand-solid).
   final Color brandSolid;
+
   /// Brand weak outline or border color (stroke.brand-weak).
   final Color brandWeak;
+
   /// Critical solid outline or border color (stroke.critical-solid).
   final Color criticalSolid;
+
   /// Critical weak outline or border color (stroke.critical-weak).
   final Color criticalWeak;
+
   /// High-visibility focus outline for keyboard focus (stroke.focus-ring).
   final Color focusRing;
+
   /// Informative solid outline or border color (stroke.informative-solid).
   final Color informativeSolid;
+
   /// Informative weak outline or border color (stroke.informative-weak).
   final Color informativeWeak;
+
   /// High-contrast neutral outline (stroke.neutral-contrast).
   final Color neutralContrast;
+
   /// Muted neutral stroke for subtle boundaries (stroke.neutral-muted).
   final Color neutralMuted;
+
   /// Neutral solid outline or border color (stroke.neutral-solid).
   final Color neutralSolid;
+
   /// Very subtle neutral stroke (stroke.neutral-subtle).
   final Color neutralSubtle;
+
   /// Low-emphasis neutral border and separator (stroke.neutral-weak).
   final Color neutralWeak;
+
   /// Positive solid outline or border color (stroke.positive-solid).
   final Color positiveSolid;
+
   /// Positive weak outline or border color (stroke.positive-weak).
   final Color positiveWeak;
+
   /// Warning solid outline or border color (stroke.warning-solid).
   final Color warningSolid;
+
   /// Warning weak outline or border color (stroke.warning-weak).
   final Color warningWeak;
 
@@ -679,22 +760,31 @@ class SeedStrokeColors {
 class SeedMannerTempColors {
   /// Background and text colors for manner-temperature level 1 (on the 1–10 scale).
   final SeedMannerTempColor l1;
+
   /// Background and text colors for manner-temperature level 2 (on the 1–10 scale).
   final SeedMannerTempColor l2;
+
   /// Background and text colors for manner-temperature level 3 (on the 1–10 scale).
   final SeedMannerTempColor l3;
+
   /// Background and text colors for manner-temperature level 4 (on the 1–10 scale).
   final SeedMannerTempColor l4;
+
   /// Background and text colors for manner-temperature level 5 (on the 1–10 scale).
   final SeedMannerTempColor l5;
+
   /// Background and text colors for manner-temperature level 6 (on the 1–10 scale).
   final SeedMannerTempColor l6;
+
   /// Background and text colors for manner-temperature level 7 (on the 1–10 scale).
   final SeedMannerTempColor l7;
+
   /// Background and text colors for manner-temperature level 8 (on the 1–10 scale).
   final SeedMannerTempColor l8;
+
   /// Background and text colors for manner-temperature level 9 (on the 1–10 scale).
   final SeedMannerTempColor l9;
+
   /// Background and text colors for manner-temperature level 10 (on the 1–10 scale).
   final SeedMannerTempColor l10;
 
@@ -846,18 +936,141 @@ class SeedMannerTempColors {
   }
 }
 
+/// Theme-adaptive banner colors from the SEED color tokens.
+class SeedBannerColors {
+  /// blue banner background.
+  final Color blue;
+
+  /// coolGray banner background.
+  final Color coolGray;
+
+  /// green banner background.
+  final Color green;
+
+  /// orange banner background.
+  final Color orange;
+
+  /// pink banner background.
+  final Color pink;
+
+  /// purple banner background.
+  final Color purple;
+
+  /// red banner background.
+  final Color red;
+
+  /// teal banner background.
+  final Color teal;
+
+  /// warmGray banner background.
+  final Color warmGray;
+
+  /// yellow banner background.
+  final Color yellow;
+
+  /// Creates a complete banner palette.
+  const SeedBannerColors({
+    required this.blue,
+    required this.coolGray,
+    required this.green,
+    required this.orange,
+    required this.pink,
+    required this.purple,
+    required this.red,
+    required this.teal,
+    required this.warmGray,
+    required this.yellow,
+  });
+
+  /// Creates the official light banner palette.
+  const SeedBannerColors.light()
+    : blue = const Color(0xFFE1F7FF),
+      coolGray = const Color(0xFFEBF1F5),
+      green = const Color(0xFFF0FBE5),
+      orange = const Color(0xFFFFF2E1),
+      pink = const Color(0xFFFFEBF1),
+      purple = const Color(0xFFF5ECFF),
+      red = const Color(0xFFFFECEE),
+      teal = const Color(0xFFE6FAF6),
+      warmGray = const Color(0xFFF2F0EE),
+      yellow = const Color(0xFFFFFAE1);
+
+  /// Creates the official dark banner palette.
+  const SeedBannerColors.dark()
+    : blue = const Color(0xFF0D2A3A),
+      coolGray = const Color(0xFF242C33),
+      green = const Color(0xFF1E361C),
+      orange = const Color(0xFF42230A),
+      pink = const Color(0xFF3B172C),
+      purple = const Color(0xFF2E1E45),
+      red = const Color(0xFF3A0F15),
+      teal = const Color(0xFF143633),
+      warmGray = const Color(0xFF2F2B27),
+      yellow = const Color(0xFF3E2B00);
+
+  /// Returns this palette with the specified colors replaced.
+  SeedBannerColors copyWith({
+    Color? blue,
+    Color? coolGray,
+    Color? green,
+    Color? orange,
+    Color? pink,
+    Color? purple,
+    Color? red,
+    Color? teal,
+    Color? warmGray,
+    Color? yellow,
+  }) => SeedBannerColors(
+    blue: blue ?? this.blue,
+    coolGray: coolGray ?? this.coolGray,
+    green: green ?? this.green,
+    orange: orange ?? this.orange,
+    pink: pink ?? this.pink,
+    purple: purple ?? this.purple,
+    red: red ?? this.red,
+    teal: teal ?? this.teal,
+    warmGray: warmGray ?? this.warmGray,
+    yellow: yellow ?? this.yellow,
+  );
+
+  /// Interpolates each banner color.
+  static SeedBannerColors lerp(
+    SeedBannerColors a,
+    SeedBannerColors b,
+    double t,
+  ) => SeedBannerColors(
+    blue: Color.lerp(a.blue, b.blue, t)!,
+    coolGray: Color.lerp(a.coolGray, b.coolGray, t)!,
+    green: Color.lerp(a.green, b.green, t)!,
+    orange: Color.lerp(a.orange, b.orange, t)!,
+    pink: Color.lerp(a.pink, b.pink, t)!,
+    purple: Color.lerp(a.purple, b.purple, t)!,
+    red: Color.lerp(a.red, b.red, t)!,
+    teal: Color.lerp(a.teal, b.teal, t)!,
+    warmGray: Color.lerp(a.warmGray, b.warmGray, t)!,
+    yellow: Color.lerp(a.yellow, b.yellow, t)!,
+  );
+}
+
 /// Complete color scheme of SEED Design System with full semantic roles.
 class SeedColorScheme extends ThemeExtension<SeedColorScheme> {
   /// Theme brightness used to select light/dark semantics
   final Brightness brightness;
+
   /// Foreground text and icon semantic roles
   final SeedFgColors fg;
+
   /// Background, surface and overlay semantic roles
   final SeedBgColors bg;
+
   /// Border, separator and focus-ring semantic roles
   final SeedStrokeColors stroke;
+
   /// Ten-level manner-temperature badge color pairs
   final SeedMannerTempColors mannerTemp;
+
+  /// Theme-adaptive banner background colors.
+  final SeedBannerColors banner;
 
   /// Creates a complete semantic color scheme, including [brightness], [fg], [bg], [stroke], and
   /// [mannerTemp].
@@ -867,7 +1080,12 @@ class SeedColorScheme extends ThemeExtension<SeedColorScheme> {
     required this.bg,
     required this.stroke,
     required this.mannerTemp,
-  });
+    SeedBannerColors? banner,
+  }) : banner =
+           banner ??
+           (brightness == Brightness.dark
+               ? const SeedBannerColors.dark()
+               : const SeedBannerColors.light());
 
   /// Creates a light [SeedColorScheme] from the official light semantic palettes.
   const SeedColorScheme.light()
@@ -875,7 +1093,8 @@ class SeedColorScheme extends ThemeExtension<SeedColorScheme> {
       fg = const SeedFgColors.light(),
       bg = const SeedBgColors.light(),
       stroke = const SeedStrokeColors.light(),
-      mannerTemp = const SeedMannerTempColors.light();
+      mannerTemp = const SeedMannerTempColors.light(),
+      banner = const SeedBannerColors.light();
 
   /// Creates a dark [SeedColorScheme] from the official dark semantic palettes.
   const SeedColorScheme.dark()
@@ -883,7 +1102,8 @@ class SeedColorScheme extends ThemeExtension<SeedColorScheme> {
       fg = const SeedFgColors.dark(),
       bg = const SeedBgColors.dark(),
       stroke = const SeedStrokeColors.dark(),
-      mannerTemp = const SeedMannerTempColors.dark();
+      mannerTemp = const SeedMannerTempColors.dark(),
+      banner = const SeedBannerColors.dark();
 
   /// Whether [brightness] is [Brightness.dark].
   bool get isDark => brightness == Brightness.dark;
@@ -898,6 +1118,7 @@ class SeedColorScheme extends ThemeExtension<SeedColorScheme> {
     SeedBgColors? bg,
     SeedStrokeColors? stroke,
     SeedMannerTempColors? mannerTemp,
+    SeedBannerColors? banner,
   }) {
     return SeedColorScheme(
       brightness: brightness ?? this.brightness,
@@ -905,6 +1126,7 @@ class SeedColorScheme extends ThemeExtension<SeedColorScheme> {
       bg: bg ?? this.bg,
       stroke: stroke ?? this.stroke,
       mannerTemp: mannerTemp ?? this.mannerTemp,
+      banner: banner ?? this.banner,
     );
   }
 
@@ -920,6 +1142,7 @@ class SeedColorScheme extends ThemeExtension<SeedColorScheme> {
       bg: SeedBgColors.lerp(bg, other.bg, t),
       stroke: SeedStrokeColors.lerp(stroke, other.stroke, t),
       mannerTemp: SeedMannerTempColors.lerp(mannerTemp, other.mannerTemp, t),
+      banner: SeedBannerColors.lerp(banner, other.banner, t),
     );
   }
 }

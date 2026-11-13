@@ -18,6 +18,29 @@ Widget hostInteraction(Widget child) => MaterialApp(
 );
 
 void main() {
+  testWidgets('partial color theme also supplies fallback text foreground', (
+    tester,
+  ) async {
+    final colors = const SeedColorScheme.light().copyWith(
+      fg: const SeedColorScheme.dark().fg,
+    );
+    await tester.pumpWidget(
+      host(
+        Builder(
+          builder: (context) => Text(
+            'Custom foreground',
+            style: context.seedTypography.t5Regular,
+          ),
+        ),
+        theme: ThemeData(extensions: [colors]),
+      ),
+    );
+    expect(
+      tester.widget<Text>(find.text('Custom foreground')).style?.color,
+      colors.fg.neutral,
+    );
+  });
+
   testWidgets('fallback SEED typography preserves host application font', (
     tester,
   ) async {
