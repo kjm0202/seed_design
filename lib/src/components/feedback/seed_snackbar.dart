@@ -204,10 +204,18 @@ enum SeedSnackbarStrategy {
 }
 
 class _SeedSnackbarEntry {
-  _SeedSnackbarEntry(this.child, this.duration, this.removeDelay, this.onClose);
+  _SeedSnackbarEntry(
+    this.child,
+    this.duration,
+    this.removeDelay,
+    this.onClose,
+    this.onDiscard,
+  );
   final Widget child;
   final Duration duration, removeDelay;
   final VoidCallback? onClose;
+  final VoidCallback? onDiscard;
+  bool presented = false;
 }
 
 /// Manages snackbar entries and their timers without [ScaffoldMessenger].
@@ -224,6 +232,7 @@ class SeedSnackbarController extends ChangeNotifier {
     this.strategy = SeedSnackbarStrategy.immediate,
     this.pauseOnInteraction = true,
   });
+
   /// Default strategy for new entries; individual [show] calls may override it.
   SeedSnackbarStrategy strategy;
 
@@ -234,7 +243,7 @@ class SeedSnackbarController extends ChangeNotifier {
   bool _disposed = false;
   bool _attached = false;
   final List<_SeedSnackbarEntry> _queue = [];
-  final Map<Object, double> _avoidedHeights = {};
+  final Map<Object, Rect> _avoidedRects = {};
   Timer? _timer, _removeTimer;
   // The current entry is exiting: hidden, but not yet removed from the queue.
   bool _dismissing = false;
@@ -242,7 +251,6 @@ class SeedSnackbarController extends ChangeNotifier {
   Duration _remaining = Duration.zero;
   bool _hover = false, _pressed = false, _focused = false;
   bool get _paused => _hover || _pressed || _focused;
-  double get _bottomOffset => _avoidedHeights.values.fold(0, math.max);
   _SeedSnackbarEntry? get _current => _dismissing ? null : _queue.firstOrNull;
 
   /// Returns a dismiss callback for this entry, including when it is queued.
@@ -252,14 +260,23 @@ class SeedSnackbarController extends ChangeNotifier {
   /// [child] is the displayed content, [duration] defaults to four seconds,
   /// and [strategy] overrides this controller's strategy for this entry.
   /// The callback is safe to call while the entry is waiting in the queue.
+  /// [onDiscard] additionally reports an entry removed before it was shown;
+  /// [onClose] still runs for such entries for compatibility.
   VoidCallback show({
     required Widget child,
     Duration duration = const Duration(seconds: 4),
     Duration removeDelay = const Duration(milliseconds: 200),
     SeedSnackbarStrategy? strategy,
     VoidCallback? onClose,
+    VoidCallback? onDiscard,
   }) {
-    final entry = _SeedSnackbarEntry(child, duration, removeDelay, onClose);
+    final entry = _SeedSnackbarEntry(
+      child,
+      duration,
+      removeDelay,
+      onClose,
+      onDiscard,
+    );
     if ((strategy ?? this.strategy) == SeedSnackbarStrategy.immediate &&
         _queue.isNotEmpty) {
       // React's immediate PUSH sets `queue: [option]`: everything waiting,
@@ -270,6 +287,7 @@ class SeedSnackbarController extends ChangeNotifier {
         ..removeRange(1, _queue.length)
         ..add(entry);
       for (final dropped in replaced) {
+        dropped.onDiscard?.call();
         dropped.onClose?.call();
       }
       _dismiss(_queue.first);
@@ -291,6 +309,7 @@ class SeedSnackbarController extends ChangeNotifier {
     if (index < 0) return;
     if (index > 0) {
       _queue.removeAt(index);
+      entry.onDiscard?.call();
       entry.onClose?.call();
       notifyListeners();
       return;
@@ -303,6 +322,7 @@ class SeedSnackbarController extends ChangeNotifier {
     _removeTimer = Timer(entry.removeDelay, () {
       _dismissing = false;
       _queue.remove(entry);
+      if (!entry.presented) entry.onDiscard?.call();
       entry.onClose?.call();
       _start();
       notifyListeners();
@@ -368,12 +388,13 @@ class SeedSnackbarController extends ChangeNotifier {
     }
   }
 
-  void _avoid(Object key, double? height) {
+  void _avoid(Object key, Rect? rect) {
     if (_disposed) return;
-    if (height == null) {
-      _avoidedHeights.remove(key);
+    if (_avoidedRects[key] == rect) return;
+    if (rect == null) {
+      _avoidedRects.remove(key);
     } else {
-      _avoidedHeights[key] = height;
+      _avoidedRects[key] = rect;
     }
     notifyListeners();
   }
@@ -423,6 +444,7 @@ class SeedSnackbarProvider extends StatefulWidget {
     this.strategy = SeedSnackbarStrategy.immediate,
     this.pauseOnInteraction = true,
   });
+
   /// Application subtree that may display snackbars.
   final Widget child;
 
@@ -439,16 +461,56 @@ class SeedSnackbarProvider extends StatefulWidget {
   static SeedSnackbarController of(BuildContext context) => context
       .dependOnInheritedWidgetOfExactType<_SeedSnackbarScope>()!
       .controller;
+
   /// Returns the nearest controller, or null outside a provider.
   static SeedSnackbarController? maybeOf(BuildContext context) => context
       .dependOnInheritedWidgetOfExactType<_SeedSnackbarScope>()
       ?.controller;
+
   /// Creates state that attaches and detaches the snackbar controller.
   @override
   State<SeedSnackbarProvider> createState() => _SeedSnackbarProviderState();
 }
 
 class _SeedSnackbarProviderState extends State<SeedSnackbarProvider> {
+  final _stackKey = GlobalKey();
+  final _regionKey = GlobalKey();
+  double _overlapOffset = 0;
+
+  void _measureOffset(double bottomInset) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final stack = _stackKey.currentContext?.findRenderObject();
+      final region = _regionKey.currentContext?.findRenderObject();
+      if (stack is! RenderBox ||
+          region is! RenderBox ||
+          !stack.hasSize ||
+          !region.hasSize) {
+        return;
+      }
+      final origin = stack.localToGlobal(Offset.zero);
+      final bounds = origin & stack.size;
+      final bottom = bounds.bottom - bottomInset;
+      var availableBottom = bottom;
+      final rects =
+          _controller._avoidedRects.values
+              .where((rect) => rect.overlaps(bounds))
+              .toList()
+            ..sort((a, b) => b.bottom.compareTo(a.bottom));
+      for (final rect in rects) {
+        if (rect.top >= availableBottom) continue;
+        if (availableBottom - rect.bottom >= region.size.height) break;
+        availableBottom = rect.top;
+      }
+      final offset =
+          region.size.height > 0 &&
+              availableBottom - region.size.height >= bounds.top
+          ? bottom - availableBottom
+          : 0.0;
+      if (_overlapOffset != offset) setState(() => _overlapOffset = offset);
+    });
+  }
+
   late SeedSnackbarController _controller =
       widget.controller ??
       SeedSnackbarController(
@@ -495,8 +557,26 @@ class _SeedSnackbarProviderState extends State<SeedSnackbarProvider> {
       listenable: _controller,
       builder: (context, _) {
         final entry = _controller._current;
+        if (entry != null && !entry.presented) {
+          final controller = _controller;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted &&
+                identical(_controller, controller) &&
+                identical(controller._current, entry)) {
+              entry.presented = true;
+            }
+          });
+        }
         final reduce = MediaQuery.disableAnimationsOf(context);
+        final bottomInset =
+            math.max(
+              MediaQuery.viewInsetsOf(context).bottom,
+              MediaQuery.paddingOf(context).bottom,
+            ) +
+            8;
+        _measureOffset(bottomInset);
         return Stack(
+          key: _stackKey,
           fit: StackFit.passthrough,
           children: [
             widget.child,
@@ -505,13 +585,7 @@ class _SeedSnackbarProviderState extends State<SeedSnackbarProvider> {
               curve: SeedCurves.easing,
               left: 8,
               right: 8,
-              bottom:
-                  math.max(
-                    MediaQuery.viewInsetsOf(context).bottom,
-                    MediaQuery.paddingOf(context).bottom,
-                  ) +
-                  8 +
-                  _controller._bottomOffset,
+              bottom: bottomInset + _overlapOffset,
               child: Focus(
                 canRequestFocus: false,
                 onFocusChange: (v) => _controller._interaction(focused: v),
@@ -526,6 +600,7 @@ class _SeedSnackbarProviderState extends State<SeedSnackbarProvider> {
                     onPointerCancel: (_) =>
                         _controller._interaction(pressed: false),
                     child: AnimatedSwitcher(
+                      key: _regionKey,
                       duration: reduce ? Duration.zero : SeedDuration.d3,
                       reverseDuration: reduce ? Duration.zero : SeedDuration.d2,
                       switchInCurve: SeedCurves.enter,
@@ -545,6 +620,7 @@ class _SeedSnackbarProviderState extends State<SeedSnackbarProvider> {
                           : Semantics(
                               key: ObjectKey(entry),
                               liveRegion: true,
+                              onDismiss: () => _controller._dismiss(entry),
                               child: Center(
                                 child: _SeedSnackbarEntryScope(
                                   dismiss: () => _controller._dismiss(entry),
@@ -567,18 +643,18 @@ class _SeedSnackbarProviderState extends State<SeedSnackbarProvider> {
   );
 }
 
-/// Reserves the measured height of a floating action region above the snackbar.
+/// Registers a floating region that the snackbar should avoid.
 ///
-/// Must be inside [SeedSnackbarProvider], which receives size-change and
-/// disposal notifications so the snackbar can avoid covering [child].
+/// Must be inside [SeedSnackbarProvider], which tracks the child's bounds
+/// after each rendered frame so the snackbar can avoid covering [child].
 class SeedSnackbarAvoidOverlap extends StatefulWidget {
-  /// Watches the size of the floating [child].
+  /// Watches the bounds of the floating [child].
   const SeedSnackbarAvoidOverlap({super.key, required this.child});
 
-  /// Floating region whose height the provider should avoid.
+  /// Floating region that the provider should avoid.
   final Widget child;
 
-  /// Creates state that registers and unregisters the measured height.
+  /// Creates state that registers and unregisters the measured bounds.
   @override
   State<SeedSnackbarAvoidOverlap> createState() =>
       _SeedSnackbarAvoidOverlapState();
@@ -587,20 +663,36 @@ class SeedSnackbarAvoidOverlap extends StatefulWidget {
 class _SeedSnackbarAvoidOverlapState extends State<SeedSnackbarAvoidOverlap> {
   final Object _id = Object();
   SeedSnackbarController? _controller;
-  double? _height;
+  @override
+  void initState() {
+    super.initState();
+    _measureAfterFrame();
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _controller = SeedSnackbarProvider.of(context);
+    final next = SeedSnackbarProvider.of(context);
+    final previous = _controller;
+    if (!identical(previous, next)) {
+      _controller = next;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!identical(previous, _controller)) previous?._avoid(_id, null);
+      });
+    }
   }
 
-  void _measure() => WidgetsBinding.instance.addPostFrameCallback((_) {
+  void _measureAfterFrame() => WidgetsBinding.instance.addPostFrameCallback((
+    _,
+  ) {
     if (!mounted) return;
-    final height = context.size?.height;
-    if (height != _height) {
-      _height = height;
-      _controller?._avoid(_id, height);
+    final box = context.findRenderObject();
+    if (box is RenderBox && box.hasSize) {
+      _controller?._avoid(_id, box.localToGlobal(Offset.zero) & box.size);
     }
+    // Register for the next frame without scheduling one: ancestor layout or
+    // paint transforms can move this box without rebuilding or resizing it.
+    _measureAfterFrame();
   });
   @override
   void dispose() {
@@ -612,14 +704,5 @@ class _SeedSnackbarAvoidOverlapState extends State<SeedSnackbarAvoidOverlap> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    _measure();
-    return NotificationListener<SizeChangedLayoutNotification>(
-      onNotification: (_) {
-        _measure();
-        return false;
-      },
-      child: SizeChangedLayoutNotifier(child: widget.child),
-    );
-  }
+  Widget build(BuildContext context) => widget.child;
 }

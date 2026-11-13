@@ -14,14 +14,19 @@ import '../../theme/seed_theme.dart';
 enum SeedCalloutTone {
   /// Neutral guidance.
   neutral,
+
   /// Informational tip.
   informative,
+
   /// Caution or warning.
   warning,
+
   /// Error or critical alert.
   critical,
+
   /// Positive or successful outcome.
   positive,
+
   /// Gradient AI or special guidance.
   magic,
 }
@@ -32,22 +37,35 @@ enum SeedCalloutTone {
 class SeedCallout extends StatefulWidget {
   /// Optional bold lead-in text.
   final String? title;
+
   /// Required callout body text.
   final String description;
+
   /// Optional inline text action, shown only when [onTap] is null.
   final String? linkText;
+
   /// Action for [linkText] when the callout surface is not actionable.
   final VoidCallback? onLinkTap;
+
   /// Taps on the whole callout; makes its surface interactive when supplied.
   final VoidCallback? onTap;
-  /// Enables a dismiss icon and runs after the user activates it.
+
+  /// Runs when the user activates the close button.
   final VoidCallback? onDismiss;
+
+  /// Controls the close button independently. Null shows it when [onDismiss]
+  /// is supplied, preserving the convenience behavior.
+  final bool? showCloseButton;
+
   /// Optional icon overriding the default tone-based icon.
   final Widget? prefixIcon;
+
   /// Semantic color treatment, default [SeedCalloutTone.neutral].
   final SeedCalloutTone tone;
+
   /// Whether an inline link is underlined (true by default).
   final bool underlineLink;
+
   /// Displays a tone-based icon when true; also shown if [prefixIcon] is set.
   final bool showIcon;
 
@@ -61,8 +79,8 @@ class SeedCallout extends StatefulWidget {
   ///
   /// [description] is required. When [open] is non-null, the parent controls
   /// visibility and must update it after [onDismiss]; otherwise the widget
-  /// starts at [defaultOpen] and dismisses itself. [onDismiss] also determines
-  /// whether the close button is present.
+  /// starts at [defaultOpen] and dismisses itself. Use [showCloseButton] to
+  /// include a close button on an uncontrolled callout without a callback.
   const SeedCallout({
     super.key,
     this.title,
@@ -71,6 +89,7 @@ class SeedCallout extends StatefulWidget {
     this.onLinkTap,
     this.onTap,
     this.onDismiss,
+    this.showCloseButton,
     this.prefixIcon,
     this.tone = SeedCalloutTone.neutral,
     this.underlineLink = true,
@@ -102,12 +121,12 @@ class _SeedCalloutState extends State<SeedCallout> {
       :linkText,
       :onLinkTap,
       :onTap,
-      :onDismiss,
       :prefixIcon,
       :tone,
       :underlineLink,
       :showIcon,
     ) = widget;
+    final showClose = widget.showCloseButton ?? (widget.onDismiss != null);
     final colors = context.seedColor;
     final typography = context.seedTypography;
 
@@ -182,7 +201,7 @@ class _SeedCalloutState extends State<SeedCallout> {
                     style: typography.t4Regular.copyWith(color: fgColor),
                   ),
                 ),
-                if (onDismiss != null)
+                if (showClose)
                   // The 40px target occupies 16px plus the 12px root gap.
                   const SizedBox(width: 28)
                 else if (_isActionable) ...[
@@ -192,7 +211,7 @@ class _SeedCalloutState extends State<SeedCallout> {
               ],
             ),
           ),
-          if (onDismiss != null)
+          if (showClose)
             PositionedDirectional(
               end: 2,
               top: 0,
@@ -205,7 +224,9 @@ class _SeedCalloutState extends State<SeedCallout> {
                   ),
                   behavior: HitTestBehavior.opaque,
                   focusBorderRadius: SeedBorderRadius.r2,
-                  onTap: _dismiss,
+                  onTap: widget.open == null || widget.onDismiss != null
+                      ? _dismiss
+                      : null,
                   builder: (context, isClosePressed) => AnimatedContainer(
                     duration: SeedDuration.colorTransition,
                     curve: SeedCurves.easing,
