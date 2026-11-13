@@ -22,8 +22,10 @@ import '../layout/seed_divider.dart';
 enum SeedMenuSize {
   /// Compact 200px menu.
   small,
+
   /// Standard 240px menu.
   medium,
+
   /// Choose small at viewport width 1280px or more, medium otherwise.
   responsive,
 }
@@ -52,21 +54,28 @@ class SeedMenuItemData {
 
   /// Visible primary label, also used for typeahead by default.
   final String label;
+
   /// Optional secondary line of explanatory text.
   final String? description;
 
   /// Search text for keyboard navigation; defaults to [label].
   final String? typeaheadLabel;
+
   /// Optional widget before the item label.
   final Widget? prefixIcon;
+
   /// Optional widget following the label.
   final Widget? suffixIcon;
+
   /// Optional trailing badge text.
   final String? badge;
+
   /// Invoked when the enabled item is activated.
   final VoidCallback? onTap;
+
   /// Whether the label/action uses critical styling.
   final bool isDestructive;
+
   /// Whether selection and keyboard focus are allowed; true by default.
   final bool enabled;
 }
@@ -78,6 +87,7 @@ class SeedMenuGroupData {
 
   /// Optional section heading above [items].
   final String? label;
+
   /// Ordered menu entries within this group.
   final List<SeedMenuItemData> items;
 }
@@ -103,10 +113,13 @@ class SeedMenu extends StatefulWidget {
     this.closeOnSelect = true,
     this.maxHeight = 480,
   });
+
   /// Preferred menu width policy.
   final SeedMenuSize size;
+
   /// Whether item selection requests dismissal of its nearest overlay.
   final bool closeOnSelect;
+
   /// Maximum menu height before content scrolls, 480px by default.
   final double maxHeight;
 
@@ -137,9 +150,17 @@ class _SeedMenuState extends State<SeedMenu> {
             : SeedMenuSize.medium)
       : widget.size;
 
+  bool _wasOpen = false;
+
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final isOpen = SeedOverlayScope.maybeOf(context)?.isOpen ?? false;
+    if (isOpen && !_wasOpen) _scheduleOpeningFocus();
+    _wasOpen = isOpen;
+  }
+
+  void _scheduleOpeningFocus() {
     // The overlay itself initially receives keyboard focus. As in React Menu's
     // list navigation, a keyboard open focuses the first enabled action while
     // a pointer open focuses the root, so the first arrow key lands on it.
@@ -149,9 +170,15 @@ class _SeedMenuState extends State<SeedMenu> {
         _rootFocus.requestFocus();
         return;
       }
-      final index = _items.indexWhere((item) => item.enabled);
+      final last =
+          SeedOverlayScope.maybeOf(context)?.focusLastMenuItem ?? false;
+      final index = last
+          ? _items.lastIndexWhere((item) => item.enabled)
+          : _items.indexWhere((item) => item.enabled);
       if (index >= 0 && index < _nodes.length) {
         _nodes[index].requestFocus();
+        final target = _nodes[index].context;
+        if (target != null) Scrollable.ensureVisible(target);
       }
     });
   }
@@ -274,28 +301,42 @@ class _SeedMenuState extends State<SeedMenu> {
                         ),
                         child: SeedDivider(),
                       ),
-                    if (widget.groups[g].label != null)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: SeedDimension.x4,
-                          vertical: SeedDimension.x2_5,
-                        ),
-                        child: Text(
-                          widget.groups[g].label!,
-                          style:
-                              (size == SeedMenuSize.small
-                                      ? typography.t3Regular
-                                      : typography.t4Medium)
-                                  .copyWith(color: colors.fg.neutralSubtle),
-                        ),
-                      ),
-                    ...widget.groups[g].items.map(
-                      (item) => _buildMenuItem(
-                        context,
-                        item,
-                        colors,
-                        typography,
-                        _nodes[itemIndex++],
+                    Semantics(
+                      container: true,
+                      explicitChildNodes: true,
+                      label: widget.groups[g].label,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (widget.groups[g].label != null)
+                            ExcludeSemantics(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: SeedDimension.x4,
+                                  vertical: SeedDimension.x2_5,
+                                ),
+                                child: Text(
+                                  widget.groups[g].label!,
+                                  style:
+                                      (size == SeedMenuSize.small
+                                              ? typography.t3Regular
+                                              : typography.t4Medium)
+                                          .copyWith(
+                                            color: colors.fg.neutralSubtle,
+                                          ),
+                                ),
+                              ),
+                            ),
+                          ...widget.groups[g].items.map(
+                            (item) => _buildMenuItem(
+                              context,
+                              item,
+                              colors,
+                              typography,
+                              _nodes[itemIndex++],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -478,4 +519,7 @@ class SeedMenuTrigger extends SeedAnchoredOverlay {
          // MIN_HEIGHT in React's useMenu.
          fitMinExtent: 200,
        );
+
+  @override
+  bool get isMenuTrigger => true;
 }

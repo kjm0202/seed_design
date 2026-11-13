@@ -24,8 +24,10 @@ import '../layout/seed_scroll_fog.dart';
 /// false; [routeSettings], [requestFocus], [anchorPoint], [constraints],
 /// [useSafeArea], [barrierLabel] and [barrierColor] configure the Flutter route.
 /// [modal] adds a scrim by default; [modalListenable] changes its visibility
-/// while the route is open. [isDismissible] controls backdrop dismissal and
-/// snap-to-close behavior; [enableDrag] enables downward drag gestures.
+/// while the route is open. [isDismissible] controls backdrop dismissal.
+/// [dragDismissible] overrides dismissal by dragging for both sheet modes.
+/// When null, a snapping sheet follows [isDismissible] and an ordinary sheet
+/// follows [enableDrag]. Snap resizing remains available independently.
 /// [snapPoints] enables fractional/pixel snapping, [initialSnapIndex] chooses
 /// the initial stop, [fadeFromIndex] controls scrim fade, and [snapController]
 /// drives indices programmatically; [onSnapChanged] observes index changes.
@@ -47,6 +49,7 @@ Future<T?> showSeedBottomSheet<T>({
   ValueListenable<bool>? modalListenable,
   bool isDismissible = true,
   bool enableDrag = true,
+  bool? dragDismissible,
   bool isScrollControlled = true,
   List<SeedSheetSnapPoint>? snapPoints,
   int initialSnapIndex = 0,
@@ -118,7 +121,7 @@ Future<T?> showSeedBottomSheet<T>({
           bottom: !fixed && repositionInputs ? keyboardInset : 0,
         ),
         child: snapPoints == null
-            ? (enableDrag
+            ? (enableDrag && (dragDismissible ?? true)
                   ? SeedSheetDragDismiss(
                       onProgress: route.setSnapFade,
                       onDismiss: () {
@@ -139,7 +142,7 @@ Future<T?> showSeedBottomSheet<T>({
                 fadeFromIndex: fadeFromIndex ?? snapPoints.length - 1,
                 contentHeightFraction: snapContentHeightFraction,
                 onFadeChanged: route.setSnapFade,
-                dismissible: isDismissible,
+                dismissible: dragDismissible ?? isDismissible,
               ),
       );
     },
@@ -221,6 +224,7 @@ class _SeedBarrierCurve extends Curve {
 enum SeedBottomSheetHeaderAlign {
   /// Align title and description to the left.
   left,
+
   /// Center title and description.
   center,
 }
@@ -230,6 +234,7 @@ enum SeedBottomSheetHeaderAlign {
 enum SeedBottomSheetHeaderPosition {
   /// Place the header before the body.
   top,
+
   /// Place the header after the body.
   bottom,
 }
@@ -246,38 +251,53 @@ enum SeedBottomSheetHeaderPosition {
 class SeedBottomSheet extends StatefulWidget {
   /// Optional title above the main [content].
   final String? title;
+
   /// Optional description (requires [title] or a custom [header]).
   final String? description;
+
   /// Title/description alignment, left by default.
   final SeedBottomSheetHeaderAlign headerAlign;
+
   /// Header order relative to body, top by default.
   final SeedBottomSheetHeaderPosition headerPosition;
+
   /// Custom header replacing automatic title/description composition.
   final Widget? header;
+
   /// Required scrollable body content.
   final Widget content;
+
   /// Optional fixed footer below content.
   final Widget? footer;
+
   /// Whether to display the top drag-handle indicator (false by default).
   final bool showHandle;
+
   /// Whether to display the close button (true by default).
   final bool showCloseButton;
 
   /// Overrides the close button action. When null, uses the standard overlay
   /// or Navigator dismissal behavior.
   final VoidCallback? onClosePressed;
+
   /// Padding around the body; 16px horizontally by default.
   final EdgeInsetsGeometry contentPadding;
+
   /// Optional externally-owned body scroll controller.
   final ScrollController? scrollController;
+
   /// Fills available height when true; otherwise shrink-wraps up to 90vh.
   final bool expand;
+
   /// Optional explicit height cap in logical pixels.
   final double? maxHeight;
+
   /// Receives vertical handle drag deltas, in logical pixels.
   final ValueChanged<double>? onHandleDrag;
+
   /// Called when a handle drag gesture finishes.
   final VoidCallback? onHandleDragEnd;
+
   /// Called when the handle is tapped.
   final VoidCallback? onHandleTap;
 
@@ -830,13 +850,16 @@ class SeedSheetSnapPoint {
     : assert(value > 0 && value <= 1),
       fraction = value,
       pixels = null;
+
   /// Creates a stop at positive [value] logical pixels from the bottom.
   const SeedSheetSnapPoint.pixels(double value)
     : assert(value > 0),
       pixels = value,
       fraction = null;
+
   /// Exactly one underlying representation, with the other member null.
   final double? fraction, pixels;
+
   /// Resolves the point against viewport [height] to a fraction in `[.01, 1]`.
   double resolve(double height) =>
       (fraction ?? pixels! / height).clamp(0.01, 1);
@@ -850,8 +873,10 @@ class SeedSheetController extends ChangeNotifier {
   /// Creates a controller starting at [initialIndex] (zero by default).
   SeedSheetController({int initialIndex = 0}) : _index = initialIndex;
   int _index;
+
   /// Current selected snap stop index.
   int get index => _index;
+
   /// Requests a snap to [index] and notifies listeners.
   void snapTo(int index) {
     _index = index;
@@ -894,20 +919,28 @@ class SeedSnappingBottomSheet extends StatefulWidget {
     this.onFadeChanged,
     this.dismissible = true,
   });
+
   /// Composed sheet surface to resize.
   final SeedBottomSheet sheet;
+
   /// Nonempty ordered snap stops (fractions or positive pixel heights).
   final List<SeedSheetSnapPoint> snapPoints;
+
   /// Initially selected stop, index zero by default.
   final int initialSnapIndex;
+
   /// Optional externally-owned snap controller.
   final SeedSheetController? controller;
+
   /// Notified when the resolved snap stop changes.
   final ValueChanged<int>? onSnapChanged;
+
   /// Whether only the handle can resize the sheet.
   final bool handleOnly;
+
   /// Whether dragging below the minimum stop can close the sheet.
   final bool dismissible;
+
   /// Index where backdrop fade reaches full strength; nullable to disable it.
   final int? fadeFromIndex;
 
@@ -915,6 +948,7 @@ class SeedSnappingBottomSheet extends StatefulWidget {
   /// A .9-height surface translated by React's viewport snap points reveals
   /// (fraction - .1) of the viewport.
   final double contentHeightFraction;
+
   /// Receives a fade fraction from 0 to 1 as the sheet moves across stops.
   final ValueChanged<double>? onFadeChanged;
   @override
@@ -1131,10 +1165,13 @@ class _SeedSnappingBottomSheetState extends State<SeedSnappingBottomSheet> {
           footer: source.footer,
           showHandle: source.showHandle,
           showCloseButton: source.showCloseButton,
+          onClosePressed: source.onClosePressed,
           contentPadding: source.contentPadding,
           expand: true,
           scrollController: controller,
           onHandleDrag: (delta) {
+            source.onHandleDrag?.call(delta);
+            if (!mounted) return;
             _interruptSnap();
             final current = !widget.handleOnly && _drag.isAttached
                 ? _drag.size
@@ -1157,8 +1194,13 @@ class _SeedSnappingBottomSheetState extends State<SeedSnappingBottomSheet> {
             }
             _reportFade();
           },
-          onHandleDragEnd: _finishDrag,
+          onHandleDragEnd: () {
+            source.onHandleDragEnd?.call();
+            if (mounted) _finishDrag();
+          },
           onHandleTap: () {
+            source.onHandleTap?.call();
+            if (!mounted) return;
             if (_index + 1 < _points.length) {
               _snap(_index + 1);
             } else if (widget.dismissible) {

@@ -1,3 +1,5 @@
+import 'dart:ui' show SemanticsRole;
+
 import 'seed_sheet_drag.dart';
 import 'seed_side_panel.dart';
 
@@ -15,8 +17,10 @@ import 'seed_dialog.dart';
 enum SeedModalType {
   /// Centered dialog route.
   dialog,
+
   /// Bottom sheet route.
   bottomSheet,
+
   /// Sliding edge panel.
   sidePanel,
 }
@@ -63,16 +67,22 @@ class SeedModalTrigger extends StatefulWidget {
     this.fadeFromIndex,
   }) : onOpenChanged = onOpenChange ?? onOpenChanged,
        assert(onOpenChange == null || onOpenChanged == null);
+
   /// Builds the trigger from context, current open state, and toggle callback.
   final Widget Function(BuildContext, bool, VoidCallback) triggerBuilder;
+
   /// Builds the dialog, sheet or panel contents in the overlay context.
   final WidgetBuilder builder;
+
   /// Requested modal presentation type.
   final SeedModalType type;
+
   /// Imperative open-state owner when [open] is absent.
   final SeedOverlayController? controller;
+
   /// Parent-controlled open state, taking precedence over [controller].
   final bool? open;
+
   /// Initial visibility and presentation/dismissal options.
   ///
   /// [defaultOpen] is initially false. [dismissible] defaults true;
@@ -85,24 +95,33 @@ class SeedModalTrigger extends StatefulWidget {
       fromRight,
       skipAnimation,
       handleOnly;
+
   /// Deprecated compatibility spelling of [onOpenChange].
   @Deprecated('Use onOpenChange instead.')
   final SeedOverlayOpenChanged? onOpenChanged;
+
   /// Visibility request callback including the dismissal cause.
   SeedOverlayOpenChanged? get onOpenChange => onOpenChanged;
+
   /// Returns false to prevent dismissal for a particular reason.
   final bool Function(SeedOverlayDismissReason)? canClose;
+
   /// Independent overrides for outside-tap and Escape dismissal; null uses
   /// [dismissible].
   final bool? closeOnInteractOutside, closeOnEscape;
+
   /// Optional fractional or pixel snap stops for a bottom sheet.
   final List<SeedSheetSnapPoint>? snapPoints;
+
   /// Initial snap stop index, `0` by default.
   final int initialSnapIndex;
+
   /// Snap stop where the modal backdrop reaches full opacity.
   final int? fadeFromIndex;
+
   /// Programmatic snap controller, owned and disposed by its creator.
   final SeedSheetController? snapController;
+
   /// Notified when a bottom sheet selects a new snap index.
   final ValueChanged<int>? onSnapChanged;
   @override
@@ -192,6 +211,8 @@ class SeedSidePanelTrigger extends SeedModalTrigger {
     @Deprecated('Use onOpenChange instead.') super.onOpenChanged,
     super.canClose,
     super.dismissible,
+    super.closeOnInteractOutside,
+    super.closeOnEscape,
     super.responsive = true,
     super.modal,
     super.fromRight,
@@ -220,6 +241,12 @@ class SeedMenuSheetTrigger extends SeedModalTrigger {
 class _SeedModalTriggerState extends State<SeedModalTrigger>
     with SingleTickerProviderStateMixin {
   bool _open = false;
+
+  SeedModalType _typeFor(BuildContext context) =>
+      widget.responsive && MediaQuery.sizeOf(context).width < 768
+      ? SeedModalType.bottomSheet
+      : widget.type;
+
   _SeedManagedRoute? _route;
   FocusNode? _returnFocus;
   final OverlayPortalController _persistent = OverlayPortalController();
@@ -288,8 +315,15 @@ class _SeedModalTriggerState extends State<SeedModalTrigger>
     }
   }
 
-  Widget _content(BuildContext context, SeedModalType type) {
+  Widget _content(
+    BuildContext context,
+    SeedModalType type, {
+    GlobalKey? bodyKey,
+  }) {
+    Widget responsiveBody(Widget body) =>
+        bodyKey == null ? body : KeyedSubtree(key: bodyKey, child: body);
     Widget child = widget.builder(context);
+    String? responsiveSemanticsLabel;
     if (type == SeedModalType.bottomSheet &&
         widget.type == SeedModalType.dialog &&
         child is SeedDialog) {
@@ -298,8 +332,10 @@ class _SeedModalTriggerState extends State<SeedModalTrigger>
         title: source.title,
         description: source.description,
         header: source.header,
-        content: source.content,
+        content: responsiveBody(source.content),
         showCloseButton: source.showCloseButton,
+        maxHeight: source.maxHeight,
+        contentPadding: source.bodyPadding,
         footer:
             source.footer ??
             Wrap(
@@ -312,14 +348,95 @@ class _SeedModalTriggerState extends State<SeedModalTrigger>
               ],
             ),
       );
+    } else if (widget.responsive &&
+        widget.modal &&
+        type == SeedModalType.dialog &&
+        child is SeedDialog) {
+      child = SeedDialog(
+        key: child.key,
+        title: child.title,
+        description: child.description,
+        header: child.header,
+        content: responsiveBody(child.content),
+        footer: child.footer,
+        subAction: child.subAction,
+        secondaryAction: child.secondaryAction,
+        primaryAction: child.primaryAction,
+        showCloseButton: child.showCloseButton,
+        maxWidth: child.maxWidth,
+        size: child.size,
+        maxHeight: child.maxHeight,
+        scrollBody: child.scrollBody,
+        showScrollFog: child.showScrollFog,
+        bodyPadding: child.bodyPadding,
+      );
     }
     if (type == SeedModalType.bottomSheet && child is SeedSidePanel) {
       final source = child;
+      responsiveSemanticsLabel = source.semanticsLabel ?? source.title;
       child = SeedBottomSheet(
         title: source.title,
         description: source.description,
-        content: source.body,
+        header: source.titleWidget != null || source.descriptionWidget != null
+            ? Padding(
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  24,
+                  source.showCloseButton ? 56 : 16,
+                  16,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    DefaultTextStyle(
+                      style: context.seedTypography.t8Bold.copyWith(
+                        color: context.seedColor.fg.neutral,
+                      ),
+                      child: source.titleWidget ?? Text(source.title),
+                    ),
+                    if (source.descriptionWidget != null ||
+                        source.description != null) ...[
+                      const SizedBox(height: 8),
+                      DefaultTextStyle(
+                        style: context.seedTypography.t5Regular.copyWith(
+                          color: context.seedColor.fg.neutralMuted,
+                        ),
+                        child:
+                            source.descriptionWidget ??
+                            Text(source.description!),
+                      ),
+                    ],
+                  ],
+                ),
+              )
+            : null,
+        content: responsiveBody(source.body),
         footer: source.footer,
+        showCloseButton: source.showCloseButton,
+        onClosePressed: source.onClose,
+        contentPadding:
+            source.bodyPadding ?? const EdgeInsets.symmetric(horizontal: 16),
+      );
+    } else if (widget.responsive &&
+        widget.modal &&
+        type == SeedModalType.sidePanel &&
+        child is SeedSidePanel) {
+      child = SeedSidePanel(
+        key: child.key,
+        title: child.title,
+        semanticsLabel: child.semanticsLabel,
+        titleWidget: child.titleWidget,
+        description: child.description,
+        descriptionWidget: child.descriptionWidget,
+        body: responsiveBody(child.body),
+        bodyPadding: child.bodyPadding,
+        footer: child.footer,
+        onClose: child.onClose,
+        size: child.size,
+        width: child.width,
+        maxWidth: child.maxWidth,
+        fromRight: child.fromRight,
+        showCloseButton: child.showCloseButton,
       );
     }
     if (type == SeedModalType.bottomSheet && widget.snapPoints != null) {
@@ -335,6 +452,17 @@ class _SeedModalTriggerState extends State<SeedModalTrigger>
         fadeFromIndex: widget.fadeFromIndex,
         onFadeChanged: (value) => _route?.setFade(value),
         dismissible: widget.dismissible,
+      );
+    }
+    if (responsiveSemanticsLabel != null) {
+      child = Semantics(
+        container: true,
+        explicitChildNodes: true,
+        scopesRoute: true,
+        namesRoute: true,
+        role: SemanticsRole.dialog,
+        label: responsiveSemanticsLabel,
+        child: child,
       );
     }
     return CallbackShortcuts(
@@ -369,29 +497,29 @@ class _SeedModalTriggerState extends State<SeedModalTrigger>
       _persistentAnimation.forward();
       return;
     }
-    final type = widget.responsive && MediaQuery.sizeOf(context).width < 768
-        ? SeedModalType.bottomSheet
-        : widget.type;
+    final type = _typeFor(context);
+    final bodyKey = widget.responsive ? GlobalKey() : null;
     final navigator = Navigator.of(context);
     _route = _SeedManagedRoute(
       type: type,
+      resolveType: _typeFor,
       fromRight: widget.fromRight,
       dismissible: widget.closeOnInteractOutside ?? widget.dismissible,
-      enableDrag: widget.snapPoints == null,
+      enableDrag: widget.dismissible && widget.snapPoints == null,
       reduceMotion:
           widget.skipAnimation || MediaQuery.disableAnimationsOf(context),
       color: context.seedColor.bg.overlay,
       barrierLabelText: MaterialLocalizations.of(context)
           .modalBarrierDismissLabel,
       onDismissRequest: (reason) => _request(false, reason),
-      builder: (routeContext) => PopScope(
+      builder: (routeContext, currentType) => PopScope(
         canPop: false,
         onPopInvokedWithResult: (didPop, result) {
           if (!didPop && widget.dismissible) {
             _request(false, SeedOverlayDismissReason.programmatic);
           }
         },
-        child: _content(routeContext, type),
+        child: _content(routeContext, currentType, bodyKey: bodyKey),
       ),
     );
     navigator.push(_route!).whenComplete(() {
@@ -487,6 +615,7 @@ class _SeedModalTriggerState extends State<SeedModalTrigger>
 class _SeedManagedRoute extends PopupRoute<Object?> {
   _SeedManagedRoute({
     required this.type,
+    required this.resolveType,
     required this.fromRight,
     required this.dismissible,
     required this.enableDrag,
@@ -497,11 +626,12 @@ class _SeedManagedRoute extends PopupRoute<Object?> {
     required this.builder,
   });
   final SeedModalType type;
+  final SeedModalType Function(BuildContext) resolveType;
   final bool fromRight, dismissible, reduceMotion, enableDrag;
   final Color color;
   final String barrierLabelText;
   final ValueChanged<SeedOverlayDismissReason> onDismissRequest;
-  final WidgetBuilder builder;
+  final Widget Function(BuildContext, SeedModalType) builder;
   double _fade = 1;
   void setFade(double value) {
     if (_fade == value) return;
@@ -546,7 +676,9 @@ class _SeedManagedRoute extends PopupRoute<Object?> {
     Animation<double> animation,
     Animation<double> secondaryAnimation,
   ) {
-    Widget child = Builder(builder: builder);
+    final type = resolveType(context);
+    Widget buildContent(BuildContext context) => builder(context, type);
+    Widget child = Builder(builder: buildContent);
     if (type == SeedModalType.bottomSheet) {
       child = SlideTransition(
         position: Tween(
@@ -564,13 +696,14 @@ class _SeedManagedRoute extends PopupRoute<Object?> {
             padding: EdgeInsets.only(
               bottom: MediaQuery.viewInsetsOf(context).bottom,
             ),
-            child: dismissible && enableDrag
+            child: enableDrag
                 ? SeedSheetDragDismiss(
+                    restoreAfterDismissRequest: true,
                     onDismiss: () =>
                         onDismissRequest(SeedOverlayDismissReason.drag),
-                    child: Builder(builder: builder),
+                    child: Builder(builder: buildContent),
                   )
-                : Builder(builder: builder),
+                : Builder(builder: buildContent),
           ),
         ),
       );

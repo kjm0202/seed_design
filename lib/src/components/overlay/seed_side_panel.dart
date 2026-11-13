@@ -19,13 +19,16 @@ import 'seed_anchored_overlay.dart';
 enum SeedSidePanelSize {
   /// Narrow panel intended for compact details (480px).
   small(480.0),
+
   /// Standard panel width (720px).
   medium(720.0),
+
   /// Wide panel for complex content (960px).
   large(960.0);
 
   /// Creates a width preset with its fixed logical-pixel [width].
   const SeedSidePanelSize(this.width);
+
   /// Preferred panel width, in logical pixels.
   final double width;
 }
@@ -151,31 +154,42 @@ class SeedSidePanel extends StatefulWidget {
   /// Accessible dialog name when the visible title is intentionally omitted.
   /// Mirrors the React SidePanel.Content `aria-label` override.
   final String? semanticsLabel;
+
   /// Optional custom heading widget.
   final Widget? titleWidget;
+
   /// Optional supporting heading description.
   final String? description;
+
   /// Custom description widget taking precedence over [description].
   final Widget? descriptionWidget;
+
   /// Scrollable main panel content.
   final Widget body;
+
   /// Optional padding around [body].
   final EdgeInsetsGeometry? bodyPadding;
+
   /// Fixed bottom section, not part of the body scroll view.
   final Widget? footer;
+
   /// Close-button callback; caller must dismiss its owning route if needed.
   final VoidCallback? onClose;
+
   /// Preferred width preset, medium by default.
   final SeedSidePanelSize size;
   final double? _width;
+
   /// Optional positive upper bound on panel width.
   final double? maxWidth;
 
   /// Preferred content width, capped at 80% of the available safe width by default.
   /// Official small, medium (default), and large widths are 480, 720, and 960.
   double get width => _width ?? size.width;
+
   /// Whether the panel enters from the right rather than left.
   final bool fromRight;
+
   /// Whether the heading includes a close affordance.
   final bool showCloseButton;
 
@@ -259,7 +273,7 @@ class _SeedSidePanelState extends State<SeedSidePanel> {
               final velocity = details.primaryVelocity ?? 0;
               if ((widget.fromRight && velocity > 300) ||
                   (!widget.fromRight && velocity < -300)) {
-                _handleClose(context, SeedOverlayDismissReason.outside);
+                _handleClose(context, SeedOverlayDismissReason.drag);
               }
             },
             child: SizedBox(

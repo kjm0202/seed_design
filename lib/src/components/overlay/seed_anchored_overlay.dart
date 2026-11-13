@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart' show listEquals;
+import 'package:flutter/foundation.dart' show listEquals, protected;
 import 'package:flutter/rendering.dart'
     show BoxParentData, RenderBox, RenderShiftedBox;
 import 'package:material_ui/material_ui.dart';
@@ -15,10 +15,13 @@ import '../button/seed_button.dart';
 enum SeedOverlaySide {
   /// Above the anchor.
   top,
+
   /// Below the anchor.
   bottom,
+
   /// To the left of the anchor.
   left,
+
   /// To the right of the anchor.
   right,
 }
@@ -28,8 +31,10 @@ enum SeedOverlaySide {
 enum SeedOverlayAlign {
   /// Leading edge of the anchor.
   start,
+
   /// Center of the anchor.
   center,
+
   /// Trailing edge of the anchor.
   end,
 }
@@ -38,22 +43,31 @@ enum SeedOverlayAlign {
 enum SeedOverlayDismissReason {
   /// The trigger was activated.
   trigger,
+
   /// The close button was activated.
   closeButton,
+
   /// An overlay action requested dismissal.
   action,
+
   /// A menu item was selected; corresponds to React Menu's item-click reason.
   itemClick,
+
   /// Escape was pressed.
   escapeKey,
+
   /// A pointer interaction occurred outside the overlay.
   outside,
+
   /// Focus left the overlay's dismissal boundary.
   focusOut,
+
   /// An enclosing overlay closed.
   parentClosed,
+
   /// Code requested a state change or dismissed a route.
   programmatic,
+
   /// A sheet was dismissed by dragging.
   drag,
 }
@@ -76,10 +90,13 @@ class SeedOverlayController extends ChangeNotifier {
   /// Creates a closed controller by default.
   SeedOverlayController({this._open = false});
   bool _open;
+
   /// The reason associated with the most recent controller state change.
   SeedOverlayDismissReason reason = SeedOverlayDismissReason.programmatic;
+
   /// Whether the controller currently requests an open overlay.
   bool get isOpen => _open;
+
   /// Requests opening with [SeedOverlayDismissReason.programmatic].
   void open() {
     if (!_open) {
@@ -116,18 +133,28 @@ class SeedOverlayScope extends InheritedWidget {
     this.tapGroup,
     this.isOpen = true,
     this.anchorPoint,
+    this.focusLastMenuItem = false,
     required super.child,
   });
+
   /// Requests dismissal with the supplied reason.
   final void Function(SeedOverlayDismissReason) close;
+
   /// Resolved side used by content and directional adornments.
   final SeedOverlaySide side;
+
   /// Pointer grouping used to distinguish nested dismissal boundaries.
   final Object? tapGroup;
+
   /// Whether the owning overlay is visibly open.
   final bool isOpen;
+
   /// Optional resolved anchor point in overlay coordinates.
   final Offset? anchorPoint;
+
+  /// Whether a menu was opened with the upward arrow key.
+  final bool focusLastMenuItem;
+
   /// Reads the nearest scope, or null outside overlay content.
   static SeedOverlayScope? maybeOf(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<SeedOverlayScope>();
@@ -136,7 +163,8 @@ class SeedOverlayScope extends InheritedWidget {
       side != oldWidget.side ||
       isOpen != oldWidget.isOpen ||
       tapGroup != oldWidget.tapGroup ||
-      anchorPoint != oldWidget.anchorPoint;
+      anchorPoint != oldWidget.anchorPoint ||
+      focusLastMenuItem != oldWidget.focusLastMenuItem;
 }
 
 /// Anchored non-modal overlay with native focus, outside, Escape, flip and shift behavior.
@@ -199,33 +227,51 @@ class SeedAnchoredOverlay extends StatefulWidget {
     this.exitDuration = SeedDuration.d2,
   }) : onOpenChanged = onOpenChange ?? onOpenChanged,
        assert(onOpenChange == null || onOpenChanged == null);
+
+  /// Enables menu-specific arrow-key opening and expanded trigger semantics.
+  @protected
+  bool get isMenuTrigger => false;
+
   /// Builds the trigger with its current visibility and a toggle callback.
   final Widget Function(BuildContext, bool, VoidCallback) triggerBuilder;
+
   /// Builds the floating content in the overlay's own context.
   final WidgetBuilder overlayBuilder;
+
   /// Optional widget acting as a separate positional anchor.
   final Widget? anchor;
+
   /// Imperative state owner used in the absence of [open].
   final SeedOverlayController? controller;
+
   /// Parent-controlled visibility; null delegates to [controller] or local state.
   final bool? open;
+
   /// Initial local visibility when neither [open] nor [controller] is supplied.
   final bool defaultOpen;
+
   /// Initial lazy mounting and post-exit removal; both default to `true` here.
   final bool lazyMount, unmountOnExit;
+
   /// Deprecated spelling of [onOpenChange], retained for compatibility.
   @Deprecated('Use onOpenChange instead.')
   final SeedOverlayOpenChanged? onOpenChanged;
+
   /// Callback for visibility requests and their dismiss reasons.
   SeedOverlayOpenChanged? get onOpenChange => onOpenChanged;
+
   /// Optional veto for close requests, receiving the attempted dismiss reason.
   final bool Function(SeedOverlayDismissReason)? canClose;
+
   /// Preferred placement side, before flipping.
   final SeedOverlaySide side;
+
   /// Cross-axis alignment of the floating content.
   final SeedOverlayAlign align;
+
   /// Anchor gap, viewport overflow padding, and arrow clearance, in pixels.
   final double gap, overflowPadding, arrowPadding;
+
   /// Whether to flip sides or shift within the available viewport bounds.
   final bool flip, shift;
 
@@ -247,6 +293,7 @@ class SeedAnchoredOverlay extends StatefulWidget {
   /// Whether the overlay content can receive keyboard or accessibility focus.
   /// Disable for descriptive content such as a tooltip.
   final bool contentFocusable;
+
   /// Focus, interaction, keyboard traversal, and animation policies.
   ///
   /// [autoFocus] initially focuses content; [restoreFocus] restores focus
@@ -259,14 +306,19 @@ class SeedAnchoredOverlay extends StatefulWidget {
       closeOnFocusOut,
       tabExitsContent,
       skipAnimation;
+
   /// Starting scale for entrance, `0.95` by default.
   final double enterScale;
+
   /// Optional ending scale for dismissal.
   final double? exitScale;
+
   /// Entrance and exit easing curves.
   final Curve enterCurve, exitCurve;
+
   /// Whether transform origin follows the resolved anchor.
   final bool scaleFromAnchor;
+
   /// Entrance and exit durations; defaults are `d3` and `d2`.
   final Duration enterDuration, exitDuration;
   @override
@@ -352,6 +404,7 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
   // React PopoverContent itself receives initial focus before its actions.
   final FocusNode _contentFocus = FocusNode(debugLabel: 'Seed overlay content');
   final FocusNode _triggerFocus = FocusNode();
+  bool _focusLastMenuItem = false;
   final List<ScrollPosition> _scrollPositions = [];
   // OverlayPortal does not rebuild its overlay when only the anchor's render
   // position changes (e.g. AnimatedPositioned). React floating-ui observes
@@ -601,7 +654,10 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
   Future<void> _hide(SeedOverlayDismissReason reason) async {
     if (!_open) return;
     _unbindMenuEscapeScope();
-    setState(() => _open = false);
+    setState(() {
+      _open = false;
+      _focusLastMenuItem = false;
+    });
     _animation.reverseDuration =
         widget.skipAnimation || MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
@@ -912,6 +968,7 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
                               child: SeedOverlayScope(
                                 side: _resolvedSide,
                                 isOpen: _open,
+                                focusLastMenuItem: _focusLastMenuItem,
                                 anchorPoint: _anchorPoint,
                                 tapGroup: _tapGroup,
                                 close: (reason) => _request(false, reason),
@@ -944,6 +1001,16 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
           focusNode: _triggerFocus,
           canRequestFocus: false,
           onKeyEvent: (node, event) {
+            if (widget.isMenuTrigger &&
+                !_open &&
+                event is KeyDownEvent &&
+                (event.logicalKey == LogicalKeyboardKey.arrowDown ||
+                    event.logicalKey == LogicalKeyboardKey.arrowUp)) {
+              _focusLastMenuItem =
+                  event.logicalKey == LogicalKeyboardKey.arrowUp;
+              _request(true, SeedOverlayDismissReason.trigger);
+              return KeyEventResult.handled;
+            }
             // An open React popover stays immediately after its trigger in the
             // keyboard tab order. Flutter Web can otherwise advance from the
             // trigger straight to the following page button after a reverse
@@ -971,10 +1038,12 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
           child: widget.anchor == null
               ? KeyedSubtree(
                   key: _anchorKey,
-                  child: widget.triggerBuilder(
-                    context,
-                    _open,
-                    () => _request(!_open, SeedOverlayDismissReason.trigger),
+                  child: Semantics(
+                    expanded: widget.isMenuTrigger ? _open : null,
+                    child: widget.triggerBuilder(context, _open, () {
+                      _focusLastMenuItem = false;
+                      _request(!_open, SeedOverlayDismissReason.trigger);
+                    }),
                   ),
                 )
               : Column(
@@ -982,10 +1051,12 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     KeyedSubtree(key: _anchorKey, child: widget.anchor!),
-                    widget.triggerBuilder(
-                      context,
-                      _open,
-                      () => _request(!_open, SeedOverlayDismissReason.trigger),
+                    Semantics(
+                      expanded: widget.isMenuTrigger ? _open : null,
+                      child: widget.triggerBuilder(context, _open, () {
+                        _focusLastMenuItem = false;
+                        _request(!_open, SeedOverlayDismissReason.trigger);
+                      }),
                     ),
                   ],
                 ),
@@ -1017,29 +1088,40 @@ class SeedOverlayPositionDelegate extends SingleChildLayoutDelegate {
     this.onResolved,
     this.onPosition,
   });
+
   /// Anchor bounds in this delegate's overlay coordinate space.
   final Rect anchor;
+
   /// Insets reserved from the available viewport.
   final EdgeInsets insets;
+
   /// Preferred side of the anchor.
   final SeedOverlaySide side;
+
   /// Placement alignment along the cross axis.
   final SeedOverlayAlign align;
+
   /// Distance from the anchor in logical pixels.
   final double gap;
+
   /// Side flipping and viewport shifting behavior.
   final bool flip, shift;
 
   /// Explicit ordered fallback sides; null keeps the legacy opposite-only flip.
   final List<SeedOverlaySide>? flipFallbackSides;
+
   /// Determines start/end alignment for horizontal text flow.
   final TextDirection textDirection;
+
   /// Optional size limits and minimum preferred-side space before flipping.
   final double? maxWidth, maxHeight, fitMinExtent;
+
   /// Reports the selected side after resolving fallback placement.
   final ValueChanged<SeedOverlaySide>? onResolved;
+
   /// Reports the final top-left offset and measured size.
   final void Function(Offset, Size)? onPosition;
+
   /// Computes the available viewport rectangle after applying [insets].
   Rect bounds(Size size) {
     final left = insets.left.clamp(0.0, size.width);
@@ -1059,6 +1141,7 @@ class SeedOverlayPositionDelegate extends SingleChildLayoutDelegate {
     SeedOverlaySide.left => SeedOverlaySide.right,
     SeedOverlaySide.right => SeedOverlaySide.left,
   };
+
   /// Returns available space between [anchor] and bounds [b] on [side].
   double space(SeedOverlaySide side, Rect b) => math.max(0, switch (side) {
     SeedOverlaySide.top => anchor.top - b.top - gap,
@@ -1354,16 +1437,22 @@ class SeedOverlayAction extends StatelessWidget {
     this.variant = SeedButtonVariant.neutralSolid,
     this.size = SeedButtonSize.medium,
   });
+
   /// Visible action label.
   final String label;
+
   /// Immediate button activation callback.
   final VoidCallback? onPressed;
+
   /// Optional gate evaluated after [onPressed]; `false` prevents dismissal.
   final bool Function()? onAction;
+
   /// Dismissal behavior, enabled state and loading state, respectively.
   final bool closeOnPressed, enabled, loading;
+
   /// Visual button variant, `neutralSolid` by default.
   final SeedButtonVariant variant;
+
   /// Button size, `medium` by default.
   final SeedButtonSize size;
   @override
@@ -1386,7 +1475,9 @@ class SeedOverlayAction extends StatelessWidget {
 
 /// Dialog action alias for the shared [SeedOverlayAction] behavior.
 typedef SeedDialogAction = SeedOverlayAction;
+
 /// Popover action alias for the shared [SeedOverlayAction] behavior.
 typedef SeedPopoverAction = SeedOverlayAction;
+
 /// Bottom-sheet action alias for the shared [SeedOverlayAction] behavior.
 typedef SeedBottomSheetAction = SeedOverlayAction;

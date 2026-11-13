@@ -19,6 +19,7 @@ class SeedSheetDragDismiss extends StatefulWidget {
     required this.onDismiss,
     required this.child,
     this.onProgress,
+    this.restoreAfterDismissRequest = false,
   });
 
   /// Called after a completed downward drag crosses the dismiss threshold.
@@ -26,6 +27,9 @@ class SeedSheetDragDismiss extends StatefulWidget {
 
   /// Reports the remaining share of the sheet, for fading its backdrop.
   final ValueChanged<double>? onProgress;
+
+  /// Animates back if the surrounding route stays open after the request.
+  final bool restoreAfterDismissRequest;
 
   /// Rendered sheet content translated during the drag.
   final Widget child;
@@ -79,8 +83,12 @@ class _SeedSheetDragDismissState extends State<SeedSheetDragDismiss>
         (_offset.value / height >= _closeThreshold ||
             velocity > _velocityThreshold)) {
       widget.onDismiss();
-      return;
+      if (!mounted || !widget.restoreAfterDismissRequest) return;
     }
+    _restore();
+  }
+
+  void _restore() {
     if (MediaQuery.disableAnimationsOf(context)) {
       _offset.value = 0;
     } else {
@@ -104,6 +112,7 @@ class _SeedSheetDragDismissState extends State<SeedSheetDragDismiss>
     onVerticalDragStart: _handleStart,
     onVerticalDragUpdate: _handleUpdate,
     onVerticalDragEnd: _handleEnd,
+    onVerticalDragCancel: _restore,
     child: _SeedSheetMeasurer(
       onHeight: (height) => _height = height,
       child: AnimatedBuilder(

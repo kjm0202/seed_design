@@ -360,6 +360,7 @@ class SeedHelpBubbleTrigger extends StatelessWidget {
     this.skipAnimation = false,
   }) : onOpenChanged = onOpenChange ?? onOpenChanged,
        assert(onOpenChange == null || onOpenChanged == null);
+
   /// Builds the trigger with context, open flag and toggle callback.
   final Widget Function(BuildContext, bool, VoidCallback) triggerBuilder;
 
@@ -396,6 +397,7 @@ class SeedHelpBubbleTrigger extends StatelessWidget {
   ///
   /// Null keeps the established bool [flip] opposite-side behavior unchanged.
   final List<SeedOverlaySide>? flipFallbackSides;
+
   /// Maximum width of the bubble card, default 280 logical pixels.
   final double maxWidth;
 
@@ -428,6 +430,7 @@ class SeedHelpBubbleTrigger extends StatelessWidget {
     maxWidth: maxWidth,
     autoFocus: autoFocus,
     closeOnInteractOutside: closeOnInteractOutside,
+    closeOnFocusOut: closeOnInteractOutside,
     enterScale: 0.9,
     exitScale: 1,
     enterCurve: SeedCurves.enter,
@@ -467,6 +470,7 @@ class SeedTooltipDelayGroup extends StatefulWidget {
     this.closeDelay = const Duration(milliseconds: 100),
     this.skipDelay = const Duration(milliseconds: 800),
   });
+
   /// Tooltip-bearing subtree.
   final Widget child;
 
@@ -480,7 +484,7 @@ class SeedTooltipDelayGroup extends StatefulWidget {
 
 class _SeedTooltipDelayGroupState extends State<SeedTooltipDelayGroup> {
   DateTime? lastClose;
-  SeedOverlayController? active;
+  _SeedHelpBubbleTooltipState? active;
   @override
   Widget build(BuildContext context) =>
       _SeedTooltipGroupScope(state: this, child: widget.child);
@@ -522,6 +526,7 @@ class SeedHelpBubbleTooltip extends StatefulWidget {
     this.maxWidth = 280,
     this.isBrand = false,
   });
+
   /// Hoverable and focusable trigger subtree.
   final Widget child;
 
@@ -569,44 +574,83 @@ class _SeedHelpBubbleTooltipState extends State<SeedHelpBubbleTooltip> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final previous = group;
     group = context
         .dependOnInheritedWidgetOfExactType<_SeedTooltipGroupScope>()
         ?.state;
+    if (previous != group) {
+      if (previous?.active == this) previous!.active = null;
+      _syncGroupAfterBuild();
+    }
+  }
+
+  bool get _isOpen => widget.open ?? _controller.isOpen;
+
+  void _syncGroupAfterBuild() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _updateGroup(_isOpen);
+    });
+  }
+
+  void _updateGroup(bool open) {
+    final g = group;
+    if (g == null) return;
+    if (open) {
+      final previous = g.active;
+      if (previous != null && previous != this) {
+        previous._setOpen(false, SeedOverlayDismissReason.trigger);
+      }
+      g.active = this;
+    } else if (g.active == this) {
+      g.active = null;
+      g.lastClose = DateTime.now();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant SeedHelpBubbleTooltip oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.open != widget.open) _syncGroupAfterBuild();
+  }
+
+  void _setOpen(bool open, SeedOverlayDismissReason reason) {
+    _timer?.cancel();
+    if (!mounted || open == _isOpen) return;
+    widget.onOpenChange?.call(open);
+    widget.onOpenChanged?.call(open, reason);
+    if (widget.open == null) {
+      open ? _controller.open() : _controller.close(reason);
+      _updateGroup(open);
+    }
   }
 
   void _request(bool open) {
     _timer?.cancel();
     final g = group;
+    final useGroupDelay = widget.openDelay == null && widget.closeDelay == null;
     final skip =
-        g?.lastClose != null &&
-        DateTime.now().difference(g!.lastClose!) < g.widget.skipDelay;
+        g?.active != null ||
+        (g?.lastClose != null &&
+            DateTime.now().difference(g!.lastClose!) < g.widget.skipDelay);
     final delay = open
-        ? (skip
+        ? (skip && useGroupDelay
               ? Duration.zero
               : widget.openDelay ??
-                    g?.widget.openDelay ??
+                    (useGroupDelay ? g?.widget.openDelay : null) ??
                     const Duration(milliseconds: 200))
         : widget.closeDelay ??
-              g?.widget.closeDelay ??
+              (useGroupDelay ? g?.widget.closeDelay : null) ??
               const Duration(milliseconds: 100);
-    _timer = Timer(delay, () {
-      if (!mounted || open == (widget.open ?? _controller.isOpen)) return;
-      if (open) {
-        g?.active?.close();
-        if (g != null) g.active = _controller;
-      } else if (g != null) {
-        g.lastClose = DateTime.now();
-      }
-      widget.onOpenChange?.call(open);
-      widget.onOpenChanged?.call(open, SeedOverlayDismissReason.trigger);
-      if (widget.open == null) open ? _controller.open() : _controller.close();
-    });
+    _timer = Timer(
+      delay,
+      () => _setOpen(open, SeedOverlayDismissReason.trigger),
+    );
   }
 
   @override
   void dispose() {
     _timer?.cancel();
-    if (group?.active == _controller) {
+    if (group?.active == this) {
       group!.active = null;
       group!.lastClose = DateTime.now();
     }
@@ -635,6 +679,7 @@ class _SeedHelpBubbleTooltipState extends State<SeedHelpBubbleTooltip> {
     contentFocusable: false,
     restoreFocus: false,
     onOpenChange: (open, reason) {
+      if (widget.open == null) _updateGroup(open);
       widget.onOpenChange?.call(open);
       widget.onOpenChanged?.call(open, reason);
     },
@@ -643,7 +688,12 @@ class _SeedHelpBubbleTooltipState extends State<SeedHelpBubbleTooltip> {
       onExit: (_) => _request(false),
       child: Focus(
         canRequestFocus: false,
-        onFocusChange: _request,
+        onFocusChange: (focused) => _setOpen(
+          focused,
+          focused
+              ? SeedOverlayDismissReason.trigger
+              : SeedOverlayDismissReason.focusOut,
+        ),
         child: widget.child,
       ),
     ),

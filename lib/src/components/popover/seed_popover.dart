@@ -30,31 +30,43 @@ import '../../theme/seed_theme.dart';
 class SeedPopover extends StatelessWidget {
   /// Optional custom title widget, taking precedence over [titleText].
   final Widget? title;
+
   /// Convenience string title when [title] is absent.
   final String? titleText;
+
   /// Optional custom description widget, taking precedence over [descriptionText].
   final Widget? description;
+
   /// Convenience description text when [description] is absent.
   final String? descriptionText;
+
   /// Optional scrollable main content.
   final Widget? body;
+
   /// Optional fixed footer below the body.
   final Widget? footer;
+
   /// Invoked by the optional close button; caller handles dismissal.
   final VoidCallback? onClose;
 
   /// Accessible dialog name, especially when the visual header is omitted.
   final String? semanticsLabel;
+
   /// Minimum card width in logical pixels (`320` by default).
   final double minWidth;
+
   /// Maximum card width in logical pixels (`480` by default).
   final double maxWidth;
+
   /// Maximum card height in logical pixels (`600` by default).
   final double maxHeight;
+
   /// Whether the body scrolls within the fixed card header/footer.
   final bool scrollBody;
+
   /// Whether a scroll-edge fog appears for overflowing body content.
   final bool showScrollFog;
+
   /// Whether to render the close affordance; false by default.
   final bool showCloseButton;
 
@@ -121,7 +133,20 @@ class SeedPopover extends StatelessWidget {
   // hidden behind a custom [title] must not name it.
   String? get _accessibleName {
     if (semanticsLabel?.isNotEmpty ?? false) return semanticsLabel;
+    if (title case Text(data: final text?) when text.isNotEmpty) return text;
     if (title == null && (titleText?.isNotEmpty ?? false)) return titleText;
+    return null;
+  }
+
+  // Flutter exposes a dialog description through its semantics hint. Like the
+  // title, only the rendered description should contribute to the semantics.
+  String? get _accessibleDescription {
+    if (description case Text(data: final text?) when text.isNotEmpty) {
+      return text;
+    }
+    if (description == null && (descriptionText?.isNotEmpty ?? false)) {
+      return descriptionText;
+    }
     return null;
   }
 
@@ -133,6 +158,7 @@ class SeedPopover extends StatelessWidget {
     // when the same semantics node explicitly names its route.
     namesRoute: _accessibleName != null,
     label: _accessibleName,
+    hint: _accessibleDescription,
     child: _buildSurface(context),
   );
 
@@ -459,16 +485,22 @@ class SeedPopoverTrigger extends StatefulWidget {
   }) : closeOnFocusOut = closeOnFocusOut ?? closeOnInteractOutside,
        onOpenChanged = onOpenChange ?? onOpenChanged,
        assert(onOpenChange == null || onOpenChanged == null);
+
   /// Creates the trigger from context, open state, and a toggle callback.
   final Widget Function(BuildContext, bool, VoidCallback) triggerBuilder;
+
   /// Creates floating popover content; commonly a [SeedPopover].
   final WidgetBuilder builder;
+
   /// Optional separate anchor widget for placement.
   final Widget? anchor;
+
   /// External visibility controller when [open] is null.
   final SeedOverlayController? controller;
+
   /// Parent-controlled visibility; the parent must accept callbacks and rebuild.
   final bool? open;
+
   /// Initial visibility and position/focus/dismiss/mounting policies.
   ///
   /// [defaultOpen] defaults to false. [flip], [slide], [autoFocus], and
@@ -483,15 +515,20 @@ class SeedPopoverTrigger extends StatefulWidget {
       autoFocus,
       closeOnInteractOutside,
       closeOnFocusOut;
+
   /// Deprecated Flutter compatibility name for [onOpenChange].
   @Deprecated('Use onOpenChange instead.')
   final SeedOverlayOpenChanged? onOpenChanged;
+
   /// Receives proposed open changes with [SeedOverlayDismissReason].
   SeedOverlayOpenChanged? get onOpenChange => onOpenChanged;
+
   /// Preferred side of [anchor] or the trigger.
   final SeedOverlaySide side;
+
   /// Cross-axis alignment of the popover.
   final SeedOverlayAlign align;
+
   /// Maximum floating card width and height, in logical pixels.
   final double maxWidth, maxHeight;
 
@@ -634,7 +671,10 @@ class _SeedPopoverTriggerState extends State<SeedPopoverTrigger> {
     triggerBuilder: (context, open, toggle) => Builder(
       builder: (inside) {
         _triggerFocus = Focus.of(inside);
-        return widget.triggerBuilder(inside, open, toggle);
+        return Semantics(
+          expanded: open,
+          child: widget.triggerBuilder(inside, open, toggle),
+        );
       },
     ),
     overlayBuilder: (context) {
