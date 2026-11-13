@@ -139,6 +139,7 @@ class SeedFloatingActionButton extends StatelessWidget {
               : SeedDuration.d4,
           curve: SeedCurves.easing,
           child: SeedPressable(
+            focusBorderRadius: SeedBorderRadius.full,
             semanticsLabel: semanticsLabel ?? this.label,
             onTap: onPressed,
             builder: (context, isPressed) => AnimatedContainer(

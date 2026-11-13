@@ -53,8 +53,10 @@ class SeedReactionButton extends StatefulWidget {
   final Widget? prefixIcon;
   /// Button height preset, defaulting to [SeedReactionButtonSize.small].
   final SeedReactionButtonSize size;
-  /// Shows a progress indicator in place of content and blocks activation.
+  /// Shows a progress indicator in place of content.
   final bool loading;
+  /// Blocks activation during loading when true (the default).
+  final bool disableOnLoading;
   /// Whether the button accepts user input; defaults to true.
   final bool enabled;
   final String? _semanticsLabel;
@@ -83,6 +85,7 @@ class SeedReactionButton extends StatefulWidget {
     this.prefixIcon,
     this.size = SeedReactionButtonSize.small,
     this.loading = false,
+    this.disableOnLoading = true,
     this.enabled = true,
     String? semanticsLabel,
     // Keep the public constructor parameter and non-nullable getter compatible.
@@ -104,13 +107,9 @@ class SeedReactionButton extends StatefulWidget {
     final colors = context.seedColor;
     final typography = context.seedTypography;
 
-    final Color bgColor = !enabled
-        ? colors.bg.disabled
-        : (loading
-              ? (isReacted
-                    ? colors.bg.transparentPressed
-                    : colors.bg.neutralWeakPressed)
-              : colors.bg.transparent);
+    final Color bgColor = loading
+        ? (isReacted ? colors.bg.transparentPressed : colors.bg.neutralWeakPressed)
+        : (!enabled ? colors.bg.disabled : colors.bg.transparent);
 
     final Color fgColor = !enabled
         ? colors.fg.disabled
@@ -122,8 +121,9 @@ class SeedReactionButton extends StatefulWidget {
     return SeedPressable(
       enabled:
           enabled &&
-          !loading &&
+          (!disableOnLoading || !loading) &&
           (_isReacted == null || onReactedChanged != null),
+      focusBorderRadius: SeedBorderRadius.full,
       toggled: isReacted,
       // React names the button by its visible text; the localized fallback
       // only covers a count-only button.
@@ -148,11 +148,11 @@ class SeedReactionButton extends StatefulWidget {
                   ? SeedDimension.x1_5
                   : SeedDimension.x2,
             ) -
-            (enabled ? const EdgeInsets.all(1) : EdgeInsets.zero),
+            (enabled || (loading && isReacted) ? const EdgeInsets.all(1) : EdgeInsets.zero),
         decoration: BoxDecoration(
           color: enabled && isPressed ? colors.bg.transparentPressed : bgColor,
           borderRadius: SeedBorderRadius.full,
-          border: enabled
+          border: enabled || (loading && isReacted)
               ? Border.all(
                   color: isReacted
                       ? colors.stroke.brandWeak
@@ -223,7 +223,7 @@ class _SeedReactionButtonState extends State<SeedReactionButton> {
   late bool _isReacted = widget.defaultIsReacted;
 
   void _toggle() {
-    if (!widget.enabled || widget.loading) return;
+    if (!widget.enabled || (widget.loading && widget.disableOnLoading)) return;
     final next = !(widget._isReacted ?? _isReacted);
     if (widget._isReacted == null) setState(() => _isReacted = next);
     widget.onReactedChanged?.call(next);

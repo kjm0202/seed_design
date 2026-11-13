@@ -31,7 +31,7 @@ class SeedContextualFloatingButton extends StatelessWidget {
   final String? label;
   /// Accessible name; required for an icon-only button.
   final String? semanticsLabel;
-  /// Invoked on activation while [enabled] and not [loading].
+  /// Invoked on activation while [enabled], subject to [disableOnLoading].
   final VoidCallback onPressed;
   /// Visual treatment (solid by default), corresponding to React `variant`.
   final SeedContextualFloatingButtonVariant variant;
@@ -40,8 +40,10 @@ class SeedContextualFloatingButton extends StatelessWidget {
   SeedContextualFloatingButtonTone get tone => variant;
   /// Uses brand foreground/background tokens where applicable (default false).
   final bool isBrand;
-  /// Displays a spinner and temporarily prevents interaction.
+  /// Displays a spinner in place of the content.
   final bool loading;
+  /// Blocks activation during loading when true (the default).
+  final bool disableOnLoading;
   /// Whether user activation is allowed (true by default).
   final bool enabled;
 
@@ -59,6 +61,7 @@ class SeedContextualFloatingButton extends StatelessWidget {
     @Deprecated('Use variant instead.') SeedContextualFloatingButtonTone? tone,
     this.isBrand = false,
     this.loading = false,
+    this.disableOnLoading = true,
     this.enabled = true,
   }) : variant = variant ?? tone ?? SeedContextualFloatingButtonTone.solid,
        assert(variant == null || tone == null),
@@ -79,6 +82,7 @@ class SeedContextualFloatingButton extends StatelessWidget {
     @Deprecated('Use variant instead.') SeedContextualFloatingButtonTone? tone,
     this.isBrand = false,
     this.loading = false,
+    this.disableOnLoading = true,
     this.enabled = true,
   }) : variant = variant ?? tone ?? SeedContextualFloatingButtonTone.solid,
        assert(variant == null || tone == null),
@@ -110,7 +114,8 @@ class SeedContextualFloatingButton extends StatelessWidget {
 
     return SeedPressable(
       semanticsLabel: semanticsLabel ?? label,
-      enabled: enabled && !loading,
+      enabled: enabled && (!disableOnLoading || !loading),
+      focusBorderRadius: SeedBorderRadius.full,
       onTap: onPressed,
       builder: (context, isPressed) => AnimatedContainer(
         duration: SeedDuration.colorTransition,
@@ -125,9 +130,7 @@ class SeedContextualFloatingButton extends StatelessWidget {
           vertical: label == null ? 0 : SeedDimension.x2,
         ),
         decoration: BoxDecoration(
-          color: !enabled
-              ? colors.bg.disabled
-              : (isPressed || loading)
+          color: loading || (enabled && isPressed)
               ? (variant == SeedContextualFloatingButtonTone.solid
                     ? (isBrand
                           ? colors.bg.brandSolidPressed

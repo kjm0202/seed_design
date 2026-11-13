@@ -70,8 +70,10 @@ class SeedToggleButton extends StatefulWidget {
   final SeedToggleButtonVariant variant;
   /// Size preset, defaulting to [SeedToggleButtonSize.small].
   final SeedToggleButtonSize size;
-  /// Replaces visible content with a spinner and prevents activation.
+  /// Replaces visible content with a spinner.
   final bool loading;
+  /// Blocks activation during loading when true (the default).
+  final bool disableOnLoading;
   /// Allows interaction when true (the default).
   final bool enabled;
   /// Overrides the accessible name derived from [label].
@@ -103,6 +105,7 @@ class SeedToggleButton extends StatefulWidget {
     this.variant = SeedToggleButtonVariant.brandSolid,
     this.size = SeedToggleButtonSize.small,
     this.loading = false,
+    this.disableOnLoading = true,
     this.enabled = true,
     this.semanticsLabel,
   }) : pressed = pressed ?? selected,
@@ -143,7 +146,7 @@ class _SeedToggleButtonState extends State<SeedToggleButton> {
     return SeedPressable(
       enabled:
           widget.enabled &&
-          !loading &&
+          (!widget.disableOnLoading || !loading) &&
           (widget.pressed == null || widget.onPressedChange != null),
       toggled: selected,
       // The React toggle-button uses the full pill radius for both its body
