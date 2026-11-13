@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 import 'dart:ui' show SemanticsRole;
 
+import 'package:flutter/semantics.dart' show SemanticsValidationResult;
+
 import 'package:material_ui/material_ui.dart';
 
 import '../../foundations/dimensions/seed_dimension.dart';
@@ -16,19 +18,23 @@ import '../badge/seed_notification_badge.dart';
 class SeedSegment<T> {
   /// Selection identity passed to [SeedSegmentedControl.onValueChange].
   final T value;
+
   /// Visible and accessible text; defaults to empty when [child] renders it.
   final String label;
+
   /// Optional custom segment contents in place of [label].
   final Widget? child;
+
   /// Optional badge count to show beside the segment content.
   final int? notificationCount;
+
   /// Displays a notification dot when no positive count is shown.
   final bool showNotificationDot;
+
   /// Enables this segment independently of the group; defaults to true.
   final bool enabled;
-  /// Additional invalid-state metadata; defaults to false.
-  ///
-  /// The current segment renderer does not draw a separate error treatment.
+
+  /// Marks this segment invalid in accessibility semantics; defaults to false.
   final bool invalid;
 
   /// Describes a mutually exclusive segment with its [value] and contents.
@@ -54,20 +60,26 @@ class SeedSegment<T> {
 class SeedSegmentedControl<T> extends StatefulWidget {
   /// Two to four mutually exclusive options; each needs a distinct value.
   final List<SeedSegment<T>> segments;
+
   /// Legacy parent-controlled selection property; prefer [value].
   @Deprecated('Use value instead.')
   final T? selectedValue;
+
   /// React-style controlled selection; null leaves the control unmanaged
   /// unless [controlled] is true.
   T? get value => selectedValue;
+
   /// Initial uncontrolled selection; falls back to the first segment.
   final T? defaultValue;
+
   /// Legacy callback property; prefer [onValueChange].
   @Deprecated('Use onValueChange instead.')
   final ValueChanged<T>? onValueChanged;
+
   /// React-style callback for changed selections, without repeated same-value
   /// notifications; alias of [onValueChanged].
   ValueChanged<T>? get onValueChange => onValueChanged;
+
   /// Whether the whole group is interactive; defaults to true.
   final bool enabled;
 
@@ -136,8 +148,6 @@ class _SeedSegmentedControlState<T> extends State<SeedSegmentedControl<T>> {
     final enabled = widget.enabled;
     final colors = context.seedColor;
     final typography = context.seedTypography;
-    final textDirection = Directionality.of(context);
-    final textScaler = MediaQuery.textScalerOf(context);
     final effectiveValue = _effectiveValue;
     final int selectedIndex = segments.indexWhere(
       (s) => s.value == effectiveValue,
@@ -145,27 +155,6 @@ class _SeedSegmentedControlState<T> extends State<SeedSegmentedControl<T>> {
 
     return LayoutBuilder(
       builder: (context, slotConstraints) {
-        final minWidth = 86.0 * segments.length;
-        final width = slotConstraints.hasBoundedWidth
-            ? math.max(slotConstraints.maxWidth - 8, minWidth)
-            : minWidth;
-        final labelWidth = math.max(1.0, width / segments.length - 48);
-        var tallestLabel = 18.0;
-        for (final segment in segments) {
-          final badgeWidth =
-              segment.notificationCount != null || segment.showNotificationDot
-              ? 24.0
-              : 0.0;
-          final painter = TextPainter(
-            text: TextSpan(text: segment.label, style: typography.t5Bold),
-            textDirection: textDirection,
-            textScaler: textScaler,
-            textAlign: TextAlign.center,
-          )..layout(maxWidth: math.max(1, labelWidth - badgeWidth));
-          tallestLabel = math.max(tallestLabel, painter.height);
-          painter.dispose();
-        }
-        final itemHeight = math.max(34.0, tallestLabel + 12);
         return Semantics(
           container: true,
           role: SemanticsRole.radioGroup,
@@ -175,7 +164,6 @@ class _SeedSegmentedControlState<T> extends State<SeedSegmentedControl<T>> {
             enabled: segments.map((s) => enabled && s.enabled).toList(),
             onSelected: (index) => _handleSelect(segments[index].value),
             builder: (context, nodes) => Container(
-              height: itemHeight + 2 * SeedDimension.x1,
               padding: const EdgeInsets.all(SeedDimension.x1),
               decoration: BoxDecoration(
                 color: colors.bg.neutralWeakAlpha,
@@ -194,7 +182,6 @@ class _SeedSegmentedControlState<T> extends State<SeedSegmentedControl<T>> {
 
                   final content = SizedBox(
                     width: width,
-                    height: itemHeight,
                     child: Stack(
                       children: [
                         // Animated Floating Pill Indicator
@@ -242,6 +229,9 @@ class _SeedSegmentedControlState<T> extends State<SeedSegmentedControl<T>> {
 
                             return Expanded(
                               child: SeedPressable(
+                                semanticsValidationResult: segment.invalid
+                                    ? SemanticsValidationResult.invalid
+                                    : SemanticsValidationResult.none,
                                 enabled: isSegmentEnabled,
                                 checked: isSelected,
                                 selected: isSelected,

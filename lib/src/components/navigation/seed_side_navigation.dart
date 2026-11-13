@@ -24,6 +24,7 @@ import '../layout/seed_scroll_fog.dart';
 enum SeedSideNavTone {
   /// Standard neutral sidebar surface.
   neutral,
+
   /// Transparent sidebar surface that shows its parent background.
   transparent,
 }
@@ -46,14 +47,19 @@ class SeedSideNavSubItem {
 
   /// Stable submenu identity used for [SeedSideNavigation.selectedId].
   final String id;
+
   /// Visible and accessible destination text.
   final String label;
+
   /// Optional trailing status badge text.
   final String? badge;
+
   /// Optional activation callback for this destination.
   final VoidCallback? onTap;
+
   /// Positive enable flag, true by default.
   final bool enabled;
+
   /// Explicit disabled flag, false by default.
   final bool disabled;
 
@@ -89,27 +95,38 @@ class SeedSideNavItem {
 
   /// Stable item identity used by [SeedSideNavigation.selectedId].
   final String id;
+
   /// Visible and accessible main-menu label.
   final String label;
+
   /// Optional leading icon, used also in collapsed icon-only navigation.
   final IconData? icon;
+
   /// Optional trailing badge text.
   final String? badge;
+
   /// Optional submenu destinations; their presence enables expansion.
   final List<SeedSideNavSubItem>? subItems;
+
   /// Callback when a selectable item is activated.
   final VoidCallback? onTap;
+
   /// Positive enable flag; true by default.
   final bool enabled;
+
   /// Explicit disable flag; false by default.
   final bool disabled;
+
   /// Controlled expanded state when non-null; otherwise state is internal.
   final bool? open;
+
   /// Initial expansion for an unmanaged item; defaults to false.
   final bool defaultOpen;
+
   /// Deprecated alias of [onOpenChange].
   @Deprecated('Use onOpenChange instead.')
   final ValueChanged<bool>? onOpenChanged;
+
   /// React-style callback receiving the next expanded state.
   ///
   /// This getter aliases [onOpenChanged] for backwards compatibility.
@@ -126,6 +143,7 @@ class SeedSideNavGroup {
 
   /// Optional section heading; a null value omits the heading.
   final String? label;
+
   /// First-level menu entries in display order.
   final List<SeedSideNavItem> items;
 }
@@ -191,6 +209,7 @@ class SeedSideNavigation extends StatefulWidget {
 
   /// Controlled collapsed state, or null when internally managed.
   bool? get collapsed => _isCollapsed;
+
   /// Legacy effective collapsed flag, including [defaultCollapsed].
   /// Prefer [collapsed] for controlled input.
   @Deprecated('Use collapsed or defaultCollapsed instead.')
@@ -202,6 +221,7 @@ class SeedSideNavigation extends StatefulWidget {
   /// Callback with the next collapsed state when toggled.
   @Deprecated('Use onCollapsedChange instead.')
   final ValueChanged<bool>? onCollapsedChanged;
+
   /// React-style callback reporting the next collapsed state.
   /// This getter aliases [onCollapsedChanged].
   ValueChanged<bool>? get onCollapsedChange => onCollapsedChanged;
@@ -220,6 +240,7 @@ class SeedSideNavigation extends StatefulWidget {
 
   /// Optional explicit surface color, overriding [tone]'s default background.
   final Color? backgroundColor;
+
   /// Viewport-width threshold below which collapsed mode is forced.
   ///
   /// Null disables this responsive Flutter extension; measured width is from
@@ -233,6 +254,7 @@ class SeedSideNavigation extends StatefulWidget {
 
 class _SeedSideNavigationState extends State<SeedSideNavigation> {
   final Set<String> _expandedItemIds = {};
+  final Set<String> _knownItemIds = {};
   final ScrollController _scrollController = ScrollController();
   late bool _uncontrolledCollapsed = widget.defaultCollapsed;
   bool _scrolled = false;
@@ -252,6 +274,8 @@ class _SeedSideNavigationState extends State<SeedSideNavigation> {
   @override
   void didUpdateWidget(SeedSideNavigation oldWidget) {
     super.didUpdateWidget(oldWidget);
+    // Initialize newly introduced identities without resetting prior choices.
+    _initNewExpandedItems();
     // Only a newly selected item reveals its parent. Rebuilds must not reopen a
     // parent the user closed.
     if (oldWidget.selectedId != widget.selectedId) _expandSelectedParent();
@@ -272,14 +296,18 @@ class _SeedSideNavigationState extends State<SeedSideNavigation> {
   }
 
   void _initExpandedItems() {
+    _initNewExpandedItems();
+    _expandSelectedParent();
+  }
+
+  void _initNewExpandedItems() {
     for (final group in widget.groups) {
       for (final item in group.items) {
-        if (item.defaultOpen) {
+        if (_knownItemIds.add(item.id) && item.defaultOpen) {
           _expandedItemIds.add(item.id);
         }
       }
     }
-    _expandSelectedParent();
   }
 
   void _expandSelectedParent() {
@@ -940,14 +968,30 @@ class _SeedCollapsedSubmenuState extends State<_SeedCollapsedSubmenu> {
                     RoundedRectangleBorder(borderRadius: SeedBorderRadius.r3),
                   ),
                 ),
-                onPressed: sub.isEnabled ? sub.onTap : null,
-                child: Text(
-                  sub.label,
-                  style: typography.t5Regular.copyWith(
-                    color: sub.isEnabled
-                        ? colors.fg.neutral
-                        : colors.fg.disabled,
-                  ),
+                onPressed: sub.isEnabled ? (sub.onTap ?? () {}) : null,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        sub.label,
+                        style: typography.t5Regular.copyWith(
+                          color: sub.isEnabled
+                              ? colors.fg.neutral
+                              : colors.fg.disabled,
+                        ),
+                      ),
+                    ),
+                    if (sub.badge != null) ...[
+                      const SizedBox(width: SeedDimension.x2),
+                      SeedBadge(
+                        label: sub.badge!,
+                        tone: sub.id == widget.selectedId
+                            ? SeedBadgeTone.brand
+                            : SeedBadgeTone.neutral,
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ),

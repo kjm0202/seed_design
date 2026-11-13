@@ -21,13 +21,16 @@ enum SeedAccordionVariant {
 enum SeedAccordionSize {
   /// Compact header and 20 px chevron.
   medium,
+
   /// Spacious header and 24 px chevron.
   large,
+
   /// Resolves to medium below a 768 px viewport, large otherwise.
   responsive;
 
   /// Chevron icon size (20 px for medium, 24 px otherwise).
   double get iconSize => this == SeedAccordionSize.medium ? 20.0 : 24.0;
+
   /// Header insets (16 px or 20 px vertical, 16 px horizontal).
   EdgeInsets get padding => this == SeedAccordionSize.medium
       ? const EdgeInsets.symmetric(
@@ -71,30 +74,43 @@ class SeedAccordionContentFocusScope extends InheritedWidget {
 class SeedAccordionItem extends StatefulWidget {
   /// Required header text.
   final String title;
+
   /// Optional smaller text beneath [title].
   final String? description;
+
   /// Optional leading header widget.
   final Widget? prefix;
+
   /// Panel body, shown or hidden by the expansion state.
   final Widget content;
+
   /// Initial expansion for standalone/uncontrolled use (default false).
   final bool initiallyExpanded;
+
   /// Receives the proposed expansion state after activating the header.
   final ValueChanged<bool>? onExpansionChanged;
+
   /// Row or card presentation, default [SeedAccordionVariant.inline].
   final SeedAccordionVariant variant;
+
   /// Header dimensions, default [SeedAccordionSize.medium].
   final SeedAccordionSize size;
+
   /// Whether users can expand/collapse this row (default true).
   final bool enabled;
+
   /// Optional identifier when used in [SeedAccordion]; index used if null.
   final String? value;
+
   /// Controlled expansion; null uses internally managed [initiallyExpanded].
   final bool? expanded;
+
   /// Optional externally owned header focus node.
   final FocusNode? focusNode;
+
   /// Displays a divider in inline mode when true (default true).
   final bool showDivider;
+
   /// Semantic header level, restricted to 1 through 6 (default 3).
   final int headingLevel;
 
@@ -440,25 +456,36 @@ class SeedAccordion extends StatefulWidget {
     this.size = SeedAccordionSize.medium,
   }) : onValuesChanged = onValuesChange ?? onValuesChanged,
        assert(onValuesChange == null || onValuesChanged == null);
-  /// Ordered rows; each [SeedAccordionItem.value] must be unique when present.
+
+  /// Ordered rows. Supply unique [SeedAccordionItem.value] identifiers to
+  /// preserve item state across reordering.
   final List<SeedAccordionItem> items;
+
   /// Parent-controlled IDs of expanded items, or null for internal state.
   final Set<String>? values;
+
   /// Initial expanded IDs in uncontrolled mode (empty by default).
   final Set<String> defaultValues;
+
   /// Legacy alias of [onValuesChange].
   @Deprecated('Use onValuesChange instead.')
   final ValueChanged<Set<String>>? onValuesChanged;
+
   /// Reports the proposed expanded IDs as an unmodifiable set.
   ValueChanged<Set<String>>? get onValuesChange => onValuesChanged;
+
   /// Allows several items open at once when true (default false).
   final bool multiple;
+
   /// Allows all items to be closed when true (default true).
   final bool collapsible;
+
   /// Global interaction flag; combines with each item's [SeedAccordionItem.enabled].
   final bool enabled;
+
   /// Group-wide row or separated-card presentation.
   final SeedAccordionVariant variant;
+
   /// Group-wide dimension preset; responsive resolves at 768 px.
   final SeedAccordionSize size;
   @override
@@ -468,6 +495,21 @@ class SeedAccordion extends StatefulWidget {
 class _SeedAccordionState extends State<SeedAccordion> {
   late Set<String> _values = Set.of(widget.defaultValues);
   final Map<String, FocusNode> _nodes = {};
+
+  @override
+  void didUpdateWidget(SeedAccordion oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final ownedIds = {
+      for (final (index, item) in widget.items.indexed)
+        if (item.focusNode == null) item.value ?? '$index',
+    };
+    final removed = _nodes.keys.where((id) => !ownedIds.contains(id)).toList();
+    for (final id in removed) {
+      final node = _nodes.remove(id)!;
+      WidgetsBinding.instance.addPostFrameCallback((_) => node.dispose());
+    }
+  }
+
   @override
   void dispose() {
     for (final node in _nodes.values) {
@@ -490,6 +532,10 @@ class _SeedAccordionState extends State<SeedAccordion> {
         widget.items[i].value ?? '$i',
     ];
     assert(ids.toSet().length == ids.length, 'Accordion values must be unique');
+    final nodes = [
+      for (final (index, item) in widget.items.indexed)
+        item.focusNode ?? _nodes.putIfAbsent(ids[index], FocusNode.new),
+    ];
     return Focus(
       canRequestFocus: false,
       onKeyEvent: (node, event) {
@@ -498,11 +544,9 @@ class _SeedAccordionState extends State<SeedAccordion> {
         }
         final available = [
           for (var i = 0; i < ids.length; i++)
-            if (widget.enabled && widget.items[i].enabled) ids[i],
+            if (widget.enabled && widget.items[i].enabled) nodes[i],
         ];
-        final current = available.indexWhere(
-          (id) => _nodes[id]?.hasFocus ?? false,
-        );
+        final current = available.indexWhere((node) => node.hasFocus);
         if (current < 0) return KeyEventResult.ignored;
         final key = event.logicalKey;
         final next = key == LogicalKeyboardKey.home
@@ -515,7 +559,7 @@ class _SeedAccordionState extends State<SeedAccordion> {
             ? (current - 1) % available.length
             : -1;
         if (next < 0) return KeyEventResult.ignored;
-        _nodes[available[next]]?.requestFocus();
+        available[next].requestFocus();
         return KeyEventResult.handled;
       },
       child: Column(
@@ -544,7 +588,7 @@ class _SeedAccordionState extends State<SeedAccordion> {
                   (widget.variant != SeedAccordionVariant.inline ||
                       i < widget.items.length - 1),
               expanded: values.contains(ids[i]),
-              focusNode: _nodes.putIfAbsent(ids[i], FocusNode.new),
+              focusNode: nodes[i],
               onExpansionChanged: (expanded) {
                 final next = widget.multiple
                     ? Set<String>.of(values)

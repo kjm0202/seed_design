@@ -13,8 +13,10 @@ class SeedTabsController extends ChangeNotifier {
   /// Creates an index controller starting at [initialIndex] (default zero).
   SeedTabsController({int initialIndex = 0}) : _index = initialIndex;
   int _index;
+
   /// Current zero-based selected tab index.
   int get index => _index;
+
   /// Updates [index] and notifies listeners only if it changed.
   ///
   /// The name preserves the Flutter controller API; it does not itself run a
@@ -77,16 +79,21 @@ class SeedTabsView extends StatefulWidget {
     this.contentScrollControllers = const [],
   }) : keepAlive = (keepAlive ?? true) && !unmountOnExit,
        assert(value == null || selectedIndex == null);
+
   /// Header items; must align one to one with [children].
   final List<SeedTabItem> items;
+
   /// Page content in the same order as [items].
   final List<Widget> children;
+
   /// Flutter-controlled selected index; mutually exclusive with [value].
   final int? selectedIndex;
+
   /// [value] controls selection by React-style tab ID; [defaultValue] supplies
   /// the initial ID of an uncontrolled view. IDs come from [SeedTabItem.value]
   /// or the zero-based index formatted as a string.
   final String? value, defaultValue;
+
   /// Reports a requested React-style tab ID after header selection or swiping.
   final ValueChanged<String>? onValueChange;
   String _valueAt(int index) => items[index].value ?? '$index';
@@ -99,16 +106,22 @@ class SeedTabsView extends StatefulWidget {
   }
 
   int? get _controlledIndex => value == null ? selectedIndex : _indexOf(value!);
+
   /// Initial zero-based selection when no value/controller is supplied.
   final int initialIndex;
+
   /// Flutter callback for a requested zero-based tab index.
   final ValueChanged<int>? onTabSelected;
+
   /// Optional external index notifier, listened to but not disposed by the view.
   final SeedTabsController? controller;
+
   /// Tab header style, line by default.
   final SeedTabsVariant variant;
+
   /// Optional tab header size; follows [variant] when null.
   final SeedTabsSize? size;
+
   /// Whether to fade chip-tab scroll edges, false by default.
   final bool showScrollFog;
 
@@ -133,15 +146,20 @@ class SeedTabsView extends StatefulWidget {
 
   /// Fixed carousel height, or its initial height when [dynamicHeight] is true.
   final double? height;
+
   /// Duration of programmatic page animations; defaults to [SeedDuration.d4].
   final Duration duration;
+
   /// [onSwipeStart] runs when a page drag begins, and [onSwipeEnd] when it
   /// ends; these callbacks apply to the carousel interaction.
   final VoidCallback? onSwipeStart, onSwipeEnd;
+
   /// Reports the zero-based page index when a swipe settles.
   final ValueChanged<int>? onSettle;
+
   /// Scrolls newly selected content to offset zero when enabled.
   final bool scrollToTopOnChange;
+
   /// Per-page scroll controllers used by [scrollToTopOnChange]; entries may
   /// be null and the list may be shorter than [items].
   final List<ScrollController?> contentScrollControllers;
@@ -194,6 +212,7 @@ class SeedChipTabsView extends SeedTabsView {
 }
 
 class _SeedTabsViewState extends State<SeedTabsView> {
+  late List<String> _itemValues;
   late int _index =
       (widget._controlledIndex ??
               widget.controller?.index ??
@@ -202,8 +221,8 @@ class _SeedTabsViewState extends State<SeedTabsView> {
                   : widget._indexOf(widget.defaultValue!)))
           .clamp(0, widget.items.length - 1);
   late final PageController _pages = PageController(initialPage: _index);
-  late final Set<int> _visited = {_index};
-  final Map<int, double> _heights = {};
+  late final Set<String> _visited = {widget._valueAt(_index)};
+  final Map<String, double> _heights = {};
   double? _lastViewportHeight;
   bool _heightAnimationReady = false;
   bool _heightInitializationScheduled = false;
@@ -222,6 +241,7 @@ class _SeedTabsViewState extends State<SeedTabsView> {
           widget.items.length,
       'Tab values must be unique',
     );
+    _itemValues = List.generate(widget.items.length, widget._valueAt);
     widget.controller?.addListener(_controllerChanged);
   }
 
@@ -232,16 +252,45 @@ class _SeedTabsViewState extends State<SeedTabsView> {
       oldWidget.controller?.removeListener(_controllerChanged);
       widget.controller?.addListener(_controllerChanged);
     }
-    final next = (widget._controlledIndex ?? widget.controller?.index ?? _index)
-        .clamp(0, widget.items.length - 1);
-    if (next != _index) {
-      _index = next;
-      _visited.add(_index);
-      if (!_swiping) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && next == _index) _animate(next);
-        });
-      }
+    assert(
+      widget.items.isNotEmpty && widget.items.length == widget.children.length,
+    );
+    final values = List.generate(widget.items.length, widget._valueAt);
+    assert(values.toSet().length == values.length, 'Tab values must be unique');
+    _visited.retainAll(values.toSet());
+    _heights.removeWhere((key, _) => !values.contains(key));
+    final oldValues = _itemValues;
+    final oldValue = oldValues[_index];
+    _itemValues = values;
+    final retainedIndex = values.indexOf(oldValue);
+    final next =
+        (widget._controlledIndex ??
+                widget.controller?.index ??
+                (retainedIndex < 0 ? _index : retainedIndex))
+            .clamp(0, widget.items.length - 1);
+    final orderChanged =
+        oldValues.length != values.length ||
+        List.generate(
+          values.length,
+          (i) => i,
+        ).any((i) => oldValues[i] != values[i]);
+    final selectionChanged = next != _index;
+    _index = next;
+    _visited.add(widget._valueAt(_index));
+    if (orderChanged) {
+      _animationId++;
+      _animating = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _pages.hasClients && next == _index) {
+          _animating = true;
+          _pages.jumpToPage(next);
+          _animating = false;
+        }
+      });
+    } else if (selectionChanged && !_swiping) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && next == _index) _animate(next);
+      });
     }
   }
 
@@ -253,16 +302,20 @@ class _SeedTabsViewState extends State<SeedTabsView> {
     if (next != _index) {
       setState(() {
         _index = next;
-        _visited.add(_index);
+        _visited.add(widget._valueAt(_index));
       });
       _animate(next);
     }
   }
 
-  void _recordHeight(int index, double height) {
-    if (!mounted || _heights[index] == height) return;
-    setState(() => _heights[index] = height);
-    if (index == _index &&
+  void _recordHeight(String value, double height) {
+    if (!mounted ||
+        !List.generate(widget.items.length, widget._valueAt).contains(value) ||
+        _heights[value] == height) {
+      return;
+    }
+    setState(() => _heights[value] = height);
+    if (value == widget._valueAt(_index) &&
         !_heightAnimationReady &&
         !_heightInitializationScheduled) {
       _heightInitializationScheduled = true;
@@ -311,7 +364,7 @@ class _SeedTabsViewState extends State<SeedTabsView> {
     }
     setState(() {
       _index = index;
-      _visited.add(_index);
+      _visited.add(widget._valueAt(_index));
     });
     _syncingController = true;
     widget.controller?.animateTo(index);
@@ -340,24 +393,25 @@ class _SeedTabsViewState extends State<SeedTabsView> {
               index: _index,
               children: [
                 for (var i = 0; i < widget.children.length; i++)
-                  if (!widget.lazyMount || _visited.contains(i))
+                  if (!widget.lazyMount ||
+                      _visited.contains(widget._valueAt(i)))
                     KeyedSubtree(
-                      key: ValueKey<int>(i),
+                      key: ValueKey<String>(widget._valueAt(i)),
                       child: widget.children[i],
                     )
                   else
-                    SizedBox.shrink(key: ValueKey<int>(i)),
+                    SizedBox.shrink(key: ValueKey<String>(widget._valueAt(i))),
               ],
             )
           : KeyedSubtree(
-              key: ValueKey<int>(_index),
+              key: ValueKey<String>(widget._valueAt(_index)),
               child: widget.children[_index],
             );
     } else {
       body = LayoutBuilder(
         builder: (context, constraints) {
           final height = widget.dynamicHeight
-              ? (_heights[_index] ??
+              ? (_heights[widget._valueAt(_index)] ??
                     _lastViewportHeight ??
                     widget.height ??
                     300)
@@ -434,6 +488,14 @@ class _SeedTabsViewState extends State<SeedTabsView> {
                     ? const PageScrollPhysics()
                     : const NeverScrollableScrollPhysics(),
                 itemCount: widget.children.length,
+                findChildIndexCallback: (key) {
+                  if (key is! ValueKey<String>) return null;
+                  final index = List.generate(
+                    widget.items.length,
+                    widget._valueAt,
+                  ).indexOf(key.value);
+                  return index < 0 ? null : index;
+                },
                 onPageChanged: (index) {
                   // Passing intermediate pages is not a new tab selection.
                   if (!_animating) {
@@ -442,9 +504,11 @@ class _SeedTabsViewState extends State<SeedTabsView> {
                   }
                 },
                 itemBuilder: (context, index) {
+                  final value = widget._valueAt(index);
                   Widget child = widget.children[index];
                   final mounted =
-                      (!widget.lazyMount || _visited.contains(index)) &&
+                      (!widget.lazyMount ||
+                          _visited.contains(widget._valueAt(index))) &&
                       !(widget.unmountOnExit && index != _index);
                   if (!mounted) child = const SizedBox.shrink();
                   if (widget.dynamicHeight && mounted) {
@@ -453,12 +517,13 @@ class _SeedTabsViewState extends State<SeedTabsView> {
                       maxHeight: double.infinity,
                       alignment: Alignment.topCenter,
                       child: _SeedPageMeasurer(
-                        onHeight: (height) => _recordHeight(index, height),
+                        onHeight: (height) => _recordHeight(value, height),
                         child: child,
                       ),
                     );
                   }
                   return _SeedKeptAliveTabPage(
+                    key: ValueKey<String>(value),
                     keepAlive: widget.keepAlive,
                     child: child,
                   );
@@ -498,7 +563,11 @@ class _SeedTabsViewState extends State<SeedTabsView> {
 }
 
 class _SeedKeptAliveTabPage extends StatefulWidget {
-  const _SeedKeptAliveTabPage({required this.keepAlive, required this.child});
+  const _SeedKeptAliveTabPage({
+    super.key,
+    required this.keepAlive,
+    required this.child,
+  });
   final bool keepAlive;
   final Widget child;
   @override
@@ -530,6 +599,7 @@ class SeedCarouselPreventDrag extends StatelessWidget {
   /// The wrapper retains the child's vertical and other gesture interactions.
   /// An optional `key` preserves Flutter widget identity.
   const SeedCarouselPreventDrag({super.key, required this.child});
+
   /// Interactive content whose horizontal drags must not switch tabs.
   final Widget child;
   @override
@@ -588,10 +658,13 @@ class SeedStickyTabsHeader extends StatelessWidget {
     this.floating = false,
     this.pinned = true,
   });
+
   /// Tab strip or other widget displayed in the sliver header.
   final Widget child;
+
   /// Fixed minimum and maximum header extent; defaults to 44.
   final double height;
+
   /// [floating] lets the header reappear as scrolling reverses (default false);
   /// [pinned] keeps it attached to the viewport top (default true).
   final bool floating, pinned;

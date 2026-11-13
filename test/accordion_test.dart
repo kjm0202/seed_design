@@ -255,6 +255,77 @@ void main() {
   });
 
   testWidgets(
+    'group retains item identity and navigates with supplied focus nodes',
+    (tester) async {
+      final a = FocusNode();
+      final b = FocusNode();
+      addTearDown(a.dispose);
+      addTearDown(b.dispose);
+      Widget group(List<String> order) => _host(
+        SeedAccordion(
+          defaultValues: const {'a'},
+          items: [
+            for (final id in order)
+              SeedAccordionItem(
+                value: id,
+                title: id.toUpperCase(),
+                content: Text('Body $id'),
+                focusNode: id == 'a' ? a : b,
+              ),
+          ],
+        ),
+      );
+
+      await tester.pumpWidget(group(['a', 'b']));
+      a.requestFocus();
+      await tester.pump();
+      await tester.pumpWidget(group(['b', 'a']));
+      await tester.pumpAndSettle();
+      final buttons = tester.widgetList<SeedPressable>(
+        find.byType(SeedPressable),
+      );
+      expect(buttons.map((button) => button.expanded), [false, true]);
+      expect(a.hasPrimaryFocus, isTrue);
+      await tester.sendKeyEvent(LogicalKeyboardKey.home);
+      await tester.pump();
+      expect(b.hasPrimaryFocus, isTrue);
+
+      await tester.pumpWidget(group(['a']));
+      await tester.pumpAndSettle();
+      // Removing a row must not dispose the consumer-owned focus node.
+      void listener() {}
+      b.addListener(listener);
+      b.removeListener(listener);
+    },
+  );
+
+  testWidgets('group disposes its own focus node after removing an item', (
+    tester,
+  ) async {
+    Widget group(bool includeB) => _host(
+      SeedAccordion(
+        items: [
+          const SeedAccordionItem(value: 'a', title: 'A', content: SizedBox()),
+          if (includeB)
+            const SeedAccordionItem(
+              value: 'b',
+              title: 'B',
+              content: SizedBox(),
+            ),
+        ],
+      ),
+    );
+    await tester.pumpWidget(group(true));
+    final removed = tester
+        .widgetList<SeedPressable>(find.byType(SeedPressable))
+        .last
+        .focusNode!;
+    await tester.pumpWidget(group(false));
+    await tester.pump();
+    expect(() => removed.addListener(() {}), throwsFlutterError);
+  });
+
+  testWidgets(
     'controlled item requests an expansion without mutating its state',
     (tester) async {
       final requested = <bool>[];
