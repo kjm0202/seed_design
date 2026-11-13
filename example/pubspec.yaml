@@ -32,8 +32,6 @@ dev_dependencies:
   shared_preferences_platform_interface: ^2.4.2
   file_selector_platform_interface: ^2.7.0
   url_launcher_platform_interface: ^2.3.2
-  integration_test:
-    sdk: flutter
   flutter_test:
     sdk: flutter
 
