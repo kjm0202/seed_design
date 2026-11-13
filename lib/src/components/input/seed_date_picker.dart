@@ -352,6 +352,7 @@ class SeedDatePicker extends StatefulWidget {
 
   /// One-time uncontrolled seed. [initialDates] is a compatibility alias.
   List<DateTime> get defaultValues => initialDates;
+
   /// Earliest and latest selectable date, inclusive, when specified.
   final DateTime? firstDate, lastDate;
 
@@ -396,6 +397,7 @@ class SeedDatePicker extends StatefulWidget {
 
   /// Uses DateTime weekday numbering: Monday=1 through Sunday=7.
   final int? weekStartsOn;
+
   /// Controlled visible date and initial uncontrolled visible date.
   final DateTime? viewDate, defaultViewDate;
 
@@ -473,22 +475,57 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
     day.month,
     day.day - (day.weekday - _weekStartsOn) % 7,
   );
-  DateTime get _firstMonth => _month(
-    widget.monthRange?.start ?? widget.firstDate ?? DateTime(_firstYear),
-  );
-  DateTime get _lastMonth => _month(
-    widget.monthRange?.end ?? widget.lastDate ?? DateTime(_lastYear, 12),
-  );
-  int get _firstYear =>
-      widget.yearRange?.start ??
-      widget.monthRange?.start.year ??
-      widget.firstDate?.year ??
-      math.min((widget.today ?? DateTime.now()).year - 100, _view.year);
-  int get _lastYear =>
-      widget.yearRange?.end ??
-      widget.monthRange?.end.year ??
-      widget.lastDate?.year ??
-      math.max((widget.today ?? DateTime.now()).year + 100, _view.year);
+  DateTime? get _lowerMonthBound {
+    final bounds = [
+      if (widget.yearRange != null) DateTime(widget.yearRange!.start),
+      if (widget.monthRange != null) _month(widget.monthRange!.start),
+      if (widget.firstDate != null) _month(widget.firstDate!),
+    ];
+    return bounds.isEmpty
+        ? null
+        : bounds.reduce((a, b) => a.isAfter(b) ? a : b);
+  }
+
+  DateTime? get _upperMonthBound {
+    final bounds = [
+      if (widget.yearRange != null) DateTime(widget.yearRange!.end, 12),
+      if (widget.monthRange != null) _month(widget.monthRange!.end),
+      if (widget.lastDate != null) _month(widget.lastDate!),
+    ];
+    return bounds.isEmpty
+        ? null
+        : bounds.reduce((a, b) => a.isBefore(b) ? a : b);
+  }
+
+  DateTime get _firstMonth => _lowerMonthBound ?? DateTime(_firstYear);
+  DateTime get _lastMonth {
+    final upper = _upperMonthBound ?? DateTime(_lastYear, 12);
+    final lower = _lowerMonthBound;
+    return lower != null && upper.isBefore(lower) ? lower : upper;
+  }
+
+  int get _firstYear {
+    final lower = _lowerMonthBound?.year;
+    if (lower != null) return lower;
+    final fallback = math.min(
+      (widget.today ?? DateTime.now()).year - 100,
+      _view.year,
+    );
+    final upper = _upperMonthBound?.year;
+    return upper == null ? fallback : math.min(fallback, upper);
+  }
+
+  int get _lastYear {
+    final upper = _upperMonthBound?.year;
+    final lower = _lowerMonthBound?.year;
+    if (upper != null) return lower == null ? upper : math.max(lower, upper);
+    final fallback = math.max(
+      (widget.today ?? DateTime.now()).year + 100,
+      _view.year,
+    );
+    return lower == null ? fallback : math.max(fallback, lower);
+  }
+
   DateTime get _headerMonth {
     if (widget.layout != SeedDatePickerLayout.week) return _month(_view);
     final start = _week(_view),
@@ -594,14 +631,9 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
   }
 
   DateTime _clampView(DateTime day) {
-    final first =
-        widget.monthRange?.start ??
-        widget.firstDate ??
-        (widget.yearRange == null ? null : DateTime(_firstYear));
-    final last =
-        widget.monthRange?.end ??
-        widget.lastDate ??
-        (widget.yearRange == null ? null : DateTime(_lastYear, 12, 31));
+    final first = _lowerMonthBound;
+    final last = _upperMonthBound;
+    if (first != null && last != null && first.isAfter(last)) return first;
     if (first != null && _month(day).isBefore(_month(first))) {
       return _month(first);
     }
@@ -610,14 +642,8 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
   }
 
   bool _canShow(DateTime day) {
-    final first =
-        widget.monthRange?.start ??
-        widget.firstDate ??
-        (widget.yearRange == null ? null : DateTime(_firstYear));
-    final last =
-        widget.monthRange?.end ??
-        widget.lastDate ??
-        (widget.yearRange == null ? null : DateTime(_lastYear, 12, 31));
+    final first = _lowerMonthBound;
+    final last = _upperMonthBound;
     return (first == null || !_month(day).isBefore(_month(first))) &&
         (last == null || !_month(day).isAfter(_month(last)));
   }
@@ -803,6 +829,13 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
   }
 
   bool _selectable(DateTime day) {
+    if (widget.mode == SeedDatePickerMode.multiple && _dates.contains(day)) {
+      final proposal = _proposal(day);
+      return widget.constraints.every(
+        (constraint) => constraint(day, proposal),
+      );
+    }
+    if (!_canShow(day)) return false;
     if (widget.firstDate != null &&
         day.isBefore(seedDateOnly(widget.firstDate!))) {
       return false;
@@ -839,9 +872,7 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
         return;
       }
     }
-    final removal =
-        widget.mode == SeedDatePickerMode.multiple && _dates.contains(day);
-    if (!removal && !_selectable(day)) return;
+    if (!_selectable(day)) return;
     final unchanged = _selectedDate == day;
     final proposal = _proposal(day);
     setState(() {
@@ -916,10 +947,10 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
 
   Widget _buildMonthPicker(BuildContext context, {bool small = false}) {
     final year = _headerMonth.year;
-    final firstBound = widget.monthRange?.start ?? widget.firstDate;
-    final lastBound = widget.monthRange?.end ?? widget.lastDate;
-    final firstMonth = firstBound?.year == year ? firstBound!.month : 1;
-    final lastMonth = lastBound?.year == year ? lastBound!.month : 12;
+    final firstBound = _firstMonth;
+    final lastBound = _lastMonth;
+    final firstMonth = firstBound.year == year ? firstBound.month : 1;
+    final lastMonth = lastBound.year == year ? lastBound.month : 12;
     final months = List.generate(
       lastMonth - firstMonth + 1,
       (i) => firstMonth + i,
@@ -1077,7 +1108,7 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
         rangeComplete && date.isAfter(_startDate!) && date.isBefore(_endDate!);
     final selected = endpointSelected || inRange;
     final today = date == seedDateOnly((widget.today ?? DateTime.now()));
-    final unavailable = !_selectable(date) && !(multi && !widget.readOnly);
+    final unavailable = !_selectable(date);
     final isRangeStartReadOnly = widget.rangeStartReadOnly && start;
     final readOnly = widget.readOnly || isRangeStartReadOnly;
     final node = _dayNodes.putIfAbsent(date, FocusNode.new);
@@ -1281,7 +1312,7 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
   Widget _twoMonthHeader(DateTime month, {required bool isFirst}) {
     final colors = context.seedColor;
     final rtl = Directionality.of(context) == TextDirection.rtl;
-    final target = DateTime(month.year, month.month + (isFirst ? -1 : 1));
+    final target = DateTime(_view.year, _view.month + (isFirst ? -1 : 1));
     final canMove = !_isDisabled && !_showMonthPicker && _canShow(target);
     final icon = isFirst
         ? (rtl ? Icons.chevron_right : Icons.chevron_left)

@@ -42,6 +42,7 @@ class SeedDateSelection {
     this.end,
     this.dates = const [],
   });
+
   /// Single date, range start, and range end in the proposed selection.
   final DateTime? date, start, end;
 
@@ -66,6 +67,7 @@ typedef SeedDateConstraint = bool Function(
   DateTime date,
   SeedDateSelection selection,
 );
+
 /// Accepts dates on or after [first], inclusive, ignoring the time of day.
 SeedDateConstraint seedDateOnOrAfter(DateTime first) =>
     (date, _) => !seedDateOnly(date).isBefore(seedDateOnly(first));
@@ -97,6 +99,7 @@ SeedDateConstraint seedExcludeDates(
   }
   return true;
 };
+
 /// Requires at least [count] calendar days in a completed range.
 ///
 /// Both endpoints count. Incomplete ranges are allowed; [count] below one
@@ -133,7 +136,9 @@ SeedDateConstraint seedMaxSelectionCount(int count) {
   if (count < 1) {
     throw RangeError.value(count, 'count', 'Must be at least 1');
   }
-  return (date, selection) => selection.dates.length <= count;
+  return (date, selection) =>
+      !selection.dates.contains(seedDateOnly(date)) ||
+      selection.dates.length <= count;
 }
 
 /// Navigation leaves selection untouched. focusDate additionally moves keyboard focus.
@@ -185,6 +190,7 @@ class SeedDateCellInfo {
     this.disabled = false,
     required this.focused,
   });
+
   /// Calendar date associated with this cell.
   final DateTime date;
 

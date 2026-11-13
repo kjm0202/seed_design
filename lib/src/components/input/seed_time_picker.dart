@@ -85,6 +85,7 @@ class SeedTimePicker extends StatefulWidget {
 
   /// Overall height of the picker.
   final double height;
+
   /// Controlled 24-hour time; null uses [defaultValue] as the local seed.
   final TimeOfDay? value;
 
@@ -181,6 +182,10 @@ class _SeedTimePickerState extends State<SeedTimePicker> {
       final pattern = DateFormat.jm(locale).pattern ?? '';
       final aIndex = pattern.indexOf('a');
       final mIndex = pattern.indexOf('m');
+      if (aIndex < 0 || mIndex < 0) {
+        final language = Intl.shortLocale(locale);
+        return language != 'ko' && language != 'ja' && language != 'zh';
+      }
       return aIndex >= 0 && mIndex >= 0 && aIndex > mIndex;
     } catch (_) {
       final language = Intl.shortLocale(locale);

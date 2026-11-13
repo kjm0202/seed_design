@@ -2,7 +2,7 @@ import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, TargetPlatform;
+    show defaultTargetPlatform, listEquals, TargetPlatform;
 
 import '../../foundations/dimensions/seed_dimension.dart';
 import '../../foundations/radius/seed_radius.dart';
@@ -139,26 +139,29 @@ abstract class SeedWheelColumn {
           (onValueChanged == null && onValueStepChanged == null),
     );
     assert(loop == null || looping == null);
+    // Keep the previous widget's options available even if the caller mutates
+    // its list in place before rebuilding.
+    final options = List<T>.of(items);
     return _SeedWheelColumnImpl<T>(
       preserveInitialSelection: true,
-      items: items,
-      index: value == null ? null : items.indexOf(value),
-      initialIndex: defaultValue == null ? 0 : items.indexOf(defaultValue),
-      onChanged: (index) => onValueChanged?.call(items[index]),
+      items: options,
+      index: value == null ? null : options.indexOf(value),
+      initialIndex: defaultValue == null ? 0 : options.indexOf(defaultValue),
+      onChanged: (index) => onValueChanged?.call(options[index]),
       onStepChanged: onValueChange == null && onValueStepChanged == null
           ? null
           : (index, stepDelta) {
-              if (stepDelta % items.length != 0) {
+              if (stepDelta % options.length != 0) {
                 onValueChange?.call(
-                  items[index],
+                  options[index],
                   SeedWheelPickerValueChangeDetails(stepDelta: stepDelta),
                 );
               }
-              onValueStepChanged?.call(items[index], stepDelta);
+              onValueStepChanged?.call(options[index], stepDelta);
             },
       onIndexChanged: onIndexChange == null
           ? null
-          : (index) => onIndexChange(index, items[index]),
+          : (index) => onIndexChange(index, options[index]),
       itemBuilder: itemBuilder,
       width: width,
       alignment: alignment,
@@ -186,6 +189,7 @@ abstract class SeedWheelColumn {
   /// Called once when scrolling settles, providing both the resolved index and
   /// the signed step delta traversed on the wheel.
   void Function(int index, int stepDelta)? get onStepChanged => null;
+
   /// Preferred height of one row in logical pixels.
   double get itemExtent;
 
@@ -201,12 +205,15 @@ abstract class SeedWheelColumn {
   /// Whether the column repeats across its first/last item boundary.
   /// Change callbacks still report indices in `0 .. itemCount - 1`.
   bool get loop => looping;
+
   /// Deprecated wraparound alias; use [loop].
   @Deprecated('Use loop instead.')
   bool get looping => false;
   bool get _preserveInitialSelection => false;
+  bool _hasSameOptions(SeedWheelColumn previous) => true;
   int? _indexPreservingValue(SeedWheelColumn previous, int previousIndex) =>
       null;
+
   /// Whether this column accepts interaction (default true).
   bool get enabled => true;
 
@@ -262,6 +269,10 @@ class _SeedWheelColumnImpl<T> extends SeedWheelColumn {
   final bool preserveInitialSelection;
   @override
   bool get _preserveInitialSelection => preserveInitialSelection;
+  @override
+  bool _hasSameOptions(SeedWheelColumn previous) =>
+      previous is _SeedWheelColumnImpl && listEquals(items, previous.items);
+
   @override
   int? _indexPreservingValue(SeedWheelColumn previous, int previousIndex) {
     if (previous is! _SeedWheelColumnImpl ||
@@ -396,6 +407,7 @@ class SeedWheelPicker extends StatefulWidget {
 
   /// Whether scrolling, item selection and focus are allowed.
   final bool enabled;
+
   /// Whether the wheel remains visible while selection changes are blocked.
   ///
   /// Defaults to false and combines with each column's read-only state.
@@ -426,7 +438,10 @@ class _SeedWheelPickerState extends State<SeedWheelPicker> {
   void initState() {
     super.initState();
     _controllers = widget.columns.map((col) {
-      return FixedExtentScrollController(initialItem: _validIndex(col));
+      return FixedExtentScrollController(
+        initialItem: _validIndex(col),
+        keepScrollOffset: false,
+      );
     }).toList();
     _selectedIndices = widget.columns.map(_validIndex).toList();
     _committedIndices = List.of(_selectedIndices);
@@ -449,34 +464,57 @@ class _SeedWheelPickerState extends State<SeedWheelPicker> {
     final updatedScrollCommits = <int>[];
     for (var i = 0; i < widget.columns.length; i++) {
       final column = widget.columns[i];
+      final becameConstrained =
+          i < oldWidget.columns.length &&
+          oldWidget.enabled &&
+          !oldWidget.readOnly &&
+          oldWidget.columns[i].enabled &&
+          !oldWidget.columns[i].readOnly &&
+          (!widget.enabled ||
+              widget.readOnly ||
+              !column.enabled ||
+              column.readOnly);
       final preserveValue =
           column._preserveInitialSelection &&
           column.index == null &&
           i < oldWidget.columns.length &&
           oldWidget.columns[i].index == null;
+      final optionsChanged =
+          preserveValue && !column._hasSameOptions(oldWidget.columns[i]);
       final targetIndex = preserveValue
           ? column._indexPreservingValue(
                   oldWidget.columns[i],
-                  _selectedIndices[i],
+                  becameConstrained || optionsChanged
+                      ? _committedIndices[i]
+                      : _selectedIndices[i],
                 ) ??
                 _validIndex(column)
+          : becameConstrained && column.index == null && column.itemCount > 0
+          ? _committedIndices[i].clamp(0, column.itemCount - 1)
           : _validIndex(column);
       final keepSelection =
+          !optionsChanged &&
           i < oldWidget.columns.length &&
           column.itemCount == oldWidget.columns[i].itemCount &&
           column.looping == oldWidget.columns[i].looping &&
           column.effectiveItemExtent(widget.size) ==
               oldWidget.columns[i].effectiveItemExtent(oldWidget.size) &&
-          (preserveValue
-              ? _selectedIndices[i] == targetIndex
-              : ((_selectedIndices[i] == targetIndex &&
-                        (column.index != null ||
-                            targetIndex == _validIndex(oldWidget.columns[i]) ||
-                            _committedIndices[i] == targetIndex)) ||
-                    (targetIndex == _validIndex(oldWidget.columns[i]) &&
-                        column.index == null) ||
-                    (oldControllers[i].hasClients &&
-                        oldControllers[i].position.isScrollingNotifier.value)));
+          (becameConstrained
+              ? _committedIndices[i] == targetIndex
+              : (preserveValue
+                    ? _selectedIndices[i] == targetIndex
+                    : ((_selectedIndices[i] == targetIndex &&
+                              (column.index != null ||
+                                  targetIndex ==
+                                      _validIndex(oldWidget.columns[i]) ||
+                                  _committedIndices[i] == targetIndex)) ||
+                          (targetIndex == _validIndex(oldWidget.columns[i]) &&
+                              column.index == null) ||
+                          (oldControllers[i].hasClients &&
+                              oldControllers[i]
+                                  .position
+                                  .isScrollingNotifier
+                                  .value))));
 
       if (keepSelection) {
         // Parent rebuilds must not reset another column's user selection.
@@ -487,7 +525,10 @@ class _SeedWheelPickerState extends State<SeedWheelPicker> {
         updatedScrollCommits.add(_committedScrollIndices[i]);
       } else {
         updatedControllers.add(
-          FixedExtentScrollController(initialItem: targetIndex),
+          FixedExtentScrollController(
+            initialItem: targetIndex,
+            keepScrollOffset: false,
+          ),
         );
         updatedSelections.add(targetIndex);
         updatedCommits.add(targetIndex);
@@ -524,18 +565,43 @@ class _SeedWheelPickerState extends State<SeedWheelPicker> {
         WidgetsBinding.instance.addPostFrameCallback((_) => node.dispose());
       }
     }
-    if (oldWidget.enabled && !widget.enabled) {
-      // Cancel any in-flight activity and restore the last confirmed value.
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || widget.enabled) return;
-        for (var i = 0; i < _controllers.length; i++) {
-          if (_controllers[i].hasClients) {
-            _controllers[i].jumpToItem(_committedScrollIndices[i]);
+    for (
+      var i = 0;
+      i < widget.columns.length && i < oldWidget.columns.length;
+      i++
+    ) {
+      final wasEditable =
+          oldWidget.enabled &&
+          !oldWidget.readOnly &&
+          oldWidget.columns[i].enabled &&
+          !oldWidget.columns[i].readOnly;
+      final isEditable =
+          widget.enabled &&
+          !widget.readOnly &&
+          widget.columns[i].enabled &&
+          !widget.columns[i].readOnly;
+      if (wasEditable && !isEditable) {
+        // Cancel in-flight movement at the last committed selection.
+        _selectedIndices[i] = _committedIndices[i];
+        _selectedScrollIndices[i] = _committedScrollIndices[i];
+        final controller = _controllers[i];
+        final target = _committedScrollIndices[i];
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted ||
+              i >= widget.columns.length ||
+              _controllers[i] != controller) {
+            return;
           }
-        }
-      });
-      _selectedIndices = List.of(_committedIndices);
-      _selectedScrollIndices = List.of(_committedScrollIndices);
+          final current = widget.columns[i];
+          if ((!widget.enabled ||
+                  widget.readOnly ||
+                  !current.enabled ||
+                  current.readOnly) &&
+              controller.hasClients) {
+            controller.jumpToItem(target);
+          }
+        });
+      }
     }
   }
 
@@ -553,6 +619,7 @@ class _SeedWheelPickerState extends State<SeedWheelPicker> {
   @override
   Widget build(BuildContext context) {
     final colors = context.seedColor;
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
     final itemHeight = widget.columns.isNotEmpty
         ? widget.columns.first.effectiveItemExtent(widget.size)
         : widget.size.itemExtent;
@@ -624,8 +691,8 @@ class _SeedWheelPickerState extends State<SeedWheelPicker> {
                         } else {
                           _keyboardTargets.remove(controller);
                         }
-                        if (repeat) {
-                          // React uses an immediate move for repeated keydown.
+                        if (repeat || reduceMotion) {
+                          // Repeated keys and reduced motion move immediately.
                           controller.jumpToItem(destination);
                           return;
                         }
@@ -720,6 +787,13 @@ class _SeedWheelPickerState extends State<SeedWheelPicker> {
                             ignoring: !editable,
                             child: NotificationListener<ScrollNotification>(
                               onNotification: (notification) {
+                                if (colIdx >= _controllers.length ||
+                                    !identical(
+                                      controller,
+                                      _controllers[colIdx],
+                                    )) {
+                                  return false;
+                                }
                                 if (notification is ScrollEndNotification &&
                                     notification.depth == 0 &&
                                     controller.hasClients &&
@@ -817,7 +891,14 @@ class _SeedWheelPickerState extends State<SeedWheelPicker> {
                                       ? const FixedExtentScrollPhysics()
                                       : const NeverScrollableScrollPhysics(),
                                   onSelectedItemChanged: (scrollIndex) {
-                                    if (!editable) return;
+                                    if (!editable ||
+                                        colIdx >= _controllers.length ||
+                                        !identical(
+                                          controller,
+                                          _controllers[colIdx],
+                                        )) {
+                                      return;
+                                    }
                                     final prevScrollIndex =
                                         _selectedScrollIndices[colIdx];
                                     final nextIndex =
@@ -873,11 +954,17 @@ class _SeedWheelPickerState extends State<SeedWheelPicker> {
                                                   return;
                                                 }
                                                 focusNode.requestFocus();
-                                                controller.animateToItem(
-                                                  scrollIndex,
-                                                  duration: SeedDuration.d4,
-                                                  curve: SeedCurves.easing,
-                                                );
+                                                if (reduceMotion) {
+                                                  controller.jumpToItem(
+                                                    scrollIndex,
+                                                  );
+                                                } else {
+                                                  controller.animateToItem(
+                                                    scrollIndex,
+                                                    duration: SeedDuration.d4,
+                                                    curve: SeedCurves.easing,
+                                                  );
+                                                }
                                               }
                                             : null,
                                         child: Center(
