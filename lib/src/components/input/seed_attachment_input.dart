@@ -15,6 +15,8 @@ import '../../foundations/typography/seed_typography.dart';
 import '../../theme/seed_theme.dart';
 import '../feedback/seed_progress_circle.dart';
 import '../button/seed_button.dart';
+import '../layout/seed_safe_area_x.dart';
+import 'seed_reorderable_sliver.dart';
 
 /// Status of an individual attachment item.
 enum SeedAttachmentStatus {
@@ -190,9 +192,10 @@ class SeedAttachmentDropzone extends StatelessWidget {
         ? colors.stroke.neutralSolid
         : (colors.isDark ? SeedPalette.gray500Dark : SeedPalette.gray500Light);
 
-    final Color labelColor = !enabled
-        ? colors.fg.disabled
-        : colors.fg.neutralSubtle;
+    // Official AttachmentInput.DropzoneLabel is a plain div that never
+    // receives data-disabled, so only the select-files button reflects
+    // [enabled]; the helper keeps fg.neutralSubtle.
+    final Color labelColor = colors.fg.neutralSubtle;
 
     // The official Dropzone is a plain drop target; only its ActionButton
     // opens the chooser, so the area itself is neither a tab stop nor a button.
@@ -283,6 +286,7 @@ class SeedAttachmentInput extends StatelessWidget {
   /// the default camera glyph; [showTrigger] hides the add tile for dropzones.
   /// [representativeLabel] defaults to '대표'. [scrollPadding] is Flutter-only
   /// internal scrollport padding and defaults to [EdgeInsets.zero].
+  /// [extendSafeAreaX] bleeds the list under the horizontal safe-area insets.
   const SeedAttachmentInput({
     super.key,
     required this.items,
@@ -298,6 +302,7 @@ class SeedAttachmentInput extends StatelessWidget {
     this.onReorder,
     this.scrollPadding = EdgeInsets.zero,
     this.enabled = true,
+    this.extendSafeAreaX = false,
     // Preserve the public named parameter and getter.
     // ignore: prefer_initializing_formals
   }) : _representativeLabel = representativeLabel;
@@ -352,11 +357,45 @@ class SeedAttachmentInput extends StatelessWidget {
   /// Whether the attachment input is enabled.
   final bool enabled;
 
-  @override
-  Widget build(BuildContext context) =>
-      _RemoveButtonHitScope(child: _buildList(context));
+  /// Extends the attachment list edge to edge under the horizontal safe-area
+  /// insets, like React `AttachmentInput` `extendSafeAreaX` (React 3.1.0+).
+  /// Defaults to false, which keeps the existing layout.
+  ///
+  /// Place the input inside the safe area as usual. When true, the input
+  /// widens by the device's physical left and right insets, so the list
+  /// scrolls and drags across the full width, and the scrollport padding
+  /// grows by the same insets on top of [scrollPadding], so the trigger and
+  /// first preview start inside the safe area. A focused item, including one
+  /// moved with the keyboard, stops at the inset boundary rather than under
+  /// it (React's `scroll-padding`, without an extra item margin). The insets
+  /// are the largest of the view padding and the ambient [MediaQuery]
+  /// padding and view padding, also when an ancestor [SafeArea] has consumed
+  /// them.
+  ///
+  /// Pointer input that starts in the inset strips reaches the list only
+  /// when the ancestors also cover those strips; Flutter hit testing stops at
+  /// each ancestor's bounds.
+  final bool extendSafeAreaX;
 
-  Widget _buildList(BuildContext context) {
+  @override
+  Widget build(BuildContext context) {
+    final insets = SeedSafeAreaX.resolve(context, extendSafeAreaX);
+    // The bleed and the focus reveals stay at zero insets when the flag is
+    // false, so toggling it keeps the list's scroll offset, keyboard focus
+    // and a provisional keyboard reorder.
+    return SeedSafeAreaXBleed(
+      insets: insets,
+      child: _RemoveButtonHitScope(child: _buildList(context, insets)),
+    );
+  }
+
+  Widget _buildList(BuildContext context, SeedSafeAreaX insets) {
+    // React adds the safe-area insets to the container's padding-inline.
+    final listPadding = extendSafeAreaX
+        ? scrollPadding + insets.padding
+        : scrollPadding;
+    Widget revealing(Widget child) =>
+        SeedSafeAreaXFocusReveal(insets: insets, child: child);
     final colors = context.seedColor;
     final typography = context.seedTypography;
     final canAdd = enabled && !readOnly && items.length < maxCount;
@@ -454,73 +493,42 @@ class SeedAttachmentInput extends StatelessWidget {
               ? _fileHeight(context, typography)
               : itemSize,
         ),
-        child: ReorderableListView.builder(
-          scrollDirection: Axis.horizontal,
-          shrinkWrap: true,
-          clipBehavior: Clip.none,
-          padding: scrollPadding,
-          // File and image tiles have known horizontal extents even when
-          // filenames wrap or text scaling changes their height. Providing
-          // the actual extent prevents the lazily-built sliver from
-          // underestimating maxScrollExtent after dynamic add/remove and
-          // during edge auto-scrolling.
-          itemExtentBuilder: (index, _) =>
-              (items[index].type == SeedAttachmentType.file
-                  ? _attachmentFileTileWidth
-                  : itemSize) +
-              (showTrigger || index > 0 ? 8.0 : 0.0),
-          buildDefaultDragHandles: false,
+        child: _AttachmentReorderList(
+          items: items,
+          padding: listPadding,
+          revealInsets: insets,
           header: showTrigger ? trigger : null,
-          itemCount: items.length,
-          onReorderItem: (from, to) {
-            final item = items[from];
-            if (item.enabled && !item.readOnly) {
-              onReorder!(from, to > from ? to + 1 : to);
-            }
-          },
-          itemBuilder: (context, index) {
-            final item = items[index];
-            final child = Padding(
-              // CSS itemGroup gap is between siblings only. With no trigger
-              // (dropzone), the first preview starts at the scrollPadding.
-              padding: EdgeInsetsDirectional.only(
-                start: showTrigger || index > 0 ? 8 : 0,
-              ),
-              child: preview(item),
-            );
-            return KeyedSubtree(
-              key: ValueKey(item.id),
-              child: enabled && !readOnly && item.enabled && !item.readOnly
-                  ? ReorderableDelayedDragStartListener(
-                      index: index,
-                      child: _AttachmentKeyboardReorder(
-                        index: index,
-                        count: items.length,
-                        onReorder: onReorder!,
-                        child: child,
-                      ),
-                    )
-                  : child,
-            );
-          },
+          headerWidth: showTrigger ? triggerWidth : 0,
+          itemSize: itemSize,
+          canReorder: (item) =>
+              enabled && !readOnly && item.enabled && !item.readOnly,
+          onReorder: onReorder!,
+          itemBuilder: (context, item, index) => Padding(
+            // CSS itemGroup gap is between siblings only. With no trigger
+            // (dropzone), the first preview starts at the scrollPadding.
+            padding: EdgeInsetsDirectional.only(
+              start: showTrigger || index > 0 ? 8 : 0,
+            ),
+            child: preview(item),
+          ),
         ),
       );
     }
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: scrollPadding,
+      padding: listPadding,
       // The remove button overhangs the item's corner.
       clipBehavior: Clip.none,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (showTrigger) trigger,
+          if (showTrigger) revealing(trigger),
           for (var index = 0; index < items.length; index++)
             Padding(
               padding: EdgeInsetsDirectional.only(
                 start: showTrigger || index > 0 ? 8 : 0,
               ),
-              child: preview(items[index]),
+              child: revealing(preview(items[index])),
             ),
         ],
       ),
@@ -859,19 +867,323 @@ class SeedAttachmentInput extends StatelessWidget {
   }
 }
 
-// Keep keyboard moves provisional until Space commits them, as in the
-// upstream sortable example. The consumer still owns the actual list.
+// The reorderable strip. It mirrors Material's ReorderableListView layout
+// (header sliver followed by the reorderable sliver, same padding split) on
+// top of the package's copy of the Flutter reorderable sliver, which can
+// leave the move accessibility actions off items that cannot be reordered.
+//
+// A keyboard reorder is provisional: the moving item is shown at its target
+// position, as in the upstream sortable example, and the consumer's callback
+// runs once when Space commits it. Escape or losing focus restores the order.
+class _AttachmentReorderList extends StatefulWidget {
+  const _AttachmentReorderList({
+    required this.items,
+    required this.padding,
+    required this.revealInsets,
+    required this.header,
+    required this.headerWidth,
+    required this.itemSize,
+    required this.canReorder,
+    required this.onReorder,
+    required this.itemBuilder,
+  });
+
+  final List<SeedAttachmentItem> items;
+  final EdgeInsets padding;
+  // extendSafeAreaX: keeps revealed items inside these insets. Zero when the
+  // flag is false; the reveal wrappers stay so the item trees do not change.
+  final SeedSafeAreaX revealInsets;
+  final Widget? header;
+  final double headerWidth;
+  final double itemSize;
+  final bool Function(SeedAttachmentItem item) canReorder;
+  final ReorderCallback onReorder;
+  final Widget Function(
+    BuildContext context,
+    SeedAttachmentItem item,
+    int displayIndex,
+  )
+  itemBuilder;
+
+  @override
+  State<_AttachmentReorderList> createState() => _AttachmentReorderListState();
+}
+
+class _AttachmentReorderListState extends State<_AttachmentReorderList> {
+  // Keyboard move in progress: the item's index in widget.items and the
+  // position it is provisionally shown at.
+  int? _from;
+  int? _target;
+  String? _movingId;
+
+  final ScrollController _controller = ScrollController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  bool get _hasHeader => widget.header != null;
+
+  bool get _rtl => Directionality.of(context) == TextDirection.rtl;
+
+  // The header sliver takes the start padding and the list sliver the end
+  // padding. SliverPadding resolves physical insets along the axis
+  // direction, so in RTL the start padding is the right one.
+  EdgeInsets get _listPadding => !_hasHeader
+      ? widget.padding
+      : _rtl
+      ? widget.padding.copyWith(right: 0)
+      : widget.padding.copyWith(left: 0);
+
+  EdgeInsets get _headerPadding => _rtl
+      ? widget.padding.copyWith(left: 0)
+      : widget.padding.copyWith(right: 0);
+
+  // Reveal the new position in the same layout as the provisional order.
+  // Animating to a far position can leave the moved item outside the sliver's
+  // cache for a frame, unmounting its keyboard focus before it can be dropped.
+  void _reveal(int display) {
+    if (!_controller.hasClients) return;
+    final position = _controller.position;
+    var leading = _rtl ? widget.padding.right : widget.padding.left;
+    if (_hasHeader) leading += widget.headerWidth;
+    for (var i = 0; i < display; i++) {
+      leading += _extent(i);
+    }
+    final trailing = leading + _extent(display);
+    // React's container scroll-padding equals the safe-area insets under
+    // extendSafeAreaX, so the item stops at the inset boundary.
+    final insets = widget.revealInsets;
+    final direction = Directionality.of(context);
+    final before = insets.start(direction), after = insets.end(direction);
+    var target = position.pixels;
+    if (leading - before < position.pixels) {
+      target = leading - before;
+    } else if (trailing + after >
+        position.pixels + position.viewportDimension) {
+      target = trailing + after - position.viewportDimension;
+    }
+    target = target.clamp(position.minScrollExtent, position.maxScrollExtent);
+    if ((target - position.pixels).abs() < 0.5) return;
+    position.jumpTo(target);
+  }
+
+  @override
+  void didUpdateWidget(_AttachmentReorderList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final from = _from;
+    // The consumer changed the list under a provisional move.
+    if (from != null &&
+        (from >= widget.items.length ||
+            _target! >= widget.items.length ||
+            widget.items[from].id != _movingId ||
+            !widget.canReorder(widget.items[from]))) {
+      _from = _target = _movingId = null;
+    }
+  }
+
+  // Index in widget.items of the item shown at a display position.
+  int _actual(int display) {
+    final from = _from, target = _target;
+    if (from == null || target == null || from == target) return display;
+    if (display == target) return from;
+    if (from < target) {
+      return display >= from && display < target ? display + 1 : display;
+    }
+    return display > target && display <= from ? display - 1 : display;
+  }
+
+  // File and image tiles have known horizontal extents even when filenames
+  // wrap or text scaling changes their height. Providing the actual extent
+  // prevents the lazily-built sliver from underestimating maxScrollExtent
+  // after dynamic add/remove and during edge auto-scrolling.
+  double _extent(int display) =>
+      (widget.items[_actual(display)].type == SeedAttachmentType.file
+          ? _attachmentFileTileWidth
+          : widget.itemSize) +
+      (_hasHeader || display > 0 ? 8.0 : 0.0);
+
+  void _announce(SeedLabel key, SeedAttachmentItem item, int index) {
+    final message = SeedLocalizations.label(context, key)
+        .replaceAll('{name}', item.name ?? '${index + 1}')
+        .replaceAll('{position}', '${index + 1}');
+    SemanticsService.sendAnnouncement(
+      View.of(context),
+      message,
+      Directionality.of(context),
+    );
+  }
+
+  void _start(int index) {
+    final item = widget.items[index];
+    setState(() {
+      _from = _target = index;
+      _movingId = item.id;
+    });
+    _announce(SeedLabel.reorderStarted, item, index);
+  }
+
+  void _move(int delta) {
+    final target = _target;
+    if (target == null) return;
+    final next = (target + delta).clamp(0, widget.items.length - 1);
+    if (next == target) return;
+    setState(() => _target = next);
+    _reveal(next);
+  }
+
+  void _cancel({bool announce = true}) {
+    final from = _from;
+    if (from == null) return;
+    setState(() => _from = _target = _movingId = null);
+    _reveal(from);
+    if (announce) _announce(SeedLabel.reorderCanceled, widget.items[from], from);
+  }
+
+  void _commit() {
+    final from = _from, target = _target;
+    if (from == null || target == null) return;
+    setState(() => _from = _target = _movingId = null);
+    // As in the official sortable example, finishing announces the resulting
+    // position even when it equals the starting one.
+    _announce(SeedLabel.reorderDropped, widget.items[from], target);
+    if (target != from) {
+      widget.onReorder(from, target > from ? target + 1 : target);
+    }
+  }
+
+  // Same decoration as Material's ReorderableListView default.
+  Widget _proxyDecorator(Widget child, int index, Animation<double> animation) {
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) => Material(
+        elevation: Curves.easeInOut.transform(animation.value) * 6,
+        child: child,
+      ),
+      child: child,
+    );
+  }
+
+  Widget _buildItem(BuildContext context, int display) {
+    final actual = _actual(display);
+    final item = widget.items[actual];
+    // The value key by item id is how consumers and tests locate an entry.
+    final child = KeyedSubtree(
+      key: ValueKey(item.id),
+      child: widget.itemBuilder(context, item, display),
+    );
+    Widget revealing(Widget child) => SeedSafeAreaXFocusReveal(
+      insets: widget.revealInsets,
+      // The item box also holds the gap before it.
+      startGap: _hasHeader || display > 0 ? 8.0 : 0.0,
+      child: child,
+    );
+    return KeyedSubtree(
+      // A global key keeps the item's state, including keyboard focus, when
+      // a reorder moves it to another index.
+      key: _AttachmentItemGlobalKey(ValueKey(item.id), this),
+      child: revealing(
+        widget.canReorder(item)
+            ? SeedReorderableDelayedDragStartListener(
+                index: display,
+                child: _AttachmentKeyboardReorder(
+                  position: display,
+                  count: widget.items.length,
+                  moving: _from == actual,
+                  // Keys can arrive before the next build, so the handler
+                  // reads the live state instead of the built flag.
+                  isMoving: () => _movingId == item.id,
+                  onStart: () => _start(actual),
+                  onMove: _move,
+                  onCommit: _commit,
+                  onCancel: _cancel,
+                  child: child,
+                ),
+              )
+            : child,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomScrollView(
+      controller: _controller,
+      scrollDirection: Axis.horizontal,
+      shrinkWrap: true,
+      clipBehavior: Clip.none,
+      slivers: [
+        if (_hasHeader)
+          SliverPadding(
+            padding: _headerPadding,
+            sliver: SliverToBoxAdapter(child: widget.header),
+          ),
+        SliverPadding(
+          padding: _listPadding,
+          sliver: SeedSliverReorderableList(
+            itemCount: widget.items.length,
+            itemExtentBuilder: (index, _) => _extent(index),
+            itemBuilder: _buildItem,
+            canReorderItem: (index) =>
+                widget.canReorder(widget.items[_actual(index)]),
+            proxyDecorator: _proxyDecorator,
+            // A pointer drag or an accessibility move action replaces any
+            // provisional keyboard move.
+            onReorderStart: (_) => _cancel(announce: false),
+            onReorderItem: (from, to) {
+              _cancel(announce: false);
+              if (widget.canReorder(widget.items[from])) {
+                widget.onReorder(from, to > from ? to + 1 : to);
+              }
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AttachmentItemGlobalKey extends GlobalObjectKey {
+  const _AttachmentItemGlobalKey(this.subKey, this.state) : super(subKey);
+
+  final Key subKey;
+  final State state;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _AttachmentItemGlobalKey &&
+      other.subKey == subKey &&
+      other.state == state;
+
+  @override
+  int get hashCode => Object.hash(subKey, state);
+}
+
+// The keyboard reorder handle of one movable item: Space picks the item up
+// and drops it, the arrow keys move it and Escape cancels.
 class _AttachmentKeyboardReorder extends StatefulWidget {
   const _AttachmentKeyboardReorder({
-    required this.index,
+    required this.position,
     required this.count,
-    required this.onReorder,
+    required this.moving,
+    required this.isMoving,
+    required this.onStart,
+    required this.onMove,
+    required this.onCommit,
+    required this.onCancel,
     required this.child,
   });
 
-  final int index;
+  final int position;
   final int count;
-  final ReorderCallback onReorder;
+  final bool moving;
+  final bool Function() isMoving;
+  final VoidCallback onStart;
+  final ValueChanged<int> onMove;
+  final VoidCallback onCommit;
+  final VoidCallback onCancel;
   final Widget child;
 
   @override
@@ -882,15 +1194,6 @@ class _AttachmentKeyboardReorder extends StatefulWidget {
 class _AttachmentKeyboardReorderState
     extends State<_AttachmentKeyboardReorder> {
   final FocusNode _focusNode = FocusNode();
-  int? _target;
-
-  @override
-  void didUpdateWidget(_AttachmentKeyboardReorder oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.index != widget.index || oldWidget.count != widget.count) {
-      _target = null;
-    }
-  }
 
   @override
   void dispose() {
@@ -904,19 +1207,12 @@ class _AttachmentKeyboardReorderState
       return KeyEventResult.ignored;
     }
     if (event.logicalKey == LogicalKeyboardKey.space && event is KeyDownEvent) {
-      final target = _target;
-      setState(() => _target = target == null ? widget.index : null);
-      if (target != null && target != widget.index) {
-        widget.onReorder(
-          widget.index,
-          target > widget.index ? target + 1 : target,
-        );
-      }
+      widget.isMoving() ? widget.onCommit() : widget.onStart();
       return KeyEventResult.handled;
     }
-    if (_target == null) return KeyEventResult.ignored;
+    if (!widget.isMoving()) return KeyEventResult.ignored;
     if (event.logicalKey == LogicalKeyboardKey.escape) {
-      setState(() => _target = null);
+      widget.onCancel();
       return KeyEventResult.handled;
     }
     final isRight = event.logicalKey == LogicalKeyboardKey.arrowRight;
@@ -924,28 +1220,24 @@ class _AttachmentKeyboardReorderState
     if (!isRight && !isLeft) return KeyEventResult.ignored;
     final forward =
         isRight == (Directionality.of(context) == TextDirection.ltr);
-    setState(() {
-      _target = (_target! + (forward ? 1 : -1)).clamp(0, widget.count - 1);
-    });
+    widget.onMove(forward ? 1 : -1);
     return KeyEventResult.handled;
   }
 
   @override
   Widget build(BuildContext context) {
-    final korean = Localizations.localeOf(context).languageCode == 'ko';
-    final target = _target;
-    final hint = target == null
-        ? (korean ? '스페이스를 눌러 순서 변경' : 'Press Space to reorder')
-        : (korean
-              ? '${target + 1}번째 위치. 방향키로 이동, 스페이스로 완료, Escape로 취소'
-              : 'Position ${target + 1}. Use arrow keys, Space to finish, Escape to cancel');
+    final hint = widget.moving
+        ? SeedLocalizations.label(
+            context,
+            SeedLabel.reorderMovingHint,
+          ).replaceAll('{position}', '${widget.position + 1}')
+        : SeedLocalizations.label(context, SeedLabel.reorderStartHint);
     return Focus(
       focusNode: _focusNode,
       onKeyEvent: _onKey,
       onFocusChange: (focused) {
-        setState(() {
-          if (!focused) _target = null;
-        });
+        if (!focused && widget.isMoving()) widget.onCancel();
+        setState(() {});
       },
       child: Semantics(
         hint: hint,
@@ -963,7 +1255,7 @@ class _AttachmentKeyboardReorderState
             clipBehavior: Clip.none,
             children: [
               widget.child,
-              if (target != null)
+              if (widget.moving)
                 PositionedDirectional(
                   bottom: 0,
                   end: 0,
@@ -976,7 +1268,7 @@ class _AttachmentKeyboardReorderState
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 4),
                         child: Text(
-                          '${target + 1} / ${widget.count}',
+                          '${widget.position + 1} / ${widget.count}',
                           style: TextStyle(
                             color: context.seedColor.fg.onNeutralSolid,
                           ),

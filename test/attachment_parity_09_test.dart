@@ -45,7 +45,7 @@ void main() {
         ),
       ),
     );
-    expect(find.byType(ReorderableListView), findsNothing);
+    expect(find.byType(CustomScrollView), findsNothing);
     for (final name in ['a.pdf', 'b.pdf']) {
       expect(
         tester
@@ -243,7 +243,7 @@ void main() {
           ),
         ),
       );
-      expect(find.byType(ReorderableListView), findsNothing);
+      expect(find.byType(CustomScrollView), findsNothing);
       expect(
         tester
             .getSemantics(find.text('a.pdf'))

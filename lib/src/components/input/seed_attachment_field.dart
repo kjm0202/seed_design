@@ -123,7 +123,8 @@ class SeedAttachmentDisplayField extends StatefulWidget {
   /// follows the presence of [errorMessage]. [showDropzone] swaps the add tile for
   /// the dropzone, with externally supplied [isDraggingOver] highlight.
   /// [inset], [itemSize], [triggerIcon] and [representativeLabel] are composition
-  /// options, not automatic file-handling features.
+  /// options, not automatic file-handling features. [extendSafeAreaX] is
+  /// forwarded to [SeedAttachmentInput.extendSafeAreaX].
   const SeedAttachmentDisplayField({
     super.key,
     this.controller,
@@ -154,6 +155,7 @@ class SeedAttachmentDisplayField extends StatefulWidget {
     this.itemSize = 80,
     this.triggerIcon,
     String? representativeLabel,
+    this.extendSafeAreaX = false,
     // Preserve the public named parameter and getter.
     // ignore: prefer_initializing_formals
   }) : _representativeLabel = representativeLabel,
@@ -235,6 +237,14 @@ class SeedAttachmentDisplayField extends StatefulWidget {
 
   /// Padding around attachment content (default [EdgeInsets.zero]).
   final EdgeInsetsGeometry inset;
+
+  /// Bleeds the default attachment list under the horizontal safe-area
+  /// insets; see [SeedAttachmentInput.extendSafeAreaX]. Defaults to false.
+  ///
+  /// As in React, where the dropzone keeps a margin of the insets, the
+  /// label, description, error and dropzone stay inside the safe area; only
+  /// the scrolling list extends. A custom [itemBuilder] list is not affected.
+  final bool extendSafeAreaX;
   @override
   State<SeedAttachmentDisplayField> createState() =>
       _SeedAttachmentDisplayFieldState();
@@ -338,6 +348,7 @@ class _SeedAttachmentDisplayFieldState
                       ? null
                       : (item) => widget.onRetry!(item, _controller),
                   onReorder: widget.reorderable ? _controller.reorder : null,
+                  extendSafeAreaX: widget.extendSafeAreaX,
                 ),
           ],
         ),
@@ -380,6 +391,7 @@ class SeedAttachmentField extends SeedAttachmentDisplayField {
     super.itemSize,
     super.triggerIcon,
     super.representativeLabel,
+    super.extendSafeAreaX,
   }) : super(
          entries: items,
          defaultEntries: defaultItems,

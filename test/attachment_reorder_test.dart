@@ -119,7 +119,7 @@ Widget host(Widget child, {required double width, double scale = 1}) =>
 Future<ScrollPosition> position(WidgetTester tester) async {
   final scrollable = find
       .descendant(
-        of: find.byType(ReorderableListView),
+        of: find.byType(CustomScrollView),
         matching: find.byType(Scrollable),
       )
       .first;
@@ -231,7 +231,7 @@ Widget _hostRtl(
 ScrollPosition _scrollPosition(WidgetTester tester) {
   final scrollable = find
       .descendant(
-        of: find.byType(ReorderableListView),
+        of: find.byType(CustomScrollView),
         matching: find.byType(Scrollable),
       )
       .first;
@@ -304,7 +304,7 @@ void main() {
           reason: 'Actual drag, not direct callback invocation',
         );
         expect(entries.first.id, isNot('item-0'));
-        expect(tester.getRect(find.byType(ReorderableListView)).width, 390);
+        expect(tester.getRect(find.byType(CustomScrollView)).width, 390);
         expect(tester.takeException(), isNull);
       },
     );
@@ -381,7 +381,7 @@ void main() {
             );
             expect(key.currentState!.entries.first.id, isNot('entry-0'));
             expect(
-              tester.getRect(find.byType(ReorderableListView)).right,
+              tester.getRect(find.byType(CustomScrollView)).right,
               closeTo(width, .01),
             );
             expect(tester.takeException(), isNull);
@@ -450,7 +450,7 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(key.currentState!.entries, isEmpty);
-        final list = find.byType(ReorderableListView);
+        final list = find.byType(CustomScrollView);
         expect(list, findsOneWidget);
         expect(tester.getRect(list).width, 320);
         for (var i = 0; i < 22; i++) {
@@ -510,7 +510,7 @@ void main() {
             expect(scroll.pixels, 0);
             expect(scroll.maxScrollExtent, greaterThan(0));
             expect(
-              tester.getRect(find.byType(ReorderableListView)).width,
+              tester.getRect(find.byType(CustomScrollView)).width,
               width,
             );
 

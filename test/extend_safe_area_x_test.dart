@@ -437,6 +437,187 @@ void main() {
     }
   });
 
+  group('SeedAttachmentInput', () {
+    List<SeedAttachmentItem> items(int count) => [
+      for (var i = 0; i < count; i++) SeedAttachmentItem(id: 'item$i'),
+    ];
+
+    for (final direction in TextDirection.values) {
+      testWidgets('keyboard reorder reveals within both insets ($direction)', (
+        tester,
+      ) async {
+        _landscapeNotch(tester);
+        final ltr = direction == TextDirection.ltr;
+        final forward = ltr
+            ? LogicalKeyboardKey.arrowRight
+            : LogicalKeyboardKey.arrowLeft;
+        final backward = ltr
+            ? LogicalKeyboardKey.arrowLeft
+            : LogicalKeyboardKey.arrowRight;
+        var reorderCalls = 0;
+        await tester.pumpWidget(
+          _app(
+            SeedAttachmentInput(
+              items: items(16),
+              maxCount: 20,
+              showTrigger: false,
+              onReorder: (_, _) => reorderCalls++,
+              extendSafeAreaX: true,
+            ),
+            direction: direction,
+          ),
+        );
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pump();
+        await tester.sendKeyEvent(LogicalKeyboardKey.space);
+        await tester.pump();
+        expect(find.text('1 / 16'), findsOneWidget);
+
+        final item = find.byKey(const ValueKey('item0'));
+        final viewport = _scrollRect(tester, find.byType(SeedAttachmentInput));
+        final start = viewport.left + _left;
+        final end = viewport.right - _right;
+        for (var i = 0; i < 15; i++) {
+          await tester.sendKeyEvent(forward);
+          await tester.pumpAndSettle();
+          expect(tester.getRect(item).left, greaterThanOrEqualTo(start - 0.5));
+          expect(tester.getRect(item).right, lessThanOrEqualTo(end + 0.5));
+        }
+        expect(find.text('16 / 16'), findsOneWidget);
+        final last = tester.getRect(item);
+        expect(ltr ? last.right : last.left, closeTo(ltr ? end : start, 0.5));
+
+        for (var i = 0; i < 15; i++) {
+          await tester.sendKeyEvent(backward);
+          await tester.pumpAndSettle();
+          expect(tester.getRect(item).left, greaterThanOrEqualTo(start - 0.5));
+          expect(tester.getRect(item).right, lessThanOrEqualTo(end + 0.5));
+        }
+        final first = tester.getRect(item);
+        expect(ltr ? first.left : first.right, closeTo(ltr ? start : end, 0.5));
+        await tester.sendKeyEvent(LogicalKeyboardKey.space);
+        await tester.pumpAndSettle();
+        expect(reorderCalls, 0);
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    for (final direction in TextDirection.values) {
+      for (final reorder in [false, true]) {
+        testWidgets('trigger starts inside the safe area '
+            '($direction, reorder: $reorder)', (tester) async {
+          _landscapeNotch(tester);
+          await tester.pumpWidget(
+            _app(
+              SeedAttachmentInput(
+                items: items(3),
+                maxCount: 10,
+                onAdd: () {},
+                onRemove: (_) {},
+                onReorder: reorder ? (_, _) {} : null,
+                extendSafeAreaX: true,
+              ),
+              direction: direction,
+            ),
+          );
+          final input = find.byType(SeedAttachmentInput);
+          expect(tester.getRect(input).left, _left);
+          expect(_scrollRect(tester, input).left, 0);
+          expect(_scrollRect(tester, input).right, _width);
+          final trigger = tester.getRect(
+            find
+                .descendant(of: input, matching: find.byType(SeedPressable))
+                .first,
+          );
+          if (direction == TextDirection.ltr) {
+            expect(trigger.left, closeTo(_left, 0.01));
+          } else {
+            expect(trigger.right, closeTo(_width - _right, 0.01));
+          }
+          expect(tester.takeException(), isNull);
+        });
+      }
+    }
+
+    testWidgets('focus traversal stops at the inset boundary', (tester) async {
+      _landscapeNotch(tester);
+      await tester.pumpWidget(
+        _app(
+          SeedAttachmentInput(
+            items: items(15),
+            maxCount: 20,
+            onAdd: () {},
+            onRemove: (_) {},
+            extendSafeAreaX: true,
+          ),
+        ),
+      );
+      // Trigger, then one remove button per item.
+      for (var i = 0; i < 16; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+      final scroll = tester.state<ScrollableState>(
+        find
+            .descendant(
+              of: find.byType(SeedAttachmentInput),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      expect(scroll.position.pixels, greaterThan(0));
+      // The focused remove button overhangs its 80px item by 4px; the item
+      // itself ends at the right inset, not under it.
+      final focused = FocusManager.instance.primaryFocus!.rect;
+      expect(focused.right, lessThanOrEqualTo(_width - _right + 4 + 0.5));
+      expect(focused.right, greaterThan(_width - _right - 8));
+    });
+
+    testWidgets('SeedAttachmentField forwards the flag', (tester) async {
+      _landscapeNotch(tester);
+      await tester.pumpWidget(
+        _app(
+          SeedAttachmentField(
+            label: 'Photos',
+            items: items(1),
+            maxCount: 5,
+            extendSafeAreaX: true,
+          ),
+        ),
+      );
+      expect(
+        tester
+            .widget<SeedAttachmentInput>(find.byType(SeedAttachmentInput))
+            .extendSafeAreaX,
+        isTrue,
+      );
+      // The label stays inside the safe area; only the list bleeds.
+      expect(
+        tester.getRect(find.text('Photos')).left,
+        greaterThanOrEqualTo(_left),
+      );
+      expect(_scrollRect(tester, find.byType(SeedAttachmentInput)).left, 0);
+    });
+
+    testWidgets('default false is unchanged by the insets', (tester) async {
+      _landscapeNotch(tester);
+      await tester.pumpWidget(
+        _app(
+          SeedAttachmentInput(
+            items: items(2),
+            maxCount: 5,
+            onAdd: () {},
+            onRemove: (_) {},
+          ),
+        ),
+      );
+      final input = find.byType(SeedAttachmentInput);
+      expect(_scrollRect(tester, input).left, _left);
+      expect(_scrollRect(tester, input).right, _width - _right);
+    });
+  });
+
   // React's flag is a CSS variant: toggling it at runtime (the official
   // ActivitySafeAreaBleed example uses a Switch) remounts nothing, so the
   // selected page, scroll offsets, focus and child state all survive.
@@ -601,6 +782,119 @@ void main() {
           _expectInsideSafeArea(tester, find.text('Long tab title 13'));
           expect(find.text('page12: 1'), findsOneWidget);
         }
+      });
+
+      for (final reorder in [false, true]) {
+        testWidgets('SeedAttachmentInput keeps its scroll offset and focus '
+            '($flip, reorder: $reorder)', (tester) async {
+          _landscapeNotch(tester);
+          final extend = ValueNotifier(initial);
+          addTearDown(extend.dispose);
+          await tester.pumpWidget(
+            _flipping(
+              extend,
+              (value) => SeedAttachmentInput(
+                items: [
+                  for (var i = 0; i < 15; i++)
+                    SeedAttachmentItem(
+                      id: 'item$i',
+                      name: 'file$i',
+                      type: SeedAttachmentType.file,
+                    ),
+                ],
+                maxCount: 20,
+                onAdd: () {},
+                onRemove: (_) {},
+                onReorder: reorder ? (_, _) {} : null,
+                extendSafeAreaX: value,
+              ),
+            ),
+          );
+          final input = find.byType(SeedAttachmentInput);
+          final scroll = _scrollState(tester, input);
+          scroll.position.jumpTo(1000);
+          await tester.pump();
+          final item = find.text('file6');
+          final before = tester.getRect(item);
+
+          extend.value = !initial;
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+          expect(_scrollState(tester, input), same(scroll));
+          expect(scroll.position.pixels, 1000);
+          expect(tester.getRect(item).left, closeTo(before.left, 0.5));
+
+          // Keyboard focus on an item survives the flip back.
+          for (var i = 0; i < 4; i++) {
+            await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+            await tester.pump();
+          }
+          await tester.pumpAndSettle();
+          final focused = FocusManager.instance.primaryFocus!;
+          var focusInInput = false;
+          focused.context!.visitAncestorElements((element) {
+            focusInInput = element.widget is SeedAttachmentInput;
+            return !focusInInput;
+          });
+          expect(focusInInput, isTrue);
+          final pixels = scroll.position.pixels;
+          final focusedRect = focused.rect;
+
+          extend.value = initial;
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+          expect(FocusManager.instance.primaryFocus, same(focused));
+          expect(focused.context?.mounted, isTrue);
+          expect(_scrollState(tester, input), same(scroll));
+          expect(scroll.position.pixels, pixels);
+          expect(focused.rect.left, closeTo(focusedRect.left, 0.5));
+        });
+      }
+
+      testWidgets('SeedAttachmentInput keeps a provisional keyboard reorder '
+          '($flip)', (tester) async {
+        _landscapeNotch(tester);
+        final extend = ValueNotifier(initial);
+        addTearDown(extend.dispose);
+        final calls = <(int, int)>[];
+        await tester.pumpWidget(
+          _flipping(
+            extend,
+            (value) => SeedAttachmentInput(
+              items: [
+                for (var i = 0; i < 16; i++) SeedAttachmentItem(id: 'item$i'),
+              ],
+              maxCount: 20,
+              showTrigger: false,
+              onReorder: (from, to) => calls.add((from, to)),
+              extendSafeAreaX: value,
+            ),
+          ),
+        );
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pump();
+        await tester.sendKeyEvent(LogicalKeyboardKey.space);
+        await tester.pump();
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await tester.pumpAndSettle();
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await tester.pumpAndSettle();
+        expect(find.text('3 / 16'), findsOneWidget);
+
+        extend.value = !initial;
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        expect(find.text('3 / 16'), findsOneWidget);
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await tester.pumpAndSettle();
+        expect(find.text('4 / 16'), findsOneWidget);
+
+        extend.value = initial;
+        await tester.pumpAndSettle();
+        expect(find.text('4 / 16'), findsOneWidget);
+        await tester.sendKeyEvent(LogicalKeyboardKey.space);
+        await tester.pumpAndSettle();
+        expect(calls, [(0, 4)]);
       });
 
       for (final tone in [

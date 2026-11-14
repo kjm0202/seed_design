@@ -83,6 +83,16 @@ enum SeedLabel {
   deleteChip,
   /// Singular unread notification; template retains {count}.
   unreadNotification,
+  /// Hint on a reorderable item before a keyboard reorder starts
+  reorderStartHint,
+  /// Hint while a keyboard reorder is in progress; `{position}` is one-based
+  reorderMovingHint,
+  /// Announcement when reordering `{name}` starts
+  reorderStarted,
+  /// Announcement when reordering `{name}` is canceled
+  reorderCanceled,
+  /// Announcement when `{name}` is dropped at one-based `{position}`
+  reorderDropped,
 }
 
 /// Optional, captured localization overrides for SEED widgets.
@@ -202,6 +212,12 @@ class SeedLocalizations extends StatelessWidget {
     SeedLabel.optionalInput: '(optional)',
     SeedLabel.deleteChip: 'Delete {label}',
     SeedLabel.unreadNotification: '{count} unread notification',
+    SeedLabel.reorderStartHint: 'Press Space to reorder',
+    SeedLabel.reorderMovingHint:
+        'Position {position}. Use arrow keys, Space to finish, Escape to cancel',
+    SeedLabel.reorderStarted: 'Started reordering {name}.',
+    SeedLabel.reorderCanceled: 'Canceled reordering {name}.',
+    SeedLabel.reorderDropped: 'Moved {name} to position {position}.',
   };
   static const _korean = <SeedLabel, String>{
     SeedLabel.pageNumber: '{page}페이지',
@@ -244,6 +260,12 @@ class SeedLocalizations extends StatelessWidget {
     SeedLabel.optionalInput: '(선택)',
     SeedLabel.deleteChip: '{label} 삭제',
     SeedLabel.unreadNotification: '읽지 않은 알림 {count}개',
+    SeedLabel.reorderStartHint: '스페이스를 눌러 순서 변경',
+    SeedLabel.reorderMovingHint:
+        '{position}번째 위치. 방향키로 이동, 스페이스로 완료, Escape로 취소',
+    SeedLabel.reorderStarted: '{name} 항목 순서 변경을 시작했어요.',
+    SeedLabel.reorderCanceled: '{name} 항목 순서 변경을 취소했어요.',
+    SeedLabel.reorderDropped: '{name} 항목을 {position}번째에 놓았어요.',
   };
 }
 

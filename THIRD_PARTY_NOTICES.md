@@ -54,3 +54,15 @@ License: SIL Open Font License 1.1. The SPA example bundles the font and its lic
 ## Material Icons
 
 Rendering tests load the Material Icons font supplied by the Flutter SDK through its normal asset bundle.
+
+## Flutter
+
+Reference: https://github.com/flutter/flutter
+
+`lib/src/components/input/seed_reorderable_sliver.dart` is adapted from
+`packages/flutter/lib/src/widgets/reorderable_list.dart` at Flutter 3.50.0
+(`SliverReorderableList` and its drag-start listeners). The classes are renamed
+with a `Seed` prefix, are not exported, and gain `canReorderItem`, which leaves
+the move accessibility actions off items that cannot be reordered. Copyright
+2014 The Flutter Authors; BSD 3-Clause License, included at
+`third_party/flutter/LICENSE`.
