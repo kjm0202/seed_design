@@ -164,7 +164,8 @@ class SeedTopNavigationTextButton extends StatelessWidget {
       text,
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
-      textScaler: const TextScaler.linear(1.0)
+      // React clamps the app bar label between 1.0x and 1.2x of its size.
+      textScaler: MediaQuery.textScalerOf(context)
           .clamp(minScaleFactor: 1.0, maxScaleFactor: 1.2),
       style: typography.t5Medium.copyWith(color: labelColor),
     );
@@ -188,8 +189,9 @@ class SeedTopNavigationTextButton extends StatelessWidget {
               : colors.bg.transparent,
           borderRadius: SeedBorderRadius.r2,
         ),
-        alignment: Alignment.center,
-        child: textWidget,
+        // Shrink-wrap the label. A container alignment would expand the
+        // button to the full width of a loosely constrained slot.
+        child: Align(widthFactor: 1.0, heightFactor: 1.0, child: textWidget),
       ),
     );
   }

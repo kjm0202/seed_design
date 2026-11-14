@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import '../../localization/seed_localizations.dart';
 
 import 'package:material_ui/material_ui.dart';
@@ -12,8 +14,10 @@ import 'seed_top_navigation_button.dart';
 enum SeedTopNavigationPlatform {
   /// Centers titles on iOS and left-aligns them on other platforms.
   adaptive,
+
   /// Uses centered iOS-style title alignment regardless of host platform.
   cupertino,
+
   /// Uses left-aligned Android-style titles regardless of host platform.
   android,
 }
@@ -33,36 +37,51 @@ class SeedTopNavigation extends StatelessWidget implements PreferredSizeWidget {
   /// Unlike [title], [slot] uses the official Stackflow AppBar flex geometry
   /// rather than the centered-title NavigationToolbar geometry.
   final Widget? slot;
+
   /// Text title rendered in SEED typography; mutually exclusive with [title].
   final String? titleText;
+
   /// Leading action; overrides automatic drawer and back actions.
   final Widget? leading;
+
   /// Trailing actions; null permits an automatic end-drawer action.
   final List<Widget>? actions;
+
   /// Title alignment override; null follows the selected [platform].
   final bool? centerTitle;
+
   /// Infers a drawer, back, or end-drawer button when possible; defaults true.
   final bool automaticallyImplyLeading;
+
   /// Additional preferred-size widget placed below the 56-pixel bar.
   final PreferredSizeWidget? bottom;
+
   /// Text-scaling override for [titleText] and [subtitle]. By default the
   /// ambient scaler is clamped to 1.0-1.2, as React's app bar CSS clamps the
   /// title and subtitle font sizes so they fit the fixed bar height.
   final TextScaler? titleTextScaler;
+
   /// Draws a bottom divider inside the 56-pixel bar; defaults false.
   final bool showBottomDivider;
+
   /// Explicit bar background color, used when no gradient takes priority.
   final Color? backgroundColor;
+
   /// Optional text subtitle, mutually exclusive with [slot].
   final String? subtitle;
+
   /// Custom subtitle content, used before [subtitle] when both are supplied.
   final Widget? subtitleWidget;
+
   /// Explicit background gradient, overriding the optional tone gradient.
   final Gradient? backgroundGradient;
+
   /// Adaptive title-layout policy; defaults to [SeedTopNavigationPlatform.adaptive].
   final SeedTopNavigationPlatform platform;
+
   /// Surface/foreground tone inherited by top-navigation buttons.
   final SeedTopNavigationButtonTone tone;
+
   /// Enables the built-in fade gradient in transparent tone; defaults false.
   final bool gradient;
 
@@ -131,9 +150,8 @@ class SeedTopNavigation extends StatelessWidget implements PreferredSizeWidget {
     final bool isTransparent = tone == SeedTopNavigationButtonTone.transparent;
     final TextScaler clampedScaler =
         titleTextScaler ??
-        MediaQuery.textScalerOf(
-          context,
-        ).clamp(minScaleFactor: 1.0, maxScaleFactor: 1.2);
+        MediaQuery.textScalerOf(context)
+            .clamp(minScaleFactor: 1.0, maxScaleFactor: 1.2);
     final scaffold = Scaffold.maybeOf(context);
 
     Widget? effectiveLeading = leading;
@@ -239,6 +257,7 @@ class SeedTopNavigation extends StatelessWidget implements PreferredSizeWidget {
                         slot: slot!,
                         leading: effectiveLeading,
                         actions: effectiveActions,
+                        android: !cupertino,
                       )
                     : NavigationToolbar(
                         leading: effectiveLeading != null
@@ -275,87 +294,158 @@ class SeedTopNavigation extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
-/// The 44px React AppBarIconButton's first/last -10px margins overlap the
-/// custom slot. Give the buttons a full-width Stack hit-test parent, not the
-/// reduced 24/68px CSS layout extent: an OverflowBox inside a narrow Row
-/// paints those buttons correctly but drops pointer hits on the overhang.
+/// React Stackflow `AppBar` geometry around a custom `AppBar.Slot`.
+///
+/// The bar has 16px root padding. `.seed-app-bar__iconButton` and
+/// `.seed-app-bar__textButton` get `margin-left/right: -10px` as the first or
+/// last child of the left/right areas (icon: `(44 - 24) / -2`; text button:
+/// `x1_5 - x4`), so their padded boxes overhang the padding and the slot. The
+/// android theme adds `.seed-app-bar__left { padding-right: 16px }`. Other
+/// widgets get no margin, like arbitrary DOM children.
+///
+/// The layout covers the whole bar so the overhanging parts of the 44px
+/// buttons stay hit-testable; an OverflowBox inside a narrow Row would paint
+/// them correctly but drop pointer hits on the overhang. Buttons are painted
+/// (and hit-tested) above the slot.
 class _SeedAppBarSlotLayout extends StatelessWidget {
   const _SeedAppBarSlotLayout({
     required this.slot,
     required this.leading,
     required this.actions,
+    required this.android,
   });
 
   final Widget slot;
   final Widget? leading;
   final List<Widget>? actions;
-  static const double _buttonExtent = 44;
-  static const double _iconExtent = 24;
-  static const double _edgeOverlap = (_buttonExtent - _iconExtent) / 2;
+  final bool android;
+
+  static double _edgeMargin(Widget child) =>
+      child is SeedTopNavigationIconButton ||
+          child is SeedTopNavigationTextButton
+      ? SeedDimension.x2_5
+      : 0;
 
   @override
   Widget build(BuildContext context) {
     final actionItems = actions ?? const <Widget>[];
-    final leadingIsIcon =
-        leading == null || leading is SeedTopNavigationIconButton;
-    final actionsAreIcons = actionItems.every(
-      (child) => child is SeedTopNavigationIconButton,
-    );
-    if (leadingIsIcon && actionsAreIcons) {
-      final leadingFlexWidth = leading == null ? 0.0 : _iconExtent;
-      final actionsFlexWidth = actionItems.isEmpty
-          ? 0.0
-          : _buttonExtent * actionItems.length - 2 * _edgeOverlap;
-
-      // Root covers the ENTIRE AppBar for hit testing. Icons use physical
-      // 44px touch targets and overlap the growing slot by 10px at each end.
-      return SizedBox.expand(
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            PositionedDirectional(
-              start: SeedDimension.x4 + leadingFlexWidth,
-              end: SeedDimension.x4 + actionsFlexWidth,
-              top: 0,
-              bottom: 0,
-              child: slot,
-            ),
-            if (leading != null)
-              PositionedDirectional(
-                start: SeedDimension.x4 - _edgeOverlap,
-                top: 0,
-                bottom: 0,
-                child: Center(child: leading),
-              ),
-            if (actionItems.isNotEmpty)
-              PositionedDirectional(
-                end: SeedDimension.x4 - _edgeOverlap,
-                top: 0,
-                bottom: 0,
-                child: Center(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: actionItems,
-                  ),
-                ),
-              ),
-          ],
-        ),
-      );
-    }
-
-    // Arbitrary non-icon widgets use their natural size; there is no official
-    // AppBarIconButton negative margin to apply to those widgets.
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: SeedDimension.x4),
-      child: Row(
-        children: [
-          ?leading,
-          Expanded(child: slot),
-          if (actionItems.isNotEmpty)
-            Row(mainAxisSize: MainAxisSize.min, children: actionItems),
-        ],
+    return CustomMultiChildLayout(
+      delegate: _SeedAppBarSlotDelegate(
+        textDirection: Directionality.of(context),
+        leadingMargin: leading == null ? 0 : _edgeMargin(leading!),
+        leadingPaddingEnd: leading != null && android ? SeedDimension.x4 : 0,
+        actionsStartMargin: actionItems.isEmpty
+            ? 0
+            : _edgeMargin(actionItems.first),
+        actionsEndMargin: actionItems.isEmpty
+            ? 0
+            : _edgeMargin(actionItems.last),
       ),
+      children: [
+        LayoutId(id: _SeedAppBarSlotPart.slot, child: slot),
+        if (leading != null)
+          LayoutId(id: _SeedAppBarSlotPart.leading, child: leading!),
+        if (actionItems.isNotEmpty)
+          LayoutId(
+            id: _SeedAppBarSlotPart.actions,
+            child: Row(mainAxisSize: MainAxisSize.min, children: actionItems),
+          ),
+      ],
     );
   }
+}
+
+enum _SeedAppBarSlotPart { leading, slot, actions }
+
+class _SeedAppBarSlotDelegate extends MultiChildLayoutDelegate {
+  _SeedAppBarSlotDelegate({
+    required this.textDirection,
+    required this.leadingMargin,
+    required this.leadingPaddingEnd,
+    required this.actionsStartMargin,
+    required this.actionsEndMargin,
+  });
+
+  final TextDirection textDirection;
+
+  /// Negative CSS margin on both sides of the single leading child.
+  final double leadingMargin;
+  final double leadingPaddingEnd;
+  final double actionsStartMargin;
+  final double actionsEndMargin;
+
+  static const double _padding = SeedDimension.x4;
+
+  @override
+  void performLayout(Size size) {
+    final contentWidth = math.max(0.0, size.width - 2 * _padding);
+    final height = size.height;
+    double startExtent = 0;
+    double endExtent = 0;
+
+    // Positions are measured from the start edge, then mirrored for RTL.
+    void place(Object id, double start, Size child, {bool center = true}) {
+      final x = textDirection == TextDirection.ltr
+          ? start
+          : size.width - start - child.width;
+      positionChild(id, Offset(x, center ? (height - child.height) / 2 : 0));
+    }
+
+    if (hasChild(_SeedAppBarSlotPart.leading)) {
+      final child = layoutChild(
+        _SeedAppBarSlotPart.leading,
+        BoxConstraints.loose(Size(contentWidth + 2 * leadingMargin, height)),
+      );
+      startExtent = math.max(
+        0.0,
+        child.width - 2 * leadingMargin + leadingPaddingEnd,
+      );
+      place(_SeedAppBarSlotPart.leading, _padding - leadingMargin, child);
+    }
+    if (hasChild(_SeedAppBarSlotPart.actions)) {
+      final child = layoutChild(
+        _SeedAppBarSlotPart.actions,
+        BoxConstraints.loose(
+          Size(
+            math.max(
+              0.0,
+              contentWidth -
+                  startExtent +
+                  actionsStartMargin +
+                  actionsEndMargin,
+            ),
+            height,
+          ),
+        ),
+      );
+      endExtent = math.max(
+        0.0,
+        child.width - actionsStartMargin - actionsEndMargin,
+      );
+      place(
+        _SeedAppBarSlotPart.actions,
+        size.width - _padding + actionsEndMargin - child.width,
+        child,
+      );
+    }
+    final slotWidth = math.max(0.0, contentWidth - startExtent - endExtent);
+    final slot = layoutChild(
+      _SeedAppBarSlotPart.slot,
+      BoxConstraints.tightFor(width: slotWidth, height: height),
+    );
+    place(
+      _SeedAppBarSlotPart.slot,
+      _padding + startExtent,
+      slot,
+      center: false,
+    );
+  }
+
+  @override
+  bool shouldRelayout(_SeedAppBarSlotDelegate oldDelegate) =>
+      textDirection != oldDelegate.textDirection ||
+      leadingMargin != oldDelegate.leadingMargin ||
+      leadingPaddingEnd != oldDelegate.leadingPaddingEnd ||
+      actionsStartMargin != oldDelegate.actionsStartMargin ||
+      actionsEndMargin != oldDelegate.actionsEndMargin;
 }
