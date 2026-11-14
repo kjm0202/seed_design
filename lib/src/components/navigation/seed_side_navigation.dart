@@ -1,9 +1,6 @@
 import '../../localization/seed_localizations.dart';
 
-import 'dart:async';
 import 'dart:ui' show SemanticsRole;
-
-import 'package:flutter/services.dart';
 
 import 'package:material_ui/material_ui.dart';
 
@@ -19,6 +16,8 @@ import '../overlay/seed_anchored_overlay.dart';
 import '../badge/seed_badge.dart';
 import '../layout/seed_divider.dart';
 import '../layout/seed_scroll_fog.dart';
+import '../overlay/seed_menu.dart' show SeedMenuSize;
+import 'seed_navigation_menu.dart';
 
 /// Surface tone for [SeedSideNavigation].
 enum SeedSideNavTone {
@@ -258,6 +257,11 @@ class _SeedSideNavigationState extends State<SeedSideNavigation> {
   final ScrollController _scrollController = ScrollController();
   late bool _uncontrolledCollapsed = widget.defaultCollapsed;
   bool _scrolled = false;
+  bool? _previousCollapsed;
+  double? _previousWidth;
+  bool _transitioning = false;
+  // Open collapsed-sidebar flyout (SeedNavigationMenu value).
+  String? _flyout;
 
   bool get _collapsed =>
       (widget._isCollapsed ?? _uncontrolledCollapsed) ||
@@ -301,6 +305,12 @@ class _SeedSideNavigationState extends State<SeedSideNavigation> {
   }
 
   void _initNewExpandedItems() {
+    final currentIds = {
+      for (final group in widget.groups)
+        for (final item in group.items) item.id,
+    };
+    _knownItemIds.retainAll(currentIds);
+    _expandedItemIds.retainAll(currentIds);
     for (final group in widget.groups) {
       for (final item in group.items) {
         if (_knownItemIds.add(item.id) && item.defaultOpen) {
@@ -352,6 +362,18 @@ class _SeedSideNavigationState extends State<SeedSideNavigation> {
     final colors = context.seedColor;
     final typography = context.seedTypography;
     final currentWidth = _collapsed ? widget.collapsedWidth : widget.width;
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    // The registry installs collapsed overlays only after the root transition.
+    if (reduceMotion || !_collapsed) {
+      _transitioning = false;
+    } else if (_previousCollapsed == false) {
+      _transitioning = _previousWidth != currentWidth;
+    }
+    _previousCollapsed = _collapsed;
+    _previousWidth = currentWidth;
+    // A flyout does not survive leaving collapsed mode.
+    if (!_collapsed) _flyout = null;
+    final rtl = Directionality.of(context) == TextDirection.rtl;
     final hasCollapseTrigger =
         widget.onToggleCollapsed != null ||
         widget.onCollapsedChanged != null ||
@@ -368,7 +390,12 @@ class _SeedSideNavigationState extends State<SeedSideNavigation> {
       container: true,
       role: SemanticsRole.navigation,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: reduceMotion
+            ? Duration.zero
+            : const Duration(milliseconds: 200),
+        onEnd: _transitioning
+            ? () => setState(() => _transitioning = false)
+            : null,
         curve: Curves.easeInOut,
         width: currentWidth,
         decoration: BoxDecoration(
@@ -459,72 +486,87 @@ class _SeedSideNavigationState extends State<SeedSideNavigation> {
 
                 // Scrollable navigation content
                 Expanded(
-                  child: Stack(
-                    children: [
-                      ListView.separated(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.fromLTRB(0, 8, 0, 24),
-                        itemCount: widget.groups.length,
-                        separatorBuilder: (_, _) =>
-                            SizedBox(height: _collapsed ? 0 : SeedDimension.x2),
-                        itemBuilder: (context, groupIndex) {
-                          final group = widget.groups[groupIndex];
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (group.label != null)
-                                _SeedSideNavPanel(
-                                  expanded: !_collapsed,
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 14,
-                                      vertical: SeedDimension.x1_5,
-                                    ),
-                                    child: Text(
-                                      group.label!,
-                                      maxLines: 1,
-                                      softWrap: false,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: typography.t4Bold.copyWith(
-                                        color: colors.fg.neutralMuted,
+                  // Registry SideNavigationRoot: NavigationMenuProvider with
+                  // placement right-start (toward the content, so left in
+                  // RTL) and responsive size. Its delay group also covers
+                  // the collapsed items' tooltips.
+                  child: SeedNavigationMenu(
+                    controlled: true,
+                    value: _collapsed ? _flyout : null,
+                    onValueChange: (value) {
+                      if (mounted) setState(() => _flyout = value);
+                    },
+                    side: rtl ? SeedOverlaySide.left : SeedOverlaySide.right,
+                    align: SeedOverlayAlign.start,
+                    size: SeedMenuSize.responsive,
+                    child: Stack(
+                      children: [
+                        ListView.separated(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.fromLTRB(0, 8, 0, 24),
+                          itemCount: widget.groups.length,
+                          separatorBuilder: (_, _) => SizedBox(
+                            height: _collapsed ? 0 : SeedDimension.x2,
+                          ),
+                          itemBuilder: (context, groupIndex) {
+                            final group = widget.groups[groupIndex];
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (group.label != null)
+                                  _SeedSideNavPanel(
+                                    expanded: !_collapsed,
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 14,
+                                        vertical: SeedDimension.x1_5,
+                                      ),
+                                      child: Text(
+                                        group.label!,
+                                        maxLines: 1,
+                                        softWrap: false,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: typography.t4Bold.copyWith(
+                                          color: colors.fg.neutralMuted,
+                                        ),
                                       ),
                                     ),
                                   ),
+                                ...group.items.map(
+                                  (item) => _buildMenuItem(
+                                    context,
+                                    item,
+                                    colors,
+                                    typography,
+                                  ),
                                 ),
-                              ...group.items.map(
-                                (item) => _buildMenuItem(
-                                  context,
-                                  item,
-                                  colors,
-                                  typography,
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      ),
-                      if (_scrolled)
-                        const Positioned(
-                          top: 0,
+                              ],
+                            );
+                          },
+                        ),
+                        if (_scrolled)
+                          const Positioned(
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            child: SeedDivider(
+                              key: ValueKey('seed-side-nav-scroll-divider'),
+                            ),
+                          ),
+                        Positioned(
+                          bottom: 0,
                           left: 0,
                           right: 0,
-                          child: SeedDivider(
-                            key: ValueKey('seed-side-nav-scroll-divider'),
+                          child: SeedScrollFog(
+                            placement: SeedScrollFogPlacement.bottom,
+                            size: 24,
+                            color: effectiveBgColor == Colors.transparent
+                                ? colors.bg.layerDefault
+                                : effectiveBgColor,
                           ),
                         ),
-                      Positioned(
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        child: SeedScrollFog(
-                          placement: SeedScrollFogPlacement.bottom,
-                          size: 24,
-                          color: effectiveBgColor == Colors.transparent
-                              ? colors.bg.layerDefault
-                              : effectiveBgColor,
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
 
@@ -573,31 +615,69 @@ class _SeedSideNavigationState extends State<SeedSideNavigation> {
               : (isCurrent ? colors.fg.neutral : inactiveIconColor),
         ),
       );
-      if (hasSubItems && isItemEnabled) {
-        return _SeedCollapsedSubmenu(
-          item: item,
-          selected: isCurrent,
-          selectedId: widget.selectedId,
-          collapsedWidth: widget.collapsedWidth,
-          surfaceBuilder: surface,
+      if (!_transitioning && hasSubItems && isItemEnabled) {
+        // Official registry: a NavigationMenuRoot whose trigger is the item
+        // button (tooltip disabled) and whose flyout groups the sub items
+        // under the item label.
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: SeedDimension.x2),
+          child: SeedNavigationMenuRoot(
+            value: item.id,
+            trigger: SeedNavigationMenuTrigger(
+              selected: isCurrent,
+              semanticsLabel: item.label,
+              focusRingInside: true,
+              focusBorderRadius: SeedBorderRadius.r2_5,
+              builder: (context, open, isEngaged) => surface(isEngaged),
+            ),
+            content: SeedNavigationMenuContent(
+              children: [
+                SeedNavigationMenuGroup(
+                  label: item.label,
+                  children: [
+                    for (final sub in item.subItems!)
+                      SeedNavigationMenuItem(
+                        label: sub.label,
+                        current: sub.id == widget.selectedId,
+                        // Only an explicit disable disables it; a missing
+                        // onTap stays enabled as when expanded (12-04).
+                        disabled: !sub.isEnabled,
+                        onTap: sub.onTap,
+                        suffixIcon: sub.badge == null
+                            ? null
+                            : SeedBadge(
+                                label: sub.badge!,
+                                tone: sub.id == widget.selectedId
+                                    ? SeedBadgeTone.brand
+                                    : SeedBadgeTone.neutral,
+                              ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         );
       }
+      final button = SeedPressable(
+        enabled: isItemEnabled && !(_transitioning && hasSubItems),
+        enableScale: false,
+        selected: isCurrent,
+        semanticsLabel: item.label,
+        focusRingInside: true,
+        focusBorderRadius: SeedBorderRadius.r2_5,
+        onTap: item.onTap ?? () {},
+        builder: (context, isEngaged) => surface(isEngaged),
+      );
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: SeedDimension.x2),
-        child: SeedHelpBubbleTooltip(
-          title: item.label,
-          side: SeedOverlaySide.right,
-          child: SeedPressable(
-            enabled: isItemEnabled,
-            enableScale: false,
-            selected: isCurrent,
-            semanticsLabel: item.label,
-            focusRingInside: true,
-            focusBorderRadius: SeedBorderRadius.r2_5,
-            onTap: item.onTap ?? () {},
-            builder: (context, isEngaged) => surface(isEngaged),
-          ),
-        ),
+        child: _transitioning
+            ? button
+            : SeedHelpBubbleTooltip(
+                title: item.label,
+                side: SeedOverlaySide.right,
+                child: button,
+              ),
       );
     }
 
@@ -840,196 +920,6 @@ class _SeedSideNavItemSurface extends StatelessWidget {
         borderRadius: SeedBorderRadius.r2_5,
       ),
       child: child,
-    );
-  }
-}
-
-class _SeedCollapsedSubmenu extends StatefulWidget {
-  const _SeedCollapsedSubmenu({
-    required this.item,
-    required this.selected,
-    required this.selectedId,
-    required this.collapsedWidth,
-    required this.surfaceBuilder,
-  });
-  final SeedSideNavItem item;
-  final bool selected;
-  final String? selectedId;
-  final double collapsedWidth;
-  final Widget Function(bool isEngaged) surfaceBuilder;
-  @override
-  State<_SeedCollapsedSubmenu> createState() => _SeedCollapsedSubmenuState();
-}
-
-class _SeedCollapsedSubmenuState extends State<_SeedCollapsedSubmenu> {
-  final MenuController _menu = MenuController();
-  final FocusNode _trigger = FocusNode();
-  final Map<String, FocusNode> _items = {};
-  bool _restoring = false;
-  void _focusFirst() {
-    _enter();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _items.values.firstOrNull?.requestFocus();
-    });
-  }
-
-  Timer? _timer;
-  void _enter() {
-    _timer?.cancel();
-    if (!_menu.isOpen) _menu.open();
-  }
-
-  void _exit() {
-    _timer?.cancel();
-    _timer = Timer(const Duration(milliseconds: 160), () {
-      if (mounted) _menu.close();
-    });
-  }
-
-  Widget _region(Widget child) => MouseRegion(
-    onEnter: (_) => _enter(),
-    onExit: (_) => _exit(),
-    child: child,
-  );
-  @override
-  void dispose() {
-    _timer?.cancel();
-    _trigger.dispose();
-    for (final node in _items.values) {
-      node.dispose();
-    }
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.seedColor;
-    final typography = context.seedTypography;
-    return MenuAnchor(
-      controller: _menu,
-      childFocusNode: _trigger,
-      crossAxisUnconstrained: false,
-      style: MenuStyle(
-        visualDensity: VisualDensity.standard,
-        backgroundColor: WidgetStatePropertyAll(colors.bg.layerFloating),
-        surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
-        minimumSize: const WidgetStatePropertyAll(Size(240, 0)),
-        padding: const WidgetStatePropertyAll(
-          EdgeInsets.symmetric(vertical: SeedDimension.x2),
-        ),
-        shape: WidgetStatePropertyAll(
-          RoundedRectangleBorder(borderRadius: SeedBorderRadius.r5),
-        ),
-      ),
-      onClose: () {
-        _restoring = true;
-        WidgetsBinding.instance.addPostFrameCallback((_) => _restoring = false);
-      },
-      alignmentOffset: Offset(widget.collapsedWidth, -44),
-      menuChildren: [
-        _region(
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: SeedDimension.x4,
-              vertical: SeedDimension.x2_5,
-            ),
-            child: Text(
-              widget.item.label,
-              style: typography.t4Medium.copyWith(
-                color: colors.fg.neutralSubtle,
-              ),
-            ),
-          ),
-        ),
-        for (final sub in widget.item.subItems!)
-          _region(
-            Semantics(
-              selected: sub.id == widget.selectedId,
-              child: MenuItemButton(
-                focusNode: _items.putIfAbsent(sub.id, FocusNode.new),
-                style: ButtonStyle(
-                  visualDensity: VisualDensity.standard,
-                  padding: const WidgetStatePropertyAll(
-                    EdgeInsets.symmetric(
-                      horizontal: SeedDimension.x4,
-                      vertical: SeedDimension.x3,
-                    ),
-                  ),
-                  minimumSize: const WidgetStatePropertyAll(Size.zero),
-                  backgroundColor: WidgetStatePropertyAll(
-                    sub.id == widget.selectedId
-                        ? colors.bg.transparentSelected
-                        : colors.bg.transparent,
-                  ),
-                  overlayColor: WidgetStatePropertyAll(
-                    colors.bg.transparentPressed,
-                  ),
-                  shape: const WidgetStatePropertyAll(
-                    RoundedRectangleBorder(borderRadius: SeedBorderRadius.r3),
-                  ),
-                ),
-                onPressed: sub.isEnabled ? (sub.onTap ?? () {}) : null,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        sub.label,
-                        style: typography.t5Regular.copyWith(
-                          color: sub.isEnabled
-                              ? colors.fg.neutral
-                              : colors.fg.disabled,
-                        ),
-                      ),
-                    ),
-                    if (sub.badge != null) ...[
-                      const SizedBox(width: SeedDimension.x2),
-                      SeedBadge(
-                        label: sub.badge!,
-                        tone: sub.id == widget.selectedId
-                            ? SeedBadgeTone.brand
-                            : SeedBadgeTone.neutral,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ),
-      ],
-      builder: (context, controller, child) => _region(
-        Focus(
-          canRequestFocus: false,
-          onKeyEvent: (_, event) {
-            if (event is KeyDownEvent &&
-                event.logicalKey == LogicalKeyboardKey.arrowDown) {
-              _focusFirst();
-              return KeyEventResult.handled;
-            }
-            return KeyEventResult.ignored;
-          },
-          onFocusChange: (focused) {
-            if (focused && !_restoring) {
-              _enter();
-            }
-          },
-          // React sets disableTooltip here: the flyout already shows the label.
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: SeedDimension.x2),
-            child: SeedPressable(
-              focusNode: _trigger,
-              enableScale: false,
-              selected: widget.selected,
-              semanticsLabel: widget.item.label,
-              expanded: _menu.isOpen,
-              focusRingInside: true,
-              focusBorderRadius: SeedBorderRadius.r2_5,
-              onTap: _focusFirst,
-              builder: (context, isEngaged) => widget.surfaceBuilder(isEngaged),
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

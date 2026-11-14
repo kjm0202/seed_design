@@ -97,20 +97,16 @@ void main() {
     );
     await tester.tap(find.byIcon(Icons.settings));
     await tester.pumpAndSettle();
-    final child = tester.widget<MenuItemButton>(
-      find.ancestor(
-        of: find.text('Child'),
-        matching: find.byType(MenuItemButton),
-      ),
+    // The flyout is a SeedNavigationMenu disclosure; check the public
+    // semantics instead of its internal widgets.
+    expect(
+      tester.getSemantics(find.text('Child')),
+      isSemantics(isEnabled: true, hasEnabledState: true),
     );
-    final disabled = tester.widget<MenuItemButton>(
-      find.ancestor(
-        of: find.text('Disabled'),
-        matching: find.byType(MenuItemButton),
-      ),
+    expect(
+      tester.getSemantics(find.text('Disabled')),
+      isSemantics(isEnabled: false, hasEnabledState: true),
     );
-    expect(child.onPressed, isNotNull);
-    expect(disabled.onPressed, isNull);
     expect(find.text('New'), findsOneWidget);
     expect(find.bySemanticsLabel(RegExp('New')), findsWidgets);
     semantics.dispose();

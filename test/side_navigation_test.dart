@@ -1,3 +1,5 @@
+import 'dart:ui' show PointerDeviceKind;
+
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -39,6 +41,22 @@ SeedSideNavigation navigation({String? selectedId, VoidCallback? onParent}) =>
         ),
       ],
     );
+
+SeedSideNavigation navigationWithItem(bool present) => SeedSideNavigation(
+  groups: [
+    SeedSideNavGroup(
+      items: present
+          ? const [
+              SeedSideNavItem(
+                id: 'parent',
+                label: 'Parent',
+                subItems: [SeedSideNavSubItem(id: 'child', label: 'Child')],
+              ),
+            ]
+          : const [],
+    ),
+  ],
+);
 
 void main() {
   group('items and flyout', () {
@@ -111,6 +129,98 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Parent'), findsOneWidget);
       expect(find.text('Child'), findsOneWidget);
+    });
+
+    testWidgets('collapsed flyout waits until the width transition ends', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_app(nav()));
+      await tester.pumpWidget(_app(nav(collapsed: true)));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.tap(find.byIcon(Icons.settings));
+      await tester.pump(const Duration(milliseconds: 90));
+      expect(find.byType(SeedNavigationMenuTrigger), findsNothing);
+      expect(find.text('Child'), findsNothing);
+
+      await tester.pumpAndSettle();
+      expect(find.text('Child'), findsNothing);
+      await tester.tap(find.byIcon(Icons.settings));
+      await tester.pumpAndSettle();
+      expect(find.text('Child'), findsOneWidget);
+    });
+
+    testWidgets('reduced motion makes the collapsed flyout available at once', (
+      tester,
+    ) async {
+      Widget host(bool collapsed) => _app(
+        MediaQuery(
+          data: const MediaQueryData(disableAnimations: true),
+          child: nav(collapsed: collapsed),
+        ),
+      );
+
+      await tester.pumpWidget(host(false));
+      await tester.pumpWidget(host(true));
+      expect(find.byType(SeedNavigationMenuTrigger), findsOneWidget);
+      await tester.tap(find.byIcon(Icons.settings));
+      await tester.pumpAndSettle();
+      expect(find.text('Child'), findsOneWidget);
+    });
+
+    testWidgets('hover starts the flyout delay after collapse settles', (
+      tester,
+    ) async {
+      Widget host(bool collapsed) => _app(
+        Align(alignment: Alignment.centerLeft, child: nav(collapsed: collapsed)),
+      );
+
+      await tester.pumpWidget(host(false));
+      await tester.pumpWidget(host(true));
+      await tester.pump(const Duration(milliseconds: 100));
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(
+        location: tester.getCenter(find.byIcon(Icons.settings)),
+      );
+      addTearDown(mouse.removePointer);
+
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 190));
+      expect(find.text('Child'), findsNothing);
+      await tester.pump(const Duration(milliseconds: 20));
+      await tester.pumpAndSettle();
+      expect(find.text('Child'), findsOneWidget);
+    });
+
+    // Regression: the collapsed flyout could be hovered open only once; on
+    // later hovers it closed one frame after opening. 16ms frames expose it.
+    testWidgets('collapsed flyout reopens on every hover', (tester) async {
+      Future<void> frames(int ms) async {
+        for (var i = 0; i < ms ~/ 16; i++) {
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+      }
+
+      await tester.pumpWidget(
+        _app(
+          Align(alignment: Alignment.centerLeft, child: nav(collapsed: true)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: const Offset(700, 580));
+      addTearDown(mouse.removePointer);
+      for (var round = 1; round <= 3; round++) {
+        await mouse.moveTo(tester.getCenter(find.byIcon(Icons.settings)));
+        await frames(300);
+        expect(find.text('Child'), findsOneWidget, reason: 'round $round');
+        await frames(1000);
+        expect(find.text('Child'), findsOneWidget, reason: 'round $round');
+        await mouse.moveTo(const Offset(700, 580));
+        await frames(800);
+        expect(find.text('Child'), findsNothing, reason: 'round $round');
+      }
     });
   });
 
@@ -230,6 +340,31 @@ void main() {
     });
   });
   group('expansion and visibility', () {
+    testWidgets('a removed and reintroduced item starts from its default', (
+      tester,
+    ) async {
+      late StateSetter rebuild;
+      var present = true;
+      await tester.pumpWidget(
+        host(
+          StatefulBuilder(
+            builder: (context, setState) {
+              rebuild = setState;
+              return navigationWithItem(present);
+            },
+          ),
+        ),
+      );
+      await tester.tap(find.text('Parent'));
+      await tester.pumpAndSettle();
+      expect(find.text('Child'), findsOneWidget);
+      rebuild(() => present = false);
+      await tester.pumpAndSettle();
+      rebuild(() => present = true);
+      await tester.pumpAndSettle();
+      expect(find.text('Child'), findsNothing);
+    });
+
     testWidgets(
       'collapsed navigation exposes children to pointer and keyboard',
       (tester) async {

@@ -485,9 +485,73 @@ class SeedTooltipDelayGroup extends StatefulWidget {
 class _SeedTooltipDelayGroupState extends State<SeedTooltipDelayGroup> {
   DateTime? lastClose;
   _SeedHelpBubbleTooltipState? active;
+  // A non-tooltip disclosure sharing this group (SeedNavigationMenu).
+  Object? member;
+  VoidCallback? memberClose;
+
+  void closeMember() {
+    final close = memberClose;
+    member = null;
+    memberClose = null;
+    close?.call();
+  }
+
   @override
   Widget build(BuildContext context) =>
       _SeedTooltipGroupScope(state: this, child: widget.child);
+}
+
+/// Lets a hover disclosure other than [SeedHelpBubbleTooltip] share the
+/// nearest [SeedTooltipDelayGroup], as React's navigation menu shares its
+/// floating-ui delay group with `HelpBubbleTooltip`.
+///
+/// Package-internal; `seed_design.dart` does not export it.
+class SeedTooltipDelayGroupLink {
+  const SeedTooltipDelayGroupLink._(this._state);
+  final _SeedTooltipDelayGroupState _state;
+
+  /// The nearest group, registering a dependency on it; null without one.
+  static SeedTooltipDelayGroupLink? maybeOf(BuildContext context) {
+    final state = context
+        .dependOnInheritedWidgetOfExactType<_SeedTooltipGroupScope>()
+        ?.state;
+    return state == null ? null : SeedTooltipDelayGroupLink._(state);
+  }
+
+  /// The group's initial open delay and its close delay.
+  Duration get openDelay => _state.widget.openDelay;
+
+  /// The group's close delay.
+  Duration get closeDelay => _state.widget.closeDelay;
+
+  /// Whether a tooltip or another member is open, so an opening skips delay.
+  bool get hasOpenMember => _state.active != null || _state.member != null;
+
+  /// Records [member] as open, closing the previously open tooltip or member.
+  void open(Object member, VoidCallback close) {
+    final tooltip = _state.active;
+    if (tooltip != null) {
+      tooltip._setOpen(false, SeedOverlayDismissReason.trigger);
+      if (_state.active == tooltip) _state.active = null;
+    }
+    if (_state.member != null && _state.member != member) _state.closeMember();
+    _state.member = member;
+    _state.memberClose = close;
+  }
+
+  /// Forgets [member] if it is the open member.
+  void close(Object member) {
+    if (_state.member != member) return;
+    _state.member = null;
+    _state.memberClose = null;
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is SeedTooltipDelayGroupLink && other._state == _state;
+
+  @override
+  int get hashCode => _state.hashCode;
 }
 
 class _SeedTooltipGroupScope extends InheritedWidget {
@@ -600,6 +664,7 @@ class _SeedHelpBubbleTooltipState extends State<SeedHelpBubbleTooltip> {
       if (previous != null && previous != this) {
         previous._setOpen(false, SeedOverlayDismissReason.trigger);
       }
+      if (g.member != null) g.closeMember();
       g.active = this;
     } else if (g.active == this) {
       g.active = null;
@@ -630,6 +695,7 @@ class _SeedHelpBubbleTooltipState extends State<SeedHelpBubbleTooltip> {
     final useGroupDelay = widget.openDelay == null && widget.closeDelay == null;
     final skip =
         g?.active != null ||
+        g?.member != null ||
         (g?.lastClose != null &&
             DateTime.now().difference(g!.lastClose!) < g.widget.skipDelay);
     final delay = open

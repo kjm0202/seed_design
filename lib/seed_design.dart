@@ -157,6 +157,7 @@ export 'src/components/navigation/seed_segmented_control.dart';
 export 'src/components/navigation/seed_pagination.dart';
 export 'src/components/navigation/seed_table_pagination.dart';
 export 'src/components/navigation/seed_side_navigation.dart';
+export 'src/components/navigation/seed_navigation_menu.dart';
 
 // Components - Layout
 export 'src/components/layout/seed_divider.dart';
@@ -188,7 +189,8 @@ export 'src/components/popover/seed_popover.dart';
 export 'src/components/feedback/seed_progress_circle.dart';
 export 'src/components/feedback/seed_skeleton.dart';
 export 'src/components/feedback/seed_snackbar.dart';
-export 'src/components/feedback/seed_help_bubble.dart';
+export 'src/components/feedback/seed_help_bubble.dart'
+    hide SeedTooltipDelayGroupLink;
 
 export 'src/components/feedback/seed_pull_to_refresh.dart';
 export 'src/components/layout/seed_layout.dart';
