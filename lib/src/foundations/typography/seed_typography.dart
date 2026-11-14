@@ -32,6 +32,49 @@ class SeedFontSize {
   static const double t13 = 40.0;
   /// Type scale t14 font size: 48.0 logical pixels.
   static const double t14 = 48.0;
+
+  /// Static type scale t1 font size: 11.0 logical pixels
+  /// (`$font-size.t1-static`). Pair with [SeedStaticTextScope].
+  static const double t1Static = 11.0;
+  /// Static type scale t2 font size: 12.0 logical pixels
+  /// (`$font-size.t2-static`). Pair with [SeedStaticTextScope].
+  static const double t2Static = 12.0;
+  /// Static type scale t3 font size: 13.0 logical pixels
+  /// (`$font-size.t3-static`). Pair with [SeedStaticTextScope].
+  static const double t3Static = 13.0;
+  /// Static type scale t4 font size: 14.0 logical pixels
+  /// (`$font-size.t4-static`). Pair with [SeedStaticTextScope].
+  static const double t4Static = 14.0;
+  /// Static type scale t5 font size: 16.0 logical pixels
+  /// (`$font-size.t5-static`). Pair with [SeedStaticTextScope].
+  static const double t5Static = 16.0;
+  /// Static type scale t6 font size: 18.0 logical pixels
+  /// (`$font-size.t6-static`). Pair with [SeedStaticTextScope].
+  static const double t6Static = 18.0;
+  /// Static type scale t7 font size: 20.0 logical pixels
+  /// (`$font-size.t7-static`). Pair with [SeedStaticTextScope].
+  static const double t7Static = 20.0;
+  /// Static type scale t8 font size: 22.0 logical pixels
+  /// (`$font-size.t8-static`). Pair with [SeedStaticTextScope].
+  static const double t8Static = 22.0;
+  /// Static type scale t9 font size: 24.0 logical pixels
+  /// (`$font-size.t9-static`). Pair with [SeedStaticTextScope].
+  static const double t9Static = 24.0;
+  /// Static type scale t10 font size: 26.0 logical pixels
+  /// (`$font-size.t10-static`). Pair with [SeedStaticTextScope].
+  static const double t10Static = 26.0;
+  /// Static type scale t11 font size: 28.0 logical pixels
+  /// (`$font-size.t11-static`). Pair with [SeedStaticTextScope].
+  static const double t11Static = 28.0;
+  /// Static type scale t12 font size: 32.0 logical pixels
+  /// (`$font-size.t12-static`). Pair with [SeedStaticTextScope].
+  static const double t12Static = 32.0;
+  /// Static type scale t13 font size: 40.0 logical pixels
+  /// (`$font-size.t13-static`). Pair with [SeedStaticTextScope].
+  static const double t13Static = 40.0;
+  /// Static type scale t14 font size: 48.0 logical pixels
+  /// (`$font-size.t14-static`). Pair with [SeedStaticTextScope].
+  static const double t14Static = 48.0;
 }
 
 /// Line height tokens defined by SEED Design System (in pixels).
@@ -66,6 +109,49 @@ class SeedLineHeight {
   static const double t13 = 52.0;
   /// Type scale t14 line height: 60.0 logical pixels.
   static const double t14 = 60.0;
+
+  /// Static type scale t1 line height: 15.0 logical pixels
+  /// (`$line-height.t1-static`). Pair with [SeedStaticTextScope].
+  static const double t1Static = 15.0;
+  /// Static type scale t2 line height: 16.0 logical pixels
+  /// (`$line-height.t2-static`). Pair with [SeedStaticTextScope].
+  static const double t2Static = 16.0;
+  /// Static type scale t3 line height: 18.0 logical pixels
+  /// (`$line-height.t3-static`). Pair with [SeedStaticTextScope].
+  static const double t3Static = 18.0;
+  /// Static type scale t4 line height: 19.0 logical pixels
+  /// (`$line-height.t4-static`). Pair with [SeedStaticTextScope].
+  static const double t4Static = 19.0;
+  /// Static type scale t5 line height: 22.0 logical pixels
+  /// (`$line-height.t5-static`). Pair with [SeedStaticTextScope].
+  static const double t5Static = 22.0;
+  /// Static type scale t6 line height: 24.0 logical pixels
+  /// (`$line-height.t6-static`). Pair with [SeedStaticTextScope].
+  static const double t6Static = 24.0;
+  /// Static type scale t7 line height: 27.0 logical pixels
+  /// (`$line-height.t7-static`). Pair with [SeedStaticTextScope].
+  static const double t7Static = 27.0;
+  /// Static type scale t8 line height: 30.0 logical pixels
+  /// (`$line-height.t8-static`). Pair with [SeedStaticTextScope].
+  static const double t8Static = 30.0;
+  /// Static type scale t9 line height: 32.0 logical pixels
+  /// (`$line-height.t9-static`). Pair with [SeedStaticTextScope].
+  static const double t9Static = 32.0;
+  /// Static type scale t10 line height: 35.0 logical pixels
+  /// (`$line-height.t10-static`). Pair with [SeedStaticTextScope].
+  static const double t10Static = 35.0;
+  /// Static type scale t11 line height: 38.0 logical pixels
+  /// (`$line-height.t11-static`). Pair with [SeedStaticTextScope].
+  static const double t11Static = 38.0;
+  /// Static type scale t12 line height: 42.0 logical pixels
+  /// (`$line-height.t12-static`). Pair with [SeedStaticTextScope].
+  static const double t12Static = 42.0;
+  /// Static type scale t13 line height: 52.0 logical pixels
+  /// (`$line-height.t13-static`). Pair with [SeedStaticTextScope].
+  static const double t13Static = 52.0;
+  /// Static type scale t14 line height: 60.0 logical pixels
+  /// (`$line-height.t14-static`). Pair with [SeedStaticTextScope].
+  static const double t14Static = 60.0;
 }
 
 /// Font weight tokens defined by SEED Design System.
@@ -182,6 +268,268 @@ class SeedTypography extends ThemeExtension<SeedTypography> {
   final TextStyle t14Medium;
   /// SEED type scale t14, bold weight: 48 px font size with 60 px line height in [SeedTypography.base].
   final TextStyle t14Bold;
+
+  // Static scale (React 3.1.0+ `textStyle="t5StaticBold"` etc.)
+
+  // Font size and line height fixed to the official `-static` tokens; other
+  // properties (family, color, letter spacing, ...) follow the base style.
+  static TextStyle _static(
+    TextStyle base,
+    double fontSize,
+    double lineHeight,
+  ) => base.copyWith(fontSize: fontSize, height: lineHeight / fontSize);
+
+  /// Static t1 regular style: 11 px font size with 15 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t1StaticRegular =>
+      _static(t1Regular, SeedFontSize.t1Static, SeedLineHeight.t1Static);
+
+  /// Static t1 medium style: 11 px font size with 15 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t1StaticMedium =>
+      _static(t1Medium, SeedFontSize.t1Static, SeedLineHeight.t1Static);
+
+  /// Static t1 bold style: 11 px font size with 15 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t1StaticBold =>
+      _static(t1Bold, SeedFontSize.t1Static, SeedLineHeight.t1Static);
+
+  /// Static t2 regular style: 12 px font size with 16 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t2StaticRegular =>
+      _static(t2Regular, SeedFontSize.t2Static, SeedLineHeight.t2Static);
+
+  /// Static t2 medium style: 12 px font size with 16 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t2StaticMedium =>
+      _static(t2Medium, SeedFontSize.t2Static, SeedLineHeight.t2Static);
+
+  /// Static t2 bold style: 12 px font size with 16 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t2StaticBold =>
+      _static(t2Bold, SeedFontSize.t2Static, SeedLineHeight.t2Static);
+
+  /// Static t3 regular style: 13 px font size with 18 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t3StaticRegular =>
+      _static(t3Regular, SeedFontSize.t3Static, SeedLineHeight.t3Static);
+
+  /// Static t3 medium style: 13 px font size with 18 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t3StaticMedium =>
+      _static(t3Medium, SeedFontSize.t3Static, SeedLineHeight.t3Static);
+
+  /// Static t3 bold style: 13 px font size with 18 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t3StaticBold =>
+      _static(t3Bold, SeedFontSize.t3Static, SeedLineHeight.t3Static);
+
+  /// Static t4 regular style: 14 px font size with 19 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t4StaticRegular =>
+      _static(t4Regular, SeedFontSize.t4Static, SeedLineHeight.t4Static);
+
+  /// Static t4 medium style: 14 px font size with 19 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t4StaticMedium =>
+      _static(t4Medium, SeedFontSize.t4Static, SeedLineHeight.t4Static);
+
+  /// Static t4 bold style: 14 px font size with 19 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t4StaticBold =>
+      _static(t4Bold, SeedFontSize.t4Static, SeedLineHeight.t4Static);
+
+  /// Static t5 regular style: 16 px font size with 22 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t5StaticRegular =>
+      _static(t5Regular, SeedFontSize.t5Static, SeedLineHeight.t5Static);
+
+  /// Static t5 medium style: 16 px font size with 22 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t5StaticMedium =>
+      _static(t5Medium, SeedFontSize.t5Static, SeedLineHeight.t5Static);
+
+  /// Static t5 bold style: 16 px font size with 22 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t5StaticBold =>
+      _static(t5Bold, SeedFontSize.t5Static, SeedLineHeight.t5Static);
+
+  /// Static t6 regular style: 18 px font size with 24 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t6StaticRegular =>
+      _static(t6Regular, SeedFontSize.t6Static, SeedLineHeight.t6Static);
+
+  /// Static t6 medium style: 18 px font size with 24 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t6StaticMedium =>
+      _static(t6Medium, SeedFontSize.t6Static, SeedLineHeight.t6Static);
+
+  /// Static t6 bold style: 18 px font size with 24 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t6StaticBold =>
+      _static(t6Bold, SeedFontSize.t6Static, SeedLineHeight.t6Static);
+
+  /// Static t7 regular style: 20 px font size with 27 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t7StaticRegular =>
+      _static(t7Regular, SeedFontSize.t7Static, SeedLineHeight.t7Static);
+
+  /// Static t7 medium style: 20 px font size with 27 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t7StaticMedium =>
+      _static(t7Medium, SeedFontSize.t7Static, SeedLineHeight.t7Static);
+
+  /// Static t7 bold style: 20 px font size with 27 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t7StaticBold =>
+      _static(t7Bold, SeedFontSize.t7Static, SeedLineHeight.t7Static);
+
+  /// Static t8 regular style: 22 px font size with 30 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t8StaticRegular =>
+      _static(t8Regular, SeedFontSize.t8Static, SeedLineHeight.t8Static);
+
+  /// Static t8 medium style: 22 px font size with 30 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t8StaticMedium =>
+      _static(t8Medium, SeedFontSize.t8Static, SeedLineHeight.t8Static);
+
+  /// Static t8 bold style: 22 px font size with 30 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t8StaticBold =>
+      _static(t8Bold, SeedFontSize.t8Static, SeedLineHeight.t8Static);
+
+  /// Static t9 regular style: 24 px font size with 32 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t9StaticRegular =>
+      _static(t9Regular, SeedFontSize.t9Static, SeedLineHeight.t9Static);
+
+  /// Static t9 medium style: 24 px font size with 32 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t9StaticMedium =>
+      _static(t9Medium, SeedFontSize.t9Static, SeedLineHeight.t9Static);
+
+  /// Static t9 bold style: 24 px font size with 32 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t9StaticBold =>
+      _static(t9Bold, SeedFontSize.t9Static, SeedLineHeight.t9Static);
+
+  /// Static t10 regular style: 26 px font size with 35 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t10StaticRegular =>
+      _static(t10Regular, SeedFontSize.t10Static, SeedLineHeight.t10Static);
+
+  /// Static t10 medium style: 26 px font size with 35 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t10StaticMedium =>
+      _static(t10Medium, SeedFontSize.t10Static, SeedLineHeight.t10Static);
+
+  /// Static t10 bold style: 26 px font size with 35 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t10StaticBold =>
+      _static(t10Bold, SeedFontSize.t10Static, SeedLineHeight.t10Static);
+
+  /// Static t11 regular style: 28 px font size with 38 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t11StaticRegular =>
+      _static(t11Regular, SeedFontSize.t11Static, SeedLineHeight.t11Static);
+
+  /// Static t11 medium style: 28 px font size with 38 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t11StaticMedium =>
+      _static(t11Medium, SeedFontSize.t11Static, SeedLineHeight.t11Static);
+
+  /// Static t11 bold style: 28 px font size with 38 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t11StaticBold =>
+      _static(t11Bold, SeedFontSize.t11Static, SeedLineHeight.t11Static);
+
+  /// Static t12 regular style: 32 px font size with 42 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t12StaticRegular =>
+      _static(t12Regular, SeedFontSize.t12Static, SeedLineHeight.t12Static);
+
+  /// Static t12 medium style: 32 px font size with 42 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t12StaticMedium =>
+      _static(t12Medium, SeedFontSize.t12Static, SeedLineHeight.t12Static);
+
+  /// Static t12 bold style: 32 px font size with 42 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t12StaticBold =>
+      _static(t12Bold, SeedFontSize.t12Static, SeedLineHeight.t12Static);
+
+  /// Static t13 regular style: 40 px font size with 52 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t13StaticRegular =>
+      _static(t13Regular, SeedFontSize.t13Static, SeedLineHeight.t13Static);
+
+  /// Static t13 medium style: 40 px font size with 52 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t13StaticMedium =>
+      _static(t13Medium, SeedFontSize.t13Static, SeedLineHeight.t13Static);
+
+  /// Static t13 bold style: 40 px font size with 52 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t13StaticBold =>
+      _static(t13Bold, SeedFontSize.t13Static, SeedLineHeight.t13Static);
+
+  /// Static t14 regular style: 48 px font size with 60 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t14StaticRegular =>
+      _static(t14Regular, SeedFontSize.t14Static, SeedLineHeight.t14Static);
+
+  /// Static t14 medium style: 48 px font size with 60 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t14StaticMedium =>
+      _static(t14Medium, SeedFontSize.t14Static, SeedLineHeight.t14Static);
+
+  /// Static t14 bold style: 48 px font size with 60 px line height that
+  /// do not follow font scaling. The style alone cannot stop Flutter's text
+  /// scaling; render it inside a [SeedStaticTextScope].
+  TextStyle get t14StaticBold =>
+      _static(t14Bold, SeedFontSize.t14Static, SeedLineHeight.t14Static);
 
   // Semantic shortcuts
   /// Screen-heading semantic style, equal to [t10Bold].
@@ -713,6 +1061,45 @@ class SeedTypography extends ThemeExtension<SeedTypography> {
       labelLarge: applyColor(t4Bold),
       labelMedium: applyColor(t3Bold),
       labelSmall: applyColor(t2Bold),
+    );
+  }
+}
+
+/// Turns off the ambient text scaling for [child], so SEED static text
+/// styles such as [SeedTypography.t5StaticBold] keep their official size.
+///
+/// React 3.1.0+ exposes `textStyle="t1StaticRegular"` through
+/// `"t14StaticBold"`, whose font size and line height use the `-static`
+/// tokens instead of following the user's font scaling. In Flutter the font
+/// size of a [TextStyle] is always multiplied by the [TextScaler] that [Text]
+/// reads from [MediaQuery], so a style alone cannot opt out. This scope
+/// replaces that scaler with [TextScaler.noScaling] for its subtree; the
+/// static getters supply the token values.
+///
+/// ```dart
+/// SeedStaticTextScope(
+///   child: Text('3', style: context.seedTypography.t5StaticBold),
+/// )
+/// ```
+///
+/// Everything in [child] stops scaling, including text that uses ordinary
+/// styles, so keep the scope around the static text only. A [Text] with its
+/// own `textScaler` argument keeps that scaler.
+class SeedStaticTextScope extends StatelessWidget {
+  /// Renders [child] with [TextScaler.noScaling].
+  const SeedStaticTextScope({super.key, required this.child});
+
+  /// The subtree whose text must not follow the ambient text scaling.
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final data = MediaQuery.maybeOf(context);
+    // Without a MediaQuery, Text already falls back to no scaling.
+    if (data == null) return child;
+    return MediaQuery(
+      data: data.copyWith(textScaler: TextScaler.noScaling),
+      child: child,
     );
   }
 }

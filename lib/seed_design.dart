@@ -171,6 +171,7 @@ export 'src/components/layout/seed_image_frame.dart';
 export 'src/components/layout/seed_content_placeholder.dart';
 export 'src/components/layout/seed_identity_placeholder.dart';
 export 'src/components/layout/seed_footer.dart';
+export 'src/components/layout/seed_consistent_width.dart';
 
 // Components - List
 export 'src/components/list/seed_list.dart';
