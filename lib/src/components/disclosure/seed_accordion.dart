@@ -81,6 +81,20 @@ class SeedAccordionItem extends StatefulWidget {
   /// Optional leading header widget.
   final Widget? prefix;
 
+  /// Optional widget shown in place of the [title] text, as with React's
+  /// `Accordion.Title` children. It inherits the title text style. [title]
+  /// stays the accessible name of the panel, so keep it meaningful.
+  final Widget? titleWidget;
+
+  /// Optional widget shown in place of the [description] text. It inherits
+  /// the description text style.
+  final Widget? descriptionWidget;
+
+  /// Optional trailing icon replacing the default chevron, as with React's
+  /// `Accordion.SuffixIcon`. It rotates half a turn while expanded and
+  /// inherits the chevron's size and color through [IconTheme].
+  final Widget? suffixIcon;
+
   /// Panel body, shown or hidden by the expansion state.
   final Widget content;
 
@@ -124,6 +138,9 @@ class SeedAccordionItem extends StatefulWidget {
     required this.title,
     this.description,
     this.prefix,
+    this.titleWidget,
+    this.descriptionWidget,
+    this.suffixIcon,
     required this.content,
     this.initiallyExpanded = false,
     this.onExpansionChanged,
@@ -316,8 +333,20 @@ class _SeedAccordionItemState extends State<SeedAccordionItem>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(widget.title, style: titleStyle),
-                            if (widget.description != null) ...[
+                            if (widget.titleWidget != null)
+                              DefaultTextStyle.merge(
+                                style: titleStyle,
+                                child: widget.titleWidget!,
+                              )
+                            else
+                              Text(widget.title, style: titleStyle),
+                            if (widget.descriptionWidget != null) ...[
+                              const SizedBox(height: SeedDimension.x0_5),
+                              DefaultTextStyle.merge(
+                                style: descStyle,
+                                child: widget.descriptionWidget!,
+                              ),
+                            ] else if (widget.description != null) ...[
                               const SizedBox(height: SeedDimension.x0_5),
                               Text(widget.description!, style: descStyle),
                             ],
@@ -327,12 +356,16 @@ class _SeedAccordionItemState extends State<SeedAccordionItem>
                       const SizedBox(width: SeedDimension.x3),
                       RotationTransition(
                         turns: _iconTurns,
-                        child: Icon(
-                          Icons.keyboard_arrow_down_rounded,
-                          size: size.iconSize,
-                          color: widget.enabled
-                              ? colors.fg.neutralSubtle
-                              : colors.fg.disabled,
+                        child: IconTheme.merge(
+                          data: IconThemeData(
+                            size: size.iconSize,
+                            color: widget.enabled
+                                ? colors.fg.neutralSubtle
+                                : colors.fg.disabled,
+                          ),
+                          child:
+                              widget.suffixIcon ??
+                              const Icon(Icons.keyboard_arrow_down_rounded),
                         ),
                       ),
                     ],
@@ -578,6 +611,9 @@ class _SeedAccordionState extends State<SeedAccordion> {
               title: widget.items[i].title,
               description: widget.items[i].description,
               prefix: widget.items[i].prefix,
+              titleWidget: widget.items[i].titleWidget,
+              descriptionWidget: widget.items[i].descriptionWidget,
+              suffixIcon: widget.items[i].suffixIcon,
               headingLevel: widget.items[i].headingLevel,
               content: widget.items[i].content,
               variant: widget.variant,

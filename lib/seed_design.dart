@@ -188,6 +188,7 @@ export 'src/components/popover/seed_popover.dart';
 
 // Components - Feedback
 export 'src/components/feedback/seed_progress_circle.dart';
+export 'src/components/feedback/seed_loading_indicator.dart';
 export 'src/components/feedback/seed_skeleton.dart';
 export 'src/components/feedback/seed_snackbar.dart';
 export 'src/components/feedback/seed_help_bubble.dart'

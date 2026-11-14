@@ -36,6 +36,8 @@ class SeedFieldset extends StatelessWidget {
     this.label,
     this.labelBold = false,
     this.description,
+    this.errorMessage,
+    this.errorIcon,
     this.indicator,
     this.required = false,
     this.enabled = true,
@@ -51,6 +53,18 @@ class SeedFieldset extends StatelessWidget {
   /// Optional help copy, painted in the footer below [child] like the
   /// official Field description (t4 regular, fg.neutralSubtle).
   final String? description;
+
+  /// Optional group error, as with React's `Fieldset.ErrorMessage`.
+  ///
+  /// When non-null it replaces [description] in the footer, is painted in
+  /// `fg.critical` with [errorIcon], and is announced politely when it
+  /// appears or changes. Errors of individual controls inside [child] are
+  /// independent and unaffected. Like the official fieldset, the group
+  /// itself is not marked invalid; the message describes it.
+  final String? errorMessage;
+
+  /// Optional icon before [errorMessage]; defaults to the Field error icon.
+  final Widget? errorIcon;
 
   /// Optional trailing widget in the label row, such as indicator text.
   final Widget? indicator;
@@ -128,7 +142,45 @@ class SeedFieldset extends StatelessWidget {
             child,
             // Official RadioGroup/Field compositions render the description
             // in a footer after the controls.
-            if (description != null)
+            if (errorMessage != null)
+              Padding(
+                padding: const EdgeInsets.only(
+                  top: SeedDimension.x2,
+                  left: SeedDimension.x0_5,
+                  right: SeedDimension.x0_5,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Centers the icon on the first line of text.
+                    Padding(
+                      padding: EdgeInsets.only(top: textScaler.scale(1.5)),
+                      child: ExcludeSemantics(
+                        child: IconTheme(
+                          data: IconThemeData(
+                            color: colors.fg.critical,
+                            size: SeedDimension.x4,
+                          ),
+                          child: errorIcon ?? const Icon(Icons.error),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: SeedDimension.x1_5),
+                    Expanded(
+                      child: Semantics(
+                        liveRegion: true,
+                        child: Text(
+                          errorMessage!,
+                          style: typography.t4Regular.copyWith(
+                            color: colors.fg.critical,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else if (description != null)
               Padding(
                 padding: const EdgeInsets.only(
                   top: SeedDimension.x2,
