@@ -175,7 +175,7 @@ Inputs forward Flutter options for autofill, IME actions, editing completion, ca
 
 Dialog/BottomSheet helpers accept exactly one of `child` or `builder`, plus `useRootNavigator`, `routeSettings` and `requestFocus`. BottomSheet `constraints` can override its default maximum width of 480. Place ordinary providers above the selected Navigator when needed: captured themes and SEED label overrides do not clone arbitrary providers.
 
-Default labels follow the app locale. SEED-specific copy has Korean and English defaults; common labels also use Material translations. Override other translations using `SeedLocalizations`. Explicit widget labels are preserved.
+Default labels follow the app locale. SEED-specific copy has Korean and English defaults; common labels also use Material translations. Override other translations using `SeedLocalizations`. Nested overrides inherit unspecified labels from enclosing scopes, including when a dialog is opened. Explicit widget labels are preserved.
 
 ```dart
 SeedLocalizations(
@@ -184,16 +184,9 @@ SeedLocalizations(
 );
 ```
 
-DatePicker/TimePicker retain the official SEED `ko_KR` locale default. To follow the app language, explicitly pass `locale: Localizations.localeOf(context)`.
+DatePicker and TimePicker follow the app locale by default. Pass `locale: const Locale('ko', 'KR')` to keep Korean formatting in an app that uses another language.
 
 A null callback does not disable SEED Switch/Checkbox controls: set `enabled: false` for permission/loading restrictions. SEED Slider defaults to 0–100 with step 1. Keep a Material Slider for continuous 0–1 behavior, or explicitly choose the SEED range and step/divisions. These defaults follow official SEED contracts.
-
-The runnable migration example at `example/lib/material_migration.dart` combines Form validation/save/reset/Undo, existing Material tabs/Drawer/Switch and a SEED dialog.
-
-```sh
-cd example
-flutter run -t lib/material_migration.dart
-```
 
 ## Buttons and inputs
 

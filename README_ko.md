@@ -155,7 +155,7 @@ SeedFormField<bool>(
 
 Dialog/BottomSheet helper는 `child` 또는 `builder` 중 하나를 받으며 `useRootNavigator`, `routeSettings`, `requestFocus`를 지원합니다. BottomSheet의 `constraints`로 기본 최대 폭 480을 변경할 수 있습니다. 일반 provider가 필요한 경우 해당 Navigator 위에 provider를 설치하세요. 테마와 SEED 문구 override는 자동 캡처되지만 일반 provider를 복제하지는 않습니다.
 
-기본 문구는 앱 locale을 따릅니다. 한국어·영어 SEED 문구와 Material 공통 번역을 제공하고, 다른 번역은 다음처럼 지정할 수 있습니다. 명시적으로 전달한 위젯 문구는 그대로 유지합니다.
+기본 문구는 앱 locale을 따릅니다. 한국어·영어 SEED 문구와 Material 공통 번역을 제공하고, 다른 번역은 다음처럼 지정할 수 있습니다. 명시한 위젯 문구가 우선합니다. 중첩된 `SeedLocalizations`는 생략한 문구를 바깥 설정에서 이어받으며, 대화상자에도 이 설정이 전달됩니다.
 
 ```dart
 SeedLocalizations(
@@ -164,16 +164,9 @@ SeedLocalizations(
 );
 ```
 
-DatePicker/TimePicker의 `locale` 기본값은 공식 SEED와 같은 `ko_KR`입니다. 앱 언어를 따르게 하려면 `locale: Localizations.localeOf(context)`를 명시하세요.
+DatePicker와 TimePicker는 기본으로 앱의 로케일을 따릅니다. 다른 언어를 사용하는 앱에서 한국어 형식을 유지하려면 `locale: const Locale('ko', 'KR')`를 지정하세요.
 
 Switch/Checkbox의 콜백을 null로 만드는 것과 SEED의 비활성화는 다릅니다. 권한·로딩에 따라 잠그려면 `enabled: false`를 명시하세요. SEED Slider는 기본 0~100, step 1입니다. 기존 연속 0~1 Slider 동작이 필요하면 Material Slider를 유지하고, SEED로 교체할 때는 범위·step/divisions를 명시하세요. 이 기본값은 공식 SEED 계약을 유지합니다.
-
-실행 가능한 이전 예제인 `example/lib/material_migration.dart`는 Form 검증·저장·초기화·Undo, 기존 Material 탭·Drawer·Switch, SEED dialog를 함께 보여줍니다.
-
-```sh
-cd example
-flutter run -t lib/material_migration.dart
-```
 
 ## 버튼과 입력창
 

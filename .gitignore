@@ -47,6 +47,7 @@ migrate_working_dir/
 !/example/README.md
 !/example/README_ko.md
 !/CHANGELOG.md
+!/CHANGELOG_ko.md
 !/AGENTS.md
 !/THIRD_PARTY_NOTICES.md
 !/test/assets/fonts/SOURCE.md
