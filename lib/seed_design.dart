@@ -131,6 +131,7 @@ export 'src/components/selection/seed_select_box_group.dart';
 
 // Components - Input
 export 'src/components/input/seed_text_input.dart';
+export 'src/components/input/seed_search_input.dart';
 export 'src/components/input/seed_text_field.dart';
 export 'src/components/input/seed_field.dart';
 export 'src/components/input/seed_quantity_picker.dart';

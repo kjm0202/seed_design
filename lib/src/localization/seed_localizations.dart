@@ -83,6 +83,10 @@ enum SeedLabel {
   deleteChip,
   /// Singular unread notification; template retains {count}.
   unreadNotification,
+  /// Accessible name of a search input.
+  search,
+  /// Clear the query of a search input.
+  clearSearch,
   /// Hint on a reorderable item before a keyboard reorder starts
   reorderStartHint,
   /// Hint while a keyboard reorder is in progress; `{position}` is one-based
@@ -144,6 +148,7 @@ class SeedLocalizations extends StatelessWidget {
         SeedLabel.previousPage => material.previousPageTooltip,
         SeedLabel.nextPage => material.nextPageTooltip,
         SeedLabel.rowsPerPage => material.rowsPerPageTitle,
+        SeedLabel.search => material.searchFieldLabel,
         _ => null,
       };
       if (translated != null) return translated;
@@ -212,6 +217,8 @@ class SeedLocalizations extends StatelessWidget {
     SeedLabel.optionalInput: '(optional)',
     SeedLabel.deleteChip: 'Delete {label}',
     SeedLabel.unreadNotification: '{count} unread notification',
+    SeedLabel.search: 'Search',
+    SeedLabel.clearSearch: 'Clear',
     SeedLabel.reorderStartHint: 'Press Space to reorder',
     SeedLabel.reorderMovingHint:
         'Position {position}. Use arrow keys, Space to finish, Escape to cancel',
@@ -260,6 +267,8 @@ class SeedLocalizations extends StatelessWidget {
     SeedLabel.optionalInput: '(선택)',
     SeedLabel.deleteChip: '{label} 삭제',
     SeedLabel.unreadNotification: '읽지 않은 알림 {count}개',
+    SeedLabel.search: '검색',
+    SeedLabel.clearSearch: '지우기',
     SeedLabel.reorderStartHint: '스페이스를 눌러 순서 변경',
     SeedLabel.reorderMovingHint:
         '{position}번째 위치. 방향키로 이동, 스페이스로 완료, Escape로 취소',
