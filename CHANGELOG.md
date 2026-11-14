@@ -4,118 +4,240 @@
 
 #### Source compatibility
 
-- **List rows** now expose `showDivider` as `bool?` on `SeedListItem`, `SeedListLinkItem`, `SeedCheckListItem`, `SeedRadioListItem`, and `SeedSwitchListItem`. Null inherits `SeedList.showDividers` and resolves to false for standalone rows. Handle null when reading the property, using the parent list setting when applicable.
-- **Widget types** changed for `SeedToggleButton` (`StatelessWidget` → `StatefulWidget`) and `SeedResponsivePair` (`StatelessWidget` → `MultiChildRenderObjectWidget`). Use `Widget` for variables and return types that only hold or return these widgets. `SeedAspectRatio` now composes `AspectRatio`. Use `ratio` in place of the inherited `aspectRatio` getter and use Flutter's `AspectRatio` directly where that type is required.
-- **`SeedInputButtonSize`** adds `large`. Add a `large` case to exhaustive switches. `small` remains a distinct deprecated enum value with the same 40px dimensions as `medium`.
-- **`SeedBgColors`** requires `neutralSolidMuted` and `neutralSolidMutedPressed` in direct constructor calls.
-- **Picker fields** are nullable in two places. Read `picker.defaultValue ?? picker.min` for the quantity picker's initial seed before clamping. Use `SeedSliderMarker.resolveAlign(min, max)` for the effective alignment. An omitted marker alignment resolves to start at the minimum, end at the maximum, and center otherwise.
-- **`SeedDatePickerLayout`** gains `twoWeeks`. Add a `twoWeeks` case to exhaustive switches over this enum.
+- **Aspect Ratio:** Compose `AspectRatio` in `SeedAspectRatio`; use `ratio` instead of the inherited `aspectRatio` getter, and Flutter's `AspectRatio` directly where that type is required.
+- **Colors:** Require `neutralSolidMuted` and `neutralSolidMutedPressed` in direct `SeedBgColors` constructor calls.
+- **Date Picker:** Add `SeedDatePickerLayout.twoWeeks`; add a `twoWeeks` case to exhaustive switches.
+- **Input Button:** Add `SeedInputButtonSize.large`; add a `large` case to exhaustive switches. `small` stays a distinct deprecated value with `medium`'s 40px dimensions.
+- **List:** Type row `showDivider` as `bool?` on `SeedListItem`, `SeedListLinkItem`, `SeedCheckListItem`, `SeedRadioListItem`, and `SeedSwitchListItem`; null inherits `SeedList.showDividers`, or false for standalone rows. Handle null when reading it, using the parent list setting where applicable.
+- **Quantity Picker:** Read the nullable initial seed as `picker.defaultValue ?? picker.min` before clamping.
+- **Slider:** Make marker alignment nullable; use `SeedSliderMarker.resolveAlign(min, max)` for the effective value. Omitted alignment resolves to start at the minimum, end at the maximum, and center otherwise.
+- **Widget types:** Change `SeedToggleButton` (`StatelessWidget` → `StatefulWidget`) and `SeedResponsivePair` (`StatelessWidget` → `MultiChildRenderObjectWidget`); use `Widget` for variables and return types that only hold or return them.
 
 #### Defaults and behavior
 
-- **Buttons and fields.** `SeedButton.textColor` applies to ghost buttons with `enabled: true`, and `fontWeight` applies to ghost buttons. Use `SeedInputButtonSize.large` for the previous 52px `medium` size. The new `medium` is 40px and the default remains 52px under `large`. Set `clearable: true` on `SeedTextInput` or `SeedTextField` to keep the clear button.
-- **Form validation and reset.** Server errors and grapheme-limit violations in `SeedTextField` now affect `FormState.validate()`. Clear a server error when the form can be submitted again. Uncontrolled `SeedRadioGroup` and `SeedQuantityPicker` no longer register with the enclosing form. Wrap them in `SeedFormField` when validation, saving, or resetting should be owned by the form.
-- **List and choice controls.** Dividers are hidden by default. Set `showDividers: true` on the list or `showDivider: true` on a row to retain them. Standalone Checkbox, Radio, and Switch controls use their official visual sizes with a 44px touch target, and labeled rows use the official minimum heights. Use Space to toggle these controls and their check, radio, and switch list rows. Enter no longer toggles them.
-- **Layout.** `SeedFloat.offset` now defaults to zero instead of 16px on all sides. `SeedResponsive.largeBreakpoint` moves from 1024 to 1280. Supply the earlier values explicitly to retain those layouts. Supply `SeedFooter.copyright` explicitly to display the previous copyright text. Grid auto-placement uses sparse placement. With only `rows` set, row flow uses a single column. Specify columns or explicit `row` and `column` positions where the layout depended on the previous placement.
-- **Picker locale.** DatePicker and TimePicker follow the app locale when omitted and fall back to English (`en_US`) when no supported locale is available. Pass `locale: const Locale('ko', 'KR')` to keep Korean formatting in an app that uses another language. The public `locale` properties are now nullable.
-- **Attachments and pickers.** Pass `maxCount: 10` to `SeedAttachmentInput` to keep the previous attachment limit of ten. The default is now one. An omitted quantity starts at `min`. Pass `defaultValue: 1` to retain the previous initial seed, subject to the picker's bounds. Reselecting the current date no longer emits `onValueChange`. TimePicker rounds minute ties up, so 10:05 with a ten-minute step becomes 10:10.
-- **Select.** The default popup uses an anchored overlay and an 8px menu gap. Set `menuOffset: Offset.zero` to retain a zero gap. A non-default `menuAlignment` still uses `MenuAnchor`. Update widget tests that locate the default popup by its `MenuAnchor` implementation.
-- **Multiple Select value.** A `SeedSelect(multiple: true)` trigger shows the selected labels joined by `, `, like React's `SelectValue`, instead of removable chips. Use `formatValue` to change the text, or `valueBuilder` to render chips or other custom content.
-- **Menu focus.** Tab requests dismissal and moves focus beyond the menu. Shift+Tab from the menu can return to its trigger while leaving it open. Account for these focus transitions in keyboard handlers and tests.
-- **Material Snackbar.** `showSeedSnackbar` now reports `SnackBarClosedReason.action` instead of `hide` when the action is selected. Update consumers of `ScaffoldFeatureController.closed` that branch on the previous reason. A snackbar with both an action label and callback persists by default. Pass `persist: false` to keep its timeout.
-- **SEED Snackbar controller.** An active entry exits before the next entry enters. `SeedSnackbarController.show` defaults `removeDelay` to 200ms and calls the active entry's `onClose` after removal. Move logic that depends on removal into that callback.
-- **Navigation.** `SeedTabs.fill` defaults to true. Pass `fill: false` to retain intrinsic tab widths. Adaptive `SeedTopNavigation` centers titles on iOS only and uses a chevron for the default back action. Set `centerTitle` or provide `leading` for the earlier presentation. The bar can now infer Drawer and EndDrawer actions. Use explicit `leading` and `actions` to control the buttons, or disable inference with `automaticallyImplyLeading: false`. String titles and subtitles still clamp the ambient text scale to 1.0–1.2. Pass `titleTextScaler` to use another scaler.
-- **SEED 3.3.0 colors.** `bg.neutralWeakAlpha` and its pressed color now use `gray-alpha-200/300`, and `stroke.neutralWeak` uses the translucent `gray-alpha-400`. Outlines of `neutralOutline` and `brandOutline` buttons, the neutral outline Badge, outline Chips, ReactionButton, and the disabled square Checkbox move from `stroke.neutralMuted` to `stroke.neutralWeak`. Update tests that compare these colors as opaque values.
-- **Tabs reveal.** A selected tab within 16px of a scroll edge now scrolls to leave 16px beside it, and the ChipTabs reveal box no longer includes the 8px gap.
-- **Top navigation text button.** The label follows the system text scale between 1.0 and 1.2, and the button hugs its label instead of filling a loosely constrained slot.
-- **Attachment reorder.** Items that cannot move (disabled or read-only) no longer expose move accessibility actions. A keyboard reorder shows the item at its provisional position and announces start, cancel, and drop. The list is no longer a Material `ReorderableListView`; update tests that locate it by that type. With a trigger in RTL, the start padding now sits before the trigger.
-- **Collapsed side navigation.** The flyout is a disclosure built on `SeedNavigationMenu`: hover opens after 200ms and closes after 100ms, hover and mouse clicks keep focus where it was, and sub-items without `onTap` stay enabled. The flyout no longer highlights the selected sub-item's background.
-- **DatePicker.** Changing the visible range in non-continuous layouts fades the new rows in with a 20px slide. Reduced motion keeps the fade only.
-- **DatePicker bounds.** When several of `firstDate`, `lastDate`, `monthRange`, and `yearRange` are set, the picker uses the narrowest range they allow instead of letting one take precedence. Removing a date in multiple mode must also pass `constraints`. `seedMaxSelectionCount` always allows a removal.
-- **Side panel swipe.** Swiping a `SeedSidePanel` closed reports `SeedOverlayDismissReason.drag` instead of `outside`. Update handlers that branch on the previous reason.
-- **Slider value label.** The default label shows a fractional value in full instead of rounding it to one decimal place, so 0.25 no longer appears as 0.3. Use `valueFormatter` for a fixed format.
-- **HelpBubble focus.** `SeedHelpBubbleTrigger` closes when focus leaves its content. Set `closeOnInteractOutside: false` to keep it open.
+- **Attachments:** Default `SeedAttachmentInput.maxCount` to one instead of ten; pass `maxCount: 10` to keep the old limit.
+- **Attachments:** Hide move accessibility actions on items that cannot move (disabled or read-only).
+- **Attachments:** Show a keyboard-reordered item at its provisional position and announce start, cancel, and drop.
+- **Attachments:** Stop using a Material `ReorderableListView` for the list; update tests that locate it by that type.
+- **Attachments:** In RTL with a trigger, place the start padding before the trigger.
+- **Button:** Apply `SeedButton.textColor` to ghost buttons with `enabled: true`, and `fontWeight` to ghost buttons.
+- **Checkbox / Radio / Switch:** Use the official visual sizes with a 44px touch target for standalone controls, and the official minimum heights for labeled rows.
+- **Checkbox / Radio / Switch:** Toggle these controls and their check, radio, and switch list rows with Space, not Enter.
+- **Colors:** Use `gray-alpha-200/300` for `bg.neutralWeakAlpha` and its pressed color, and translucent `gray-alpha-400` for `stroke.neutralWeak`, per SEED 3.3.0.
+- **Colors:** Move outlines of `neutralOutline` and `brandOutline` buttons, the neutral outline Badge, outline Chips, ReactionButton, and the disabled square Checkbox from `stroke.neutralMuted` to `stroke.neutralWeak`; update tests that compare these colors as opaque values.
+- **Date Picker:** Stop emitting `onValueChange` when the current date is reselected.
+- **Date Picker:** Fade new rows in with a 20px slide when the visible range changes in non-continuous layouts; reduced motion keeps only the fade.
+- **Date Picker:** Use the narrowest range allowed when several of `firstDate`, `lastDate`, `monthRange`, and `yearRange` are set, instead of letting one take precedence.
+- **Date Picker:** Apply `constraints` to date removal in multiple mode; `seedMaxSelectionCount` always allows a removal.
+- **Date Picker / Time Picker:** Follow the app locale when `locale` is omitted, falling back to English (`en_US`) without a supported locale; pass `locale: const Locale('ko', 'KR')` to keep Korean formatting in apps using another language. The public `locale` properties are nullable.
+- **Float:** Default `SeedFloat.offset` to zero instead of 16px on all sides; pass the old value to keep the layout.
+- **Footer:** Supply `SeedFooter.copyright` explicitly to show the previous copyright text.
+- **Forms:** Stop registering uncontrolled `SeedRadioGroup` and `SeedQuantityPicker` with the enclosing form; wrap them in `SeedFormField` when the form should own validation, saving, or resetting.
+- **Grid:** Use sparse auto-placement, and a single column for row flow when only `rows` is set; specify columns or explicit `row` and `column` positions where layouts depended on the old placement.
+- **Help Bubble:** Close `SeedHelpBubbleTrigger` when focus leaves its content; set `closeOnInteractOutside: false` to keep it open.
+- **Input Button:** Shrink `SeedInputButtonSize.medium` to 40px; use `large` for the previous 52px `medium`. The default stays 52px under `large`.
+- **List:** Hide dividers by default; set `showDividers: true` on the list or `showDivider: true` on a row to keep them.
+- **Material Snackbar:** Report `SnackBarClosedReason.action` instead of `hide` from `showSeedSnackbar` when the action is selected; update `ScaffoldFeatureController.closed` consumers that branch on the old reason.
+- **Material Snackbar:** Persist snackbars with both an action label and callback by default; pass `persist: false` to keep the timeout.
+- **Menu:** Request dismissal and move focus beyond the menu on Tab; Shift+Tab can return to the trigger while leaving the menu open. Account for these focus transitions in keyboard handlers and tests.
+- **Quantity Picker:** Start an omitted quantity at `min`; pass `defaultValue: 1` for the previous initial seed, subject to the picker's bounds.
+- **Responsive:** Move `SeedResponsive.largeBreakpoint` from 1024 to 1280; pass the old value to keep the layout.
+- **Select:** Use an anchored overlay with an 8px menu gap for the default popup; set `menuOffset: Offset.zero` for a zero gap. A non-default `menuAlignment` still uses `MenuAnchor`; update widget tests that find the default popup by its `MenuAnchor` implementation.
+- **Select:** Show `SeedSelect(multiple: true)` values as labels joined by `, `, like React's `SelectValue`, instead of removable chips; use `formatValue` to change the text or `valueBuilder` for chips or other custom content.
+- **Side Navigation:** Make the collapsed flyout a disclosure built on `SeedNavigationMenu`: hover opens after 200ms and closes after 100ms, hover and mouse clicks keep focus in place, and sub-items without `onTap` stay enabled.
+- **Side Navigation:** Stop highlighting the selected sub-item's background in the flyout.
+- **Side Panel:** Report swiping a `SeedSidePanel` closed as `SeedOverlayDismissReason.drag` instead of `outside`; update handlers that branch on the old reason.
+- **Slider:** Show fractional values in full in the default label instead of rounding to one decimal place (0.25 no longer shows as 0.3); use `valueFormatter` for a fixed format.
+- **Snackbar:** Exit the active entry before the next one enters.
+- **Snackbar:** Default `SeedSnackbarController.show`'s `removeDelay` to 200ms and call the active entry's `onClose` after removal; move removal-dependent logic into that callback.
+- **Tabs:** Default `SeedTabs.fill` to true; pass `fill: false` for intrinsic tab widths.
+- **Tabs:** Scroll a selected tab within 16px of a scroll edge to leave 16px beside it; exclude the 8px gap from the ChipTabs reveal box.
+- **Text Field:** Include server errors and grapheme-limit violations in `FormState.validate()`; clear a server error once the form can be submitted again.
+- **Text Input / Text Field:** Set `clearable: true` on `SeedTextInput` or `SeedTextField` to keep the clear button.
+- **Time Picker:** Round minute ties up; 10:05 with a ten-minute step becomes 10:10.
+- **Top Navigation:** Center adaptive `SeedTopNavigation` titles on iOS only and use a chevron for the default back action; set `centerTitle` or provide `leading` for the earlier presentation.
+- **Top Navigation:** Infer Drawer and EndDrawer actions; use explicit `leading` and `actions` to control the buttons, or `automaticallyImplyLeading: false` to disable inference.
+- **Top Navigation:** String titles and subtitles still clamp the ambient text scale to 1.0–1.2; pass `titleTextScaler` for another scaler.
+- **Top Navigation:** Scale text button labels with the system text scale between 1.0 and 1.2, and hug the label instead of filling a loosely constrained slot.
 
 ### Added and deprecated APIs
 
-- Add locale-aware, overridable labels through `SeedLocalizations`, keyed by `SeedLabel`. Omitted labels follow the locale and explicit strings take precedence.
-- Add opt-in `preserveComponentThemes` to the Material bridge. It defaults to false. When enabled, supplied Material component theme fields take precedence and SEED fills the remaining fields.
-- Add `SeedSelectFormField` for validation, save, reset, and restoration, and `SeedTabBar` for Material `TabController` and `TabBarView` integration. Add English and Korean migration guides.
-- Add `SeedTopNavigation.slot` for custom content that fills the space between leading and trailing actions. Use it separately from title and subtitle inputs. Add `bottom`, `titleTextScaler`, and `automaticallyImplyLeading` to the navigation bar, and optional Hero tags and tooltips to `SeedFloatingActionButton`.
-- Add text input autofill, IME, editing, and restoration options. Add `forceErrorText` and `restorationId` to `SeedFormField`. Add `showDefaultSuffix` and `contentScale` to `SeedInputButton`, and `showValueChips` to `SeedFieldButton` for choosing chips or plain text.
-- Add `invalid` to Field, TextInput, InputButton, Select, and QuantityPicker. Deprecate the corresponding `isInvalid`, `hasError`, and `isError` inputs. Add `description` to Field and `placeholder` to TextInput, with `helperText` and `hintText` retained as compatibility inputs.
-- Add `pressed`, `defaultPressed`, and `onPressedChange` to ToggleButton, and `variant` to ContextualFloatingButton, Checkbox, and Checkmark. Their existing `selected` and `onSelectedChanged`, `tone`, and `shape` inputs remain available as deprecated aliases.
-- Add `invalid` and `required` to Checkbox, Radio, and Switch. Add `labelWeight` to TextField, FieldButton, Select, Slider, and RadioGroup, `indicatorText` to Field, and `indicator` to TextField, attachment fields, and Slider. Add `showRequiredIndicator` to RadioGroup and Slider, `required` to Fieldset, `labelWeight` to attachment fields, `tone` to RadioListItem, and `jumpMultiplier` to Slider.
-- Add `SeedAttachmentInput.scrollPadding` for scroll content in regular and reorderable lists, with a default of `EdgeInsets.zero`. Add `SeedFooterLink.uri` for link semantics.
-- Add `SeedPagination.visibleItemCount` with 7 or 9 controls including arrows. `maxVisibleSlots` continues to count page slots. Add `SeedTablePagination.rangeLabel`, Grid's CSS-style `colSpan` and one-based start/end lines, and full-span placement via `SeedGridItem.full`. Add `SeedLayoutContent` with density presets and `SeedScrollFogMask`. Allow `SeedAspectRatio.ratio` to be omitted, with a default of 4/3.
-- Add ordered `flipFallbackSides` to HelpBubbleTrigger and AnchoredOverlay, plus `fitMinExtent` and `tabExitsContent` to AnchoredOverlay. Add `focusableWhenScrollable` to ScrollArea and `onClosePressed` to BottomSheet. Dialog and sheet helpers accept route builders and Navigator, route, and focus options. Bottom sheets support constraint overrides. Add `showSeedSnackbar.onVisible`.
-- Add `semanticsLabel` to SegmentedControl, Select, InputButton, SelectBoxGroup, ChipRadioGroup, Menu, and Popover. Add control focus rings and options to customize focus and link semantics on `SeedPressable`. Set `activateOnEnter: false` to activate on Space only, and `unfocusOnDisabledTap` so a pointer tap on a disabled choice row blurs the focused input, as native controls do.
-- Align tokens and the official reference fixture with SEED React/CSS 3.3.0.
-- Add `SeedSearchInput` with `onSubmit`, `blurOnSubmit`, and a clear button that keeps the input focused.
-- Add `SeedSegmentedTextInput` with segments, separators, masked dots, paste and autofill distribution, and `SeedSegmentedTextInputFormField`.
-- Add `SeedNavigationMenu` with its root, trigger, content, group, and item widgets.
-- Add `SeedDatePickerLayout.twoWeeks`, which shows two weeks and moves by two weeks.
-- Add `SeedConsistentWidth`, `SeedLoadingIndicator`, and `SeedStaticTextScope` with the 42 `tNStatic{Regular,Medium,Bold}` text styles and the `t1Static`–`t14Static` tokens in `SeedFontSize` and `SeedLineHeight`.
-- Add `extendSafeAreaX` to Tabs, TabBar, TabsView, ChipTabsView, PageBanner, AttachmentInput, and the attachment fields.
-- Add `titleWidget`, `descriptionWidget`, and `suffixIcon` to `SeedAccordionItem`, and `errorMessage` and `errorIcon` to `SeedFieldset`.
-- Add `showCloseButton` to Callout, `disableOnLoading` to ContextualFloatingButton, ReactionButton, and ToggleButton, `showRequiredIndicator` to Field, TextField, and FieldButton, `hideCharacterCount` to TextField, `labelBold` to Fieldset, and `rowBuilder` to Radio.
-- Add `SeedSelect.formatSelectedValue`, also on `SeedSelectFormField`, with `SeedSelectSelectedItem` for formatting selected values whose options have not loaded yet. Add `textValue` and `typeaheadLabel` to `SeedSelectItem` for separate display and search text, and `SeedSelectBoxGroup.radio` for an explicit radio group.
-- Add `dragDismissible` to `showSeedBottomSheet`, `closeOnInteractOutside` and `closeOnEscape` to `SeedSidePanelTrigger`, and `onDiscard` to `SeedSnackbarController.show` for entries removed before they are shown.
-- Add `semanticsReadOnly` and `semanticsValidationResult` to `SeedPressable`, and `focusVisible` and `surfaceSize` to `SeedInteractionState`.
-- Add the light and dark `SeedPalette.grayAlpha100Light`–`grayAlpha1000Dark` colors and `SeedColorScheme.banner` (`SeedBannerColors`).
+- **Accordion:** Add `titleWidget`, `descriptionWidget`, and `suffixIcon` to `SeedAccordionItem`.
+- **Aspect Ratio:** Make `SeedAspectRatio.ratio` optional, defaulting to 4/3.
+- **Attachments:** Add `SeedAttachmentInput.scrollPadding` (default `EdgeInsets.zero`) for scroll content in regular and reorderable lists.
+- **Bottom Sheet:** Add `onClosePressed`, constraint overrides, and `dragDismissible` on `showSeedBottomSheet`.
+- **Buttons:** Add `disableOnLoading` to ContextualFloatingButton, ReactionButton, and ToggleButton.
+- **Callout:** Add `showCloseButton`.
+- **Checkbox / Radio / Switch:** Add `invalid` and `required`.
+- **Colors:** Add light and dark `SeedPalette.grayAlpha100Light`–`grayAlpha1000Dark` colors and `SeedColorScheme.banner` (`SeedBannerColors`).
+- **Consistent Width:** Add `SeedConsistentWidth`.
+- **Date Picker:** Add `SeedDatePickerLayout.twoWeeks`, which shows two weeks and moves by two weeks.
+- **Dialog / Sheets:** Accept route builders and Navigator, route, and focus options in dialog and sheet helpers.
+- **Docs:** Add English and Korean migration guides.
+- **FAB:** Add optional Hero tags and tooltips to `SeedFloatingActionButton`.
+- **Field / Text Input:** Add `description` to Field and `placeholder` to TextInput; keep `helperText` and `hintText` as compatibility inputs.
+- **Field Button:** Add `showValueChips` to `SeedFieldButton` to choose chips or plain text.
+- **Fieldset:** Add `required`, `labelBold`, `errorMessage`, and `errorIcon` to `SeedFieldset`.
+- **Footer:** Add `SeedFooterLink.uri` for link semantics.
+- **Form Field:** Add `forceErrorText` and `restorationId` to `SeedFormField`.
+- **Grid:** Add CSS-style `colSpan`, one-based start/end lines, and full-span placement via `SeedGridItem.full`.
+- **Input Button:** Add `showDefaultSuffix` and `contentScale` to `SeedInputButton`.
+- **Invalid state:** Add `invalid` to Field, TextInput, InputButton, Select, and QuantityPicker; deprecate the corresponding `isInvalid`, `hasError`, and `isError` inputs.
+- **Labels and indicators:** Add `labelWeight` to TextField, FieldButton, Select, Slider, RadioGroup, and attachment fields.
+- **Labels and indicators:** Add `indicatorText` to Field; `indicator` to TextField, attachment fields, and Slider; and `showRequiredIndicator` to Field, TextField, FieldButton, RadioGroup, and Slider.
+- **Layout:** Add `SeedLayoutContent` with density presets.
+- **Loading Indicator:** Add `SeedLoadingIndicator`.
+- **Localization:** Add `SeedLocalizations` for locale-aware, overridable labels keyed by `SeedLabel`; omitted labels follow the locale and explicit strings take precedence.
+- **Material bridge:** Add opt-in `preserveComponentThemes` (default false); when enabled, supplied Material component theme fields take precedence and SEED fills the rest.
+- **Navigation Menu:** Add `SeedNavigationMenu` with its root, trigger, content, group, and item widgets.
+- **Overlays:** Add ordered `flipFallbackSides` to HelpBubbleTrigger and AnchoredOverlay, and `fitMinExtent` and `tabExitsContent` to AnchoredOverlay.
+- **Pagination:** Add `SeedPagination.visibleItemCount` for 7 or 9 controls including arrows; `maxVisibleSlots` still counts page slots.
+- **Pressable:** Add control focus rings and options to customize focus and link semantics on `SeedPressable`.
+- **Pressable:** Add `activateOnEnter: false` to activate on Space only, and `unfocusOnDisabledTap`, which blurs the focused input on a pointer tap on a disabled choice row, as native controls do.
+- **Pressable:** Add `semanticsReadOnly` and `semanticsValidationResult` to `SeedPressable`, and `focusVisible` and `surfaceSize` to `SeedInteractionState`.
+- **Radio:** Add `rowBuilder` to Radio and `tone` to RadioListItem.
+- **Safe area:** Add `extendSafeAreaX` to Tabs, TabBar, TabsView, ChipTabsView, PageBanner, AttachmentInput, and the attachment fields.
+- **Scroll Area:** Add `focusableWhenScrollable`.
+- **Scroll Fog:** Add `SeedScrollFogMask`.
+- **Search Input:** Add `SeedSearchInput` with `onSubmit`, `blurOnSubmit`, and a clear button that keeps the input focused.
+- **Segmented Text Input:** Add `SeedSegmentedTextInput` with segments, separators, masked dots, and paste and autofill distribution, plus `SeedSegmentedTextInputFormField`.
+- **Select:** Add `SeedSelectFormField` for validation, save, reset, and restoration.
+- **Select:** Add `SeedSelect.formatSelectedValue`, also on `SeedSelectFormField`, with `SeedSelectSelectedItem` for formatting selected values whose options have not loaded yet.
+- **Select:** Add `textValue` and `typeaheadLabel` to `SeedSelectItem` for separate display and search text.
+- **SelectBox:** Add `SeedSelectBoxGroup.radio` for an explicit radio group.
+- **Semantics:** Add `semanticsLabel` to SegmentedControl, Select, InputButton, SelectBoxGroup, ChipRadioGroup, Menu, and Popover.
+- **Side Panel:** Add `closeOnInteractOutside` and `closeOnEscape` to `SeedSidePanelTrigger`.
+- **Slider:** Add `jumpMultiplier`.
+- **Snackbar:** Add `showSeedSnackbar.onVisible`, and `onDiscard` on `SeedSnackbarController.show` for entries removed before they are shown.
+- **Table Pagination:** Add `SeedTablePagination.rangeLabel`.
+- **Tabs:** Add `SeedTabBar` for Material `TabController` and `TabBarView` integration.
+- **Text Field:** Add `hideCharacterCount`.
+- **Text Input:** Add autofill, IME, editing, and restoration options.
+- **Toggle Button:** Add `pressed`, `defaultPressed`, and `onPressedChange`; keep `selected` and `onSelectedChanged` as deprecated aliases.
+- **Tokens:** Align tokens and the official reference fixture with SEED React/CSS 3.3.0.
+- **Top Navigation:** Add `SeedTopNavigation.slot` for custom content filling the space between leading and trailing actions; use it separately from title and subtitle inputs.
+- **Top Navigation:** Add `bottom`, `titleTextScaler`, and `automaticallyImplyLeading`.
+- **Typography:** Add `SeedStaticTextScope` with the 42 `tNStatic{Regular,Medium,Bold}` text styles and the `t1Static`–`t14Static` tokens in `SeedFontSize` and `SeedLineHeight`.
+- **Variants:** Add `variant` to ContextualFloatingButton, Checkbox, and Checkmark; keep the existing `tone` and `shape` inputs as deprecated aliases.
 
 ### Fixes and accessibility
 
-- Preserve focus requested by a search submit callback. Keep the caret at the end of masked segmented input when it receives keyboard focus, and use the available segment width for fill placeholders.
-- Stop `SeedSegmentedTextInput` segments from drawing the app theme's Material input border inside the group frame. Keep the example Home grid valid during Android's zero-size first frame.
-- `SeedTopNavigation.slot` places text buttons like icon buttons: their 10px padding overhangs the bar edge and the slot, so labels line up with the 16px bar padding. With the Android layout, a leading button also keeps the 16px gap before the slot.
-- The attachment dropzone's drag hint keeps its `fg.neutralSubtle` color when the field is full or disabled; only the select button dims.
-- Reach the first and last available weeks in the two-week calendar, and end the previous transition when the layout or week start changes.
-- Preserve unrelated focus when a controlled navigation menu reopens, reset reinserted sidebar items to their initial state, and wait for the sidebar width transition before enabling flyouts and tooltips.
-- Hovering a navigation menu or collapsed sidebar flyout opens it again after it closed on leave. Only a keyboard-opened flyout closes when focus leaves it, as in React, and a Popover opened while focus is elsewhere no longer closes at once.
-- Update horizontal safe-area insets when the view changes inside a `SafeArea`. Keep keyboard attachment reorder within both insets and cancel a provisional move when its target disappears.
-- Keep focus on the moving attachment when rapid arrow presses scroll its new position into view, so Space can still confirm the new order.
-- Preserve Switch, Tabs and WheelPicker selection across label and item changes. Reconcile QuantityPicker bounds, and move the two-month calendar one month at a time.
-- Apply Fieldset disabled state to buttons, text inputs, and input buttons, including through nested Fieldsets. Keep chip removal and tag actions accessible.
-- Open menus with arrow keys and forward close and handle callbacks through sheet wrappers. Avoid floating controls after a Snackbar controller swap.
-- Retain partial theme overrides, and honor end-only Grid lines and full-span precedence.
-
-- Localize optional Field indicators and Chip delete announcements. Use singular wording for one unread notification and preserve enclosing label overrides inside nested scopes and dialogs.
-- Outside taps in dismissible routes close the topmost Select, Menu, or Popover. Track moving anchors and restore nested-menu keyboard focus and Escape handling after an Accordion collapses. Menus keep the requested side when their contents fit and size long menus before trying a fallback side. After pointer or semantic activation, the first arrow key targets the appropriate enabled item in Menu or the selected option in Select when available.
-- Plain-text Popovers size within `minWidth` and `maxWidth` and reserve their scroll fade only on overflow. Custom content keeps the max-width layout, and narrow footers keep action labels readable. Scrolling Dialog bodies accept keyboard focus and arrow-key scrolling. Remove the extra Dialog root tab stop and the shadows on Dialog and AlertDialog.
-- Match BottomSheet and MenuSheet drag dismissal to the React thresholds of 25% of height or 0.4px/ms, with backdrop fade during drag. Keep MenuSheet items at least 52px tall and snapping BottomSheet footers next to their content.
-- Name HelpBubble content as a dialog whose bounds exclude the arrow. Semantics tests can find the dialog node inside `SeedHelpBubble`. FieldButton and Select expose the field name and shown value, radio groups expose named radio groups, and a labelled single Slider exposes one slider node. List links expose a single link node. Field label taps, sheet handles, and attachment dropzones avoid unnamed button nodes. MenuSheet retains an accessible close action when its visible cancel button is hidden, and ReactionButton uses its label as its accessible name. Updated localized defaults include the sidebar toggle and attachment remove and retry actions.
-- Keep choice marks on the first line of wrapped labels and stretched Switch labels at the trailing edge. RadioListItem uses a large mark inside the row. Place Fieldset descriptions below the controls and use medium field label typography. Draw focus rings around the control mark and inset them on List rows and Accordion triggers. `SeedToggleButton` draws its focus ring with the full pill radius.
-- Keep strokes from shifting input, quantity, reaction, outline Chip, and SelectBox content. Align the Field required mark and show the default error icon. Align PageBanner icons to the first line and preserve the 40px minimum height with an action. Align text-attached badges to the top of the line and attachment remove buttons to the overhanging position. Keep Chip icon spacing and align ListHeader and Popover close-button geometry.
-- Let attachment dropzones span the field width and clear stale progress in `SeedAttachmentController.updateStatus`. Restore owned text controllers through Flutter's editing lifecycle. Prevent duplicate Material Snackbar action callbacks.
-- Give `SeedResponsivePair` children equal shares and stack them in reverse order at full width when they overflow. Apply alignment to wrapping `SeedFlex`, move the Footer country selector into navigation, and use horizontal layout bleed for `SeedButton(bleed: true)`.
-- Align Select option styling and transitions, add typeahead and looping arrow navigation, apply `formatValue` to single selection, and clear stale pointer state. Press feedback scales Select content while the InputButton root stays in place. FieldButton omits the default chevron.
-- Align Slider to a 26px track layout with a 20px thumb, one bounded value bubble, and no Material dots on stepped ranges. Preserve step precision, step through `allowedValues`, and support Home, End, PageUp, PageDown, and Shift+Arrow. Fix mixed fixed/flexible WheelPicker columns, and size TimePicker columns to their widest value like React's `max-content` instead of fixed shares. Add WheelPicker mouse drag and PageUp/PageDown support, and use the corrected scroll-fog mask.
-- Let Pagination and TablePagination render without a Material ancestor. Use 40px value-sized table selectors and compact range labels such as `51-75`. Preserve collapsed SideNavigation state and current-item indication. Give the flyout a 240px minimum width and a visible group heading without a tooltip over it. Truncate item labels on one line, inset press surfaces, and remove header and footer dividers. Keep the page scroll position on tab arrow navigation.
-- Align the remaining visual feedback with React, including Accordion hover surfaces, flat WheelPicker styling, and ink-free DatePicker, Menu, Footer, and SideNavigation controls. Correct `SeedScrollFog` opacity and mask direction. Preserve text selection in pull-to-refresh content.
-- Toggling `extendSafeAreaX` at runtime no longer remounts content: TabsView keeps the selected carousel page and page state, Tabs and ChipTabsView keep the strip's scroll offset, AttachmentInput keeps its scroll offset, keyboard focus, and a provisional keyboard reorder, and PageBanner keeps its content state.
-- An `immediate` `SeedSnackbarController.show` replaces every waiting entry, as in React, and reports each replaced entry through `onClose` and `onDiscard`. `SeedSnackbarAvoidOverlap` tracks the region's position as well as its size, and the snackbar moves up only when a registered region overlaps it.
-- Release focus from Accordion content once it finishes collapsing, so Enter or Space no longer activates a hidden control. Pull-to-refresh accepts pulls on content that fits the viewport when it uses an explicit `ScrollController` or `primary: false`.
-- Range Sliders with `allowedValues` no longer enforce `minStepsBetweenThumbs`, as in React. Continuous Sliders move keyboard and accessibility increments by `step`.
-- Tab always closes a Menu and moves focus to the stop after its trigger, including triggers that skip traversal or sit last in their own `FocusScope`. ArrowUp on a closed Menu trigger opens it on the last enabled item. Menu and Popover triggers expose their expanded state, and Menu and Select option groups are exposed as labelled groups.
-- Popover takes its accessible name and description from the rendered title and description, so `titleText` and `descriptionText` no longer apply when a custom `title` or `description` widget replaces them. `semanticsLabel` still takes precedence.
-- In a column-flow Grid with `rows`, an item with only `row` stays on that row. Tabs reveal the keyboard-focused tab even when a controlled parent rejects or delays the selection.
-- Taps on the overhanging part of an attachment remove button reach the button. Reorderable attachment lists support keyboard reordering: Space picks up the focused item, arrow keys move it, Space drops it, and Escape cancels. Attachment fields show the retry action only when `onRetry` is supplied.
-- Tooltips in a `SeedTooltipDelayGroup` open without delay while another tooltip of the group is open. A tooltip with its own `openDelay` or `closeDelay` uses those values instead of the group's.
-- Responsive modal triggers keep their body state when the layout crosses the 768px breakpoint. The bottom-sheet form keeps the dialog's maximum height and body padding, and the side panel's custom title and description widgets, close button, and body padding.
-- TabsView keeps lazily mounted pages and measured heights with their tab values when tabs are reordered, inserted, or removed. Accordion keeps item focus by value, SideNavigation applies `defaultOpen` only to newly added items, the collapsed flyout shows sub-item badges, and `SeedSegment.invalid` is exposed to accessibility.
-- WheelPicker returns to its committed selection when a column becomes disabled or read-only or its options change, and moves without animation under reduced motion.
-- Activating an already selected Radio no longer reports a change. An indeterminate SelectBox check mark shows a dash. ScrollArea updates `focusableWhenScrollable` as content starts or stops overflowing, independent of `fogOnlyWhenScrollable`.
-- Press feedback scales by the measured pressable surface and applies without animation under reduced motion.
+- **Accordion:** Release focus from content once it finishes collapsing, so Enter or Space no longer activates a hidden control.
+- **Accordion:** Keep item focus by value.
+- **Attachments:** Keep the dropzone drag hint's `fg.neutralSubtle` color when the field is full or disabled; dim only the select button.
+- **Attachments:** Let dropzones span the field width; clear stale progress in `SeedAttachmentController.updateStatus`.
+- **Attachments:** Support keyboard reordering in reorderable lists: Space picks up the focused item, arrow keys move it, Space drops it, and Escape cancels.
+- **Attachments:** Keep keyboard reorder within both insets; cancel a provisional move when its target disappears.
+- **Attachments:** Keep focus on the moving item when rapid arrow presses scroll its new position into view, so Space can still confirm the new order.
+- **Attachments:** Align remove buttons to the overhanging position, and route taps on the overhanging part to the button.
+- **Attachments:** Show the retry action only when `onRetry` is supplied.
+- **Badge:** Align text-attached badges to the top of the line.
+- **Bottom Sheet / Menu Sheet:** Match drag dismissal to React's thresholds of 25% of height or 0.4px/ms, fading the backdrop during drag.
+- **Bottom Sheet:** Keep snapping footers next to their content.
+- **Button:** Use horizontal layout bleed for `SeedButton(bleed: true)`.
+- **Choice controls:** Keep choice marks on the first line of wrapped labels, and stretched Switch labels at the trailing edge.
+- **Chip:** Keep icon spacing.
+- **Chip / Tag:** Keep chip removal and tag actions accessible.
+- **Date Picker:** Reach the first and last available weeks in the two-week calendar; end the previous transition when the layout or week start changes.
+- **Date Picker:** Move the two-month calendar one month at a time.
+- **Dialog:** Accept keyboard focus and arrow-key scrolling in scrolling bodies; remove the extra root tab stop.
+- **Dialog / Alert Dialog:** Remove shadows.
+- **Examples:** Keep the Home grid valid during Android's zero-size first frame.
+- **Field:** Align the required mark and show the default error icon.
+- **Field Button:** Omit the default chevron.
+- **Field Button / Select:** Expose the field name and shown value.
+- **Fieldset:** Apply disabled state to buttons, text inputs, and input buttons, including through nested Fieldsets.
+- **Fieldset:** Place descriptions below the controls and use medium field label typography.
+- **Flex:** Apply alignment to wrapping `SeedFlex`.
+- **Focus rings:** Draw around the control mark, inset on List rows and Accordion triggers, and with the full pill radius on `SeedToggleButton`.
+- **Footer:** Move the country selector into navigation.
+- **Grid:** Honor end-only lines and full-span precedence.
+- **Grid:** Keep an item with only `row` on that row in a column-flow Grid with `rows`.
+- **Help Bubble:** Name content as a dialog whose bounds exclude the arrow; semantics tests can find the dialog node inside `SeedHelpBubble`.
+- **List:** Expose list links as a single link node.
+- **List Header / Popover:** Align close-button geometry.
+- **Localization:** Localize optional Field indicators and Chip delete announcements, and use singular wording for one unread notification.
+- **Localization:** Preserve enclosing label overrides inside nested scopes and dialogs.
+- **Localization:** Update localized defaults, including the sidebar toggle and attachment remove and retry actions.
+- **Material Snackbar:** Prevent duplicate action callbacks.
+- **Menu:** Open with arrow keys; ArrowUp on a closed trigger opens on the last enabled item.
+- **Menu:** Restore nested-menu keyboard focus and Escape handling after an Accordion collapses.
+- **Menu:** Keep the requested side when contents fit; size long menus before trying a fallback side.
+- **Menu:** Close on Tab and move focus to the stop after the trigger, including triggers that skip traversal or sit last in their own `FocusScope`.
+- **Menu / Select:** After pointer or semantic activation, aim the first arrow key at the appropriate enabled Menu item, or at the selected Select option when available.
+- **Menu / Popover / Select:** Expose Menu and Popover trigger expanded state, and Menu and Select option groups as labelled groups.
+- **Menu Sheet:** Keep items at least 52px tall.
+- **Menu Sheet:** Keep an accessible close action when the visible cancel button is hidden.
+- **Navigation Menu:** Preserve unrelated focus when a controlled menu reopens.
+- **Navigation Menu / Side Navigation:** Reopen a navigation menu or collapsed sidebar flyout on hover after it closed on leave; close a flyout on focus loss only when keyboard-opened, as in React.
+- **Overlays:** Close the topmost Select, Menu, or Popover on outside taps in dismissible routes, and track moving anchors.
+- **Page Banner:** Align icons to the first line and keep the 40px minimum height with an action.
+- **Pagination / Table Pagination:** Render without a Material ancestor.
+- **Popover:** Stop closing at once when opened while focus is elsewhere.
+- **Popover:** Size plain-text content within `minWidth` and `maxWidth`, reserving the scroll fade only on overflow; keep the max-width layout for custom content and readable action labels in narrow footers.
+- **Popover:** Take the accessible name and description from the rendered title and description, so `titleText` and `descriptionText` no longer apply when custom `title` or `description` widgets replace them; `semanticsLabel` still takes precedence.
+- **Pressable:** Scale press feedback by the measured surface and apply it without animation under reduced motion.
+- **Pull to refresh:** Preserve text selection in content.
+- **Pull to refresh:** Accept pulls on content that fits the viewport when using an explicit `ScrollController` or `primary: false`.
+- **Quantity Picker:** Reconcile bounds.
+- **Radio:** Expose radio groups as named radio groups.
+- **Radio:** Stop reporting a change when an already selected Radio is activated.
+- **Radio List Item:** Use a large mark inside the row.
+- **Reaction Button:** Use the label as the accessible name.
+- **Responsive modals:** Keep body state when the layout crosses the 768px breakpoint. In bottom-sheet form, keep the dialog's maximum height and body padding, and the side panel's custom title and description widgets, close button, and body padding.
+- **Responsive Pair:** Give `SeedResponsivePair` children equal shares; stack them in reverse order at full width on overflow.
+- **Safe area:** Update horizontal insets when the view changes inside a `SafeArea`.
+- **Safe area:** Stop remounting content when `extendSafeAreaX` toggles at runtime: TabsView keeps the selected carousel page and page state, Tabs and ChipTabsView keep the strip's scroll offset, AttachmentInput keeps its scroll offset, keyboard focus, and provisional keyboard reorder, and PageBanner keeps its content state.
+- **Scroll Area:** Update `focusableWhenScrollable` as content starts or stops overflowing, independent of `fogOnlyWhenScrollable`.
+- **Scroll Fog:** Correct `SeedScrollFog` opacity and mask direction.
+- **Search Input:** Preserve focus requested by a submit callback.
+- **Segmented Text Input:** Keep the caret at the end of masked input when it receives keyboard focus; use the available segment width for fill placeholders.
+- **Segmented Text Input:** Stop segments from drawing the app theme's Material input border inside the group frame.
+- **Select:** Align option styling and transitions, add typeahead and looping arrow navigation, apply `formatValue` to single selection, and clear stale pointer state.
+- **Select:** Scale Select content on press while the InputButton root stays in place.
+- **SelectBox:** Show a dash for an indeterminate check mark.
+- **Semantics:** Avoid unnamed button nodes for Field label taps, sheet handles, and attachment dropzones.
+- **Semantics:** Expose `SeedSegment.invalid` to accessibility.
+- **Sheets:** Forward close and handle callbacks through sheet wrappers.
+- **Side Navigation:** Reset reinserted items to their initial state; wait for the width transition before enabling flyouts and tooltips.
+- **Side Navigation:** Preserve collapsed state and current-item indication.
+- **Side Navigation:** Give the flyout a 240px minimum width and a visible group heading without a tooltip over it.
+- **Side Navigation:** Truncate item labels to one line, inset press surfaces, and remove header and footer dividers.
+- **Side Navigation:** Apply `defaultOpen` only to newly added items; show sub-item badges in the collapsed flyout.
+- **Slider:** Align to a 26px track layout with a 20px thumb, one bounded value bubble, and no Material dots on stepped ranges.
+- **Slider:** Preserve step precision, step through `allowedValues`, and support Home, End, PageUp, PageDown, and Shift+Arrow.
+- **Slider:** Stop enforcing `minStepsBetweenThumbs` on range Sliders with `allowedValues`, as in React; move continuous Slider keyboard and accessibility increments by `step`.
+- **Slider:** Expose one slider node for a labelled single Slider.
+- **Snackbar:** Avoid floating controls after a controller swap.
+- **Snackbar:** Replace every waiting entry on an `immediate` `SeedSnackbarController.show`, as in React, reporting each through `onClose` and `onDiscard`.
+- **Snackbar:** Track the `SeedSnackbarAvoidOverlap` region's position as well as its size; move the snackbar up only when a registered region overlaps it.
+- **Strokes:** Keep strokes from shifting input, quantity, reaction, outline Chip, and SelectBox content.
+- **Switch / Tabs / Wheel Picker:** Preserve selection across label and item changes.
+- **Table Pagination:** Use 40px value-sized selectors and compact range labels such as `51-75`.
+- **Tabs:** Keep the page scroll position on arrow-key tab navigation.
+- **Tabs:** Reveal the keyboard-focused tab even when a controlled parent rejects or delays the selection.
+- **Tabs View:** Keep lazily mounted pages and measured heights with their tab values when tabs are reordered, inserted, or removed.
+- **Text Input:** Restore owned text controllers through Flutter's editing lifecycle.
+- **Themes:** Retain partial overrides.
+- **Time Picker:** Size columns to their widest value, like React's `max-content`, instead of fixed shares.
+- **Tooltip:** Open without delay in a `SeedTooltipDelayGroup` while another tooltip of the group is open; a tooltip's own `openDelay` or `closeDelay` overrides the group's.
+- **Top Navigation:** Place text buttons in `SeedTopNavigation.slot` like icon buttons, their 10px padding overhanging the bar edge and the slot so labels line up with the 16px bar padding; keep the 16px gap between a leading button and the slot in the Android layout.
+- **Visual feedback:** Align the remaining feedback with React, including Accordion hover surfaces, flat WheelPicker styling, and ink-free DatePicker, Menu, Footer, and SideNavigation controls.
+- **Wheel Picker:** Fix mixed fixed/flexible columns; add mouse drag and PageUp/PageDown support; use the corrected scroll-fog mask.
+- **Wheel Picker:** Return to the committed selection when a column becomes disabled or read-only or its options change; move without animation under reduced motion.
 
 ### Example and web
 
-- Add the App Bar text button demo and a home entry for Search Bar. Search Bar dismisses the keyboard on a body tap and shows the close action in place when opened as the root screen.
-- Expand the safe area demo with live inset values, swipeable and content-width tabs, a magic banner, attachment lists, a dropzone, and Image Frame overlays. Show keyboard reorder instructions in the attachment demos.
-- Add demos for SearchInput, segmented number fields, navigation menus, the two-week calendar, consistent text width, loading, static typography, horizontal safe areas, and Accordion and Fieldset slots. Card number, resident number, and Search Bar are showcase compositions.
-- Align the Stackflow showcase's platform transitions, responsive layouts, browser font scaling, and component demos. Preserve per-Activity Step history while isolating fresh Activities, retain parent screens for pushed modals, and keep sheet draft controllers alive through dismissal.
-- Add the textarea autoresize and scroll demo at `/e2e/textarea-autoresize-scroll`.
-- Use path URLs and a GitHub Pages `404.html` app shell so showcase routes open directly and survive page refreshes.
+- **App Bar:** Add the text button demo.
+- **Search Bar:** Add a home entry; dismiss the keyboard on a body tap, and show the close action in place when opened as the root screen.
+- **Safe area:** Add live inset values, swipeable and content-width tabs, a magic banner, attachment lists, a dropzone, and Image Frame overlays to the demo.
+- **Attachments:** Show keyboard reorder instructions in the demos.
+- **Demos:** Add SearchInput, segmented number fields, navigation menus, the two-week calendar, consistent text width, loading, static typography, horizontal safe areas, and Accordion and Fieldset slots.
+- **Showcase:** Present card number, resident number, and Search Bar as showcase compositions.
+- **Stackflow:** Align the showcase's platform transitions, responsive layouts, browser font scaling, and component demos.
+- **Stackflow:** Preserve per-Activity Step history while isolating fresh Activities, retain parent screens for pushed modals, and keep sheet draft controllers alive through dismissal.
+- **Textarea:** Add the autoresize and scroll demo at `/e2e/textarea-autoresize-scroll`.
+- **Web:** Use path URLs and a GitHub Pages `404.html` app shell so showcase routes open directly and survive page refreshes.
 
 ## 1.0.0
 
