@@ -2,8 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform, kIsWeb;
-import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show BoxParentData, RenderShiftedBox;
+import 'package:material_ui/material_ui.dart';
+import 'package:flutter/rendering.dart'
+    show BoxParentData, OverflowBoxFit, RenderShiftedBox;
 import 'package:seed_design/seed_design.dart';
 
 import 'spa_types.dart';
@@ -91,13 +92,6 @@ Widget _scrollPage(List<Widget> children, {EdgeInsetsGeometry? padding}) =>
 Widget _ptrScroll(List<Widget> children) => _scrollPage(
   children,
   padding: const EdgeInsets.symmetric(horizontal: _gutter),
-);
-
-Widget _caption(String value) => Builder(
-  builder: (context) => Text(
-    value,
-    style: TextStyle(fontSize: 13, color: context.seedColor.fg.neutralMuted),
-  ),
 );
 
 Widget _action(
@@ -451,7 +445,19 @@ class _SafeAreaBleedPage extends StatefulWidget {
 }
 
 class _SafeAreaBleedPageState extends State<_SafeAreaBleedPage> {
-  String category = _categories.first;
+  static const _tabs = ['추천', '인기', '최신'];
+  static final _files = [
+    for (var i = 1; i <= 8; i++)
+      SeedAttachmentItem(
+        id: 'safe-area-file-$i',
+        name: 'file$i.txt',
+        sizeText: '1 B',
+        type: SeedAttachmentType.file,
+      ),
+  ];
+  bool _extend = true;
+  int _hugIndex = 0;
+  int _chipIndex = 0;
   final GlobalKey _footerKey = GlobalKey();
   double _footerExtent = 0;
 
@@ -480,9 +486,14 @@ class _SafeAreaBleedPageState extends State<_SafeAreaBleedPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: context.seedTypography.t5Bold),
-              const SizedBox(height: 4),
-              _caption(description),
+              Text(
+                title,
+                style: context.seedTypography.t5Bold.copyWith(
+                  color: context.seedColor.fg.neutral,
+                ),
+              ),
+              const SizedBox(height: SeedDimension.x1),
+              _mutedT3(description),
             ],
           ),
         ),
@@ -492,9 +503,121 @@ class _SafeAreaBleedPageState extends State<_SafeAreaBleedPage> {
     ),
   );
 
+  // Official: `<Text textStyle="t3Regular" color="fg.neutralMuted">`.
+  Widget _mutedT3(String value) => Text(
+    value,
+    style: context.seedTypography.t3Regular.copyWith(
+      color: context.seedColor.fg.neutralMuted,
+    ),
+  );
+
+  // Each SEED component receives the original width inside the safe area.
+  // Its extendSafeAreaX then owns any bleed and inset padding.
+  Widget _insideSafeArea(Widget child) =>
+      SafeArea(top: false, bottom: false, child: child);
+
+  // Official: `<Box px="spacingX.globalGutter">` around the field, with
+  // `--seed-attachment-input-extend-x` set to the gutter. The label and
+  // dropzone stay inside the gutter; only the item list widens by the gutter
+  // (here) and, with extendSafeAreaX, by the insets (inside the package).
+  Widget _attachmentField({required bool dropzone}) => _insideSafeArea(
+    Padding(
+      padding: const EdgeInsets.symmetric(horizontal: _gutter),
+      child: SeedAttachmentField(
+        label: '첨부파일',
+        maxCount: _files.length,
+        defaultItems: _files,
+        showDropzone: dropzone,
+        triggerIcon: const Icon(Icons.attach_file),
+        reorderable: true,
+        extendSafeAreaX: _extend,
+        itemBuilder: (context, controller) => _gutterBleedItems(
+          SeedAttachmentInput(
+            items: controller.items,
+            maxCount: _files.length,
+            showTrigger: !dropzone,
+            triggerIcon: const Icon(Icons.attach_file),
+            onAdd: () {},
+            onRemove: (item) => controller.remove(item.id),
+            onReorder: controller.reorder,
+            // The extend-x gutter stays inside the scrollport; the package
+            // adds the safe-area insets on top when extendSafeAreaX is on.
+            scrollPadding: const EdgeInsets.symmetric(horizontal: _gutter),
+            extendSafeAreaX: _extend,
+          ),
+        ),
+      ),
+    ),
+  );
+
+  // Widens the list by the gutter on both sides without changing the
+  // height the field lays out, like a negative CSS margin.
+  Widget _gutterBleedItems(Widget input) => LayoutBuilder(
+    builder: (context, constraints) => SizedBox(
+      width: constraints.maxWidth,
+      child: OverflowBox(
+        fit: OverflowBoxFit.deferToChild,
+        minWidth: constraints.maxWidth + _gutter * 2,
+        maxWidth: constraints.maxWidth + _gutter * 2,
+        child: input,
+      ),
+    ),
+  );
+
+  Widget _imageFrame(EdgeInsets insets) {
+    // Mirrors the official `ImageFrameIndicator` recipe
+    // (image-frame-indicator.yaml): static-black-alpha-800 pill, x1_5/x0_5
+    // padding, t1 medium white label.
+    Widget indicator(String label) => DecoratedBox(
+      decoration: const BoxDecoration(
+        color: SeedPalette.staticBlackAlpha800,
+        borderRadius: SeedBorderRadius.full,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: SeedDimension.x1_5,
+          vertical: SeedDimension.x0_5,
+        ),
+        child: Text(
+          label,
+          style: context.seedTypography.t1Medium.copyWith(
+            color: SeedPalette.staticWhite,
+          ),
+        ),
+      ),
+    );
+
+    final frame = SeedImageFrame(
+      imageProvider: const AssetImage('assets/peng.jpeg'),
+      semanticLabel: 'penguin',
+      customRatio: 2,
+      borderRadius: BorderRadius.zero,
+      bottomLeading: Padding(
+        padding: _extend ? insets : EdgeInsets.zero,
+        child: indicator('1 / 5'),
+      ),
+      bottomTrailing: Padding(
+        padding: _extend ? insets : EdgeInsets.zero,
+        child: const SeedImageFrameReactionButton(semanticsLabel: '좋아요'),
+      ),
+      overlay: Align(
+        alignment: Alignment.topCenter,
+        child: Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: indicator('center'),
+        ),
+      ),
+    );
+    // Keep the frame mounted so its reaction state survives toggling.
+    return Padding(padding: _extend ? EdgeInsets.zero : insets, child: frame);
+  }
+
   @override
   Widget build(BuildContext context) {
     _measureFooter();
+    final padding = MediaQuery.paddingOf(context);
+    final insets = EdgeInsets.only(left: padding.left, right: padding.right);
+    final gutter = insets + const EdgeInsets.symmetric(horizontal: _gutter);
     return Stack(
       children: [
         // The official footer is the final in-flow child of a full-height
@@ -503,10 +626,124 @@ class _SafeAreaBleedPageState extends State<_SafeAreaBleedPage> {
         ListView(
           padding: const EdgeInsets.only(top: 16),
           children: [
+            Padding(
+              padding: gutter.add(const EdgeInsets.only(bottom: 32)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SeedSwitch(
+                    label: 'extendSafeAreaX',
+                    checked: _extend,
+                    onCheckedChange: (value) => setState(() => _extend = value),
+                  ),
+                  // Official VStack gap="x2" also spaces the two zero-height
+                  // measuring divs of SafeAreaReadout, so the readout sits
+                  // three x2 gaps (24px) below the switch.
+                  const SizedBox(height: SeedDimension.x2 * 3),
+                  _mutedT3(
+                    'safe area: 왼쪽 ${insets.left.toStringAsFixed(0)}px · '
+                    '오른쪽 ${insets.right.toStringAsFixed(0)}px',
+                  ),
+                ],
+              ),
+            ),
             section(
-              '이미지',
-              'bleedX에 safeArea를 주면 좌우 inset까지 채워요.',
-              _penguinPanel(true),
+              'Tabs',
+              'extendSafeAreaX를 주면 목록 배경과 하단 선이 화면 끝까지 이어지고 패널도 화면 끝까지 스와이프돼요. 탭과 패널 내용은 safe area 안에 남아요.',
+              _insideSafeArea(
+                SeedTabsView(
+                  items: [for (final tab in _tabs) SeedTabItem(label: tab)],
+                  carousel: true,
+                  dynamicHeight: true,
+                  height: 80,
+                  extendSafeAreaX: _extend,
+                  children: [
+                    for (final tab in _tabs)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: _gutter,
+                          vertical: 24,
+                        ),
+                        decoration: BoxDecoration(
+                          color: context.seedColor.bg.informativeWeak,
+                          border: Border.all(
+                            color: context.seedColor.stroke.neutralMuted,
+                          ),
+                        ),
+                        child: Text(
+                          '$tab 패널',
+                          style: context.seedTypography.t4Medium.copyWith(
+                            color: context.seedColor.fg.neutral,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            section(
+              'Tabs (hug)',
+              '탭이 넘치면 선택한 탭을 화면 안으로 스크롤해요. 탭은 safe area 아래에 멈추지 않고, 목록 padding만큼 떨어져 멈춰요.',
+              _insideSafeArea(
+                SeedTabs(
+                  fill: false,
+                  selectedIndex: _hugIndex,
+                  onTabSelected: (index) => setState(() => _hugIndex = index),
+                  extendSafeAreaX: _extend,
+                  items: [
+                    for (final item in _categories)
+                      SeedTabItem(label: item, value: item),
+                  ],
+                ),
+              ),
+            ),
+            section(
+              'Chip Tabs',
+              'extendSafeAreaX를 주면 chip 목록이 화면 끝까지 스크롤되고, 스크롤하기 전에는 첫 chip이 safe area 경계에서 시작해요.',
+              _insideSafeArea(
+                SeedTabs(
+                  variant: SeedTabsVariant.chipSolid,
+                  fill: false,
+                  selectedIndex: _chipIndex,
+                  onTabSelected: (index) => setState(() => _chipIndex = index),
+                  extendSafeAreaX: _extend,
+                  items: [
+                    for (final item in _categories)
+                      SeedTabItem(label: item, value: item),
+                  ],
+                ),
+              ),
+            ),
+            section(
+              'Page Banner',
+              'extendSafeAreaX를 주면 배경은 화면 끝까지 채우고, 내용은 safe area 안에 둬요.',
+              _insideSafeArea(
+                SeedPageBanner(
+                  tone: SeedPageBannerTone.magic,
+                  title: '안내',
+                  description: '배경은 화면 끝까지, 글자는 safe area 안쪽에 있어요.',
+                  extendSafeAreaX: _extend,
+                  onTap: () => SeedSnackbarProvider.of(context).show(
+                    child: const SeedSnackbar(message: '안내 배너를 눌렀습니다'),
+                  ),
+                ),
+              ),
+            ),
+            section(
+              'Attachment Field',
+              'extendSafeAreaX를 주면 항목 목록이 extend-x에 inset을 더한 만큼 넓어져 화면 끝까지 스크롤돼요.',
+              _attachmentField(dropzone: false),
+            ),
+            section(
+              'Attachment Field (Dropzone)',
+              'extendSafeAreaX를 주어도 dropzone은 safe area 안에 남고, 항목 목록만 화면 끝까지 스크롤돼요.',
+              _attachmentField(dropzone: true),
+            ),
+            section(
+              'Image Frame',
+              'bleedX="safeArea"를 주면 이미지가 화면 끝까지 채워지고, floater는 safe area 안에 남아요. 스위치는 bleedX를 켜고 꺼요.',
+              _imageFrame(insets),
             ),
             section(
               '가로 스크롤',
@@ -525,39 +762,19 @@ class _SafeAreaBleedPageState extends State<_SafeAreaBleedPage> {
                         width: 120,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(8),
+                          color: context.seedColor.bg.neutralWeak,
+                          borderRadius: SeedBorderRadius.r2,
                         ),
                         child: Text(
                           '$i',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          style: context.seedTypography.t4Bold.copyWith(
+                            color: context.seedColor.fg.neutral,
+                          ),
                         ),
                       ),
                       if (i < 10) const SizedBox(width: 8),
                     ],
                   ],
-                ),
-              ),
-            ),
-            section(
-              'Chip Tabs',
-              '스크롤 영역이 gutter를 padding으로 직접 가지면, gutter와 inset을 더한 값을 padding으로 줘요.',
-              Padding(
-                padding: EdgeInsets.only(
-                  left: MediaQuery.paddingOf(context).left,
-                  right: MediaQuery.paddingOf(context).right,
-                ),
-                child: SeedTabs(
-                  variant: SeedTabsVariant.chipSolid,
-                  items: [
-                    for (final item in _categories)
-                      SeedTabItem(label: item, value: item),
-                  ],
-                  selectedIndex: _categories.indexOf(category),
-                  onTabSelected: (index) =>
-                      setState(() => category = _categories[index]),
                 ),
               ),
             ),
@@ -589,9 +806,12 @@ class _SafeAreaBleedPageState extends State<_SafeAreaBleedPage> {
               child: Column(
                 children: [
                   for (var i = 0; i < 6; i++) ...[
-                    const Text(
+                    Text(
                       '아래 하단 바가 콘텐츠 위에 고정되는지 확인하기 위한 문단이에요. '
                       '하단 바는 배경을 화면 끝까지 채우고, 버튼은 safe area 안쪽에 둬요.',
+                      style: context.seedTypography.t4Regular.copyWith(
+                        color: context.seedColor.fg.neutral,
+                      ),
                     ),
                     if (i != 5) const SizedBox(height: 12),
                   ],
@@ -599,7 +819,10 @@ class _SafeAreaBleedPageState extends State<_SafeAreaBleedPage> {
               ),
             ),
             const SizedBox(height: 32),
-            SizedBox(height: _footerExtent),
+            SizedBox(
+              key: const ValueKey('safe-area-footer-space'),
+              height: _footerExtent,
+            ),
           ],
         ),
         Positioned(

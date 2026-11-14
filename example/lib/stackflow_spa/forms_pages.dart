@@ -2,11 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:mime/mime.dart';
-import 'package:material_ui/material_ui.dart' as mui;
 import 'package:seed_design/seed_design.dart';
 
 import 'spa_routes.dart' show spaIsRootRoute;
@@ -1145,7 +1144,7 @@ class _TimePage extends StatefulWidget {
 }
 
 class _TimePageState extends State<_TimePage> {
-  mui.TimeOfDay time = const mui.TimeOfDay(hour: 13, minute: 10);
+  TimeOfDay time = const TimeOfDay(hour: 13, minute: 10);
   @override
   Widget build(BuildContext context) => SingleChildScrollView(
     padding: const EdgeInsets.all(16),
@@ -1929,7 +1928,7 @@ class _FormPageState extends State<_FormPage> {
   final Set<String> agreements = {};
   List<SeedAttachmentItem> attachments = [];
   double like = 5;
-  mui.RangeValues budget = const mui.RangeValues(200000, 500000);
+  RangeValues budget = const RangeValues(200000, 500000);
   String background = 'default';
 
   void toggle(Set<String> values, String item, bool checked) => setState(() {
@@ -2225,7 +2224,7 @@ class _FormPageState extends State<_FormPage> {
                   valueFormatter: (value) =>
                       '₩${value.round().toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (_) => ',')}',
                   onValuesChange: (values) => setState(
-                    () => budget = mui.RangeValues(values.first, values.last),
+                    () => budget = RangeValues(values.first, values.last),
                   ),
                 ),
                 const Divider(),

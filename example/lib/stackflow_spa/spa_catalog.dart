@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 class SpaEntry {
   const SpaEntry(this.title, this.activity, {this.arguments});
@@ -20,7 +20,9 @@ class SpaSection {
 const spaSections = <SpaSection>[
   SpaSection('AppScreen', Icons.layers_outlined, [
     SpaEntry('App Bar 슬롯과 긴 제목', 'ActivityLayerBar'),
+    SpaEntry('App Bar 텍스트 버튼', 'ActivityAppBarTextButton'),
     SpaEntry('투명 App Bar', 'ActivityTransparentBar'),
+    SpaEntry('Search Bar', 'ActivitySearchBar'),
     SpaEntry('좌우 safe area와 bleed', 'ActivitySafeAreaBleed'),
     SpaEntry('@stackflow/plugin-basic-ui', 'ActivityPluginBasicUI'),
     SpaEntry('스와이프백 키보드', 'ActivitySwipeBackKeyboard'),
@@ -91,6 +93,7 @@ const spaSections = <SpaSection>[
     SpaEntry('Chip Tabs와 Scroll Fog', 'ActivityChipTabsScrollFog'),
     SpaEntry('Pagination', 'ActivityPagination'),
     SpaEntry('Side Navigation', 'ActivitySideNavigation'),
+    SpaEntry('Navigation Menu', 'ActivityNavigationMenu'),
   ]),
   SpaSection('List', Icons.list_alt_rounded, [
     SpaEntry('List Item', 'ActivityListItem'),
@@ -113,6 +116,9 @@ const spaSections = <SpaSection>[
     SpaEntry('Attachment Field', 'ActivityAttachmentField'),
     SpaEntry('Attachment Display Field', 'ActivityAttachmentDisplayField'),
     SpaEntry('여러 필드 조합', 'ActivityForm'),
+    SpaEntry('Search Input', 'ActivitySearchInput'),
+    SpaEntry('Segmented Text Input', 'ActivitySegmentedTextInput'),
+    SpaEntry('Date Picker 두 주 보기', 'ActivityDatePickerTwoWeeks'),
   ]),
   SpaSection('Button & Chip', Icons.touch_app_outlined, [
     SpaEntry('Action Button', 'ActivityActionButton'),
@@ -128,6 +134,7 @@ const spaSections = <SpaSection>[
     SpaEntry('Tag Group', 'ActivityTagGroup'),
     SpaEntry('Manner Temp Badge', 'ActivityMannerTempLevel'),
     SpaEntry('Accordion', 'ActivityAccordion'),
+    SpaEntry('Accordion 슬롯과 Fieldset 오류', 'ActivityAccordionFieldset'),
     SpaEntry('Result Section', 'ActivityResultSection'),
   ]),
   SpaSection('Snackbar', Icons.message_outlined, [
@@ -138,6 +145,8 @@ const spaSections = <SpaSection>[
     SpaEntry('dismiss 후 setTimeout 우회', 'SnackbarWorkaround'),
   ]),
   SpaSection('Foundation', Icons.palette_outlined, [
+    SpaEntry('텍스트 너비·로딩·고정 글자 크기', 'ActivityTextAndLoading'),
+    SpaEntry('컴포넌트 가로 안전 영역', 'ActivityExtendSafeAreaX'),
     SpaEntry('Box margin prop', 'ActivityMarginPlayground'),
     SpaEntry('폰트 배율 레이아웃', 'ActivityFontMultiplierLayout'),
     SpaEntry('타이포그래피 스케일', 'ActivityTypographyScale'),

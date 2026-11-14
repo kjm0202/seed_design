@@ -1,8 +1,5 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart' as flutter_material;
-import 'package:flutter_localizations/flutter_localizations.dart'
-    as flutter_localizations;
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/gestures.dart'
     show
@@ -21,43 +18,47 @@ import 'extra_pages.dart';
 import 'forms_pages.dart';
 import 'navigation_pages.dart';
 import 'overlay_pages.dart';
+import 'react33_pages.dart';
 import 'screen_pages.dart';
 import 'spa_catalog.dart';
 import 'spa_paths.dart';
 import 'spa_types.dart';
 import 'spa_routes.dart';
-import 'spa_material_theme.dart';
 import 'spa_history.dart';
 import 'demo_pages.dart';
 import 'plugin_basic_browser_stub.dart'
     if (dart.library.js_interop) 'plugin_basic_browser_web.dart'
     as plugin_basic_browser;
 
-bool _pluginBasicUiCupertino(
-  BuildContext context, {
-  String? debugBrowserUserAgentOverride,
-}) {
-  // Native: stub returns null and Theme.platform remains authoritative.
-  // Web: the same UA heuristic as official stackflow/theme.ts controls this
-  // route's *plugin* AppBar. Do not let Flutter's engine platform override it.
+/// The official stackflow-spa `theme.ts` rule, applied to the whole web app:
+/// `/iphone|ipad|ipod/i.test(navigator.userAgent) ? "cupertino" : "android"`.
+///
+/// Returns null on native, where Flutter's adaptive platform stays in charge.
+/// On the web Flutter's own platform guess is not the official rule: it reads
+/// `navigator.platform` and reports iOS for a "Mac*" platform with more than
+/// two touch points (e.g. a Mac browser emulating a phone), which would center
+/// every SeedTopNavigation title. The result becomes [ThemeData.platform], so
+/// everything that follows `Theme.of(context).platform` uses the official
+/// theme.
+TargetPlatform? _spaOfficialWebPlatform(String? debugBrowserUserAgentOverride) {
   final browserUserAgent =
       debugBrowserUserAgentOverride ??
       plugin_basic_browser.readBrowserUserAgent();
-  if (browserUserAgent != null) {
-    return RegExp(
-      r'iphone|ipad|ipod',
-      caseSensitive: false,
-    ).hasMatch(browserUserAgent);
-  }
-  // Native Flutter has no browser UA; retain the existing adaptive platform.
-  return Theme.of(context).platform == TargetPlatform.iOS;
+  if (browserUserAgent == null) return null;
+  return RegExp(
+        r'iphone|ipad|ipod',
+        caseSensitive: false,
+      ).hasMatch(browserUserAgent)
+      ? TargetPlatform.iOS
+      : TargetPlatform.android;
 }
 
 // The React SPA styles body with bg.layerDefault (global.css). Restrict this
 // fallback to the example; the library's public scaffold default is unchanged.
-ThemeData _spaTheme(SeedThemeData seed) {
+ThemeData _spaTheme(SeedThemeData seed, {TargetPlatform? platform}) {
   final theme = seed.toThemeData();
   return theme.copyWith(
+    platform: platform,
     scaffoldBackgroundColor: seed.colorScheme.bg.layerDefault,
     // React's unstyled 16px Wanted Sans body text uses a 20px line box in
     // Chromium ("normal"); the 19px Flutter approximation shortened a
@@ -164,6 +165,11 @@ class _StackflowSpaAppState extends State<StackflowSpaApp> {
     super.dispose();
   }
 
+  /// Null on native; see [_spaOfficialWebPlatform].
+  late final TargetPlatform? _officialPlatform = _spaOfficialWebPlatform(
+    widget.debugBrowserUserAgentOverride,
+  );
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
@@ -174,30 +180,27 @@ class _StackflowSpaAppState extends State<StackflowSpaApp> {
       routerDelegate: _history,
       routeInformationParser: const SpaHistoryParser(),
       debugShowCheckedModeBanner: false,
-      theme: _spaTheme(SeedThemeData.light(fontFamily: 'WantedSans')),
-      darkTheme: _spaTheme(SeedThemeData.dark(fontFamily: 'WantedSans')),
+      theme: _spaTheme(
+        SeedThemeData.light(fontFamily: 'WantedSans'),
+        platform: _officialPlatform,
+      ),
+      darkTheme: _spaTheme(
+        SeedThemeData.dark(fontFamily: 'WantedSans'),
+        platform: _officialPlatform,
+      ),
       themeMode: _themeMode.value,
-      builder: (context, child) => flutter_material.Localizations.override(
-        context: context,
-        delegates: const [
-          flutter_localizations.GlobalMaterialLocalizations.delegate,
-        ],
-        child: flutter_material.Theme(
-          data: spaMaterialTheme(Theme.of(context)),
-          child: flutter_material.Material(
-            type: flutter_material.MaterialType.transparency,
-            child: SeedSnackbarProvider(
-              controller: _snackbarController,
-              strategy: SeedSnackbarStrategy.immediate,
-              // Root modal Activities have no page beneath their backdrop.
-              child: ColoredBox(
-                color: context.seedColor.bg.layerDefault,
-                child: ScrollConfiguration(
-                  behavior: ScrollConfiguration.of(context)
-                      .copyWith(scrollbars: false),
-                  child: child ?? const SizedBox.shrink(),
-                ),
-              ),
+      builder: (context, child) => Material(
+        type: MaterialType.transparency,
+        child: SeedSnackbarProvider(
+          controller: _snackbarController,
+          strategy: SeedSnackbarStrategy.immediate,
+          // Root modal Activities have no page beneath their backdrop.
+          child: ColoredBox(
+            color: context.seedColor.bg.layerDefault,
+            child: ScrollConfiguration(
+              behavior: ScrollConfiguration.of(context)
+                  .copyWith(scrollbars: false),
+              child: child ?? const SizedBox.shrink(),
             ),
           ),
         ),
@@ -229,7 +232,6 @@ class _StackflowSpaAppState extends State<StackflowSpaApp> {
       arguments: arguments,
       themeMode: _themeMode,
       onThemeModeChanged: _setThemeMode,
-      browserUserAgentOverride: widget.debugBrowserUserAgentOverride,
     );
     if (spaModalActivities.contains(activity)) {
       // The activity only hosts an independently animated sheet/dialog. An
@@ -242,8 +244,10 @@ class _StackflowSpaAppState extends State<StackflowSpaApp> {
         pageBuilder: (_, _, _) => page,
       );
     }
-    final platform = Theme.of(context).platform;
-    // React's theme.ts: cupertino on iPhone/iPad, android everywhere else.
+    // This State sits above MaterialApp's Theme, so use the official web
+    // platform directly. React's theme.ts: cupertino on iPhone/iPad/iPod,
+    // android everywhere else.
+    final platform = _officialPlatform ?? Theme.of(context).platform;
     final Object? requestedStyle =
         (arguments is Map ? arguments['transitionStyle'] : null) ??
         (platform == TargetPlatform.iOS
@@ -306,7 +310,6 @@ class _SpaActivityPage extends StatelessWidget {
     required this.activity,
     required this.themeMode,
     required this.onThemeModeChanged,
-    this.browserUserAgentOverride,
     this.arguments,
   });
 
@@ -314,7 +317,6 @@ class _SpaActivityPage extends StatelessWidget {
   final Object? arguments;
   final ValueListenable<ThemeMode> themeMode;
   final ValueChanged<ThemeMode> onThemeModeChanged;
-  final String? browserUserAgentOverride;
 
   @override
   Widget build(BuildContext context) {
@@ -382,6 +384,7 @@ class _SpaActivityPage extends StatelessWidget {
     }
 
     final Widget? body =
+        buildReact33Page(activity, navigate: navigate, goBack: goBack) ??
         buildFormsPage(
           activity,
           context,
@@ -425,6 +428,14 @@ class _SpaActivityPage extends StatelessWidget {
           arguments: arguments,
         );
 
+    if (body is SpaOwnScaffold && activity == 'ActivityAppBarSlot') {
+      // Official ActivityAppBarSlot renders `<AppScreen theme="cupertino">`
+      // on every UA: no android `AppBarLeft` padding before its slot.
+      return Theme(
+        data: Theme.of(context).copyWith(platform: TargetPlatform.iOS),
+        child: body,
+      );
+    }
     if (body is SpaOwnScaffold) return body;
     if (activity == 'ActivitySideNavigation') {
       return Scaffold(
@@ -505,14 +516,11 @@ class _SpaActivityPage extends StatelessWidget {
     // 2.75rem/44px on iOS, 3.5rem/56px on Android. SeedTopNavigation is a
     // distinct SEED AppBar recipe with a fixed 56px public contract, so only
     // this plugin activity uses a route-local 44px toolbar on iOS.
+    // Theme.platform already follows the official UA rule on the web.
     final pluginCupertino =
-        lightSurface &&
-        _pluginBasicUiCupertino(
-          context,
-          debugBrowserUserAgentOverride: browserUserAgentOverride,
-        );
+        lightSurface && Theme.of(context).platform == TargetPlatform.iOS;
     final PreferredSizeWidget effectiveBar = pluginCupertino
-        ? flutter_material.AppBar(
+        ? AppBar(
             toolbarHeight: 44,
             backgroundColor: Colors.white,
             foregroundColor: const Color(0xFF212124),
@@ -534,14 +542,14 @@ class _SpaActivityPage extends StatelessWidget {
             ),
             // basicUIPlugin's renderBackButton() returns null for isRoot.
             leading: ModalRoute.of(context)?.isFirst == false
-                ? flutter_material.IconButton(
+                ? IconButton(
                     tooltip: 'Back',
                     icon: const Icon(Icons.chevron_left_rounded),
                     onPressed: goBack,
                   )
                 : null,
             actions: [
-              flutter_material.IconButton(
+              IconButton(
                 tooltip: 'Home',
                 icon: const Icon(Icons.home_rounded),
                 onPressed: goHome,
@@ -582,8 +590,8 @@ class _SpaActivityPage extends StatelessWidget {
         body: FocusTraversalOrder(
           order: const NumericFocusOrder(1),
           child: FocusTraversalGroup(
-            child: flutter_material.Material(
-              type: flutter_material.MaterialType.transparency,
+            child: Material(
+              type: MaterialType.transparency,
               child:
                   (activity == 'ActivitySafeAreaBleed' ||
                       activity == 'ActivityTransparentBar')
@@ -1210,7 +1218,8 @@ class _SpaHomePageState extends State<_SpaHomePage> {
         : viewportWidth >= 768
         ? 2
         : 1;
-    final available = width - 32 - (columns - 1) * 20;
+    // Android hands the first frame a 0x0 view; keep the card width valid.
+    final available = math.max(0.0, width - 32 - (columns - 1) * 20);
     final cardWidth = available / columns;
     // A media-query text-scale or viewport change may relayout the chip row
     // without emitting a scroll event. Re-measure after that layout.
@@ -1340,8 +1349,8 @@ class _SpaHomePageState extends State<_SpaHomePage> {
                                 // Its section can freely grow or shrink when
                                 // text scales or intrinsic labels change.
                                 child:
-                                    flutter_material.NotificationListener<
-                                      flutter_material.SizeChangedLayoutNotification
+                                    NotificationListener<
+                                      SizeChangedLayoutNotification
                                     >(
                                       onNotification: (_) {
                                         _scheduleLayoutMeasure();
@@ -1349,13 +1358,12 @@ class _SpaHomePageState extends State<_SpaHomePage> {
                                       },
                                       child: Align(
                                         alignment: Alignment.topLeft,
-                                        child:
-                                            flutter_material.SizeChangedLayoutNotifier(
-                                              child: _buildSection(
-                                                spaSections[i],
-                                                i,
-                                              ),
-                                            ),
+                                        child: SizeChangedLayoutNotifier(
+                                          child: _buildSection(
+                                            spaSections[i],
+                                            i,
+                                          ),
+                                        ),
                                       ),
                                     ),
                               ),
@@ -1421,36 +1429,33 @@ class _SpaChipBarDelegate extends SliverPersistentHeaderDelegate {
   ) {
     return ColoredBox(
       color: background,
-      child:
-          flutter_material.NotificationListener<
-            flutter_material.SizeChangedLayoutNotification
-          >(
-            onNotification: (_) {
-              onRowResized();
-              return false;
-            },
-            child: SingleChildScrollView(
-              controller: scrollController,
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: flutter_material.SizeChangedLayoutNotifier(
-                child: Row(
-                  key: chipRowKey,
-                  children: [
-                    for (var i = 0; i < spaSections.length; i++) ...[
-                      if (i > 0) const SizedBox(width: 8),
-                      SeedChip(
-                        key: chipKeys[i],
-                        label: spaSections[i].title,
-                        checked: index == i,
-                        onCheckedChange: (_) => onSelect(i),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
+      child: NotificationListener<SizeChangedLayoutNotification>(
+        onNotification: (_) {
+          onRowResized();
+          return false;
+        },
+        child: SingleChildScrollView(
+          controller: scrollController,
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: SizeChangedLayoutNotifier(
+            child: Row(
+              key: chipRowKey,
+              children: [
+                for (var i = 0; i < spaSections.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 8),
+                  SeedChip(
+                    key: chipKeys[i],
+                    label: spaSections[i].title,
+                    checked: index == i,
+                    onCheckedChange: (_) => onSelect(i),
+                  ),
+                ],
+              ],
             ),
           ),
+        ),
+      ),
     );
   }
 

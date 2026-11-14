@@ -1,10 +1,9 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart' as seed_material;
 import 'package:seed_design/seed_design.dart';
 import 'package:seed_design_example/stackflow_spa/stackflow_spa.dart';
 
@@ -109,17 +108,10 @@ void main() {
       tester.platformDispatcher.platformBrightnessTestValue = brightness;
       await tester.pumpAndSettle();
       final context = tester.element(find.text('ActivityTransparentBar'));
-      final nativeTheme = Theme.of(context);
-      final seedTheme = seed_material.Theme.of(context);
-      expect(nativeTheme.brightness, brightness);
-      expect(seedTheme.brightness, brightness);
+      expect(Theme.of(context).brightness, brightness);
       expect(
-        nativeTheme.scaffoldBackgroundColor,
-        seedTheme.scaffoldBackgroundColor,
-      );
-      expect(
-        nativeTheme.textTheme.bodyMedium!.color,
-        seedTheme.textTheme.bodyMedium!.color,
+        Theme.of(context).scaffoldBackgroundColor,
+        context.seedColor.bg.layerDefault,
       );
     }
     expect(tester.takeException(), isNull);
@@ -149,17 +141,10 @@ void main() {
         await tester.pumpAndSettle();
 
         final heading = tester.element(find.text('ActivityTransparentBar'));
-        final nativeTheme = Theme.of(heading);
-        final seedTheme = seed_material.Theme.of(heading);
-        expect(seedTheme.brightness, brightness);
-        expect(nativeTheme.brightness, brightness);
+        expect(Theme.of(heading).brightness, brightness);
         expect(
-          nativeTheme.scaffoldBackgroundColor,
-          seedTheme.scaffoldBackgroundColor,
-        );
-        expect(
-          nativeTheme.textTheme.bodyMedium!.color,
-          seedTheme.textTheme.bodyMedium!.color,
+          Theme.of(heading).scaffoldBackgroundColor,
+          heading.seedColor.bg.layerDefault,
         );
 
         final background = await tester.runAsync(() async {
@@ -193,7 +178,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('Home'), findsOneWidget);
         expect(
-          seed_material.Theme.of(tester.element(find.text('Home'))).brightness,
+          Theme.of(tester.element(find.text('Home'))).brightness,
           brightness,
         );
         expect(tester.takeException(), isNull);
@@ -220,10 +205,6 @@ void main() {
 
         final initialContext = tester.element(find.text('Home'));
         expect(Theme.of(initialContext).brightness, initialBrightness);
-        expect(
-          seed_material.Theme.of(initialContext).brightness,
-          initialBrightness,
-        );
         expect(action('알림'), findsOneWidget);
         expect(action('테마 설정: 자동'), findsOneWidget);
         expect(
@@ -251,7 +232,6 @@ void main() {
         await tester.pumpAndSettle();
         final homeContext = tester.element(find.text('Home'));
         expect(Theme.of(homeContext).brightness, nextBrightness);
-        expect(seed_material.Theme.of(homeContext).brightness, nextBrightness);
         expect(action('테마 설정: $selectedLabel'), findsOneWidget);
         expect(find.byType(SeedMenu), findsNothing);
 
@@ -269,10 +249,6 @@ void main() {
           find.text('ActivityTransparentBar'),
         );
         expect(Theme.of(detailContext).brightness, nextBrightness);
-        expect(
-          seed_material.Theme.of(detailContext).brightness,
-          nextBrightness,
-        );
 
         await tester.tap(find.text('Back'));
         await tester.pumpAndSettle();
@@ -317,7 +293,6 @@ void main() {
         await tester.pumpAndSettle();
         final autoContext = tester.element(find.text('Home'));
         expect(Theme.of(autoContext).brightness, nextBrightness);
-        expect(seed_material.Theme.of(autoContext).brightness, nextBrightness);
         expect(tester.takeException(), isNull);
       });
     }

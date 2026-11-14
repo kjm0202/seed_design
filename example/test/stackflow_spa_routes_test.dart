@@ -1,6 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart' as seed_material;
 import 'package:seed_design/seed_design.dart';
 import 'package:seed_design_example/stackflow_spa/spa_paths.dart';
 import 'package:seed_design_example/stackflow_spa/stackflow_spa.dart';
@@ -156,13 +155,13 @@ void main() {
             reason: '${route.key} lost the stock Flutter theme.',
           );
           expect(
-            seed_material.Theme.of(element).brightness,
+            Theme.of(element).brightness,
             brightness,
             reason: '${route.key} lost the SEED theme.',
           );
           expect(
             Theme.of(element).colorScheme.surface,
-            seed_material.Theme.of(element).colorScheme.surface,
+            Theme.of(element).colorScheme.surface,
             reason: '${route.key} has mismatched surface colors.',
           );
         }

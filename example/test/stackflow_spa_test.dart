@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:seed_design_example/main.dart' as app;
 import 'package:seed_design_example/stackflow_spa/spa_routes.dart';

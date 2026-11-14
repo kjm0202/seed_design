@@ -3,10 +3,9 @@
 // native window.alert API is implemented by list_item_native_alert_web.dart.
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart' as mui;
 import 'package:seed_design/seed_design.dart';
 import 'package:seed_design_example/stackflow_spa/navigation_pages.dart';
 import 'package:seed_design_example/stackflow_spa/stackflow_spa.dart';
@@ -22,17 +21,17 @@ Future<void> _mountSwipeableTabs(
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
-    mui.MaterialApp(
+    MaterialApp(
       theme: SeedThemeData.light().toThemeData(),
       locale: const Locale('ko'),
       supportedLocales: const [Locale('ko'), Locale('en')],
-      localizationsDelegates: mui.GlobalMaterialLocalizations.delegates,
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context)
             .copyWith(textScaler: TextScaler.linear(scale)),
         child: child!,
       ),
-      home: mui.Scaffold(
+      home: Scaffold(
         appBar: const PreferredSize(
           preferredSize: Size.fromHeight(56),
           child: SizedBox(height: 56),
@@ -134,14 +133,14 @@ Future<void> _mountSideNav(
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
-    mui.MaterialApp(
+    MaterialApp(
       theme: SeedThemeData.light().toThemeData(),
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context)
             .copyWith(textScaler: TextScaler.linear(scale)),
         child: child!,
       ),
-      home: mui.Scaffold(
+      home: Scaffold(
         body: Material(
           type: MaterialType.transparency,
           child: Builder(
@@ -173,11 +172,11 @@ Future<void> _openPagination(
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
-    mui.MaterialApp(
+    MaterialApp(
       theme: SeedThemeData.light().toThemeData(),
       locale: const Locale('ko'),
       supportedLocales: const [Locale('ko'), Locale('en')],
-      localizationsDelegates: mui.GlobalMaterialLocalizations.delegates,
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       initialRoute: '/pagination',
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context)
@@ -185,7 +184,7 @@ Future<void> _openPagination(
         child: child!,
       ),
       routes: {
-        '/pagination': (context) => mui.Scaffold(
+        '/pagination': (context) => Scaffold(
           body: Builder(
             builder: (context) => buildNavigationPage(
               'ActivityPagination',

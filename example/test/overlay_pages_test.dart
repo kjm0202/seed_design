@@ -6,10 +6,9 @@
 // not simulate an actual Chromium about:blank / native Forward document load.
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart' as mui;
 import 'package:seed_design/seed_design.dart';
 import 'package:seed_design_example/stackflow_spa/spa_history.dart';
 import 'package:seed_design_example/stackflow_spa/spa_types.dart';
@@ -226,7 +225,7 @@ void main() {
       navigator.pushNamed('/menu-sheet-activity/simple');
       await tester.pumpAndSettle();
       final route = ModalRoute.of(tester.element(find.byType(SeedMenuSheet)))!;
-      expect(route, isA<mui.ModalBottomSheetRoute>());
+      expect(route, isA<ModalBottomSheetRoute>());
       final widget = tester.widget<SeedMenuSheet>(find.byType(SeedMenuSheet));
       expect(widget.showCancelButton, isFalse);
       expect(find.text('닫기'), findsNothing);

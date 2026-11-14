@@ -2,12 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart'
     show debugDefaultTargetPlatformOverride;
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart' as mui;
 import 'package:seed_design/seed_design.dart';
+import 'package:seed_design_example/stackflow_spa/screen_pages.dart';
 import 'package:seed_design_example/stackflow_spa/stackflow_spa.dart';
 
 Future<NavigatorState> _open(
@@ -180,7 +180,7 @@ void _checkAppBar(
   required TargetPlatform platform,
   required bool root,
 }) {
-  final scaffold = tester.widget<mui.Scaffold>(find.byType(mui.Scaffold).last);
+  final scaffold = tester.widget<Scaffold>(find.byType(Scaffold).last);
   expect(scaffold.appBar, isNotNull);
   final height = platform == TargetPlatform.iOS ? 44.0 : 56.0;
   expect(
@@ -231,6 +231,108 @@ Future<void> _tapHome(
   await tester.pumpAndSettle();
   expect(find.byType(CustomScrollView), findsOneWidget);
   expect(tester.takeException(), isNull);
+}
+
+const _categoriesForTest = [
+  '전체',
+  '디지털기기',
+  '생활가전',
+  '가구/인테리어',
+  '생활/주방',
+  '유아동',
+  '여성의류',
+  '남성패션/잡화',
+  '뷰티/미용',
+];
+
+// Opens /safe-area-bleed with left 38 / right 24 insets on a 390pt screen.
+// RTL wraps the same page in a pushed route with an RTL Directionality.
+Future<void> _openSafeAreaBleed(
+  WidgetTester tester,
+  TextDirection direction,
+) async {
+  tester.view.padding = const FakeViewPadding(left: 38, right: 24);
+  tester.view.viewPadding = tester.view.padding;
+  final navigator = await _open(tester, '/safe-area-bleed', 390);
+  if (direction == TextDirection.rtl) {
+    navigator.push<void>(
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          body: Directionality(
+            textDirection: direction,
+            child: buildScreenPage(
+              'ActivitySafeAreaBleed',
+              context,
+              navigate: (_, {arguments}) {},
+              goBack: navigator.pop,
+            )!,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
+}
+
+FocusNode _keyboardReorderNode(WidgetTester tester, Finder item) => tester
+    .widget<Focus>(
+      find
+          .ancestor(
+            of: item,
+            matching: find.byWidgetPredicate(
+              (widget) => widget is Focus && widget.onKeyEvent != null,
+            ),
+          )
+          .first,
+    )
+    .focusNode!;
+
+// Moves focus with real Tab key presses until [target] has primary focus.
+Future<void> _tabUntilFocused(
+  WidgetTester tester,
+  FocusNode target, {
+  int maxTabs = 200,
+}) async {
+  for (var i = 0; i < maxTabs && !target.hasPrimaryFocus; i++) {
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pumpAndSettle();
+  }
+  expect(target.hasPrimaryFocus, isTrue, reason: 'Tab reaches the item');
+}
+
+SemanticsNode _hintNode(WidgetTester tester, Finder item) {
+  SemanticsNode? node = tester.getSemantics(item);
+  while (node != null && node.hint.isEmpty) {
+    node = node.parent;
+  }
+  expect(node, isNotNull, reason: 'item exposes a reorder hint');
+  return node!;
+}
+
+// Flips the extendSafeAreaX switch at the top of the lazy page, then scrolls
+// back to [target].
+Future<void> _toggleExtend(
+  WidgetTester tester,
+  Finder scroll,
+  Finder target,
+) async {
+  final toggle = find.text('extendSafeAreaX');
+  await tester.scrollUntilVisible(toggle, -300, scrollable: scroll);
+  await tester.pumpAndSettle();
+  await tester.tap(toggle);
+  await tester.pumpAndSettle();
+  await tester.scrollUntilVisible(target, 220, scrollable: scroll);
+  await tester.ensureVisible(target);
+  await tester.pumpAndSettle();
+}
+
+String _semanticsText(SemanticsNode node) {
+  final buffer = StringBuffer(node.label);
+  node.visitChildren((child) {
+    buffer.write(' ${_semanticsText(child)}');
+    return true;
+  });
+  return buffer.toString();
 }
 
 void main() {
@@ -467,10 +569,16 @@ void main() {
     final initial = tester.getRect(footer);
     final position = tester
         .state<ScrollableState>(
-          find.descendant(of: list, matching: find.byType(Scrollable)),
+          find.descendant(of: list, matching: find.byType(Scrollable)).first,
         )
         .position;
     expect(position.maxScrollExtent, greaterThan(0));
+    // A lazy ListView updates its estimate as the new demo sections lay out.
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('safe-area-footer-space')),
+      300,
+      scrollable: find.descendant(of: list, matching: find.byType(Scrollable)).first,
+    );
     position.jumpTo(position.maxScrollExtent);
     await tester.pumpAndSettle();
     expect(tester.getRect(list).bottom, closeTo(600, 1));
@@ -478,6 +586,408 @@ void main() {
     expect(position.pixels, closeTo(position.maxScrollExtent, 1));
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('safe area updates insets and preserves the swiped tab', (
+    tester,
+  ) async {
+    tester.view.padding = const FakeViewPadding(left: 38, right: 24);
+    tester.view.viewPadding = tester.view.padding;
+    await _openResponsive(tester, '/safe-area-bleed', width: 390, height: 960);
+    expect(find.text('safe area: 왼쪽 38px · 오른쪽 24px'), findsOneWidget);
+    final tabs = find.byType(SeedTabsView);
+    final page = find.descendant(of: tabs, matching: find.byType(PageView));
+    expect(tester.getRect(page).left, 0);
+    expect(tester.getRect(page).right, 390);
+    await tester.drag(page, const Offset(-300, 0));
+    await tester.pumpAndSettle();
+    final header = find.descendant(of: tabs, matching: find.byType(SeedTabs));
+    expect(tester.widget<SeedTabs>(header).selectedIndex, 1);
+    expect(tester.getRect(find.text('인기 패널')).left, greaterThanOrEqualTo(38));
+
+    await tester.tap(find.text('extendSafeAreaX'));
+    await tester.pumpAndSettle();
+    expect(tester.getRect(page).left, 38);
+    expect(tester.getRect(page).right, 366);
+    expect(tester.widget<SeedTabs>(header).selectedIndex, 1);
+
+    tester.view.physicalSize = const Size(800, 600);
+    tester.view.padding = const FakeViewPadding(left: 24, right: 38);
+    tester.view.viewPadding = tester.view.padding;
+    await tester.pumpAndSettle();
+    expect(find.text('safe area: 왼쪽 24px · 오른쪽 38px'), findsOneWidget);
+    expect(tester.getRect(page).left, 24);
+    expect(tester.getRect(page).right, 762);
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final direction in TextDirection.values) {
+    final ltr = direction == TextDirection.ltr;
+    // Asymmetric insets: left 38, right 24 on a 390-wide screen. The page
+    // gutter is 16, so content starts at 54 (left) and ends at 350 (right).
+    testWidgets('safe area attachment fields keep the gutter in $direction', (
+      tester,
+    ) async {
+      await _openSafeAreaBleed(tester, direction);
+      final scroll = find.byType(Scrollable).first;
+      for (final dropzone in [false, true]) {
+        final current = find.byWidgetPredicate(
+          (widget) =>
+              widget is SeedAttachmentField && widget.showDropzone == dropzone,
+        );
+        await tester.scrollUntilVisible(current, 220, scrollable: scroll);
+        await tester.ensureVisible(current);
+        await tester.pumpAndSettle();
+        final label = find.descendant(of: current, matching: find.text('첨부파일'));
+        final input = find.descendant(
+          of: current,
+          matching: find.byType(SeedAttachmentInput),
+        );
+        final viewport = find.descendant(
+          of: input,
+          matching: find.byType(CustomScrollView),
+        );
+        final first = find.descendant(
+          of: input,
+          matching: find.byKey(const ValueKey('safe-area-file-1')),
+        );
+
+        void expectGeometry({required bool extend}) {
+          // The field header keeps its own x0_5 (2) inline padding inside
+          // the gutter, as the official field header does.
+          final labelRect = tester.getRect(label);
+          expect(ltr ? labelRect.left : labelRect.right, ltr ? 56 : 348);
+          if (dropzone) {
+            final rect = tester.getRect(find.byType(SeedAttachmentDropzone));
+            expect(rect.left, 54);
+            expect(rect.right, 350);
+          } else {
+            // The trigger tile comes first and starts at the gutter.
+            final trigger = find
+                .ancestor(
+                  of: find.descendant(
+                    of: input,
+                    matching: find.byIcon(Icons.attach_file),
+                  ),
+                  matching: find.byType(Container),
+                )
+                .first;
+            final rect = tester.getRect(trigger);
+            expect(ltr ? rect.left : rect.right, ltr ? 54 : 350);
+          }
+          final rect = tester.getRect(viewport);
+          expect(rect.left, extend ? 0 : 38);
+          expect(rect.right, extend ? 390 : 366);
+          if (dropzone) {
+            final tile = tester.getRect(first);
+            expect(ltr ? tile.left : tile.right, ltr ? 54 : 350);
+          }
+        }
+
+        expectGeometry(extend: true);
+        // Scroll the list to its end; the last item stops at the gutter.
+        ScrollPosition listPosition() => tester
+            .state<ScrollableState>(
+              find.descendant(of: viewport, matching: find.byType(Scrollable)),
+            )
+            .position;
+        var position = listPosition();
+        // A lazy list refines its extent as items build, so drag again
+        // until the end is reached.
+        for (var i = 0; i < 4 && position.pixels < position.maxScrollExtent; i++) {
+          await tester.drag(viewport, Offset(ltr ? -2000 : 2000, 0));
+          await tester.pumpAndSettle();
+        }
+        expect(position.pixels, position.maxScrollExtent);
+        final lastItem = find.descendant(
+          of: input,
+          matching: find.byKey(const ValueKey('safe-area-file-8')),
+        );
+        // The keyed box also holds the gap before the item, on its start
+        // side; the end edge is the item's.
+        final last = tester.getRect(lastItem);
+        expect(ltr ? last.right : last.left, ltr ? 350 : 54);
+        await tester.drag(viewport, Offset(ltr ? 2000 : -2000, 0));
+        await tester.pumpAndSettle();
+
+        await _toggleExtend(tester, scroll, current);
+        expectGeometry(extend: false);
+        // The lazy page may rebuild the field while scrolling to the switch.
+        position = listPosition();
+        for (var i = 0; i < 4 && position.pixels < position.maxScrollExtent; i++) {
+          await tester.drag(viewport, Offset(ltr ? -2000 : 2000, 0));
+          await tester.pumpAndSettle();
+        }
+        expect(position.pixels, position.maxScrollExtent);
+        final lastOff = tester.getRect(lastItem);
+        expect(ltr ? lastOff.right : lastOff.left, ltr ? 350 : 54);
+        await _toggleExtend(tester, scroll, current);
+      }
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('safe area dropzone keyboard reorder stops at $direction inset', (
+      tester,
+    ) async {
+      await _openSafeAreaBleed(tester, direction);
+      final semantics = tester.ensureSemantics();
+      final scroll = find.byType(Scrollable).first;
+      final dropzone = find.byType(SeedAttachmentDropzone);
+      await tester.scrollUntilVisible(dropzone, 220, scrollable: scroll);
+      await tester.ensureVisible(dropzone);
+      await tester.pumpAndSettle();
+      final field = find.ancestor(
+        of: dropzone,
+        matching: find.byType(SeedAttachmentField),
+      );
+      final input = find.descendant(
+        of: field,
+        matching: find.byType(SeedAttachmentInput),
+      );
+      expect(Directionality.of(tester.element(input)), direction);
+      final item = find.descendant(
+        of: input,
+        matching: find.byKey(const ValueKey('safe-area-file-1')),
+      );
+      final node = _keyboardReorderNode(tester, item);
+      await _tabUntilFocused(tester, node);
+      final start = SeedLocalizations.label(
+        tester.element(item),
+        SeedLabel.reorderStartHint,
+      );
+      expect(_hintNode(tester, item).hint, start);
+      expect(_semanticsText(_hintNode(tester, item)), contains('file1.txt'));
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.space);
+      await tester.pumpAndSettle();
+      expect(find.text('1 / 8'), findsOneWidget);
+      String moving(int position) => SeedLocalizations.label(
+        tester.element(item),
+        SeedLabel.reorderMovingHint,
+      ).replaceAll('{position}', '$position');
+      expect(_hintNode(tester, item).hint, moving(1));
+      final forward = ltr
+          ? LogicalKeyboardKey.arrowRight
+          : LogicalKeyboardKey.arrowLeft;
+      for (var i = 0; i < 7; i++) {
+        await tester.sendKeyEvent(forward);
+        await tester.pumpAndSettle();
+        final rect = tester.getRect(item);
+        expect(rect.left, greaterThanOrEqualTo(37.5));
+        expect(rect.right, lessThanOrEqualTo(366.5));
+      }
+      expect(find.text('8 / 8'), findsOneWidget);
+      expect(_hintNode(tester, item).hint, moving(8));
+      expect(_semanticsText(_hintNode(tester, item)), contains('file1.txt'));
+      // Keyboard reveal uses the insets as scroll padding (CSS
+      // scroll-padding), so the moved item stops at the inset boundary.
+      final last = tester.getRect(item);
+      expect(ltr ? last.right : last.left, ltr ? 366 : 38);
+      await tester.sendKeyEvent(LogicalKeyboardKey.space);
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<SeedAttachmentInput>(input).items.last.name,
+        'file1.txt',
+      );
+      expect(node.hasPrimaryFocus, isTrue);
+      expect(_hintNode(tester, item).hint, start);
+      semantics.dispose();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('safe area hug and chip tabs respect $direction insets', (
+      tester,
+    ) async {
+      await _openSafeAreaBleed(tester, direction);
+      final scroll = find.byType(Scrollable).first;
+      SeedTabs tabsAt(int index) => tester.widget<SeedTabs>(
+        find.byWidgetPredicate(
+          (widget) => widget is SeedTabs && widget.items.length == 9,
+        ).at(index),
+      );
+      final hug = find.byWidgetPredicate(
+        (widget) =>
+            widget is SeedTabs &&
+            widget.items.length == 9 &&
+            widget.variant != SeedTabsVariant.chipSolid,
+      );
+      await tester.scrollUntilVisible(hug, 200, scrollable: scroll);
+      await tester.pumpAndSettle();
+      final hugList = find.descendant(of: hug, matching: find.byType(Scrollable)).first;
+      for (final extend in [true, false]) {
+        if (!extend) await _toggleExtend(tester, scroll, hug);
+        final listRect = tester.getRect(hugList);
+        expect(listRect.left, extend ? 0 : 38);
+        expect(listRect.right, extend ? 390 : 366);
+        // Select the first tab that is cut by the safe-area end edge,
+        // tapping its visible part as a user would.
+        final endEdge = ltr ? 366.0 : 38.0;
+        Finder? cut;
+        for (final label in _categoriesForTest) {
+          final finder = find.descendant(of: hug, matching: find.text(label));
+          final rect = tester.getRect(finder);
+          if (ltr ? rect.right > endEdge : rect.left < endEdge) {
+            cut = finder;
+            final x = ltr
+                ? (rect.left + endEdge) / 2
+                : (rect.right + endEdge) / 2;
+            await tester.tapAt(Offset(x, rect.center.dy));
+            await tester.pumpAndSettle();
+            break;
+          }
+        }
+        expect(cut, isNotNull, reason: 'some hug tab overflows the screen');
+        final selected = tabsAt(0).selectedIndex;
+        expect(selected, greaterThan(0));
+        final revealed = tester.getRect(cut!);
+        // Revealed inside the safe area, away from the inset boundary.
+        expect(revealed.left, greaterThan(38));
+        expect(revealed.right, lessThan(366));
+        // Back to the first tab before the next pass.
+        await tester.drag(hugList, Offset(ltr ? 2000 : -2000, 0));
+        await tester.pumpAndSettle();
+        await tester.tap(find.descendant(of: hug, matching: find.text('전체')));
+        await tester.pumpAndSettle();
+      }
+      await _toggleExtend(tester, scroll, hug);
+
+      final chips = find.byWidgetPredicate(
+        (widget) =>
+            widget is SeedTabs && widget.variant == SeedTabsVariant.chipSolid,
+      );
+      await tester.scrollUntilVisible(chips, 200, scrollable: scroll);
+      await tester.pumpAndSettle();
+      for (final extend in [true, false]) {
+        if (!extend) await _toggleExtend(tester, scroll, chips);
+        final chipList = find
+            .descendant(of: chips, matching: find.byType(Scrollable))
+            .first;
+        final listRect = tester.getRect(chipList);
+        expect(listRect.left, extend ? 0 : 38);
+        expect(listRect.right, extend ? 390 : 366);
+        final firstChip = tester.getRect(
+          find
+              .ancestor(
+                of: find.descendant(of: chips, matching: find.text('전체')),
+                matching: find.byType(SeedPressable),
+              )
+              .first,
+        );
+        // inset + gutter, with the inset applied only once.
+        expect(ltr ? firstChip.left : firstChip.right, ltr ? 54 : 350);
+      }
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('safe area swiped Tabs panel follows the selected tab on toggle', (
+    tester,
+  ) async {
+    tester.view.padding = const FakeViewPadding(left: 38, right: 24);
+    tester.view.viewPadding = tester.view.padding;
+    await _openResponsive(tester, '/safe-area-bleed', width: 390, height: 960);
+    final tabs = find.byType(SeedTabsView);
+    final page = find.descendant(of: tabs, matching: find.byType(PageView));
+    final header = find.descendant(of: tabs, matching: find.byType(SeedTabs));
+    await tester.drag(page, const Offset(-300, 0));
+    await tester.pumpAndSettle();
+    expect(tester.widget<SeedTabs>(header).selectedIndex, 1);
+
+    void expectVisiblePanel(String label) {
+      final pageRect = tester.getRect(page);
+      for (final tab in ['추천', '인기', '최신']) {
+        final panel = find.text('$tab 패널');
+        final visible =
+            panel.evaluate().isNotEmpty &&
+            pageRect.overlaps(tester.getRect(panel));
+        expect(visible, tab == label, reason: '$tab panel visibility');
+      }
+    }
+
+    expectVisiblePanel('인기');
+    for (final extend in [false, true, false, true]) {
+      await tester.tap(find.text('extendSafeAreaX'));
+      await tester.pumpAndSettle();
+      expect(tester.widget<SeedTabs>(header).selectedIndex, 1);
+      expect(tester.getRect(page).left, extend ? 0 : 38);
+      expectVisiblePanel('인기');
+    }
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('safe area Page Banner and Image Frame respond to taps', (
+    tester,
+  ) async {
+    tester.view.padding = const FakeViewPadding(left: 38, right: 24);
+    tester.view.viewPadding = tester.view.padding;
+    await _openResponsive(tester, '/safe-area-bleed', width: 390, height: 844);
+    final scroll = find.byType(Scrollable).first;
+    final banner = find.byType(SeedPageBanner);
+    await tester.scrollUntilVisible(banner, 200, scrollable: scroll);
+    await tester.pumpAndSettle();
+    await tester.tap(banner);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('안내 배너를 눌렀습니다'), findsOneWidget);
+    await tester.pumpAndSettle(const Duration(seconds: 1));
+    await tester.pump(const Duration(seconds: 10));
+    await tester.pumpAndSettle();
+
+    final frame = find.byType(SeedImageFrame);
+    await tester.scrollUntilVisible(frame, 200, scrollable: scroll);
+    await tester.pumpAndSettle();
+    final rect = tester.getRect(frame);
+    expect(rect.left, 0);
+    expect(rect.right, 390);
+    expect(rect.width / rect.height, closeTo(2, 0.01));
+    expect(find.byType(SeedImageFrameReactionButton), findsOneWidget);
+    expect(find.byType(SeedReactionButton), findsNothing);
+    final like = find.descendant(
+      of: find.byType(SeedImageFrameReactionButton),
+      matching: find.byType(CustomPaint),
+    );
+    // The heart floater stays inside the safe area.
+    expect(tester.getRect(like).right, lessThanOrEqualTo(366));
+    final semantics = tester.ensureSemantics();
+    expect(
+      tester.getSemantics(like),
+      isSemantics(label: '좋아요', isSelected: false),
+    );
+    await tester.tap(like);
+    await tester.pumpAndSettle();
+    expect(
+      tester.getSemantics(like),
+      isSemantics(label: '좋아요', isSelected: true),
+    );
+    await tester.tap(like);
+    await tester.pumpAndSettle();
+    expect(
+      tester.getSemantics(like),
+      isSemantics(label: '좋아요', isSelected: false),
+    );
+    semantics.dispose();
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final brightness in Brightness.values) {
+    testWidgets('safe area route renders in $brightness theme', (tester) async {
+      tester.platformDispatcher.platformBrightnessTestValue = brightness;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      tester.view.padding = const FakeViewPadding(left: 38, right: 24);
+      tester.view.viewPadding = tester.view.padding;
+      await _openResponsive(tester, '/safe-area-bleed', width: 390);
+      final context = tester.element(find.byType(SeedTabsView));
+      expect(Theme.of(context).brightness, brightness);
+      final scroll = find.byType(Scrollable).first;
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('safe-area-footer-space')),
+        300,
+        scrollable: scroll,
+      );
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(SeedButton, '확인'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets('transparent gradient switch controls the content overlay', (
     tester,
@@ -711,7 +1221,7 @@ void main() {
         expect(appBar, findsOneWidget);
         expect(
           tester
-              .widget<mui.Scaffold>(find.byType(mui.Scaffold).last)
+              .widget<Scaffold>(find.byType(Scaffold).last)
               .appBar!
               .preferredSize
               .height,
@@ -742,7 +1252,7 @@ void main() {
                 await _openNested(tester);
               }
 
-              final bar = find.byType(mui.Scaffold).last;
+              final bar = find.byType(Scaffold).last;
               expect(ModalRoute.of(tester.element(bar))?.isFirst, root);
               _checkAppBar(tester, platform: platform, root: root);
               expect(tester.takeException(), isNull);
