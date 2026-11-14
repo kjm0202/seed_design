@@ -457,6 +457,8 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
   bool _open = false;
   FocusNode? _returnFocus;
   SeedOverlayDismissReason? _requestedDismissReason;
+  // Whether the content scope held focus at its last focus notification.
+  bool _overlayHadFocus = false;
   late SeedOverlaySide _resolvedSide = widget.side;
   bool get _desired => widget.open ?? widget.controller?.isOpen ?? _open;
   @override
@@ -860,7 +862,13 @@ class _SeedAnchoredOverlayState extends State<SeedAnchoredOverlay>
                           _open && widget.contentFocusable,
                       node: _overlayFocus,
                       onFocusChange: (focused) {
-                        if (!focused && widget.closeOnFocusOut && _open) {
+                        // Focus also notifies when canRequestFocus follows
+                        // _open, reporting false for a scope that never held
+                        // focus (e.g. a hover reopen). Only a real loss of
+                        // focus is a focus-out.
+                        final lost = _overlayHadFocus && !focused;
+                        _overlayHadFocus = focused;
+                        if (lost && widget.closeOnFocusOut && _open) {
                           WidgetsBinding.instance.addPostFrameCallback((_) {
                             if (mounted &&
                                 _open &&

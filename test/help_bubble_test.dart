@@ -325,4 +325,81 @@ void main() {
       },
     );
   });
+
+  group('programmatic open while focus is elsewhere', () {
+    setUpAll(loadSeedTestFonts);
+
+    // Same overlay regression as Popover: HelpBubbleTrigger defaults to
+    // autoFocus: false and closeOnFocusOut follows closeOnInteractOutside
+    // (true), so a controller open while an outside TextField has focus must
+    // not be treated as a focus-out.
+    testWidgets(
+      'HelpBubble opened by controller stays open while an outside TextField keeps focus',
+      (tester) async {
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = const Size(390, 844);
+        addTearDown(tester.view.reset);
+        final controller = SeedOverlayController();
+        final outside = FocusNode(debugLabel: 'outside text field');
+        addTearDown(controller.dispose);
+        addTearDown(outside.dispose);
+        final reasons = <SeedOverlayDismissReason>[];
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: SeedThemeData.light(fontFamily: seedTestFontFamily)
+                .toThemeData(),
+            home: Scaffold(
+              body: Column(
+                children: [
+                  const SizedBox(height: 160),
+                  SeedHelpBubbleTrigger(
+                    controller: controller,
+                    title: 'Programmatic bubble',
+                    description: 'Opened from the controller',
+                    onOpenChange: (open, reason) {
+                      if (!open) reasons.add(reason);
+                    },
+                    triggerBuilder: (_, _, toggle) => TextButton(
+                      onPressed: toggle,
+                      child: const Text('Programmatic help'),
+                    ),
+                  ),
+                  const SizedBox(height: 200),
+                  TextField(focusNode: outside),
+                ],
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        for (var cycle = 0; cycle < 3; cycle++) {
+          outside.requestFocus();
+          await tester.pump();
+          expect(outside.hasFocus, isTrue, reason: 'cycle $cycle');
+
+          controller.open();
+          for (var i = 0; i < 32; i++) {
+            await tester.pump(const Duration(milliseconds: 16));
+          }
+          expect(controller.isOpen, isTrue, reason: 'cycle $cycle');
+          expect(
+            find.text('Programmatic bubble'),
+            findsOneWidget,
+            reason: 'cycle $cycle',
+          );
+          expect(outside.hasFocus, isTrue, reason: 'cycle $cycle');
+          expect(reasons, isEmpty, reason: 'cycle $cycle');
+
+          controller.close();
+          await tester.pumpAndSettle();
+          expect(controller.isOpen, isFalse, reason: 'cycle $cycle');
+          expect(find.text('Programmatic bubble'), findsNothing);
+          reasons.clear();
+        }
+        expect(tester.takeException(), isNull);
+      },
+    );
+  });
 }

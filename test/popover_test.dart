@@ -462,4 +462,84 @@ void main() {
     expect(dialog.label, 'Shown');
     semantics.dispose();
   });
+
+  group('programmatic open while focus is elsewhere', () {
+    setUpAll(loadSeedTestFonts);
+
+    // Regression: with autoFocus: false the overlay scope never takes focus,
+    // so the focus-change notification fired when the scope becomes focusable
+    // on open must not count as a focus-out while an outside TextField keeps
+    // focus.
+    testWidgets(
+      'Popover autoFocus=false opened by controller stays open while an outside TextField keeps focus',
+      (tester) async {
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = const Size(390, 844);
+        addTearDown(tester.view.reset);
+        final controller = SeedOverlayController();
+        final outside = FocusNode(debugLabel: 'outside text field');
+        addTearDown(controller.dispose);
+        addTearDown(outside.dispose);
+        final reasons = <SeedOverlayDismissReason>[];
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: SeedThemeData.light(fontFamily: seedTestFontFamily)
+                .toThemeData(),
+            home: Scaffold(
+              body: Column(
+                children: [
+                  const SizedBox(height: 120),
+                  SeedPopoverTrigger(
+                    controller: controller,
+                    autoFocus: false,
+                    onOpenChange: (open, reason) {
+                      if (!open) reasons.add(reason);
+                    },
+                    triggerBuilder: (context, open, toggle) => TextButton(
+                      onPressed: toggle,
+                      child: const Text('Programmatic popover'),
+                    ),
+                    builder: (context) => const SeedPopover(
+                      titleText: 'Programmatic popup',
+                      body: Text('Opened from the controller'),
+                    ),
+                  ),
+                  const SizedBox(height: 200),
+                  TextField(focusNode: outside),
+                ],
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        for (var cycle = 0; cycle < 3; cycle++) {
+          outside.requestFocus();
+          await tester.pump();
+          expect(outside.hasFocus, isTrue, reason: 'cycle $cycle');
+
+          controller.open();
+          for (var i = 0; i < 32; i++) {
+            await tester.pump(const Duration(milliseconds: 16));
+          }
+          expect(controller.isOpen, isTrue, reason: 'cycle $cycle');
+          expect(
+            find.text('Programmatic popup'),
+            findsOneWidget,
+            reason: 'cycle $cycle',
+          );
+          expect(outside.hasFocus, isTrue, reason: 'cycle $cycle');
+          expect(reasons, isEmpty, reason: 'cycle $cycle');
+
+          controller.close();
+          await tester.pumpAndSettle();
+          expect(controller.isOpen, isFalse, reason: 'cycle $cycle');
+          expect(find.text('Programmatic popup'), findsNothing);
+          reasons.clear();
+        }
+        expect(tester.takeException(), isNull);
+      },
+    );
+  });
 }
