@@ -9,7 +9,7 @@
 - **`SeedInputButtonSize`**에 `large`가 추가됩니다. 모든 case를 나열한 switch에는 `large` case를 추가하세요. `small`은 `medium`과 같은 40px 크기를 가진 별도의 사용 중단 예정 enum 값으로 남습니다.
 - **`SeedBgColors`**를 생성자로 직접 호출하는 코드는 `neutralSolidMuted`와 `neutralSolidMutedPressed`를 지정해야 합니다.
 - **선택기 필드**가 두 곳에서 nullable이 됩니다. 수량 선택기의 초기값은 `picker.defaultValue ?? picker.min`으로 읽은 뒤 범위에 맞춰 보정하세요. 실제 정렬은 `SeedSliderMarker.resolveAlign(min, max)`로 확인하세요. 마커 정렬을 생략하면 최솟값에서는 시작, 최댓값에서는 끝, 그 외에는 가운데로 정해집니다.
-- **Enum**에 값이 추가됩니다. `SeedDatePickerLayout.twoWeeks`와 새 `SeedLabel` 키(검색, 2주 이동, 순서 변경 안내)입니다. 이 enum을 빠짐없이 다루는 switch에 case를 추가하세요.
+- **`SeedDatePickerLayout`**에 `twoWeeks`가 추가됩니다. 이 enum을 빠짐없이 다루는 switch에 `twoWeeks` case를 추가하세요.
 
 #### 기본값과 동작
 
@@ -24,17 +24,21 @@
 - **Menu 포커스.** Tab은 닫기를 요청하고 포커스를 메뉴 밖으로 옮깁니다. 메뉴에서 Shift+Tab을 누르면 메뉴를 연 채로 트리거로 돌아갈 수 있습니다. 키보드 핸들러와 테스트에서 이 포커스 전환을 고려하세요.
 - **Material Snackbar.** `showSeedSnackbar`는 액션을 선택했을 때 `hide` 대신 `SnackBarClosedReason.action`을 전달합니다. 이전 사유로 분기하는 `ScaffoldFeatureController.closed` 소비자는 수정해야 합니다. 액션 라벨과 콜백이 모두 있는 스낵바는 기본적으로 사라지지 않습니다. 시간 제한을 유지하려면 `persist: false`를 전달하세요.
 - **SEED Snackbar 컨트롤러.** 현재 항목이 퇴장한 뒤 다음 항목이 등장합니다. `SeedSnackbarController.show`의 `removeDelay` 기본값은 200ms이며, 현재 항목의 `onClose`는 제거된 뒤에 호출됩니다. 제거 시점에 의존하는 로직은 이 콜백으로 옮기세요.
-- **내비게이션.** `SeedTabs.fill`의 기본값은 true입니다. 탭의 고유 너비를 유지하려면 `fill: false`를 전달하세요. 적응형 `SeedTopNavigation`은 iOS에서만 제목을 가운데 정렬하고, 기본 뒤로 가기 동작에 쉐브론 아이콘을 사용합니다. 이전 모습이 필요하면 `centerTitle`을 지정하거나 `leading`을 제공하세요. 이제 바가 Drawer와 EndDrawer 동작을 자동으로 추론할 수 있습니다. 버튼을 직접 제어하려면 `leading`과 `actions`를 명시하고, 추론을 끄려면 `automaticallyImplyLeading: false`를 지정하세요. 문자열 제목과 부제목은 주변 텍스트 배율을 따릅니다. 이전 한도를 유지하려면 1.0–1.2로 제한한 `titleTextScaler`를 전달하세요.
+- **내비게이션.** `SeedTabs.fill`의 기본값은 true입니다. 탭의 고유 너비를 유지하려면 `fill: false`를 전달하세요. 적응형 `SeedTopNavigation`은 iOS에서만 제목을 가운데 정렬하고, 기본 뒤로 가기 동작에 쉐브론 아이콘을 사용합니다. 이전 모습이 필요하면 `centerTitle`을 지정하거나 `leading`을 제공하세요. 이제 바가 Drawer와 EndDrawer 동작을 자동으로 추론할 수 있습니다. 버튼을 직접 제어하려면 `leading`과 `actions`를 명시하고, 추론을 끄려면 `automaticallyImplyLeading: false`를 지정하세요. 문자열 제목과 부제목은 계속 주변 텍스트 배율을 1.0–1.2로 제한합니다. 다른 배율을 쓰려면 `titleTextScaler`를 전달하세요.
 - **SEED 3.3.0 색상.** `bg.neutralWeakAlpha`와 pressed 색이 `gray-alpha-200/300`을, `stroke.neutralWeak`가 반투명 `gray-alpha-400`을 사용합니다. `neutralOutline`·`brandOutline` 버튼, neutral outline Badge, outline Chip, ReactionButton, 비활성 square Checkbox의 외곽선이 `stroke.neutralMuted`에서 `stroke.neutralWeak`로 바뀝니다. 이 색을 불투명 값으로 비교하는 테스트를 수정하세요.
 - **Tabs reveal.** 선택한 탭이 스크롤 가장자리 16px 안에 있으면 16px 여백이 남도록 스크롤합니다. ChipTabs의 reveal 상자는 8px 간격을 포함하지 않습니다.
 - **상단 내비게이션 텍스트 버튼.** 라벨이 시스템 글자 배율을 1.0~1.2 범위에서 따르고, 버튼이 느슨한 제약의 슬롯을 채우지 않고 라벨 크기에 맞춰집니다.
 - **첨부 순서 변경.** 이동할 수 없는 항목(비활성·읽기 전용)은 이동 접근성 액션을 노출하지 않습니다. 키보드 순서 변경은 항목을 임시 위치에 보여 주고 시작·취소·놓기를 안내합니다. 목록은 더 이상 Material `ReorderableListView`가 아니므로, 그 타입으로 목록을 찾는 테스트를 수정하세요. RTL에서 트리거가 있으면 시작 쪽 padding이 트리거 앞에 놓입니다.
 - **접힌 사이드 내비게이션.** flyout이 `SeedNavigationMenu` 기반 disclosure가 됩니다. hover는 200ms 뒤 열리고 100ms 뒤 닫히며, hover와 마우스 클릭은 포커스를 옮기지 않고, `onTap`이 없는 하위 항목도 활성 상태를 유지합니다. 선택된 하위 항목의 배경 강조는 없어집니다.
 - **DatePicker.** continuous가 아닌 레이아웃에서 표시 구간이 바뀌면 새 날짜 줄이 20px 밀려 들어오며 나타납니다. 동작 줄이기 설정에서는 페이드만 적용합니다.
+- **DatePicker 범위.** `firstDate`, `lastDate`, `monthRange`, `yearRange` 중 여러 개를 지정하면 하나를 우선하지 않고 모두가 허용하는 가장 좁은 범위를 사용합니다. multiple 모드에서 날짜를 해제할 때도 `constraints`를 통과해야 합니다. `seedMaxSelectionCount`는 해제를 항상 허용합니다.
+- **사이드 패널 스와이프.** `SeedSidePanel`을 스와이프해 닫으면 `outside` 대신 `SeedOverlayDismissReason.drag`를 전달합니다. 이전 사유로 분기하는 핸들러를 수정하세요.
+- **Slider 값 라벨.** 기본 라벨은 소수 값을 소수점 한 자리로 반올림하지 않고 그대로 표시하므로, 0.25가 더 이상 0.3으로 표시되지 않습니다. 고정된 형식이 필요하면 `valueFormatter`를 사용하세요.
+- **HelpBubble 포커스.** `SeedHelpBubbleTrigger`는 포커스가 콘텐츠를 벗어나면 닫힙니다. 열린 상태를 유지하려면 `closeOnInteractOutside: false`를 지정하세요.
 
 ### 추가 및 사용 중단 예정 API
 
-- `SeedLocalizations`로 로케일을 따르고 재정의할 수 있는 라벨을 추가합니다. 생략한 라벨은 로케일을 따르고, 명시한 문자열이 우선합니다.
+- `SeedLocalizations`로 로케일을 따르고 재정의할 수 있는 라벨을 `SeedLabel` 키로 추가합니다. 생략한 라벨은 로케일을 따르고, 명시한 문자열이 우선합니다.
 - Material 브리지에 선택형 `preserveComponentThemes`를 추가합니다. 기본값은 false입니다. 활성화하면 지정한 Material 컴포넌트 테마 필드가 우선하고 SEED가 나머지 필드를 채웁니다.
 - 검증, 저장, 초기화, 복원을 지원하는 `SeedSelectFormField`와 Material `TabController`·`TabBarView`와 연동하는 `SeedTabBar`를 추가합니다. 영어·한국어 마이그레이션 가이드도 추가합니다.
 - 리딩과 트레일링 액션 사이를 채우는 사용자 지정 콘텐츠용 `SeedTopNavigation.slot`을 추가합니다. 제목·부제목 입력과 별도로 사용하세요. 내비게이션 바에 `bottom`, `titleTextScaler`, `automaticallyImplyLeading`을, `SeedFloatingActionButton`에 선택적인 Hero 태그와 툴팁을 추가합니다.
@@ -51,9 +55,14 @@
 - 칸, 구분자, 마스킹 점, 붙여넣기·자동완성 분배를 지원하는 `SeedSegmentedTextInput`과 `SeedSegmentedTextInputFormField`를 추가합니다.
 - `SeedNavigationMenu`와 root, trigger, content, group, item 위젯을 추가합니다.
 - 두 주를 표시하고 2주씩 이동하는 `SeedDatePickerLayout.twoWeeks`를 추가합니다.
-- `SeedConsistentWidth`, `SeedLoadingIndicator`, `SeedStaticTextScope`와 42개의 `tNStatic{Regular,Medium,Bold}` 텍스트 스타일을 추가합니다.
+- `SeedConsistentWidth`, `SeedLoadingIndicator`, `SeedStaticTextScope`와 42개의 `tNStatic{Regular,Medium,Bold}` 텍스트 스타일, `SeedFontSize`·`SeedLineHeight`의 `t1Static`–`t14Static` 토큰을 추가합니다.
 - Tabs, TabBar, TabsView, ChipTabsView, PageBanner, AttachmentInput, 첨부 필드에 `extendSafeAreaX`를 추가합니다.
 - `SeedAccordionItem`에 `titleWidget`, `descriptionWidget`, `suffixIcon`을, `SeedFieldset`에 `errorMessage`와 `errorIcon`을 추가합니다.
+- Callout에 `showCloseButton`을, ContextualFloatingButton·ReactionButton·ToggleButton에 `disableOnLoading`을, Field·TextField·FieldButton에 `showRequiredIndicator`를, TextField에 `hideCharacterCount`를, Fieldset에 `labelBold`를, Radio에 `rowBuilder`를 추가합니다.
+- 옵션이 아직 로드되지 않은 선택값까지 표시 문구로 만들 수 있도록 `SeedSelectSelectedItem`을 받는 `SeedSelect.formatSelectedValue`를 추가하며, `SeedSelectFormField`에서도 사용할 수 있습니다. 표시 문구와 검색어를 따로 지정하는 `SeedSelectItem`의 `textValue`와 `typeaheadLabel`, 명시적인 라디오 그룹을 만드는 `SeedSelectBoxGroup.radio`를 추가합니다.
+- `showSeedBottomSheet`에 `dragDismissible`을, `SeedSidePanelTrigger`에 `closeOnInteractOutside`와 `closeOnEscape`를, `SeedSnackbarController.show`에 표시되기 전에 제거된 항목을 알리는 `onDiscard`를 추가합니다.
+- `SeedPressable`에 `semanticsReadOnly`와 `semanticsValidationResult`를, `SeedInteractionState`에 `focusVisible`과 `surfaceSize`를 추가합니다.
+- 밝은·어두운 테마의 `SeedPalette.grayAlpha100Light`–`grayAlpha1000Dark` 색과 `SeedColorScheme.banner`(`SeedBannerColors`)를 추가합니다.
 
 ### 수정 및 접근성
 
@@ -67,9 +76,9 @@
 - `SafeArea` 안에서도 뷰의 가로 inset 변경을 반영합니다. 첨부를 키보드로 재정렬할 때 양쪽 inset을 지키고, 임시 이동 목표가 사라지면 이동을 취소합니다.
 - 방향키를 빠르게 눌러 첨부 항목을 화면 밖 위치로 옮겨도 포커스가 유지되어 Space로 순서를 확정할 수 있습니다.
 - 라벨과 항목이 바뀌어도 Switch, Tabs, WheelPicker의 선택을 유지합니다. 수량 범위 변경을 반영하고 두 달 달력은 한 달씩 이동합니다.
-- Fieldset 비활성을 텍스트 입력과 입력 버튼에 적용합니다. 칩 삭제와 태그 액션을 접근성 트리에 노출하고 필수 표시와 글자 수를 별도로 설정할 수 있습니다. 명시적인 라디오 카드 그룹과 Select의 표시 문구·검색어 옵션을 추가합니다.
-- 위·아래 키로 메뉴를 열 수 있습니다. 시트의 드래그 닫힘을 배경 터치와 별도로 설정하고 래퍼에서도 닫기·핸들 콜백을 전달합니다. Snackbar 컨트롤러를 바꿔도 가려지는 요소를 피하고 표시 전 폐기를 별도로 통지합니다.
-- 밝은·어두운 테마의 gray-alpha와 배너 색을 추가하고 부분 테마 재정의를 유지합니다. Grid는 끝선만 지정한 배치와 전체 너비 우선순위를 반영합니다.
+- Fieldset 비활성을 버튼, 텍스트 입력, 입력 버튼에 적용하며, 중첩된 Fieldset에서도 적용됩니다. 칩 삭제와 태그 액션을 접근성 트리에 노출합니다.
+- 위·아래 키로 메뉴를 열 수 있습니다. 래퍼에서도 시트의 닫기·핸들 콜백을 전달합니다. Snackbar 컨트롤러를 바꿔도 가려지는 요소를 피합니다.
+- 부분 테마 재정의를 유지합니다. Grid는 끝선만 지정한 배치와 전체 너비 우선순위를 반영합니다.
 
 - Field의 선택 표시와 Chip 삭제 안내를 현지화합니다. 읽지 않은 알림이 한 개일 때 단수 문구를 쓰고, 중첩 범위와 대화상자에서 바깥 번역 설정을 이어받습니다.
 - 닫을 수 있는 라우트에서 바깥을 탭하면 가장 위에 있는 Select, Menu, Popover가 닫힙니다. 움직이는 앵커를 추적하고, Accordion이 접힌 뒤에도 중첩 메뉴의 키보드 포커스와 Escape 처리를 복원합니다. 메뉴는 콘텐츠가 들어갈 수 있으면 요청한 방향을 유지하고, 긴 메뉴는 대체 방향을 시도하기 전에 크기를 먼저 줄입니다. 포인터나 접근성 활성화 뒤 첫 화살표 키는 Menu에서는 알맞은 활성 항목을, Select에서는 선택된 옵션이 있으면 그 옵션을 대상으로 합니다.
@@ -85,6 +94,19 @@
 - Pagination과 TablePagination이 Material 조상 없이 렌더링됩니다. 표 선택기는 40px로 값 크기에 맞추고, `51-75`처럼 간결한 범위 라벨을 사용합니다. 접힌 SideNavigation의 상태와 현재 항목 표시를 유지합니다. 플라이아웃은 최소 너비 240px과, 툴팁이 덮지 않는 그룹 제목을 갖습니다. 항목 라벨은 한 줄로 줄이고, 눌림 표면을 안쪽으로 들이며, 헤더와 푸터 구분선을 제거합니다. 탭을 화살표 키로 이동할 때 페이지 스크롤 위치를 유지합니다.
 - 나머지 시각 피드백을 React에 맞춥니다. Accordion 호버 표면, 평면 스타일의 WheelPicker, 잉크 효과가 없는 DatePicker·Menu·Footer·SideNavigation 컨트롤이 포함됩니다. `SeedScrollFog`의 불투명도와 마스크 방향을 바로잡습니다. 당겨서 새로고침 콘텐츠의 텍스트 선택을 유지합니다.
 - 실행 중에 `extendSafeAreaX`를 바꿔도 콘텐츠를 다시 마운트하지 않습니다. TabsView는 선택된 캐러셀 페이지와 페이지 상태를, Tabs와 ChipTabsView는 탭 목록의 스크롤 위치를, AttachmentInput은 스크롤 위치·키보드 포커스·진행 중인 키보드 재정렬을, PageBanner는 콘텐츠 상태를 유지합니다.
+- `immediate` 방식의 `SeedSnackbarController.show`는 React처럼 대기 중인 항목을 모두 대체하고, 대체된 각 항목을 `onClose`와 `onDiscard`로 알립니다. `SeedSnackbarAvoidOverlap`은 영역의 크기뿐 아니라 위치도 추적하며, 스낵바는 등록된 영역과 겹칠 때만 위로 이동합니다.
+- Accordion 콘텐츠가 완전히 접히면 그 안의 포커스를 해제하므로, 숨겨진 컨트롤이 Enter나 Space로 활성화되지 않습니다. 당겨서 새로고침은 명시적인 `ScrollController`나 `primary: false`를 사용할 때도 화면에 다 들어가는 콘텐츠에서 당기기를 받습니다.
+- `allowedValues`가 있는 범위 Slider는 React처럼 `minStepsBetweenThumbs`를 적용하지 않습니다. 연속 Slider는 키보드와 접근성 증감을 `step` 단위로 이동합니다.
+- Tab은 항상 Menu를 닫고 트리거 다음 정지점으로 포커스를 옮기며, 순회를 건너뛰는 트리거나 자체 `FocusScope`의 마지막에 있는 트리거에서도 마찬가지입니다. 닫힌 Menu 트리거에서 위쪽 화살표를 누르면 마지막 활성 항목에서 메뉴가 열립니다. Menu와 Popover 트리거는 펼침 상태를 노출하고, Menu와 Select의 옵션 그룹은 이름이 있는 그룹으로 노출됩니다.
+- Popover는 실제로 렌더링된 제목과 설명에서 접근성 이름과 설명을 가져오므로, 사용자 지정 `title`이나 `description` 위젯이 대신 표시되면 `titleText`와 `descriptionText`는 적용되지 않습니다. `semanticsLabel`은 계속 우선합니다.
+- `rows`를 지정한 열 방향 Grid에서 `row`만 지정한 항목은 그 행에 머뭅니다. 제어하는 부모가 선택을 거부하거나 늦춰도 Tabs는 키보드 포커스가 있는 탭을 화면에 보여 줍니다.
+- 첨부 제거 버튼이 항목 밖으로 걸친 부분을 탭해도 버튼이 눌립니다. 순서 변경 가능한 첨부 목록은 키보드 재정렬을 지원합니다. Space로 포커스된 항목을 집고, 방향키로 옮기고, Space로 놓으며, Escape로 취소합니다. 첨부 필드는 `onRetry`를 지정했을 때만 재시도 동작을 표시합니다.
+- `SeedTooltipDelayGroup` 안의 툴팁은 같은 그룹의 다른 툴팁이 열려 있으면 지연 없이 열립니다. 자체 `openDelay`나 `closeDelay`를 지정한 툴팁은 그룹 값 대신 그 값을 사용합니다.
+- 반응형 모달 트리거는 레이아웃이 768px 경계를 넘나들어도 본문 상태를 유지합니다. Bottom Sheet 형태에서도 Dialog의 최대 높이와 본문 padding, 사이드 패널의 사용자 지정 제목·설명 위젯, 닫기 버튼, 본문 padding을 유지합니다.
+- TabsView는 탭의 순서가 바뀌거나 탭이 추가·제거되어도 지연 마운트된 페이지와 측정된 높이를 탭 값에 따라 유지합니다. Accordion은 항목 포커스를 값에 따라 유지하고, SideNavigation은 새로 추가된 항목에만 `defaultOpen`을 적용하며, 접힌 플라이아웃은 하위 항목 배지를 표시하고, `SeedSegment.invalid`는 접근성 트리에 노출됩니다.
+- WheelPicker는 열이 비활성이나 읽기 전용이 되거나 옵션이 바뀌면 확정된 선택으로 돌아가고, 동작 줄이기 설정에서는 애니메이션 없이 이동합니다.
+- 이미 선택된 Radio를 다시 활성화해도 변경을 알리지 않습니다. indeterminate SelectBox의 체크 표시는 대시로 표시됩니다. ScrollArea는 `fogOnlyWhenScrollable`과 관계없이 콘텐츠가 넘치기 시작하거나 멈출 때 `focusableWhenScrollable` 상태를 갱신합니다.
+- 눌림 피드백은 측정된 pressable 표면 크기를 기준으로 확대·축소되며, 동작 줄이기 설정에서는 애니메이션 없이 적용됩니다.
 
 ### 예제와 웹
 
