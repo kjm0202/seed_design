@@ -8,6 +8,7 @@ import '../../foundations/feedback/seed_scale_feedback.dart';
 import '../../theme/seed_theme.dart';
 import '../../foundations/feedback/seed_choice_group.dart';
 import '../badge/seed_notification_badge.dart';
+import '../layout/seed_safe_area_x.dart';
 import '../layout/seed_scroll_fog.dart';
 
 /// Style variants of [SeedTabs].
@@ -96,6 +97,26 @@ class SeedTabs extends StatefulWidget {
   /// sides; this corresponds to ChipTabsList's customizable CSS padding.
   final EdgeInsetsGeometry? chipListPadding;
 
+  /// Extends the strip edge to edge under the horizontal safe-area insets,
+  /// like React `Tabs`/`ChipTabs` `extendSafeAreaX` (React 3.1.0+). Defaults
+  /// to false, which keeps the existing layout.
+  ///
+  /// Place the tabs inside the safe area as usual (for example below a
+  /// [SafeArea]). When true, the strip widens by the physical left and right
+  /// insets into the area outside it, so its background and bottom stroke
+  /// reach the screen edges and the list scrolls across the full width. The
+  /// list padding grows by the same insets, so the tabs start inside the safe
+  /// area, and revealing a selected or focused tab keeps its 16px scroll
+  /// margin plus the inset from each edge. The insets are the device's
+  /// physical insets: the largest of the view padding and the ambient
+  /// [MediaQuery] padding and view padding, also when an ancestor [SafeArea]
+  /// has consumed them, as CSS `env(safe-area-inset-*)` does.
+  ///
+  /// Pointer input that starts in the inset strips reaches the tabs only
+  /// when the ancestors also cover those strips; Flutter hit testing stops at
+  /// each ancestor's bounds, unlike the browser's overflow hit testing.
+  final bool extendSafeAreaX;
+
   /// Creates a controlled SEED tab strip with [items] and [selectedIndex].
   ///
   /// [onTabSelected] reports user interaction. [variant] chooses line, solid
@@ -103,8 +124,9 @@ class SeedTabs extends StatefulWidget {
   /// medium for chips. [fill] controls fill versus content-hugging headers,
   /// [showScrollFog] fades scroll edges for chips, [orientation] determines
   /// directional keyboard traversal, and [chipListPadding] overrides chip
-  /// list insets. Use `SeedTabsView` to manage corresponding content pages.
-  /// An optional `key` preserves Flutter widget identity.
+  /// list insets. [extendSafeAreaX] bleeds the strip under the horizontal
+  /// safe-area insets. Use `SeedTabsView` to manage corresponding content
+  /// pages. An optional `key` preserves Flutter widget identity.
   const SeedTabs({
     super.key,
     required this.items,
@@ -116,6 +138,7 @@ class SeedTabs extends StatefulWidget {
     this.showScrollFog = false,
     this.orientation = Axis.horizontal,
     this.chipListPadding,
+    this.extendSafeAreaX = false,
   }) : size =
            size ??
            (variant == SeedTabsVariant.line
@@ -244,14 +267,22 @@ class _SeedTabsState extends State<SeedTabs> {
     final leading = viewport.getOffsetToReveal(itemBox, 0).offset;
     final trailing = viewport.getOffsetToReveal(itemBox, 1).offset;
 
-    // Match React useTabs scrollTabIntoView's 16px reveal buffer. Offsets
-    // from the viewport are axis-direction aware (LTR and RTL); scroll only
-    // when a selected trigger is actually outside the visible viewport.
+    // Match React useTabs scrollTabIntoView (react-tabs 3.0.0): the trigger's
+    // 16px scroll-margin takes part in the visibility test too, so a tab that
+    // sits within 16px of an edge is also moved to leave that room. Offsets
+    // from the viewport are axis-direction aware (LTR and RTL).
+    // With extendSafeAreaX the list's scroll-padding adds the safe-area
+    // inset on each side, so the tab also stops inside the safe area.
+    const margin = SeedDimension.x4;
+    final insets = SeedSafeAreaX.resolve(context, widget.extendSafeAreaX);
+    final direction = Directionality.of(context);
+    final leadingMargin = margin + insets.start(direction);
+    final trailingMargin = margin + insets.end(direction);
     var target = position.pixels;
-    if (position.pixels < trailing) {
-      target = trailing + SeedDimension.x4;
-    } else if (position.pixels > leading) {
-      target = leading - SeedDimension.x4;
+    if (position.pixels > leading - leadingMargin) {
+      target = leading - leadingMargin;
+    } else if (position.pixels < trailing + trailingMargin) {
+      target = trailing + trailingMargin;
     }
     target = target.clamp(position.minScrollExtent, position.maxScrollExtent);
     if ((target - position.pixels).abs() > 0.5) {
@@ -325,6 +356,15 @@ class _SeedTabsState extends State<SeedTabs> {
 
   @override
   Widget build(BuildContext context) {
+    // Always bled, at zero insets when extendSafeAreaX is false, so toggling
+    // the flag keeps the strip's scroll offset and focus.
+    return SeedSafeAreaXBleed(
+      insets: SeedSafeAreaX.resolve(context, widget.extendSafeAreaX),
+      child: _buildTabs(context),
+    );
+  }
+
+  Widget _buildTabs(BuildContext context) {
     return SeedChoiceGroup(
       selectedIndex: widget.selectedIndex,
       enabled: widget.items.map((item) => item.enabled).toList(),
@@ -377,6 +417,7 @@ class _SeedTabsState extends State<SeedTabs> {
     final bool hasMeasuredHugIndicator =
         _hugIndicatorLeft != null && _hugIndicatorWidth != null;
     final labelSizes = _lineLabelSizes(context);
+    final safeArea = SeedSafeAreaX.resolve(context, widget.extendSafeAreaX);
     final height = labelSizes.fold(widget.size.height, (height, label) {
       final required = label.height + SeedDimension.x2_5 * 2;
       return required > height ? required : height;
@@ -399,8 +440,12 @@ class _SeedTabsState extends State<SeedTabs> {
             child: widget.fill
                 ? LayoutBuilder(
                     builder: (context, constraints) {
+                      final insets = SeedSafeAreaX.resolve(
+                        context,
+                        widget.extendSafeAreaX,
+                      );
                       final widths = _fillWidths(
-                        constraints.maxWidth,
+                        constraints.maxWidth - insets.left - insets.right,
                         labelSizes,
                       );
                       final totalWidth = widths.fold(
@@ -412,6 +457,10 @@ class _SeedTabsState extends State<SeedTabs> {
                           .fold(0.0, (sum, width) => sum + width);
                       return SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
+                        // Fill lists have no padding of their own (paddingX 0),
+                        // so extendSafeAreaX pads them by the insets alone.
+                        // Zero insets keep the Padding so the tree is stable.
+                        padding: insets.padding,
                         child: SizedBox(
                           width: totalWidth,
                           child: Stack(
@@ -469,9 +518,14 @@ class _SeedTabsState extends State<SeedTabs> {
                   )
                 : SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: SeedSpacingX.globalGutter,
-                    ),
+                    padding: widget.extendSafeAreaX
+                        ? EdgeInsets.only(
+                            left: SeedSpacingX.globalGutter + safeArea.left,
+                            right: SeedSpacingX.globalGutter + safeArea.right,
+                          )
+                        : const EdgeInsets.symmetric(
+                            horizontal: SeedSpacingX.globalGutter,
+                          ),
                     child: Stack(
                       children: [
                         Semantics(
@@ -640,11 +694,15 @@ class _SeedTabsState extends State<SeedTabs> {
         },
       );
     }
+    final listPadding =
+        widget.chipListPadding ??
+        const EdgeInsets.symmetric(horizontal: SeedDimension.x4);
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding:
-          widget.chipListPadding ??
-          const EdgeInsets.symmetric(horizontal: SeedDimension.x4),
+      padding: widget.extendSafeAreaX
+          ? listPadding.resolve(Directionality.of(context)) +
+                SeedSafeAreaX.of(context).padding
+          : listPadding,
       child: Semantics(
         role: SemanticsRole.tabBar,
         explicitChildNodes: true,
@@ -652,12 +710,14 @@ class _SeedTabsState extends State<SeedTabs> {
           children: List.generate(items.length, (index) {
             final item = items[index];
             final bool isLast = index == items.length - 1;
-            return KeyedSubtree(
-              key: _chipItemKeys[index],
-              child: Padding(
-                padding: EdgeInsetsDirectional.only(
-                  end: isLast ? 0 : SeedDimension.x2,
-                ),
+            // The key stays inside the gap padding so the reveal box is the
+            // chip itself, as in React where the gap is not part of the tab.
+            return Padding(
+              padding: EdgeInsetsDirectional.only(
+                end: isLast ? 0 : SeedDimension.x2,
+              ),
+              child: KeyedSubtree(
+                key: _chipItemKeys[index],
                 child: _buildChipTabItem(
                   context,
                   index,

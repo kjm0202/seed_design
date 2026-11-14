@@ -14,6 +14,7 @@ class SeedTabBar extends StatefulWidget implements PreferredSizeWidget {
   /// length must match [items]. [onTabSelected] reports tapped indices.
   /// [variant], [size], [fill], [showScrollFog], and [chipListPadding] configure
   /// the SEED tab strip without taking ownership of the controller.
+  /// [extendSafeAreaX] is forwarded to [SeedTabs.extendSafeAreaX].
   /// An optional `key` preserves Flutter widget identity.
   const SeedTabBar({
     super.key,
@@ -25,6 +26,7 @@ class SeedTabBar extends StatefulWidget implements PreferredSizeWidget {
     this.fill = true,
     this.showScrollFog = false,
     this.chipListPadding,
+    this.extendSafeAreaX = false,
   });
   /// Tab labels, values, enabled states, and badges.
   final List<SeedTabItem> items;
@@ -41,6 +43,11 @@ class SeedTabBar extends StatefulWidget implements PreferredSizeWidget {
   final bool fill, showScrollFog;
   /// Optional chip-strip inset; otherwise uses the standard 16-pixel inset.
   final EdgeInsetsGeometry? chipListPadding;
+
+  /// Bleeds the strip under the horizontal safe-area insets; see
+  /// [SeedTabs.extendSafeAreaX]. Defaults to false. The sibling TabBarView
+  /// belongs to the caller, so pad its pages for the insets separately.
+  final bool extendSafeAreaX;
 
   @override
   /// Height of the selected SEED tab size for use as a preferred-size header.
@@ -110,5 +117,6 @@ class _SeedTabBarState extends State<SeedTabBar> {
     fill: widget.fill,
     showScrollFog: widget.showScrollFog,
     chipListPadding: widget.chipListPadding,
+    extendSafeAreaX: widget.extendSafeAreaX,
   );
 }

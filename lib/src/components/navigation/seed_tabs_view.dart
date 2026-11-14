@@ -3,6 +3,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
 
 import '../../foundations/motion/seed_motion.dart';
+import '../layout/seed_safe_area_x.dart';
 import 'seed_tabs.dart';
 
 /// Flutter controller for a [SeedTabsView] selected index.
@@ -46,8 +47,9 @@ class SeedTabsView extends StatefulWidget {
   /// [duration] controls programmatic transitions and [onSwipeStart],
   /// [onSwipeEnd], and [onSettle] report carousel interactions.
   /// [scrollToTopOnChange] optionally resets the selected page's controller
-  /// from [contentScrollControllers] after a user tab change. An optional
-  /// `key` preserves Flutter widget identity.
+  /// from [contentScrollControllers] after a user tab change.
+  /// [extendSafeAreaX] bleeds the header and content under the horizontal
+  /// safe-area insets. An optional `key` preserves Flutter widget identity.
   const SeedTabsView({
     super.key,
     required this.items,
@@ -77,6 +79,7 @@ class SeedTabsView extends StatefulWidget {
     this.onSettle,
     this.scrollToTopOnChange = false,
     this.contentScrollControllers = const [],
+    this.extendSafeAreaX = false,
   }) : keepAlive = (keepAlive ?? true) && !unmountOnExit,
        assert(value == null || selectedIndex == null);
 
@@ -163,6 +166,16 @@ class SeedTabsView extends StatefulWidget {
   /// Per-page scroll controllers used by [scrollToTopOnChange]; entries may
   /// be null and the list may be shorter than [items].
   final List<ScrollController?> contentScrollControllers;
+
+  /// Extends the view edge to edge under the horizontal safe-area insets,
+  /// like React `Tabs`/`ChipTabs` `extendSafeAreaX` (React 3.1.0+). Defaults
+  /// to false, which keeps the existing layout.
+  ///
+  /// The header behaves as [SeedTabs.extendSafeAreaX]. The content area also
+  /// widens by the physical left and right insets, so a [carousel] swipes
+  /// across the full width, and each page is padded by the same insets so
+  /// its content stays inside the safe area, as React pads `TabsContent`.
+  final bool extendSafeAreaX;
   @override
   /// Creates the tab-header and page-transition state.
   State<SeedTabsView> createState() => _SeedTabsViewState();
@@ -208,6 +221,7 @@ class SeedChipTabsView extends SeedTabsView {
     super.onSettle,
     super.scrollToTopOnChange,
     super.contentScrollControllers,
+    super.extendSafeAreaX,
   });
 }
 
@@ -384,8 +398,16 @@ class _SeedTabsViewState extends State<SeedTabsView> {
     super.dispose();
   }
 
+  // React pads each TabsContent by the insets the extended root bleeds into.
+  // The Padding is always present, at zero insets when extendSafeAreaX is
+  // false, so neither rotating the device nor toggling the flag changes the
+  // tree and resets page state (React's flag is only a CSS variant).
+  Widget _pad(Widget child, SeedSafeAreaX insets) =>
+      Padding(padding: insets.padding, child: child);
+
   @override
   Widget build(BuildContext context) {
+    final insets = SeedSafeAreaX.resolve(context, widget.extendSafeAreaX);
     Widget body;
     if (!widget.carousel) {
       body = widget.keepAlive
@@ -397,7 +419,7 @@ class _SeedTabsViewState extends State<SeedTabsView> {
                       _visited.contains(widget._valueAt(i)))
                     KeyedSubtree(
                       key: ValueKey<String>(widget._valueAt(i)),
-                      child: widget.children[i],
+                      child: _pad(widget.children[i], insets),
                     )
                   else
                     SizedBox.shrink(key: ValueKey<String>(widget._valueAt(i))),
@@ -405,7 +427,7 @@ class _SeedTabsViewState extends State<SeedTabsView> {
             )
           : KeyedSubtree(
               key: ValueKey<String>(widget._valueAt(_index)),
-              child: widget.children[_index],
+              child: _pad(widget.children[_index], insets),
             );
     } else {
       body = LayoutBuilder(
@@ -510,7 +532,11 @@ class _SeedTabsViewState extends State<SeedTabsView> {
                       (!widget.lazyMount ||
                           _visited.contains(widget._valueAt(index))) &&
                       !(widget.unmountOnExit && index != _index);
-                  if (!mounted) child = const SizedBox.shrink();
+                  if (!mounted) {
+                    child = const SizedBox.shrink();
+                  } else {
+                    child = _pad(child, insets);
+                  }
                   if (widget.dynamicHeight && mounted) {
                     child = OverflowBox(
                       minHeight: 0,
@@ -539,6 +565,11 @@ class _SeedTabsViewState extends State<SeedTabsView> {
       container: true,
       child: body,
     );
+    // The header bleeds itself; the content bleeds here, so together they
+    // match React's single root bleed. The bleed stays at zero insets when
+    // the flag is false, so toggling it keeps the PageView, its page and the
+    // pages' state mounted.
+    body = SeedSafeAreaXBleed(insets: insets, child: body);
     final header = SeedTabs(
       items: widget.items,
       selectedIndex: _index,
@@ -548,6 +579,7 @@ class _SeedTabsViewState extends State<SeedTabsView> {
       fill: widget.fill,
       showScrollFog: widget.showScrollFog,
       chipListPadding: widget.chipListPadding,
+      extendSafeAreaX: widget.extendSafeAreaX,
     );
     return Column(
       mainAxisSize: MainAxisSize.min,

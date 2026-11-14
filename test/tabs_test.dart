@@ -787,6 +787,51 @@ void main() {
         );
       }
 
+      testWidgets(
+        'ChipTabs leaves 16px beside a visible chip near the edge width=$width',
+        (tester) async {
+          final selected = ValueNotifier<int>(0);
+          addTearDown(selected.dispose);
+          await tester.pumpWidget(
+            _host(
+              width: width,
+              selected: selected,
+              direction: TextDirection.ltr,
+              scrollFog: false,
+            ),
+          );
+          await tester.pumpAndSettle();
+          final scrollable = find
+              .descendant(
+                of: find.byType(SeedTabs),
+                matching: find.byType(Scrollable),
+              )
+              .first;
+          final position = tester.state<ScrollableState>(scrollable).position;
+          Rect chip(int index) => tester.getRect(
+            find
+                .ancestor(
+                  of: find.text('Chip Item ${index + 1}'),
+                  matching: find.byType(SeedPressable),
+                )
+                .first,
+          );
+          final viewport = tester.getRect(scrollable);
+          // Place chip 7 fully inside the viewport, 4px from its right edge.
+          position.jumpTo(
+            position.pixels + chip(6).right - (viewport.right - 4),
+          );
+          await tester.pump();
+          expect(chip(6).right, closeTo(viewport.right - 4, 0.5));
+          final gapBefore = chip(7).left - chip(6).right;
+
+          selected.value = 6;
+          await tester.pumpAndSettle();
+          expect(chip(6).right, closeTo(viewport.right - 16, 0.5));
+          expect(chip(7).left - chip(6).right, gapBefore);
+        },
+      );
+
       testWidgets('ChipTabs RTL directional padding and reveal width=$width', (
         tester,
       ) async {
