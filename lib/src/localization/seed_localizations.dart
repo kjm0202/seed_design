@@ -97,6 +97,12 @@ enum SeedLabel {
   reorderCanceled,
   /// Announcement when `{name}` is dropped at one-based `{position}`
   reorderDropped,
+  /// DatePicker `twoWeeks` previous-two-weeks button (official
+  /// `ariaLabels.previousTwoWeeks`).
+  previousTwoWeeks,
+  /// DatePicker `twoWeeks` next-two-weeks button (official
+  /// `ariaLabels.nextTwoWeeks`).
+  nextTwoWeeks,
 }
 
 /// Optional, captured localization overrides for SEED widgets.
@@ -225,6 +231,8 @@ class SeedLocalizations extends StatelessWidget {
     SeedLabel.reorderStarted: 'Started reordering {name}.',
     SeedLabel.reorderCanceled: 'Canceled reordering {name}.',
     SeedLabel.reorderDropped: 'Moved {name} to position {position}.',
+    SeedLabel.previousTwoWeeks: 'Previous two weeks',
+    SeedLabel.nextTwoWeeks: 'Next two weeks',
   };
   static const _korean = <SeedLabel, String>{
     SeedLabel.pageNumber: '{page}페이지',
@@ -275,6 +283,8 @@ class SeedLocalizations extends StatelessWidget {
     SeedLabel.reorderStarted: '{name} 항목 순서 변경을 시작했어요.',
     SeedLabel.reorderCanceled: '{name} 항목 순서 변경을 취소했어요.',
     SeedLabel.reorderDropped: '{name} 항목을 {position}번째에 놓았어요.',
+    SeedLabel.previousTwoWeeks: '이전 2주',
+    SeedLabel.nextTwoWeeks: '다음 2주',
   };
 }
 

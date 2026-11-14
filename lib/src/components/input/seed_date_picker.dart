@@ -6,12 +6,14 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart' show DateFormat, Intl, NumberFormat;
 import 'package:intl/date_symbol_data_local.dart';
 
+import '../../localization/seed_localizations.dart';
 import '../../localization/seed_picker_locale.dart';
 
 import '../../foundations/colors/seed_palette.dart';
 import '../../foundations/dimensions/seed_dimension.dart';
 import '../../foundations/radius/seed_radius.dart';
 import '../../foundations/feedback/seed_scale_feedback.dart';
+import '../../foundations/motion/seed_motion.dart';
 import '../../theme/seed_theme.dart';
 import '../button/seed_text_button.dart';
 import '../popover/seed_popover.dart';
@@ -42,6 +44,20 @@ enum SeedDatePickerLayout {
   /// Show one calendar week.
   week,
 
+  /// Show two consecutive calendar weeks as two rows.
+  ///
+  /// Corresponds to the official `visibleRange="twoWeeks"`. The view date is
+  /// normalized to the start of the first week, and the previous/next buttons
+  /// and PageUp/PageDown move by two weeks. The title shows the month owning
+  /// the middle (fourth) day of the first row, i.e. the month with more days
+  /// in that row; when that month lies outside the navigable month bounds,
+  /// the bound-side month of the row is used instead. The year/month wheel
+  /// opens in a popover as in [week].
+  ///
+  /// Adding this value can break consumer `switch` statements that cover
+  /// every [SeedDatePickerLayout] value without a default branch.
+  twoWeeks,
+
   /// Scroll through a continuous calendar; requires a bounded height.
   continuous,
 }
@@ -65,7 +81,7 @@ class SeedDatePicker extends StatefulWidget {
   /// and [initialDates] names are compatibility alternatives and may not
   /// accompany their replacements.
   ///
-  /// [viewDate] controls which month is shown independently of selection;
+  /// [viewDate] controls the visible month or week independently of selection;
   /// [defaultViewDate] sets its initial position. [onViewDateChange] observes
   /// navigation, while the selection callbacks observe selection attempts.
   /// [weekStartsOn] accepts ISO weekdays 1 (Monday) through 7 (Sunday).
@@ -444,8 +460,24 @@ class SeedDatePicker extends StatefulWidget {
   State<SeedDatePicker> createState() => _SeedDatePickerState();
 }
 
-class _SeedDatePickerState extends State<SeedDatePicker> {
+class _SeedDatePickerState extends State<SeedDatePicker>
+    with SingleTickerProviderStateMixin {
   late DateTime _view;
+  // Official `[data-view-enter-from]` row animation: $duration.d6 with
+  // $timingFunction.enter, opacity 0 -> 1 and a 20px horizontal offset.
+  late final AnimationController _viewEnter = AnimationController(
+    vsync: this,
+    duration: SeedDuration.d6,
+    value: 1,
+  );
+  late final Animation<double> _viewEnterProgress = CurvedAnimation(
+    parent: _viewEnter,
+    curve: SeedCurves.enter,
+  );
+  // Physical direction of the starting offset: 1 enters from the right.
+  double _viewEnterSign = 1;
+  ({DateTime start, SeedDatePickerLayout layout, int weekStartsOn})?
+  _viewBaseline;
   DateTime? _selectedDate, _startDate, _endDate, _focusedDate;
   late Set<DateTime> _dates;
   bool _showMonthPicker = false;
@@ -470,6 +502,12 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
       widget.weekStartsOn ??
       DateFormat.E(_locale).dateSymbols.FIRSTDAYOFWEEK + 1;
   DateTime _month(DateTime day) => DateTime(day.year, day.month);
+  int? get _weekCount => switch (widget.layout) {
+    SeedDatePickerLayout.week => 1,
+    SeedDatePickerLayout.twoWeeks => 2,
+    _ => null,
+  };
+  bool get _weekLayout => _weekCount != null;
   DateTime _week(DateTime day) => DateTime(
     day.year,
     day.month,
@@ -527,6 +565,18 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
   }
 
   DateTime get _headerMonth {
+    if (widget.layout == SeedDatePickerLayout.twoWeeks) {
+      // Official rule: the month of the first row's middle day, falling back
+      // to the row end/start when that month is before/after the bounds.
+      final start = _week(_view);
+      final middle = DateTime(start.year, start.month, start.day + 3);
+      final lower = _lowerMonthBound, upper = _upperMonthBound;
+      if (lower != null && _month(middle).isBefore(lower)) {
+        return _month(DateTime(start.year, start.month, start.day + 6));
+      }
+      if (upper != null && _month(middle).isAfter(upper)) return _month(start);
+      return _month(middle);
+    }
     if (widget.layout != SeedDatePickerLayout.week) return _month(_view);
     final start = _week(_view),
         end = DateTime(
@@ -575,7 +625,54 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _locale = resolveSeedPickerLocale(context, widget.locale);
+    _noteViewChange();
   }
+
+  DateTime get _visibleStart => _weekLayout ? _week(_view) : _month(_view);
+
+  /// Restarts the row entrance when the visible range moves. The first
+  /// build, selection-only updates, and layout/week-start changes do not
+  /// animate; continuous calendars never do.
+  void _noteViewChange() {
+    final current = (
+      start: _visibleStart,
+      layout: widget.layout,
+      weekStartsOn: _weekStartsOn,
+    );
+    final previous = _viewBaseline;
+    _viewBaseline = current;
+    if (previous != null &&
+        (previous.layout != current.layout ||
+            previous.weekStartsOn != current.weekStartsOn)) {
+      _viewEnter.value = 1;
+      return;
+    }
+    if (previous == null ||
+        current.layout == SeedDatePickerLayout.continuous ||
+        previous.start == current.start) {
+      return;
+    }
+    final isNext = current.start.isAfter(previous.start);
+    final rtl = Directionality.maybeOf(context) == TextDirection.rtl;
+    _viewEnterSign = isNext != rtl ? 1 : -1;
+    _viewEnter.forward(from: 0);
+  }
+
+  Widget _viewEnterTransition(Widget rows) => FadeTransition(
+    opacity: _viewEnterProgress,
+    alwaysIncludeSemantics: true,
+    child: AnimatedBuilder(
+      animation: _viewEnterProgress,
+      child: rows,
+      builder: (context, child) {
+        final reduced = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+        final dx = reduced
+            ? 0.0
+            : _viewEnterSign * 20 * (1 - _viewEnterProgress.value);
+        return Transform.translate(offset: Offset(dx, 0), child: child);
+      },
+    ),
+  );
 
   @override
   void didUpdateWidget(SeedDatePicker oldWidget) {
@@ -617,11 +714,13 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
         if (mounted) _scrollTo(_view);
       });
     }
+    _noteViewChange();
   }
 
   @override
   void dispose() {
     widget.controller?.removeListener(_controllerChanged);
+    _viewEnter.dispose();
     _monthYearFocusNode.dispose();
     _scroll.dispose();
     for (final node in _dayNodes.values) {
@@ -641,6 +740,16 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
     return seedDateOnly(day);
   }
 
+  DateTime _clampTwoWeekNavigation(DateTime day) {
+    final lower = _lowerMonthBound;
+    final upper = _upperMonthBound;
+    if (lower != null && _month(day).isBefore(lower)) return lower;
+    if (upper != null && _month(day).isAfter(upper)) {
+      return DateTime(upper.year, upper.month + 1, 0);
+    }
+    return day;
+  }
+
   bool _canShow(DateTime day) {
     final first = _lowerMonthBound;
     final last = _upperMonthBound;
@@ -656,11 +765,10 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
         if (widget.layout == SeedDatePickerLayout.continuous) {
           _continuousAnchor = _month(next);
         }
+        _noteViewChange();
       });
     }
-    widget.onViewDateChanged?.call(
-      widget.layout == SeedDatePickerLayout.week ? _week(next) : _month(next),
-    );
+    widget.onViewDateChanged?.call(_weekLayout ? _week(next) : _month(next));
     _updateMonthOverlay?.call(() {});
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -902,7 +1010,7 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
 
   void _toggleMonthPicker() {
     if (_isDisabled) return;
-    if (widget.layout == SeedDatePickerLayout.week && !_weekOverlayOpen) {
+    if (_weekLayout && !_weekOverlayOpen) {
       _openWeekMonthPicker();
       return;
     }
@@ -1052,8 +1160,12 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
           target.month,
           math.min(day.day, DateTime(target.year, target.month + 1, 0).day),
         );
-      } else if (widget.layout == SeedDatePickerLayout.week) {
-        next = DateTime(day.year, day.month, day.day + direction * 7);
+      } else if (_weekCount != null) {
+        next = DateTime(
+          day.year,
+          day.month,
+          day.day + direction * 7 * _weekCount!,
+        );
       } else {
         final monthStep = widget.layout == SeedDatePickerLayout.twoMonths
             ? 2
@@ -1066,7 +1178,22 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
         );
       }
     }
-    if (next == null || !_canShow(next)) return KeyEventResult.ignored;
+    if (next == null) return KeyEventResult.ignored;
+    if (widget.layout == SeedDatePickerLayout.twoWeeks) {
+      next = _clampTwoWeekNavigation(next);
+    }
+    if (!_canShow(next)) return KeyEventResult.ignored;
+    if (widget.layout == SeedDatePickerLayout.twoWeeks) {
+      // Official moveFocus: keep the view while the date stays in one of the
+      // two visible rows; otherwise the target's week becomes the first row.
+      final start = _week(_view);
+      final end = DateTime(start.year, start.month, start.day + 13);
+      if (!next.isBefore(start) && !next.isAfter(end)) {
+        setState(() => _focusedDate = next);
+        _dayNodes[next]?.requestFocus();
+        return KeyEventResult.handled;
+      }
+    }
     _focusedDate = next;
     _setView(next, focus: true);
     return KeyEventResult.handled;
@@ -1262,9 +1389,19 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
     return first;
   }
 
-  Widget _grid(DateTime month, {bool week = false}) {
+  Widget _grid(DateTime month, {int weeks = 0}) {
+    final grid = _gridRows(month, weeks: weeks);
+    return widget.layout == SeedDatePickerLayout.continuous
+        ? grid
+        : _viewEnterTransition(grid);
+  }
+
+  Widget _gridRows(DateTime month, {int weeks = 0}) {
+    final week = weeks > 0;
     final first = week ? _week(month) : _month(month);
-    final count = week ? 7 : DateTime(month.year, month.month + 1, 0).day;
+    final count = week
+        ? 7 * weeks
+        : DateTime(month.year, month.month + 1, 0).day;
     final offset = week ? 0 : (first.weekday - _weekStartsOn) % 7;
     final last = DateTime(first.year, first.month, first.day + count - 1);
     final tab = _tabDate(first, last);
@@ -1375,19 +1512,58 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
       if (heading) const SizedBox(height: SeedDimension.x4),
     ],
   );
+
+  /// Two-week navigation names. [SeedLocalizations] supplies them when the
+  /// picker formats in the app language; an explicit picker [Locale] in
+  /// another language uses that language's built-in copy, like the other
+  /// navigation names.
+  String _twoWeeksLabel(SeedLabel key) {
+    final appLanguage = Localizations.maybeLocaleOf(context)?.languageCode;
+    if (appLanguage != null && appLanguage == Intl.shortLocale(_locale)) {
+      return SeedLocalizations.label(context, key);
+    }
+    final previous = key == SeedLabel.previousTwoWeeks;
+    return _korean
+        ? (previous ? '이전 2주' : '다음 2주')
+        : (previous ? 'Previous two weeks' : 'Next two weeks');
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = context.seedColor;
     final rtl = Directionality.of(context) == TextDirection.rtl;
     final month = _headerMonth;
     final week = widget.layout == SeedDatePickerLayout.week;
+    final twoWeeks = widget.layout == SeedDatePickerLayout.twoWeeks;
+    final weekStep = 7 * (_weekCount ?? 0);
     final twoMonths = widget.layout == SeedDatePickerLayout.twoMonths;
-    final prev = week
-        ? DateTime(_view.year, _view.month, _view.day - 7)
+    final weekStart = _week(_view);
+    final navigationBase = twoWeeks ? weekStart : _view;
+    final prev = _weekLayout
+        ? DateTime(
+            navigationBase.year,
+            navigationBase.month,
+            navigationBase.day - weekStep,
+          )
         : DateTime(month.year, month.month - 1);
-    final next = week
-        ? DateTime(_view.year, _view.month, _view.day + 7)
+    final next = _weekLayout
+        ? DateTime(
+            navigationBase.year,
+            navigationBase.month,
+            navigationBase.day + weekStep,
+          )
         : DateTime(month.year, month.month + 1);
+    final lower = _lowerMonthBound;
+    final upper = _upperMonthBound;
+    final canMovePrevious = twoWeeks
+        ? lower == null || weekStart.isAfter(lower)
+        : _canShow(prev);
+    final canMoveNext = twoWeeks
+        ? upper == null ||
+              DateTime(weekStart.year, weekStart.month, weekStart.day + 13)
+                  .isBefore(DateTime(upper.year, upper.month + 1, 0))
+        : _canShow(next);
+    final nextTarget = twoWeeks ? _clampTwoWeekNavigation(next) : next;
     final continuous = widget.layout == SeedDatePickerLayout.continuous;
     final title = DateFormat.yMMMM(_locale).format(month);
     final header = Row(
@@ -1431,20 +1607,24 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
         ),
         _SeedDateNavButton(
           icon: rtl ? Icons.chevron_right : Icons.chevron_left,
-          label: _korean
+          label: twoWeeks
+              ? _twoWeeksLabel(SeedLabel.previousTwoWeeks)
+              : _korean
               ? (week ? '이전 주' : '이전 달')
               : (week ? 'Previous week' : 'Previous month'),
-          onPressed: !_isDisabled && !_showMonthPicker && _canShow(prev)
+          onPressed: !_isDisabled && !_showMonthPicker && canMovePrevious
               ? () => _setView(prev)
               : null,
         ),
         _SeedDateNavButton(
           icon: rtl ? Icons.chevron_left : Icons.chevron_right,
-          label: _korean
+          label: twoWeeks
+              ? _twoWeeksLabel(SeedLabel.nextTwoWeeks)
+              : _korean
               ? (week ? '다음 주' : '다음 달')
               : (week ? 'Next week' : 'Next month'),
-          onPressed: !_isDisabled && !_showMonthPicker && _canShow(next)
-              ? () => _setView(next)
+          onPressed: !_isDisabled && !_showMonthPicker && canMoveNext
+              ? () => _setView(nextTarget)
               : null,
         ),
       ],
@@ -1472,11 +1652,12 @@ class _SeedDatePickerState extends State<SeedDatePicker> {
                 ),
               ],
             ),
-            SeedDatePickerLayout.week => Column(
+            SeedDatePickerLayout.week ||
+            SeedDatePickerLayout.twoWeeks => Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 _weekdays(height: SeedDimension.x6),
-                _grid(_view, week: true),
+                _grid(_view, weeks: _weekCount!),
               ],
             ),
             SeedDatePickerLayout.continuous => Expanded(
