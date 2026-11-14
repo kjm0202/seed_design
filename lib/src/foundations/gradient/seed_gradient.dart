@@ -1,5 +1,5 @@
 // Generated from official SEED gradient.yaml by tool/seed_reference.py.
-// Upstream: d18f14e70f7b73ba84c032717d6413610bce0437
+// Upstream: 5c98c886e1b4bec422b420f073e70401eb3803db (values unchanged since d18f14e)
 import 'package:material_ui/material_ui.dart';
 
 /// Official SEED gradient stops. Directions are set by the consuming component.

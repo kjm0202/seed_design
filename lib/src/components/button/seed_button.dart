@@ -448,7 +448,7 @@ class SeedButton extends StatelessWidget {
         colors.fg.disabled,
         variant == SeedButtonVariant.brandOutline ||
                 variant == SeedButtonVariant.neutralOutline
-            ? colors.stroke.neutralMuted
+            ? colors.stroke.neutralWeak
             : null,
       );
     }
@@ -476,13 +476,13 @@ class SeedButton extends StatelessWidget {
         return (
           isPressed ? colors.bg.transparentPressed : colors.bg.transparent,
           colors.fg.brand,
-          colors.stroke.neutralMuted,
+          colors.stroke.neutralWeak,
         );
       case SeedButtonVariant.neutralOutline:
         return (
           isPressed ? colors.bg.transparentPressed : colors.bg.transparent,
           colors.fg.neutral,
-          colors.stroke.neutralMuted,
+          colors.stroke.neutralWeak,
         );
       case SeedButtonVariant.criticalSolid:
         return (

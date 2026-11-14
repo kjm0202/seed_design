@@ -4,7 +4,7 @@
 
 Reference: https://github.com/daangn/seed-design
 
-Reviewed revision: `d18f14e70f7b73ba84c032717d6413610bce0437` (2026-10-20).
+Reviewed revision: `5c98c886e1b4bec422b420f073e70401eb3803db` (React/CSS 3.3.0, 2026-11-13).
 
 The full YAML token/component snapshot in `test/fixtures/seed_official_reference.json`, gradient stop definitions generated into `lib/src/foundations/gradient/seed_gradient.dart`, reviewed design specification values and manner-temperature boundaries are based on the official source. The upstream project uses Apache License 2.0; a copy is included at `third_party/seed-design/LICENSE`. Manner-temperature boundary logic was adapted to Dart with finite-number validation. Official emote images are not bundled.
 

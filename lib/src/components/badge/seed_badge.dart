@@ -231,7 +231,7 @@ class SeedBadge extends StatelessWidget {
             return (
               colors.bg.transparent,
               colors.fg.neutralMuted,
-              colors.stroke.neutralMuted,
+              colors.stroke.neutralWeak,
             );
           case SeedBadgeTone.brand:
             return (

@@ -156,7 +156,7 @@ class SeedReactionButton extends StatefulWidget {
               ? Border.all(
                   color: isReacted
                       ? colors.stroke.brandWeak
-                      : colors.stroke.neutralMuted,
+                      : colors.stroke.neutralWeak,
                 )
               : null,
         ),

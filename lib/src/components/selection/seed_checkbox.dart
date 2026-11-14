@@ -109,7 +109,7 @@ class SeedCheckmark extends StatelessWidget {
           : colors.fg.placeholder;
     } else if (!enabled) {
       bgColor = colors.bg.disabled;
-      strokeColor = colors.stroke.neutralMuted;
+      strokeColor = colors.stroke.neutralWeak;
       iconColor = colors.fg.disabled;
     } else {
       bgColor = isActive

@@ -550,13 +550,13 @@ class _SeedChipControl extends StatelessWidget {
           return (
             isPressed ? colors.bg.neutralSolidPressed : colors.bg.neutralSolid,
             colors.fg.onNeutralSolid,
-            colors.stroke.neutralMuted,
+            colors.stroke.neutralWeak,
           );
         } else {
           return (
             isPressed ? colors.bg.transparentPressed : colors.bg.transparent,
             colors.fg.neutral,
-            colors.stroke.neutralMuted,
+            colors.stroke.neutralWeak,
           );
         }
 
@@ -571,7 +571,7 @@ class _SeedChipControl extends StatelessWidget {
           return (
             isPressed ? colors.bg.transparentPressed : colors.bg.transparent,
             colors.fg.neutral,
-            colors.stroke.neutralMuted,
+            colors.stroke.neutralWeak,
           );
         }
     }

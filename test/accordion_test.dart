@@ -92,8 +92,13 @@ void main() {
           image.dispose();
         }
       });
-      final strokeRed =
-          (theme.colorScheme.stroke.neutralWeak.toARGB32() >> 16) & 0xff;
+      // stroke.neutral-weak is translucent since SEED 3.3.0, so the visible
+      // color is the stroke composited over the item surface.
+      final stroke = Color.alphaBlend(
+        theme.colorScheme.stroke.neutralWeak,
+        theme.colorScheme.bg.layerDefault,
+      );
+      final strokeRed = (stroke.toARGB32() >> 16) & 0xff;
       for (final pixel in pixels!) {
         expect(
           pixel,
