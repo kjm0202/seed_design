@@ -4,6 +4,9 @@ import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
 import 'support/seed_test_fonts.dart';
+import 'support/seed_test_host.dart';
+
+import 'package:flutter/semantics.dart';
 
 Future<void> mount(
   WidgetTester tester,
@@ -37,11 +40,6 @@ Future<void> mount(
   );
   await tester.pumpAndSettle();
 }
-
-Widget host(Widget child) => MaterialApp(
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: child),
-);
 
 class Probe extends StatefulWidget {
   const Probe({super.key, required this.onMount, required this.onDispose});
@@ -191,7 +189,7 @@ void main() {
             final controller = SeedOverlayController();
             addTearDown(controller.dispose);
             await tester.pumpWidget(
-              host(
+              seedApp(
                 SeedPopoverTrigger(
                   controller: controller,
                   lazyMount: lazy,
@@ -260,7 +258,7 @@ void main() {
   });
 
   group('structure', () {
-    Widget host(Widget child, {bool isDark = false}) {
+    Widget seedApp(Widget child, {bool isDark = false}) {
       return MaterialApp(
         theme: (isDark ? SeedThemeData.dark() : SeedThemeData.light())
             .toThemeData(),
@@ -273,7 +271,7 @@ void main() {
       (tester) async {
         var closed = false;
         await tester.pumpWidget(
-          host(
+          seedApp(
             SeedPopover(
               titleText: '알림',
               descriptionText: '자세한 내용입니다.',
@@ -541,5 +539,36 @@ void main() {
         expect(tester.takeException(), isNull);
       },
     );
+  });
+
+  group('dialog description', () {
+    testWidgets('popover dialog exposes the rendered description on entry', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(
+        seedAppCentered(
+          const SeedPopover(titleText: 'Title', descriptionText: 'Description'),
+        ),
+      );
+      var data = tester
+          .getSemantics(find.byType(SeedPopover))
+          .getSemanticsData();
+      expect(data.role, SemanticsRole.dialog);
+      expect(data.label, 'Title');
+      expect(data.hint, 'Description');
+      await tester.pumpWidget(
+        seedAppCentered(
+          const SeedPopover(
+            titleText: 'Title',
+            description: Text('Rendered'),
+            descriptionText: 'Hidden',
+          ),
+        ),
+      );
+      data = tester.getSemantics(find.byType(SeedPopover)).getSemanticsData();
+      expect(data.hint, 'Rendered');
+      handle.dispose();
+    });
   });
 }

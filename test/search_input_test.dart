@@ -15,9 +15,8 @@ Widget _host(Widget child, {double textScale = 1}) => MaterialApp(
   theme: SeedThemeData.light(fontFamily: seedTestFontFamily).toThemeData(),
   home: Builder(
     builder: (context) => MediaQuery(
-      data: MediaQuery.of(
-        context,
-      ).copyWith(textScaler: TextScaler.linear(textScale)),
+      data: MediaQuery.of(context)
+          .copyWith(textScaler: TextScaler.linear(textScale)),
       child: Scaffold(
         body: Center(
           child: Padding(padding: const EdgeInsets.all(16), child: child),
@@ -109,7 +108,9 @@ void main() {
       expect(icon.size, SeedDimension.x5);
       expect(
         icon.color,
-        SeedThemeData.light(fontFamily: seedTestFontFamily).colorScheme.fg
+        SeedThemeData.light(fontFamily: seedTestFontFamily)
+            .colorScheme
+            .fg
             .neutralSubtle,
       );
       // The button sits flush with the 4px right padding of the root.
@@ -138,7 +139,10 @@ void main() {
       expect(data.flagsCollection.isTextField, isTrue);
       expect(data.inputType, SemanticsInputType.search);
       expect(
-        tester.getSemantics(_clearButton).getSemanticsData().flagsCollection
+        tester
+            .getSemantics(_clearButton)
+            .getSemanticsData()
+            .flagsCollection
             .isButton,
         isTrue,
       );
@@ -312,30 +316,24 @@ void main() {
       expect(changes.last, '오이');
     });
 
-    testWidgets(
-      'keeps focus when clicked with a mouse',
-      (tester) async {
-        await tester.pumpWidget(_host(const SeedSearchInput()));
-        await tester.showKeyboard(_editable);
-        await tester.enterText(_editable, '당근');
-        await tester.pump();
+    testWidgets('keeps focus when clicked with a mouse', (tester) async {
+      await tester.pumpWidget(_host(const SeedSearchInput()));
+      await tester.showKeyboard(_editable);
+      await tester.enterText(_editable, '당근');
+      await tester.pump();
 
-        final gesture = await tester.createGesture(
-          kind: PointerDeviceKind.mouse,
-        );
-        addTearDown(gesture.removePointer);
-        await gesture.addPointer(location: tester.getCenter(_clearButton));
-        await gesture.down(tester.getCenter(_clearButton));
-        await tester.pump();
-        expect(_inputFocus(tester).hasFocus, isTrue);
-        await gesture.up();
-        await tester.pump();
+      final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      addTearDown(gesture.removePointer);
+      await gesture.addPointer(location: tester.getCenter(_clearButton));
+      await gesture.down(tester.getCenter(_clearButton));
+      await tester.pump();
+      expect(_inputFocus(tester).hasFocus, isTrue);
+      await gesture.up();
+      await tester.pump();
 
-        expect(_text(tester), '');
-        expect(_inputFocus(tester).hasFocus, isTrue);
-      },
-      variant: TargetPlatformVariant.only(TargetPlatform.macOS),
-    );
+      expect(_text(tester), '');
+      expect(_inputFocus(tester).hasFocus, isTrue);
+    }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
     testWidgets('keyboard activation clears and returns focus to the input', (
       tester,

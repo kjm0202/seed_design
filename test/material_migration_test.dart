@@ -12,19 +12,17 @@ Widget host(Widget child) => MaterialApp(
   ),
 );
 
-Widget hostMaterialMigrationContrac(
-  Widget child, {
-  Locale locale = const Locale('en'),
-}) => MaterialApp(
-  restorationScopeId: 'app',
-  locale: locale,
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: ThemeData().withSeedDesign(),
-  home: Scaffold(
-    body: Center(child: SizedBox(width: 360, child: child)),
-  ),
-);
+Widget restorableApp(Widget child, {Locale locale = const Locale('en')}) =>
+    MaterialApp(
+      restorationScopeId: 'app',
+      locale: locale,
+      supportedLocales: const [Locale('en'), Locale('ko')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      theme: ThemeData().withSeedDesign(),
+      home: Scaffold(
+        body: Center(child: SizedBox(width: 360, child: child)),
+      ),
+    );
 
 class RouteLog extends NavigatorObserver {
   final List<Route<dynamic>> pushed = [];
@@ -362,7 +360,7 @@ void main() {
         final form = GlobalKey<FormState>();
         var changes = 0;
         await tester.pumpWidget(
-          hostMaterialMigrationContrac(
+          restorableApp(
             Form(
               key: form,
               onChanged: () => changes++,
@@ -396,7 +394,7 @@ void main() {
     ) async {
       final form = GlobalKey<FormState>();
       await tester.pumpWidget(
-        hostMaterialMigrationContrac(
+        restorableApp(
           Form(
             key: form,
             child: const SeedTextField(
@@ -418,7 +416,7 @@ void main() {
         var serverError = 'Server rejected';
         late StateSetter update;
         await tester.pumpWidget(
-          hostMaterialMigrationContrac(
+          restorableApp(
             StatefulBuilder(
               builder: (context, setState) {
                 update = setState;
@@ -449,7 +447,7 @@ void main() {
       (tester) async {
         final form = GlobalKey<FormState>();
         await tester.pumpWidget(
-          hostMaterialMigrationContrac(
+          restorableApp(
             Form(key: form, child: const SeedTextField(maxGraphemeCount: 2)),
           ),
         );
@@ -468,7 +466,7 @@ void main() {
       (tester) async {
         final events = <String>[];
         await tester.pumpWidget(
-          hostMaterialMigrationContrac(
+          restorableApp(
             SeedTextField(
               autofillHints: const [AutofillHints.email],
               textCapitalization: TextCapitalization.none,
@@ -502,7 +500,7 @@ void main() {
         'owned text controller restores after restart form=$formField',
         (tester) async {
           await tester.pumpWidget(
-            hostMaterialMigrationContrac(
+            restorableApp(
               formField
                   ? const SeedTextField(
                       restorationId: 'name',
@@ -530,7 +528,7 @@ void main() {
         List<String>? saved;
         var resets = 0;
         await tester.pumpWidget(
-          hostMaterialMigrationContrac(
+          restorableApp(
             Form(
               key: form,
               child: SeedSelectFormField<String>(
@@ -574,7 +572,7 @@ void main() {
         final changes = <List<String>>[];
         List<String>? saved;
         await tester.pumpWidget(
-          hostMaterialMigrationContrac(
+          restorableApp(
             Form(
               key: form,
               child: SeedSelectFormField<String>(
@@ -664,7 +662,7 @@ void main() {
         ScaffoldFeatureController<SnackBar, SnackBarClosedReason>? controller;
         var actions = 0;
         await tester.pumpWidget(
-          hostMaterialMigrationContrac(
+          restorableApp(
             Builder(
               builder: (context) => TextButton(
                 onPressed: () => controller = showSeedSnackbar(
@@ -689,7 +687,7 @@ void main() {
         expect(actions, 1);
         expect(await controller!.closed, SnackBarClosedReason.action);
         await tester.pumpWidget(
-          hostMaterialMigrationContrac(
+          restorableApp(
             Builder(
               builder: (context) => TextButton(
                 onPressed: () => controller = showSeedSnackbar(
@@ -819,7 +817,7 @@ void main() {
       (tester) async {
         for (final locale in [const Locale('en'), const Locale('ko')]) {
           await tester.pumpWidget(
-            hostMaterialMigrationContrac(
+            restorableApp(
               const SeedAlertDialog(title: 'Confirm'),
               locale: locale,
             ),
@@ -834,7 +832,7 @@ void main() {
           );
         }
         await tester.pumpWidget(
-          hostMaterialMigrationContrac(
+          restorableApp(
             const SeedAlertDialog(
               title: 'Confirm',
               confirmText: '확인',
@@ -851,7 +849,7 @@ void main() {
       'localized semantics and text remain overridable in an English app',
       (tester) async {
         await tester.pumpWidget(
-          hostMaterialMigrationContrac(
+          restorableApp(
             const SeedLocalizations(
               labels: {
                 SeedLabel.clearInput: 'Effacer',
@@ -949,7 +947,7 @@ void main() {
         final form = GlobalKey<FormState>();
         final radios = <String?>[];
         await tester.pumpWidget(
-          hostMaterialMigrationContrac(
+          restorableApp(
             Form(
               key: form,
               child: Column(
@@ -995,7 +993,7 @@ void main() {
     ) async {
       final form = GlobalKey<FormState>();
       await tester.pumpWidget(
-        hostMaterialMigrationContrac(
+        restorableApp(
           Form(
             key: form,
             child: SeedFormField<bool>(
@@ -1023,7 +1021,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        hostMaterialMigrationContrac(
+        restorableApp(
           SeedFloatingActionButton(
             heroTag: 'compose',
             tooltip: 'Compose message',

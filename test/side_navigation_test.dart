@@ -6,24 +6,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
 import 'support/seed_test_fonts.dart';
-
-Widget _app(Widget child) => MaterialApp(
-  theme: SeedThemeData.light(fontFamily: seedTestFontFamily).toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
-
-Widget _appCurrent(Widget child, {bool scaffold = true}) => MaterialApp(
-  theme: SeedThemeData.light(fontFamily: seedTestFontFamily).toThemeData(),
-  home: scaffold ? Scaffold(body: Center(child: child)) : Center(child: child),
-);
-
-Widget host(Widget child) => MaterialApp(
-  locale: const Locale('ko'),
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
+import 'support/seed_test_host.dart';
 
 SeedSideNavigation navigation({String? selectedId, VoidCallback? onParent}) =>
     SeedSideNavigation(
@@ -85,7 +68,7 @@ void main() {
     testWidgets('sub items animate open and leave the tree when closed', (
       tester,
     ) async {
-      await tester.pumpWidget(_app(nav()));
+      await tester.pumpWidget(fontApp(nav()));
       expect(find.text('Child'), findsNothing);
       await tester.tap(find.text('Parent'));
       await tester.pump(const Duration(milliseconds: 100));
@@ -101,7 +84,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        _app(
+        fontApp(
           SizedBox(
             height: 500,
             child: SeedSideNavigation(
@@ -134,8 +117,8 @@ void main() {
     testWidgets('collapsed flyout waits until the width transition ends', (
       tester,
     ) async {
-      await tester.pumpWidget(_app(nav()));
-      await tester.pumpWidget(_app(nav(collapsed: true)));
+      await tester.pumpWidget(fontApp(nav()));
+      await tester.pumpWidget(fontApp(nav(collapsed: true)));
       await tester.pump(const Duration(milliseconds: 100));
 
       await tester.tap(find.byIcon(Icons.settings));
@@ -153,15 +136,15 @@ void main() {
     testWidgets('reduced motion makes the collapsed flyout available at once', (
       tester,
     ) async {
-      Widget host(bool collapsed) => _app(
+      Widget koreanAppCentered(bool collapsed) => fontApp(
         MediaQuery(
           data: const MediaQueryData(disableAnimations: true),
           child: nav(collapsed: collapsed),
         ),
       );
 
-      await tester.pumpWidget(host(false));
-      await tester.pumpWidget(host(true));
+      await tester.pumpWidget(koreanAppCentered(false));
+      await tester.pumpWidget(koreanAppCentered(true));
       expect(find.byType(SeedNavigationMenuTrigger), findsOneWidget);
       await tester.tap(find.byIcon(Icons.settings));
       await tester.pumpAndSettle();
@@ -171,12 +154,15 @@ void main() {
     testWidgets('hover starts the flyout delay after collapse settles', (
       tester,
     ) async {
-      Widget host(bool collapsed) => _app(
-        Align(alignment: Alignment.centerLeft, child: nav(collapsed: collapsed)),
+      Widget koreanAppCentered(bool collapsed) => fontApp(
+        Align(
+          alignment: Alignment.centerLeft,
+          child: nav(collapsed: collapsed),
+        ),
       );
 
-      await tester.pumpWidget(host(false));
-      await tester.pumpWidget(host(true));
+      await tester.pumpWidget(koreanAppCentered(false));
+      await tester.pumpWidget(koreanAppCentered(true));
       await tester.pump(const Duration(milliseconds: 100));
       final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
       await mouse.addPointer(
@@ -203,7 +189,7 @@ void main() {
       }
 
       await tester.pumpWidget(
-        _app(
+        fontApp(
           Align(alignment: Alignment.centerLeft, child: nav(collapsed: true)),
         ),
       );
@@ -262,7 +248,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        _appCurrent(
+        fontApp(
           const SizedBox(
             height: 700,
             child: SeedSideNavigation(
@@ -290,7 +276,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        _appCurrent(
+        fontApp(
           const SizedBox(
             height: 700,
             child: SeedSideNavigation(
@@ -311,7 +297,7 @@ void main() {
       late StateSetter rebuild;
       var selected = 'c';
       await tester.pumpWidget(
-        _appCurrent(
+        fontApp(
           StatefulBuilder(
             builder: (context, setState) {
               rebuild = setState;
@@ -346,7 +332,7 @@ void main() {
       late StateSetter rebuild;
       var present = true;
       await tester.pumpWidget(
-        host(
+        koreanAppCentered(
           StatefulBuilder(
             builder: (context, setState) {
               rebuild = setState;
@@ -370,7 +356,7 @@ void main() {
       (tester) async {
         var selected = false;
         await tester.pumpWidget(
-          host(
+          koreanAppCentered(
             SeedSideNavigation(
               isCollapsed: true,
               groups: [
@@ -415,7 +401,9 @@ void main() {
       tester,
     ) async {
       var calls = 0;
-      await tester.pumpWidget(host(navigation(onParent: () => calls++)));
+      await tester.pumpWidget(
+        koreanAppCentered(navigation(onParent: () => calls++)),
+      );
       await tester.tap(find.text('Parent'));
       await tester.pumpAndSettle();
       expect(find.text('Child'), findsOneWidget);
@@ -425,15 +413,315 @@ void main() {
     testWidgets(
       'active navigation child is visible initially and after update',
       (tester) async {
-        await tester.pumpWidget(host(navigation(selectedId: 'child')));
+        await tester.pumpWidget(
+          koreanAppCentered(navigation(selectedId: 'child')),
+        );
         expect(find.text('Child'), findsOneWidget);
-        await tester.pumpWidget(host(navigation()));
+        await tester.pumpWidget(koreanAppCentered(navigation()));
         await tester.tap(find.text('Parent'));
         await tester.pumpAndSettle();
         expect(find.text('Child'), findsNothing);
-        await tester.pumpWidget(host(navigation(selectedId: 'child')));
+        await tester.pumpWidget(
+          koreanAppCentered(navigation(selectedId: 'child')),
+        );
         expect(find.text('Child'), findsOneWidget);
       },
     );
+  });
+
+  group('default-open items and collapsed submenu', () {
+    Widget host(Widget child) => MaterialApp(
+      theme: SeedThemeData.light().toThemeData(),
+      home: Scaffold(body: SizedBox(height: 500, child: child)),
+    );
+    testWidgets(
+      'new default-open item opens and existing manual state survives',
+      (tester) async {
+        late StateSetter update;
+        var added = false;
+        await tester.pumpWidget(
+          host(
+            StatefulBuilder(
+              builder: (context, setState) {
+                update = setState;
+                return SeedSideNavigation(
+                  groups: [
+                    SeedSideNavGroup(
+                      items: [
+                        const SeedSideNavItem(
+                          id: 'existing',
+                          label: 'Existing',
+                          defaultOpen: true,
+                          subItems: [
+                            SeedSideNavSubItem(id: 'old', label: 'Old child'),
+                          ],
+                        ),
+                        if (added)
+                          const SeedSideNavItem(
+                            id: 'new',
+                            label: 'New',
+                            defaultOpen: true,
+                            subItems: [
+                              SeedSideNavSubItem(
+                                id: 'new-child',
+                                label: 'New child',
+                              ),
+                            ],
+                          ),
+                      ],
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        );
+        expect(find.text('Old child'), findsOneWidget);
+        await tester.tap(find.text('Existing'));
+        await tester.pumpAndSettle();
+        expect(find.text('Old child'), findsNothing);
+        update(() => added = true);
+        await tester.pumpAndSettle();
+        expect(find.text('New child'), findsOneWidget);
+        expect(find.text('Old child'), findsNothing);
+      },
+    );
+
+    testWidgets('collapsed submenu retains enabled status and badge', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      await tester.pumpWidget(
+        host(
+          const SeedSideNavigation(
+            collapsed: true,
+            groups: [
+              SeedSideNavGroup(
+                items: [
+                  SeedSideNavItem(
+                    id: 'parent',
+                    label: 'Parent',
+                    icon: Icons.settings,
+                    subItems: [
+                      SeedSideNavSubItem(
+                        id: 'child',
+                        label: 'Child',
+                        badge: 'New',
+                      ),
+                      SeedSideNavSubItem(
+                        id: 'disabled',
+                        label: 'Disabled',
+                        disabled: true,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.tap(find.byIcon(Icons.settings));
+      await tester.pumpAndSettle();
+      // The flyout is a SeedNavigationMenu disclosure; check the public
+      // semantics instead of its internal widgets.
+      expect(
+        tester.getSemantics(find.text('Child')),
+        isSemantics(isEnabled: true, hasEnabledState: true),
+      );
+      expect(
+        tester.getSemantics(find.text('Disabled')),
+        isSemantics(isEnabled: false, hasEnabledState: true),
+      );
+      expect(find.text('New'), findsOneWidget);
+      expect(find.bySemanticsLabel(RegExp('New')), findsWidgets);
+      semantics.dispose();
+    });
+  });
+
+  group('provider, inset and context', () {
+    group('SideNavigation.Provider, Inset and context', () {
+      const groups = [
+        SeedSideNavGroup(
+          items: [SeedSideNavItem(id: 'home', label: 'Home', icon: Icons.home)],
+        ),
+      ];
+
+      Widget app(Widget child) => MaterialApp(
+        theme: SeedThemeData.light().toThemeData(),
+        home: Scaffold(body: child),
+      );
+
+      testWidgets('a control in the inset toggles the navigation', (
+        tester,
+      ) async {
+        final changes = <bool>[];
+        await tester.pumpWidget(
+          app(
+            SeedSideNavigationProvider(
+              onCollapsedChange: changes.add,
+              child: Row(
+                children: [
+                  const SeedSideNavigation(groups: groups),
+                  SeedSideNavigationInset(
+                    child: Builder(
+                      builder: (context) {
+                        final nav = SeedSideNavigationProvider.of(context);
+                        return TextButton(
+                          onPressed: nav.toggle,
+                          child: Text(nav.collapsed ? 'expand' : 'collapse'),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+        expect(tester.getSize(find.byType(SeedSideNavigation)).width, 240);
+        // The inset takes the rest of the row.
+        expect(
+          tester.getSize(find.byType(SeedSideNavigationInset)).width,
+          800 - 240,
+        );
+
+        await tester.tap(find.text('collapse'));
+        await tester.pumpAndSettle();
+        expect(changes, [true]);
+        expect(find.text('expand'), findsOneWidget);
+        expect(tester.getSize(find.byType(SeedSideNavigation)).width, 56);
+
+        await tester.tap(find.text('expand'));
+        await tester.pumpAndSettle();
+        expect(changes, [true, false]);
+        expect(tester.getSize(find.byType(SeedSideNavigation)).width, 240);
+      });
+
+      testWidgets('a controlled provider only reports the request', (
+        tester,
+      ) async {
+        final changes = <bool>[];
+        late SeedSideNavigationContextValue nav;
+        await tester.pumpWidget(
+          app(
+            SeedSideNavigationProvider(
+              collapsed: false,
+              onCollapsedChange: changes.add,
+              child: Row(
+                children: [
+                  const SeedSideNavigation(groups: groups),
+                  Builder(
+                    builder: (context) {
+                      nav = SeedSideNavigationProvider.of(context);
+                      return const SizedBox();
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+        nav.setCollapsed(true);
+        await tester.pumpAndSettle();
+        expect(changes, [true]);
+        expect(nav.collapsed, isFalse);
+        expect(tester.getSize(find.byType(SeedSideNavigation)).width, 240);
+      });
+
+      testWidgets("the navigation's own collapsed wins over the provider", (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          app(
+            const SeedSideNavigationProvider(
+              defaultCollapsed: false,
+              child: Row(
+                children: [SeedSideNavigation(groups: groups, collapsed: true)],
+              ),
+            ),
+          ),
+        );
+        expect(tester.getSize(find.byType(SeedSideNavigation)).width, 56);
+      });
+
+      testWidgets('the header reads the state without a provider', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          app(
+            Row(
+              children: [
+                SeedSideNavigation(
+                  groups: groups,
+                  showCollapseButton: true,
+                  footer: Builder(
+                    builder: (context) => Text(
+                      SeedSideNavigationProvider.of(context).collapsed
+                          ? 'footer:collapsed'
+                          : 'footer:expanded',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+        expect(find.text('footer:expanded'), findsOneWidget);
+        expect(
+          SeedSideNavigationProvider.maybeOf(
+            tester.element(find.byType(SeedSideNavigation)),
+          ),
+          isNull,
+        );
+      });
+
+      testWidgets('the inset scrolls tall content by default', (tester) async {
+        await tester.pumpWidget(
+          app(
+            const Row(
+              children: [
+                SeedSideNavigation(groups: groups),
+                SeedSideNavigationInset(child: SizedBox(height: 2000)),
+              ],
+            ),
+          ),
+        );
+        expect(tester.takeException(), isNull);
+        expect(
+          find.descendant(
+            of: find.byType(SeedSideNavigationInset),
+            matching: find.byType(SingleChildScrollView),
+          ),
+          findsOneWidget,
+        );
+
+        await tester.pumpWidget(
+          app(
+            Row(
+              children: [
+                const SeedSideNavigation(groups: groups),
+                SeedSideNavigationInset(
+                  scrollable: false,
+                  child: ListView(children: const [SizedBox(height: 2000)]),
+                ),
+              ],
+            ),
+          ),
+        );
+        expect(tester.takeException(), isNull);
+        expect(
+          tester
+              .getSize(
+                find.descendant(
+                  of: find.byType(SeedSideNavigationInset),
+                  matching: find.byType(ListView),
+                ),
+              )
+              .height,
+          600,
+        );
+      });
+    });
   });
 }

@@ -5,6 +5,11 @@ import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
 import 'support/seed_test_fonts.dart';
+import 'support/seed_test_host.dart';
+
+import 'dart:ui' show Tristate;
+
+import 'package:flutter/semantics.dart';
 
 Widget _host(SeedThemeData theme, SeedButton button) => MaterialApp(
   theme: theme.toThemeData(),
@@ -29,43 +34,6 @@ Widget host(Widget child) => MaterialApp(
     body: Align(
       alignment: Alignment.topLeft,
       child: SizedBox(width: 480, child: child),
-    ),
-  ),
-);
-
-Widget hostRegression(Widget child, {ThemeData? theme}) => MaterialApp(
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: theme ?? SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
-
-Widget hostInteraction(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
-
-Widget hostComponentAccessibilityOv(
-  Widget child, {
-  double scale = 1,
-  bool dark = false,
-}) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme:
-      (dark
-              ? SeedThemeData.dark(fontFamily: seedTestFontFamily)
-              : SeedThemeData.light(fontFamily: seedTestFontFamily))
-          .toThemeData(),
-  home: Builder(
-    builder: (context) => MediaQuery(
-      data: MediaQuery.of(context)
-          .copyWith(textScaler: TextScaler.linear(scale)),
-      child: Scaffold(body: Center(child: child)),
     ),
   ),
 );
@@ -424,11 +392,11 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        hostRegression(SeedButton(label: 'OK', onPressed: () {})),
+        themedApp(SeedButton(label: 'OK', onPressed: () {})),
       );
       expect(tester.getSize(find.byType(SeedButton)).width, lessThan(100));
       await tester.pumpWidget(
-        hostRegression(
+        themedApp(
           SizedBox(
             width: 180,
             child: SeedButton(
@@ -448,7 +416,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        hostRegression(const SeedButton(label: 'Disabled', onPressed: null)),
+        themedApp(const SeedButton(label: 'Disabled', onPressed: null)),
       );
       final container = tester.widget<AnimatedContainer>(
         find.descendant(
@@ -472,7 +440,7 @@ void main() {
 
     testWidgets('large text increases height without clipping', (tester) async {
       await tester.pumpWidget(
-        hostRegression(
+        themedApp(
           MediaQuery(
             data: const MediaQueryData(textScaler: TextScaler.linear(2.5)),
             child: SeedButton(label: '확인', onPressed: () {}),
@@ -487,7 +455,7 @@ void main() {
       (tester) async {
         var count = 0;
         await tester.pumpWidget(
-          hostRegression(SeedButton(label: 'Run', onPressed: () => count++)),
+          themedApp(SeedButton(label: 'Run', onPressed: () => count++)),
         );
         await tester.sendKeyEvent(LogicalKeyboardKey.tab);
         await tester.pump();
@@ -507,13 +475,13 @@ void main() {
     ) async {
       var calls = 0;
       await tester.pumpWidget(
-        hostInteraction(
+        koreanAppCentered(
           SeedButton(label: '저장하고 계속하기', onPressed: () => calls++),
         ),
       );
       final width = tester.getSize(find.byType(SeedButton)).width;
       await tester.pumpWidget(
-        hostInteraction(
+        koreanAppCentered(
           SeedButton(
             label: '저장하고 계속하기',
             loading: true,
@@ -543,9 +511,7 @@ void main() {
       (tester) async {
         var changes = 0;
         await tester.pumpWidget(
-          hostComponentAccessibilityOv(
-            SeedImageFrameReactionButton(onChanged: (_) => changes++),
-          ),
+          scaledApp(SeedImageFrameReactionButton(onChanged: (_) => changes++)),
         );
         final rect = tester.getRect(find.byType(SeedImageFrameReactionButton));
         expect(rect.size, const Size(24, 24));
@@ -553,7 +519,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(changes, 1);
         await tester.pumpWidget(
-          hostComponentAccessibilityOv(
+          scaledApp(
             SizedBox(
               width: 200,
               child: SeedImageFrame(
@@ -574,6 +540,176 @@ void main() {
         await tester.tapAt(heart.topLeft - const Offset(5, 5));
         await tester.pumpAndSettle();
         expect(changes, 2);
+      },
+    );
+  });
+
+  group('loading and disableOnLoading', () {
+    for (final kind in [
+      'toggle',
+      'reaction',
+      'contextual',
+      'contextual icon',
+    ]) {
+      for (final loading in [false, true]) {
+        for (final enabled in [false, true]) {
+          for (final disableOnLoading in [true, false]) {
+            testWidgets(
+              '$kind loading=$loading enabled=$enabled disableOnLoading=$disableOnLoading',
+              (tester) async {
+                var calls = 0;
+                final values = <bool>[];
+                final key = GlobalKey();
+                Widget button() => switch (kind) {
+                  'toggle' => SeedToggleButton(
+                    key: key,
+                    label: 'Action',
+                    loading: loading,
+                    enabled: enabled,
+                    disableOnLoading: disableOnLoading,
+                    onPressedChange: (value) {
+                      calls++;
+                      values.add(value);
+                    },
+                  ),
+                  'reaction' => SeedReactionButton(
+                    key: key,
+                    label: 'Action',
+                    loading: loading,
+                    enabled: enabled,
+                    disableOnLoading: disableOnLoading,
+                    onPressedChange: (value) {
+                      calls++;
+                      values.add(value);
+                    },
+                  ),
+                  'contextual' => SeedContextualFloatingButton(
+                    key: key,
+                    label: 'Action',
+                    loading: loading,
+                    enabled: enabled,
+                    disableOnLoading: disableOnLoading,
+                    onPressed: () => calls++,
+                  ),
+                  _ => SeedContextualFloatingButton.iconOnly(
+                    key: key,
+                    icon: const Icon(Icons.add),
+                    semanticsLabel: 'Action',
+                    loading: loading,
+                    enabled: enabled,
+                    disableOnLoading: disableOnLoading,
+                    onPressed: () => calls++,
+                  ),
+                };
+                await tester.pumpWidget(seedAppCentered(button()));
+                final expectedInteractive =
+                    enabled && (!loading || !disableOnLoading);
+                final semantics = tester.ensureSemantics();
+                final data = tester
+                    .getSemantics(find.byKey(key))
+                    .getSemanticsData();
+                expect(data.label, 'Action');
+                expect(
+                  data.flagsCollection.isEnabled,
+                  expectedInteractive ? Tristate.isTrue : Tristate.isFalse,
+                );
+                expect(
+                  data.hasAction(SemanticsAction.tap),
+                  expectedInteractive,
+                );
+                expect(
+                  find.byType(SeedProgressCircle),
+                  loading ? findsOneWidget : findsNothing,
+                );
+                await tester.tap(find.byKey(key));
+                await tester.pump();
+                expect(calls, expectedInteractive ? 1 : 0);
+                if (expectedInteractive) {
+                  await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+                  await tester.pump();
+                  await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+                  await tester.pump();
+                  await tester.sendKeyEvent(LogicalKeyboardKey.space);
+                  await tester.pump();
+                  expect(calls, 3);
+                  if (kind == 'toggle' || kind == 'reaction') {
+                    expect(values, [true, false, true]);
+                  }
+                }
+                semantics.dispose();
+              },
+            );
+          }
+        }
+      }
+    }
+
+    testWidgets('new controls block loading by default', (tester) async {
+      var calls = 0;
+      for (final button in <Widget>[
+        SeedToggleButton(
+          label: 'Action',
+          loading: true,
+          onPressedChange: (_) => calls++,
+        ),
+        SeedReactionButton(
+          label: 'Action',
+          loading: true,
+          onPressedChange: (_) => calls++,
+        ),
+        SeedContextualFloatingButton(
+          label: 'Action',
+          loading: true,
+          onPressed: () => calls++,
+        ),
+        SeedContextualFloatingButton.iconOnly(
+          icon: const Icon(Icons.add),
+          semanticsLabel: 'Action',
+          loading: true,
+          onPressed: () => calls++,
+        ),
+      ]) {
+        await tester.pumpWidget(seedAppCentered(button));
+        await tester.tap(find.byWidget(button));
+        await tester.pump();
+        expect(calls, 0);
+        expect(
+          tester
+              .getSemantics(find.byWidget(button))
+              .getSemanticsData()
+              .hasAction(SemanticsAction.tap),
+          isFalse,
+        );
+      }
+    });
+
+    testWidgets(
+      'controlled loading toggles report proposed value without mutating state',
+      (tester) async {
+        final values = <bool>[];
+        for (final button in <Widget>[
+          SeedToggleButton(
+            label: 'Action',
+            pressed: false,
+            loading: true,
+            disableOnLoading: false,
+            onPressedChange: values.add,
+          ),
+          SeedReactionButton(
+            label: 'Action',
+            pressed: false,
+            loading: true,
+            disableOnLoading: false,
+            onPressedChange: values.add,
+          ),
+        ]) {
+          await tester.pumpWidget(seedAppCentered(button));
+          await tester.tap(find.byWidget(button));
+          await tester.pump();
+          await tester.tap(find.byWidget(button));
+          await tester.pump();
+        }
+        expect(values, [true, true, true, true]);
       },
     );
   });

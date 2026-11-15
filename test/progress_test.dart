@@ -4,13 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
-Widget host(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
+import 'support/seed_test_host.dart';
 
 void main() {
   for (final width in [390.0, 800.0]) {
@@ -85,7 +79,7 @@ void main() {
   group('skeleton motion', () {
     testWidgets('reduced motion stops skeleton tickers', (tester) async {
       await tester.pumpWidget(
-        host(
+        koreanAppCentered(
           const MediaQuery(
             data: MediaQueryData(disableAnimations: true),
             child: SeedSkeleton(width: 100, height: 20),

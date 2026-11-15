@@ -3,32 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
 import 'support/seed_test_fonts.dart';
-
-Widget _app(Widget child) => MaterialApp(
-  theme: SeedThemeData.light(fontFamily: seedTestFontFamily).toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
-
-Widget _appFlow(Widget child, {bool scaffold = true}) => MaterialApp(
-  theme: SeedThemeData.light(fontFamily: seedTestFontFamily).toThemeData(),
-  home: scaffold ? Scaffold(body: Center(child: child)) : Center(child: child),
-);
-
-Widget host(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: child),
-);
-
-Widget hostComponentBehaviorRegress(Widget child) => MaterialApp(
-  locale: const Locale('ko'),
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
+import 'support/seed_test_host.dart';
 
 void main() {
   group('layout API', () {
@@ -38,7 +13,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        _app(
+        fontApp(
           const SeedFooter(
             policyLinks: [SeedFooterLink(label: 'Terms', uri: null)],
           ),
@@ -50,7 +25,7 @@ void main() {
     });
     testWidgets('AspectRatio defaults to 4 / 3', (tester) async {
       await tester.pumpWidget(
-        _app(const SizedBox(width: 400, child: SeedAspectRatio())),
+        fontApp(const SizedBox(width: 400, child: SeedAspectRatio())),
       );
       expect(tester.getSize(find.byType(SeedAspectRatio)).height, 300);
     });
@@ -63,7 +38,7 @@ void main() {
       Future<double> widthAt(double viewport, SeedLayoutDensity density) async {
         tester.view.physicalSize = Size(viewport, 800);
         await tester.pumpWidget(
-          _app(
+          fontApp(
             SeedLayoutContent(
               density: density,
               child: const SizedBox(key: Key('c'), width: 5000, height: 1),
@@ -84,7 +59,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        _app(
+        fontApp(
           const SizedBox(
             width: 300,
             child: SeedGrid(
@@ -117,7 +92,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        _app(
+        fontApp(
           const SeedScrollFogMask(
             placement: {SeedScrollFogPlacement.bottom},
             sizes: {SeedScrollFogPlacement.bottom: 40},
@@ -143,7 +118,7 @@ void main() {
       WidgetTester tester,
       SeedGrid child,
     ) async {
-      await tester.pumpWidget(_appFlow(SizedBox(width: 300, child: child)));
+      await tester.pumpWidget(fontApp(SizedBox(width: 300, child: child)));
       return (label) =>
           tester.getTopLeft(find.text(label)) -
           tester.getTopLeft(find.byType(SeedGrid));
@@ -241,7 +216,7 @@ void main() {
 
     testWidgets('ResponsivePair shares the row equally', (tester) async {
       await tester.pumpWidget(
-        _appFlow(
+        fontApp(
           SizedBox(
             width: 300,
             child: SeedResponsivePair(
@@ -264,7 +239,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        _appFlow(
+        fontApp(
           SizedBox(
             width: 200,
             child: SeedResponsivePair(
@@ -285,7 +260,7 @@ void main() {
 
     testWidgets('SeedFlex applies its alignment when wrapping', (tester) async {
       await tester.pumpWidget(
-        _appFlow(
+        fontApp(
           const SizedBox(
             width: 300,
             child: SeedFlex(
@@ -307,7 +282,7 @@ void main() {
       'grid spans and intrinsic rows place children without overlaps in RTL',
       (tester) async {
         await tester.pumpWidget(
-          host(
+          koreanApp(
             Directionality(
               textDirection: TextDirection.rtl,
               child: Align(
@@ -350,7 +325,7 @@ void main() {
       await tester.binding.setSurfaceSize(const Size(320, 900));
       addTearDown(() => tester.binding.setSurfaceSize(null));
       await tester.pumpWidget(
-        hostComponentBehaviorRegress(
+        koreanAppCentered(
           SeedFooter(
             brandName: 'A long service brand name',
             sitemapColumns: const [
@@ -382,5 +357,79 @@ void main() {
         expect(find.byType(SeedContentPlaceholder), findsOneWidget);
       },
     );
+  });
+
+  group('scroll focus and grid lines', () {
+    testWidgets('scroll focus responds when the viewport grows', (
+      tester,
+    ) async {
+      final height = ValueNotifier<double>(100);
+      addTearDown(height.dispose);
+      await tester.pumpWidget(
+        seedAppTopLeft(
+          ValueListenableBuilder(
+            valueListenable: height,
+            builder: (_, value, _) => SizedBox(
+              height: value,
+              width: 200,
+              child: const SeedScrollArea(
+                focusableWhenScrollable: true,
+                fogOnlyWhenScrollable: true,
+                child: SizedBox(height: 140),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      Focus focus() => tester.widget(
+        find
+            .descendant(
+              of: find.byType(SeedScrollArea),
+              matching: find.byType(Focus),
+            )
+            .first,
+      );
+      expect(focus().canRequestFocus, isTrue);
+      height.value = 160;
+      await tester.pumpAndSettle();
+      expect(focus().canRequestFocus, isFalse);
+    });
+
+    testWidgets('grid honors end-only lines and full-span precedence', (
+      tester,
+    ) async {
+      const grid = Key('grid');
+      const end = Key('end');
+      const full = Key('full');
+      await tester.pumpWidget(
+        seedAppTopLeft(
+          const SizedBox(
+            width: 300,
+            child: SeedGrid(
+              key: grid,
+              columns: 3,
+              children: [
+                SeedGridItem(
+                  colEnd: 4,
+                  rowEnd: 2,
+                  child: SizedBox(key: end, height: 30),
+                ),
+                SeedGridItem(
+                  colSpan: SeedGridItem.full,
+                  colStart: 2,
+                  colEnd: 3,
+                  rowStart: 2,
+                  child: SizedBox(key: full, height: 30),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      final gridRect = tester.getRect(find.byKey(grid));
+      expect(tester.getRect(find.byKey(end)).right, gridRect.right);
+      expect(tester.getRect(find.byKey(full)).width, gridRect.width);
+    });
   });
 }

@@ -5,16 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
 import 'support/seed_test_fonts.dart';
-
-Widget host(Widget child) => MaterialApp(
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: child),
-);
-
-Widget _app(Widget child) => MaterialApp(
-  theme: SeedThemeData.light(fontFamily: seedTestFontFamily).toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
+import 'support/seed_test_host.dart';
 
 Future<void> mount(
   WidgetTester tester,
@@ -49,46 +40,8 @@ Future<void> mount(
   await tester.pumpAndSettle();
 }
 
-Widget hostComponentAccessibilityOv(
-  Widget child, {
-  double scale = 1,
-  bool dark = false,
-}) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme:
-      (dark
-              ? SeedThemeData.dark(fontFamily: seedTestFontFamily)
-              : SeedThemeData.light(fontFamily: seedTestFontFamily))
-          .toThemeData(),
-  home: Builder(
-    builder: (context) => MediaQuery(
-      data: MediaQuery.of(context)
-          .copyWith(textScaler: TextScaler.linear(scale)),
-      child: Scaffold(body: Center(child: child)),
-    ),
-  ),
-);
-
 Finder get closeButton => find.byWidgetPredicate(
   (widget) => widget is SeedPressable && widget.semanticsLabel == '닫기',
-);
-
-Widget hostInteractionParity(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: child),
-);
-
-Widget hostInputOverlayRegression(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: Center(child: child)),
 );
 
 void main() {
@@ -98,7 +51,7 @@ void main() {
     var height = 120.0;
     late StateSetter update;
     await tester.pumpWidget(
-      host(
+      seedApp(
         StatefulBuilder(
           builder: (context, setState) {
             update = setState;
@@ -129,7 +82,7 @@ void main() {
     var tall = true;
     late StateSetter update;
     await tester.pumpWidget(
-      host(
+      seedApp(
         StatefulBuilder(
           builder: (context, setState) {
             update = setState;
@@ -171,7 +124,7 @@ void main() {
     testWidgets('showSeedDialog closes on the backdrop unless told not to', (
       tester,
     ) async {
-      Widget app(bool? dismissible) => _app(
+      Widget app(bool? dismissible) => fontApp(
         Builder(
           builder: (context) => SeedButton(
             label: 'Open',
@@ -211,7 +164,7 @@ void main() {
 
     testWidgets('a scrolling dialog body takes keyboard focus', (tester) async {
       await tester.pumpWidget(
-        _app(
+        fontApp(
           Builder(
             builder: (context) => SeedButton(
               label: 'Open',
@@ -289,7 +242,7 @@ void main() {
         for (final long in [false, true]) {
           final confirm = long ? 'Continue with this operation' : 'OK';
           await tester.pumpWidget(
-            hostComponentAccessibilityOv(
+            scaledApp(
               SeedAlertDialog(
                 title: 'Alert',
                 cancelText: 'Cancel',
@@ -319,7 +272,7 @@ void main() {
       testWidgets('dialog fades out at unit scale ($managed)', (tester) async {
         final overlay = SeedOverlayController();
         await tester.pumpWidget(
-          hostComponentAccessibilityOv(
+          scaledApp(
             managed
                 ? SeedDialogTrigger(
                     controller: overlay,
@@ -373,7 +326,7 @@ void main() {
     ) async {
       for (final scroll in [false, true]) {
         await tester.pumpWidget(
-          hostComponentAccessibilityOv(
+          scaledApp(
             SeedDialog(
               scrollBody: scroll,
               content: const SizedBox(
@@ -400,7 +353,7 @@ void main() {
     ) async {
       for (final escape in [false, true]) {
         await tester.pumpWidget(
-          hostComponentAccessibilityOv(
+          scaledApp(
             Builder(
               builder: (context) => TextButton(
                 onPressed: () => showSeedAlertDialog(
@@ -439,7 +392,7 @@ void main() {
       var prevent = true;
       final reasons = <SeedOverlayDismissReason>[];
       await tester.pumpWidget(
-        hostInteractionParity(
+        koreanApp(
           Center(
             child: SeedDialogTrigger(
               responsive: false,
@@ -476,7 +429,7 @@ void main() {
       'custom header dialog exposes dismiss action and Escape dismisses route',
       (tester) async {
         await tester.pumpWidget(
-          hostInputOverlayRegression(
+          koreanAppCentered(
             Builder(
               builder: (context) => TextButton(
                 onPressed: () => showSeedDialog<void>(
@@ -504,5 +457,85 @@ void main() {
         expect(find.byType(SeedDialog), findsNothing);
       },
     );
+  });
+
+  group('responsive dialog', () {
+    Future<void> mount(
+      WidgetTester tester,
+      Widget child, {
+      double width = 390,
+    }) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = Size(width, 800);
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: SeedThemeData.light().toThemeData(),
+          home: Scaffold(body: child),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('responsive dialog resizes without losing its editor state', (
+      tester,
+    ) async {
+      final visibility = <bool>[];
+      await mount(
+        tester,
+        SeedDialogTrigger(
+          responsive: true,
+          onOpenChange: (open, _) => visibility.add(open),
+          triggerBuilder: (_, open, toggle) =>
+              TextButton(onPressed: toggle, child: const Text('Open')),
+          builder: (_) => const SeedDialog(
+            title: 'Title',
+            content: SeedTextInput(defaultValue: 'Original'),
+          ),
+        ),
+        width: 800,
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      final editor = find.byType(EditableText);
+      await tester.enterText(editor, 'Edited');
+      final editorState = tester.state(editor);
+      for (final width in [390.0, 800.0]) {
+        tester.view.physicalSize = Size(width, 800);
+        await tester.pumpAndSettle();
+        expect(
+          find.byType(SeedBottomSheet),
+          width < 768 ? findsOneWidget : findsNothing,
+        );
+        expect(tester.state(editor), same(editorState));
+        expect(tester.widget<EditableText>(editor).controller.text, 'Edited');
+        expect(tester.widget<EditableText>(editor).focusNode.hasFocus, isTrue);
+      }
+      expect(visibility, [true]);
+    });
+  });
+
+  group('surface', () {
+    testWidgets('dialogs have no drop shadow (official recipe has none)', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        koreanAppTopLeft(
+          const SeedDialog(title: 'Body', content: SizedBox.shrink()),
+          width: 390,
+        ),
+      );
+      final shadows = tester
+          .widgetList<Container>(
+            find.descendant(
+              of: find.byType(SeedDialog),
+              matching: find.byType(Container),
+            ),
+          )
+          .map((c) => c.decoration)
+          .whereType<BoxDecoration>()
+          .where((d) => d.boxShadow != null && d.boxShadow!.isNotEmpty);
+      expect(shadows, isEmpty);
+    });
   });
 }

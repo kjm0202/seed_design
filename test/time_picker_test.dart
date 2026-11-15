@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart' as mui;
 import 'package:seed_design/seed_design.dart';
 
 import 'support/seed_test_fonts.dart';
+import 'support/seed_test_host.dart';
 
 Widget _host(Widget child) => mui.MaterialApp(
   locale: const Locale('ko'),
@@ -13,27 +14,6 @@ Widget _host(Widget child) => mui.MaterialApp(
   home: mui.Scaffold(
     body: mui.Center(child: mui.SizedBox(width: 240, child: child)),
   ),
-);
-
-Widget host(Widget child) => MaterialApp(
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: child),
-);
-
-Widget hostInputOverlayRegression(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
-
-Widget hostInteraction(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: Center(child: child)),
 );
 
 void main() {
@@ -215,7 +195,7 @@ void main() {
       (tester) async {
         TimeOfDay? changed;
         await tester.pumpWidget(
-          host(
+          seedApp(
             SeedTimePicker(
               initialTime: const TimeOfDay(hour: 11, minute: 0),
               locale: const Locale('en', 'US'),
@@ -252,7 +232,7 @@ void main() {
         TimeOfDay? changed;
         int step = 1;
         await tester.pumpWidget(
-          hostInputOverlayRegression(
+          koreanAppCentered(
             StatefulBuilder(
               builder: (context, setState) => Column(
                 mainAxisSize: MainAxisSize.min,
@@ -297,7 +277,7 @@ void main() {
       late StateSetter updateParent;
       final notifications = <TimeOfDay>[];
       await tester.pumpWidget(
-        hostInputOverlayRegression(
+        koreanAppCentered(
           SizedBox(
             width: 280,
             child: StatefulBuilder(
@@ -339,9 +319,42 @@ void main() {
   group('validation', () {
     testWidgets('invalid minute steps fail immediately', (tester) async {
       await tester.pumpWidget(
-        hostInteraction(const SeedTimePicker(minuteStep: 0)),
+        koreanAppCentered(const SeedTimePicker(minuteStep: 0)),
       );
       expect(tester.takeException(), isArgumentError);
+    });
+  });
+
+  group('locale column order', () {
+    Widget pickerHost(Widget child) => MaterialApp(
+      locale: const Locale('en', 'US'),
+      supportedLocales: const [Locale('en', 'US')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      theme: SeedThemeData.light().toThemeData(),
+      home: Scaffold(
+        body: Center(child: SizedBox(width: 720, child: child)),
+      ),
+    );
+
+    testWidgets('British 12-hour columns place period after minutes', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        pickerHost(
+          const SeedTimePicker(
+            locale: Locale('en', 'GB'),
+            value: TimeOfDay(hour: 15, minute: 5),
+          ),
+        ),
+      );
+      final picker = tester.widget<SeedWheelPicker>(
+        find.byType(SeedWheelPicker),
+      );
+      expect(picker.columns.map((column) => column.itemCount).toList(), [
+        12,
+        12,
+        2,
+      ]);
     });
   });
 }

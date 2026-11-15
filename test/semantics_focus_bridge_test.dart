@@ -4,10 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
-Widget _host(Widget child) => MaterialApp(
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
+import 'support/seed_test_host.dart';
 
 Future<void> _action(
   WidgetTester tester,
@@ -37,7 +34,7 @@ void main() {
         final focus = FocusNode();
         var count = 0;
         await tester.pumpWidget(
-          _host(
+          seedAppCentered(
             SeedPressable(
               focusNode: focus,
               semanticsLabel: 'Action',
@@ -72,7 +69,7 @@ void main() {
         final semantics = tester.ensureSemantics();
         var selected = 0;
         await tester.pumpWidget(
-          _host(
+          seedAppCentered(
             StatefulBuilder(
               builder: (_, update) => SeedTabs(
                 items: const [
@@ -106,7 +103,7 @@ void main() {
         final semantics = tester.ensureSemantics();
         final selected = <String>[];
         await tester.pumpWidget(
-          _host(
+          seedAppCentered(
             SeedMenuTrigger(
               triggerBuilder: (_, open, toggle) =>
                   SeedButton(label: 'Open menu', onPressed: toggle),
@@ -155,7 +152,7 @@ void main() {
           final semantics = tester.ensureSemantics();
           final selected = <List<String>>[];
           await tester.pumpWidget(
-            _host(
+            seedAppCentered(
               SeedSelect<String>(
                 semanticsLabel: 'Fruit',
                 defaultValue: const ['banana'],
@@ -198,7 +195,7 @@ void main() {
         var opened = 0;
         var changed = 0;
         await tester.pumpWidget(
-          _host(
+          seedAppCentered(
             SeedField(
               label: 'Fruit',
               focusNode: focus,
@@ -250,7 +247,7 @@ void main() {
         final semantics = tester.ensureSemantics();
         final changes = <int>[];
         await tester.pumpWidget(
-          _host(
+          seedAppCentered(
             SizedBox(
               width: 360,
               child: SeedWheelPicker(

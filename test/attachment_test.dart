@@ -3,62 +3,9 @@ import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
 import 'support/seed_test_fonts.dart';
+import 'support/seed_test_host.dart';
 
-Widget host(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: child),
-);
-
-Widget hostMannerAttachment(Widget child) => MaterialApp(
-  locale: const Locale('ko'),
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
-
-Widget hostComponentBehaviorRegress(Widget child) => MaterialApp(
-  locale: const Locale('ko'),
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
-
-Widget hostComponentAccessibilityOv(
-  Widget child, {
-  double scale = 1,
-  bool dark = false,
-}) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme:
-      (dark
-              ? SeedThemeData.dark(fontFamily: seedTestFontFamily)
-              : SeedThemeData.light(fontFamily: seedTestFontFamily))
-          .toThemeData(),
-  home: Builder(
-    builder: (context) => MediaQuery(
-      data: MediaQuery.of(context)
-          .copyWith(textScaler: TextScaler.linear(scale)),
-      child: Scaffold(body: Center(child: child)),
-    ),
-  ),
-);
-
-Widget _host(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(
-    body: Center(child: SizedBox(width: 340, child: child)),
-  ),
-);
+import 'package:flutter/semantics.dart';
 
 void main() {
   testWidgets('general file trigger can use a paperclip and fires once', (
@@ -66,7 +13,7 @@ void main() {
   ) async {
     var added = 0;
     await tester.pumpWidget(
-      host(
+      koreanApp(
         SeedAttachmentField(
           triggerIcon: const Icon(Icons.attach_file),
           onAdd: () => added++,
@@ -85,7 +32,7 @@ void main() {
       for (final enabled in [true, false]) {
         var added = 0;
         await tester.pumpWidget(
-          host(
+          koreanApp(
             SeedAttachmentField(
               enabled: enabled,
               showDropzone: true,
@@ -114,7 +61,7 @@ void main() {
           status: SeedAttachmentStatus.error,
         );
         await tester.pumpWidget(
-          hostMannerAttachment(
+          koreanAppCentered(
             SeedAttachmentInput(
               items: const [
                 SeedAttachmentItem(
@@ -158,7 +105,7 @@ void main() {
     ) async {
       var retries = 0;
       await tester.pumpWidget(
-        hostMannerAttachment(
+        koreanAppCentered(
           SeedAttachmentInput(
             items: const [
               SeedAttachmentItem(
@@ -191,7 +138,7 @@ void main() {
         status: SeedAttachmentStatus.error,
       );
       await tester.pumpWidget(
-        hostComponentBehaviorRegress(
+        koreanAppCentered(
           SeedAttachmentInput(
             items: const [
               SeedAttachmentItem(
@@ -213,7 +160,7 @@ void main() {
     testWidgets('disabled image upload cannot retry', (tester) async {
       var calls = 0;
       await tester.pumpWidget(
-        hostComponentBehaviorRegress(
+        koreanAppCentered(
           SeedAttachmentInput(
             enabled: false,
             items: const [
@@ -240,7 +187,7 @@ void main() {
         for (final scale in [1.0, 2.0, 3.0]) {
           for (final reorder in [false, true]) {
             await tester.pumpWidget(
-              hostComponentAccessibilityOv(
+              scaledApp(
                 SeedAttachmentInput(
                   items: const [
                     SeedAttachmentItem(
@@ -288,7 +235,7 @@ void main() {
           'a_very_long_readable_document_filename',
         ]) {
           await tester.pumpWidget(
-            hostComponentAccessibilityOv(
+            scaledApp(
               SeedAttachmentInput(
                 items: [
                   SeedAttachmentItem(
@@ -335,7 +282,7 @@ void main() {
       'Attachment explicitly exposes required and independent invalid state',
       (tester) async {
         await tester.pumpWidget(
-          _host(
+          koreanAppCompact(
             const SeedAttachmentDisplayField(
               label: 'Photos',
               showRequiredIndicator: true,
@@ -358,7 +305,7 @@ void main() {
         );
 
         await tester.pumpWidget(
-          _host(
+          koreanAppCompact(
             const SeedAttachmentDisplayField(
               label: 'Photos',
               invalid: false,
@@ -373,7 +320,7 @@ void main() {
         expect(find.text('Upload failed'), findsNothing);
 
         await tester.pumpWidget(
-          _host(
+          koreanAppCompact(
             const SeedAttachmentDisplayField(
               label: 'Photos',
               errorMessage: 'Upload failed',
@@ -390,7 +337,7 @@ void main() {
   });
 
   group('dropzone and item', () {
-    Widget host(Widget child, {bool isDark = false}) {
+    Widget koreanApp(Widget child, {bool isDark = false}) {
       return MaterialApp(
         theme: (isDark ? SeedThemeData.dark() : SeedThemeData.light())
             .toThemeData(),
@@ -405,7 +352,7 @@ void main() {
       var removed = false;
 
       await tester.pumpWidget(
-        host(
+        koreanApp(
           Column(
             children: [
               SeedAttachmentDropzone(onTap: () => dropzoneTapped = true),
@@ -502,5 +449,106 @@ void main() {
         );
       }
     }
+  });
+
+  group('retry and controller forwarding', () {
+    Widget host(Widget child) => MaterialApp(
+      theme: SeedThemeData.light().toThemeData(),
+      home: Scaffold(
+        body: Center(child: SizedBox(width: 600, child: child)),
+      ),
+    );
+
+    const failed = SeedAttachmentItem(
+      id: 'failed',
+      type: SeedAttachmentType.file,
+      name: 'failed.pdf',
+      status: SeedAttachmentStatus.error,
+    );
+
+    testWidgets('field forwards retry availability and the active controller', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      await tester.pumpWidget(
+        host(const SeedAttachmentDisplayField(defaultEntries: [failed])),
+      );
+      var input = tester.widget<SeedAttachmentInput>(
+        find.byType(SeedAttachmentInput),
+      );
+      expect(input.onRetry, isNull);
+      final retry = tester.getSemantics(find.byTooltip('Retry'));
+      expect(retry.getSemanticsData().hasAction(SemanticsAction.tap), isFalse);
+
+      SeedAttachmentItem? retried;
+      SeedAttachmentController? usedController;
+      final controller = SeedAttachmentController(items: [failed]);
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        host(
+          SeedAttachmentField(
+            controller: controller,
+            onRetry: (item, active) {
+              retried = item;
+              usedController = active;
+            },
+          ),
+        ),
+      );
+      input = tester.widget<SeedAttachmentInput>(
+        find.byType(SeedAttachmentInput),
+      );
+      expect(input.onRetry, isNotNull);
+      await tester.tap(find.byTooltip('Retry'));
+      expect(retried, same(failed));
+      expect(usedController, same(controller));
+      semantics.dispose();
+    });
+  });
+
+  group('dropzone', () {
+    testWidgets('attachment dropzone spans the field width', (tester) async {
+      await tester.pumpWidget(
+        koreanAppTopLeft(SeedAttachmentField(showDropzone: true, onAdd: () {})),
+      );
+      final field = tester.getRect(find.byType(SeedAttachmentField));
+      final dropzone = tester.getRect(find.byType(SeedAttachmentDropzone));
+      expect(dropzone.width, moreOrLessEquals(field.width, epsilon: 1));
+    });
+
+    // Official AttachmentInput.DropzoneLabel is a plain div without
+    // data-disabled, so the helper keeps fg.neutralSubtle even when the
+    // ActionButton is disabled (e.g. maxFiles reached).
+    testWidgets(
+      'dropzone label stays neutralSubtle when the button is disabled',
+      (tester) async {
+        Color labelColor() =>
+            tester.widget<Text>(find.text('또는 여기로 드래그해서 업로드')).style!.color!;
+        final expected = const SeedColorScheme.light().fg.neutralSubtle;
+
+        await tester.pumpWidget(
+          koreanAppTopLeft(const SeedAttachmentDropzone(enabled: false)),
+        );
+        expect(labelColor(), expected);
+
+        await tester.pumpWidget(
+          koreanAppTopLeft(
+            SeedAttachmentField(
+              showDropzone: true,
+              maxCount: 1,
+              defaultItems: const [
+                SeedAttachmentItem(
+                  id: 'a',
+                  name: 'a.txt',
+                  type: SeedAttachmentType.file,
+                ),
+              ],
+              onAdd: () {},
+            ),
+          ),
+        );
+        expect(labelColor(), expected);
+      },
+    );
   });
 }

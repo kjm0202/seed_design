@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
 import 'support/seed_test_fonts.dart';
+import 'support/seed_test_host.dart';
 
 Future<void> _mount(
   WidgetTester tester, {
@@ -52,7 +53,7 @@ Finder get _horizontalScroller =>
     find.byKey(const ValueKey('seed-table-pagination-horizontal-scroll'));
 
 Finder get _outerViewport =>
-    find.byKey(const ValueKey('round6-table-pagination-outer-viewport'));
+    find.byKey(const ValueKey('table-pagination-outer-viewport'));
 
 FocusNode _focusNode(WidgetTester tester, Finder root) {
   final focusable = find.descendant(
@@ -84,7 +85,7 @@ Future<void> _mountNested(
           body: Align(
             alignment: Alignment.topLeft,
             child: SingleChildScrollView(
-              key: const ValueKey('round6-table-pagination-outer-viewport'),
+              key: const ValueKey('table-pagination-outer-viewport'),
               controller: outerController,
               scrollDirection: Axis.horizontal,
               child: SizedBox(
@@ -114,11 +115,6 @@ void _expectControlFullyVisible(
   expect(rect.left, greaterThanOrEqualTo(viewport.left - .5), reason: caseId);
   expect(rect.right, lessThanOrEqualTo(viewport.right + .5), reason: caseId);
 }
-
-Widget _app(Widget child, {bool scaffold = true}) => MaterialApp(
-  theme: SeedThemeData.light(fontFamily: seedTestFontFamily).toThemeData(),
-  home: scaffold ? Scaffold(body: Center(child: child)) : Center(child: child),
-);
 
 Future<void> mount(
   WidgetTester tester,
@@ -191,14 +187,6 @@ Widget _host(
 
 Finder get _rangeField => find.byWidgetPredicate(
   (widget) => widget is Semantics && widget.properties.label == '표시 범위',
-);
-
-Widget hostStateParity(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: child),
 );
 
 void main() {
@@ -618,7 +606,7 @@ void main() {
     testWidgets('Pagination works without a Material ancestor', (tester) async {
       final pages = <int>[];
       await tester.pumpWidget(
-        _app(
+        fontApp(
           SizedBox(
             width: 400,
             child: SeedPagination(totalPages: 5, onPageChanged: pages.add),
@@ -640,7 +628,7 @@ void main() {
     ) async {
       final pages = <int>[];
       await tester.pumpWidget(
-        _app(
+        fontApp(
           SizedBox(
             width: 700,
             child: SeedTablePagination(
@@ -997,13 +985,11 @@ void main() {
       (tester) async {
         final changes = <SeedPageChange>[];
         await tester.pumpWidget(
-          hostStateParity(
-            SeedPagination(totalPages: 0, onPageChange: changes.add),
-          ),
+          koreanApp(SeedPagination(totalPages: 0, onPageChange: changes.add)),
         );
         expect(find.byType(InkWell), findsNothing);
         await tester.pumpWidget(
-          hostStateParity(
+          koreanApp(
             SeedPagination(
               currentPage: 20,
               totalPages: 5,

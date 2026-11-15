@@ -2,23 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
-Widget host(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: child),
-);
-
-Widget hostReactParity(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(
-    body: Center(child: SizedBox(width: 360, child: child)),
-  ),
-);
+import 'support/seed_test_host.dart';
 
 void main() {
   Future<void> mount(WidgetTester tester, SeedQuantityPicker picker) async {
@@ -72,7 +56,9 @@ void main() {
     testWidgets('uncontrolled quantity updates without an external callback', (
       tester,
     ) async {
-      await tester.pumpWidget(host(const SeedQuantityPicker(defaultValue: 3)));
+      await tester.pumpWidget(
+        koreanApp(const SeedQuantityPicker(defaultValue: 3)),
+      );
       await tester.tap(find.bySemanticsLabel('수량 늘리기'));
       await tester.pump();
       expect(find.text('4'), findsOneWidget);
@@ -86,7 +72,7 @@ void main() {
       var removes = 0;
       final changes = <int>[];
       await tester.pumpWidget(
-        hostReactParity(
+        koreanAppNarrow(
           SeedQuantityPicker(
             value: 1,
             onChanged: changes.add,
@@ -101,6 +87,65 @@ void main() {
       expect(removes, 1);
       expect(changes, isEmpty);
       expect(find.byType(SeedProgressCircle), findsOneWidget);
+    });
+  });
+
+  group('changed bounds and controlled value', () {
+    Widget host(Widget child) => MaterialApp(
+      theme: SeedThemeData.light().toThemeData(),
+      home: Scaffold(
+        body: Center(child: SizedBox(width: 300, child: child)),
+      ),
+    );
+    testWidgets(
+      'uncontrolled quantity reconciles changed bounds without callback',
+      (tester) async {
+        final changes = <int>[];
+        Widget picker(int min, int max) => host(
+          SeedQuantityPicker(
+            key: const ValueKey('quantity'),
+            min: min,
+            max: max,
+            onValueChange: changes.add,
+          ),
+        );
+        await tester.pumpWidget(picker(1, 5));
+        await tester.pumpWidget(picker(2, 5));
+        expect(tester.takeException(), isNull);
+        expect(find.text('2'), findsOneWidget);
+        expect(changes, isEmpty);
+        await tester.tap(find.byIcon(Icons.add_rounded));
+        await tester.pump();
+        expect(find.text('3'), findsOneWidget);
+        expect(changes, [3]);
+        await tester.pumpWidget(picker(1, 2));
+        expect(find.text('2'), findsOneWidget);
+        expect(changes, [3]);
+        await tester.pumpWidget(picker(1, 5));
+        expect(find.text('2'), findsOneWidget);
+      },
+    );
+    testWidgets('controlled quantity proposes without replacing parent value', (
+      tester,
+    ) async {
+      final changes = <int>[];
+      Widget picker(int min) => host(
+        SeedQuantityPicker(
+          key: const ValueKey('controlled'),
+          value: 3,
+          min: min,
+          max: 5,
+          onValueChange: changes.add,
+        ),
+      );
+      await tester.pumpWidget(picker(1));
+      await tester.pumpWidget(picker(2));
+      expect(find.text('3'), findsOneWidget);
+      expect(changes, isEmpty);
+      await tester.tap(find.byIcon(Icons.add_rounded));
+      await tester.pump();
+      expect(changes, [4]);
+      expect(find.text('3'), findsOneWidget);
     });
   });
 }

@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
 import 'support/seed_test_fonts.dart';
+import 'support/seed_test_host.dart';
 
 const _orderedFallbacks = <SeedOverlaySide>[
   SeedOverlaySide.right,
@@ -79,14 +80,6 @@ const _ordered = [
   SeedOverlaySide.top,
   SeedOverlaySide.bottom,
 ];
-
-Widget host(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: child),
-);
 
 void main() {
   group('ordered flip fallback', () {
@@ -1609,7 +1602,7 @@ void main() {
         addTearDown(focus.dispose);
         final reasons = <SeedOverlayDismissReason>[];
         await tester.pumpWidget(
-          host(
+          koreanApp(
             Align(
               alignment: Alignment.bottomRight,
               child: SeedAnchoredOverlay(
@@ -1656,7 +1649,7 @@ void main() {
       (tester) async {
         final reasons = <SeedOverlayDismissReason>[];
         await tester.pumpWidget(
-          host(
+          koreanApp(
             Center(
               child: SeedAnchoredOverlay(
                 open: true,

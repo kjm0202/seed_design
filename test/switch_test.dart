@@ -4,6 +4,9 @@ import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
 import 'support/seed_test_fonts.dart';
+import 'support/seed_test_host.dart';
+
+import 'dart:ui' show Tristate;
 
 Widget _host(
   Widget child, {
@@ -36,36 +39,6 @@ Color _trackColor(WidgetTester tester) {
           as BoxDecoration)
       .color!;
 }
-
-Widget host(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
-
-Widget hostComponentAccessibilityOv(
-  Widget child, {
-  double scale = 1,
-  bool dark = false,
-}) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme:
-      (dark
-              ? SeedThemeData.dark(fontFamily: seedTestFontFamily)
-              : SeedThemeData.light(fontFamily: seedTestFontFamily))
-          .toThemeData(),
-  home: Builder(
-    builder: (context) => MediaQuery(
-      data: MediaQuery.of(context)
-          .copyWith(textScaler: TextScaler.linear(scale)),
-      child: Scaffold(body: Center(child: child)),
-    ),
-  ),
-);
 
 void main() {
   for (final size in [SeedSwitchSize.size16, SeedSwitchSize.size32]) {
@@ -235,7 +208,9 @@ void main() {
       (tester) async {
         var count = 0;
         await tester.pumpWidget(
-          host(SeedSwitch(value: true, label: '알림', onChanged: (_) => count++)),
+          koreanAppCentered(
+            SeedSwitch(value: true, label: '알림', onChanged: (_) => count++),
+          ),
         );
         expect(
           tester.getSemantics(find.byType(SeedSwitch)),
@@ -266,7 +241,7 @@ void main() {
     ) async {
       var value = false;
       await tester.pumpWidget(
-        hostComponentAccessibilityOv(
+        scaledApp(
           SeedSwitchListItem(
             title: 'Switch',
             value: value,
@@ -279,5 +254,138 @@ void main() {
       await tester.tap(find.text('Switch'));
       expect(value, isTrue);
     });
+  });
+
+  group('state across label changes', () {
+    Widget host({
+      required bool labeled,
+      bool? checked,
+      bool defaultChecked = false,
+      ValueChanged<bool>? onCheckedChange,
+    }) => MaterialApp(
+      theme: SeedThemeData.light().toThemeData(),
+      home: Scaffold(
+        body: Center(
+          child: SeedSwitch(
+            key: const ValueKey('switch'),
+            label: labeled ? 'Alerts' : null,
+            semanticsLabel: 'Alerts',
+            checked: checked,
+            defaultChecked: defaultChecked,
+            onCheckedChange: onCheckedChange,
+          ),
+        ),
+      ),
+    );
+
+    void expectChecked(WidgetTester tester, bool checked) {
+      final toggle = find.byWidgetPredicate(
+        (widget) => widget is Semantics && widget.properties.toggled != null,
+      );
+      final node = tester.getSemantics(toggle);
+      expect(
+        node,
+        matchesSemantics(
+          label: 'Alerts',
+          hasToggledState: true,
+          isToggled: checked,
+          hasEnabledState: true,
+          isEnabled: true,
+          isFocusable: true,
+          isFocused:
+              node.getSemanticsData().flagsCollection.isFocused ==
+              Tristate.isTrue,
+          hasTapAction: true,
+          hasFocusAction: true,
+        ),
+      );
+    }
+
+    for (final startsLabeled in [false, true]) {
+      testWidgets(
+        'uncontrolled switch retains state when label changes from $startsLabeled',
+        (tester) async {
+          final updates = <bool>[];
+          await tester.pumpWidget(
+            host(labeled: startsLabeled, onCheckedChange: updates.add),
+          );
+          expectChecked(tester, false);
+          await tester.tap(find.byType(SeedSwitch));
+          await tester.pump();
+          expectChecked(tester, true);
+          expect(updates, [true]);
+
+          await tester.pumpWidget(
+            host(labeled: !startsLabeled, onCheckedChange: updates.add),
+          );
+          expectChecked(tester, true);
+          expect(updates, [true]);
+          await tester.tap(find.byType(SeedSwitch));
+          await tester.pump();
+          expectChecked(tester, false);
+          expect(updates, [true, false]);
+
+          await tester.pumpWidget(
+            host(
+              labeled: startsLabeled,
+              defaultChecked: true,
+              onCheckedChange: updates.add,
+            ),
+          );
+          expectChecked(tester, false);
+          expect(updates, [true, false]);
+        },
+      );
+
+      testWidgets(
+        'controlled switch retains parent value when label changes from $startsLabeled',
+        (tester) async {
+          final updates = <bool>[];
+          await tester.pumpWidget(
+            host(
+              labeled: startsLabeled,
+              checked: true,
+              onCheckedChange: updates.add,
+            ),
+          );
+          expectChecked(tester, true);
+          await tester.tap(find.byType(SeedSwitch));
+          await tester.pump();
+          expectChecked(tester, true);
+          expect(updates, [false]);
+
+          await tester.pumpWidget(
+            host(
+              labeled: !startsLabeled,
+              checked: true,
+              onCheckedChange: updates.add,
+            ),
+          );
+          expectChecked(tester, true);
+          expect(updates, [false]);
+          await tester.pumpWidget(
+            host(
+              labeled: !startsLabeled,
+              checked: false,
+              onCheckedChange: updates.add,
+            ),
+          );
+          expectChecked(tester, false);
+          await tester.tap(find.byType(SeedSwitch));
+          await tester.pump();
+          expectChecked(tester, false);
+          expect(updates, [false, true]);
+          await tester.pumpWidget(
+            host(
+              labeled: startsLabeled,
+              checked: false,
+              onCheckedChange: updates.add,
+            ),
+          );
+          expectChecked(tester, false);
+          expect(updates, [false, true]);
+        },
+      );
+    }
   });
 }

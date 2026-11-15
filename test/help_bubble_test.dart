@@ -5,24 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
 import 'support/seed_test_fonts.dart';
-
-Widget host(Widget child, {double scale = 1, bool dark = false}) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme:
-      (dark
-              ? SeedThemeData.dark(fontFamily: seedTestFontFamily)
-              : SeedThemeData.light(fontFamily: seedTestFontFamily))
-          .toThemeData(),
-  home: Builder(
-    builder: (context) => MediaQuery(
-      data: MediaQuery.of(context)
-          .copyWith(textScaler: TextScaler.linear(scale)),
-      child: Scaffold(body: Center(child: child)),
-    ),
-  ),
-);
+import 'support/seed_test_host.dart';
 
 Finder get closeButton => find.byWidgetPredicate(
   (widget) => widget is SeedPressable && widget.semanticsLabel == '닫기',
@@ -187,7 +170,7 @@ void main() {
 
       // A test tap does not promise a browser-like primary keyboard focus.
       // Make Escape delivery explicit instead of treating absent focus as a
-      // failed dismiss handler (the Round6 browser did deliver Escape).
+      // failed dismiss handler (the browser does deliver Escape).
       triggerFocus.requestFocus();
       await tester.pump();
       expect(triggerFocus.hasFocus, isTrue);
@@ -290,7 +273,7 @@ void main() {
         var closed = 0;
         for (final dark in [false, true]) {
           await tester.pumpWidget(
-            host(
+            scaledApp(
               SeedHelpBubble(
                 title: 'Tip',
                 onClose: () => closed++,
@@ -310,7 +293,7 @@ void main() {
         }
         expect(closed, 2);
         await tester.pumpWidget(
-          host(
+          scaledApp(
             SeedHelpBubble(
               title: 'A long title that wraps on a narrow screen',
               description: 'A longer description',
@@ -401,5 +384,46 @@ void main() {
         expect(tester.takeException(), isNull);
       },
     );
+  });
+
+  group('focus leaving the content', () {
+    testWidgets('help bubble proposes close when content focus moves outside', (
+      tester,
+    ) async {
+      final events = <SeedOverlayDismissReason>[];
+      final outside = FocusNode();
+      addTearDown(outside.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: [
+                SeedHelpBubbleTrigger(
+                  title: 'Bubble',
+                  autoFocus: true,
+                  defaultOpen: true,
+                  onOpenChange: (open, reason) {
+                    if (!open) events.add(reason);
+                  },
+                  triggerBuilder: (context, open, toggle) => TextButton(
+                    onPressed: toggle,
+                    child: const Text('trigger'),
+                  ),
+                ),
+                TextButton(
+                  focusNode: outside,
+                  onPressed: () {},
+                  child: const Text('outside'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      outside.requestFocus();
+      await tester.pumpAndSettle();
+      expect(events, [SeedOverlayDismissReason.focusOut]);
+    });
   });
 }

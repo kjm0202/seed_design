@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
 import 'support/seed_test_fonts.dart';
+import 'support/seed_test_host.dart';
 
 final _longTabs = <SeedTabItem>[
   for (var i = 0; i < 14; i++) SeedTabItem(label: 'Long tab title ${i + 1}'),
@@ -173,7 +174,7 @@ void _assertFullyVisible(WidgetTester tester, int index, double width) {
   );
 }
 
-Widget _hostNavigationContract(
+Widget _sizedHost(
   Widget child, {
   double width = 800,
   Brightness brightness = Brightness.light,
@@ -232,7 +233,7 @@ Widget _tabs(
   SeedTabsController controller, {
   required bool lazyMount,
   bool unmountOnExit = false,
-}) => _hostNavigationContract(
+}) => _sizedHost(
   SizedBox(
     height: 300,
     width: 360,
@@ -253,43 +254,6 @@ Widget _tabs(
   ),
 );
 
-Widget host(Widget child) => MaterialApp(
-  locale: const Locale('ko'),
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
-
-Widget hostInteraction(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
-
-Widget hostInteractionParity(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: child),
-);
-
-Widget hostLayoutParity(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: child),
-);
-
-Widget hostFghFollowupRegression(Widget child) => MaterialApp(
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: child),
-);
-
 class CounterPanel extends StatefulWidget {
   const CounterPanel({super.key});
   @override
@@ -306,16 +270,6 @@ class _CounterPanelState extends State<CounterPanel> {
     ),
   );
 }
-
-Widget _hostMixFormContract(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(
-    body: Center(child: SizedBox(width: 340, child: child)),
-  ),
-);
 
 void main() {
   setUpAll(loadSeedTestFonts);
@@ -929,7 +883,7 @@ void main() {
           final height = ValueNotifier<double>(80);
           addTearDown(height.dispose);
           await tester.pumpWidget(
-            _hostNavigationContract(
+            _sizedHost(
               SeedTabsView(
                 carousel: true,
                 dynamicHeight: true,
@@ -995,7 +949,7 @@ void main() {
               )
               .padding;
 
-          await tester.pumpWidget(_hostNavigationContract(buildTabs(null)));
+          await tester.pumpWidget(_sizedHost(buildTabs(null)));
           await tester.pumpAndSettle();
           expect(
             actualHeaderPadding(),
@@ -1004,9 +958,7 @@ void main() {
           );
 
           await tester.pumpWidget(
-            _hostNavigationContract(
-              buildTabs(const EdgeInsets.symmetric(horizontal: 20)),
-            ),
+            _sizedHost(buildTabs(const EdgeInsets.symmetric(horizontal: 20))),
           );
           await tester.pumpAndSettle();
           expect(
@@ -1031,7 +983,7 @@ void main() {
         (SeedTabsSize.large, 40.0),
       ]) {
         await tester.pumpWidget(
-          host(
+          koreanAppCentered(
             SeedTabs(
               items: const [
                 SeedTabItem(label: 'A'),
@@ -1059,7 +1011,7 @@ void main() {
       (tester) async {
         var selected = 0;
         await tester.pumpWidget(
-          hostInteraction(
+          koreanAppCentered(
             StatefulBuilder(
               builder: (context, setState) => Column(
                 mainAxisSize: MainAxisSize.min,
@@ -1113,7 +1065,7 @@ void main() {
       final changes = <int>[];
       var starts = 0, ends = 0;
       await tester.pumpWidget(
-        hostInteractionParity(
+        koreanApp(
           SizedBox(
             height: 250,
             child: SeedTabsView(
@@ -1144,7 +1096,7 @@ void main() {
       'sticky tab header stays at viewport top after content scroll',
       (tester) async {
         await tester.pumpWidget(
-          hostLayoutParity(
+          koreanApp(
             CustomScrollView(
               slivers: [
                 const SliverToBoxAdapter(child: SizedBox(height: 200)),
@@ -1168,7 +1120,7 @@ void main() {
       final controller = SeedTabsController();
       addTearDown(controller.dispose);
       await tester.pumpWidget(
-        hostFghFollowupRegression(
+        seedApp(
           SeedTabsView(
             controller: controller,
             carousel: true,
@@ -1199,7 +1151,7 @@ void main() {
         final controller = SeedTabsController();
         addTearDown(controller.dispose);
         await tester.pumpWidget(
-          hostFghFollowupRegression(
+          seedApp(
             SeedTabsView(
               controller: controller,
               carousel: true,
@@ -1245,7 +1197,7 @@ void main() {
           showScrollFog: showScrollFog,
           chipListPadding: padding,
         );
-        await tester.pumpWidget(_hostMixFormContract(tabs()));
+        await tester.pumpWidget(koreanAppCompact(tabs()));
         expect(
           tester
               .widget<SingleChildScrollView>(find.byType(SingleChildScrollView))
@@ -1253,7 +1205,7 @@ void main() {
           const EdgeInsets.symmetric(horizontal: 16),
         );
         await tester.pumpWidget(
-          _hostMixFormContract(
+          koreanAppCompact(
             tabs(padding: const EdgeInsets.symmetric(horizontal: 20)),
           ),
         );
@@ -1264,7 +1216,7 @@ void main() {
           const EdgeInsets.symmetric(horizontal: 20),
         );
         await tester.pumpWidget(
-          _hostMixFormContract(
+          koreanAppCompact(
             tabs(
               variant: SeedTabsVariant.chipOutline,
               showScrollFog: true,
@@ -1322,5 +1274,87 @@ void main() {
     final focused = tester.getRect(find.text('Long tab title 5'));
     expect(focused.left, greaterThanOrEqualTo(viewport.left - 0.5));
     expect(focused.right, lessThanOrEqualTo(viewport.right + 0.5));
+  });
+
+  group('tab identity across reorder and deletion', () {
+    testWidgets(
+      'uncontrolled tab follows value and visited panels on reorder',
+      (tester) async {
+        final order = ValueNotifier<List<String>>(['a', 'b', 'c']);
+        final items = [
+          for (final value in order.value)
+            SeedTabItem(label: value.toUpperCase(), value: value),
+        ];
+        await tester.pumpWidget(
+          seedAppTopLeft(
+            ValueListenableBuilder<List<String>>(
+              valueListenable: order,
+              builder: (_, values, _) => SeedTabsView(
+                lazyMount: true,
+                items: items,
+                children: [for (final value in values) Text('page $value')],
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('B'));
+        await tester.pumpAndSettle();
+        items.insert(0, items.removeLast());
+        order.value = ['c', 'a', 'b'];
+        await tester.pumpAndSettle();
+        expect(tester.widget<SeedTabs>(find.byType(SeedTabs)).selectedIndex, 2);
+        expect(find.text('page b'), findsOneWidget);
+        expect(find.text('page c', skipOffstage: false), findsNothing);
+        items.removeLast();
+        order.value = ['c', 'a'];
+        await tester.pumpAndSettle();
+        expect(find.text('page a'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'carousel retains selected identity and handles deletion with lazy panels',
+      (tester) async {
+        final order = ValueNotifier<List<String>>(['a', 'b', 'c']);
+        final changes = <String>[];
+        await tester.pumpWidget(
+          seedAppTopLeft(
+            ValueListenableBuilder<List<String>>(
+              valueListenable: order,
+              builder: (_, values, _) => SeedTabsView(
+                carousel: true,
+                dynamicHeight: true,
+                lazyMount: true,
+                onValueChange: changes.add,
+                items: [
+                  for (final value in values)
+                    SeedTabItem(label: value.toUpperCase(), value: value),
+                ],
+                children: [
+                  for (final value in values)
+                    SizedBox(
+                      height: value == 'b' ? 100 : 50,
+                      child: Text('page $value'),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('B'));
+        await tester.pumpAndSettle();
+        order.value = ['c', 'a', 'b'];
+        await tester.pumpAndSettle();
+        expect(tester.widget<SeedTabs>(find.byType(SeedTabs)).selectedIndex, 2);
+        expect(find.text('page b'), findsOneWidget);
+        expect(changes, ['b']);
+        order.value = ['c', 'a'];
+        await tester.pumpAndSettle();
+        expect(tester.widget<SeedTabs>(find.byType(SeedTabs)).selectedIndex, 1);
+        expect(find.text('page a'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+        expect(changes, ['b']);
+      },
+    );
   });
 }

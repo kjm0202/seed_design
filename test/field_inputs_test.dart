@@ -4,74 +4,9 @@ import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
 import 'support/seed_test_fonts.dart';
+import 'support/seed_test_host.dart';
 
-Widget _app(Widget child) => MaterialApp(
-  theme: SeedThemeData.light(fontFamily: seedTestFontFamily).toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
-
-Widget _appBehavior(Widget child, {bool scaffold = true}) => MaterialApp(
-  theme: SeedThemeData.light(fontFamily: seedTestFontFamily).toThemeData(),
-  home: scaffold ? Scaffold(body: Center(child: child)) : Center(child: child),
-);
-
-Widget host(Widget child, {ThemeData? theme}) => MaterialApp(
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: theme ?? SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
-
-Widget hostFghFollowupRegression(Widget child) => MaterialApp(
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: child),
-);
-
-Widget hostInteractionParity(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: child),
-);
-
-Widget hostInteraction(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
-
-Widget hostComponentAccessibilityOv(
-  Widget child, {
-  double scale = 1,
-  bool dark = false,
-}) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme:
-      (dark
-              ? SeedThemeData.dark(fontFamily: seedTestFontFamily)
-              : SeedThemeData.light(fontFamily: seedTestFontFamily))
-          .toThemeData(),
-  home: Builder(
-    builder: (context) => MediaQuery(
-      data: MediaQuery.of(context)
-          .copyWith(textScaler: TextScaler.linear(scale)),
-      child: Scaffold(body: Center(child: child)),
-    ),
-  ),
-);
-
-Widget hostStateParity(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: child),
-);
+import 'package:flutter/rendering.dart';
 
 void main() {
   group('field API', () {
@@ -80,7 +15,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        _app(
+        fontApp(
           const SeedField(
             description: 'help',
             invalid: true,
@@ -108,7 +43,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        _app(
+        fontApp(
           const SeedAttachmentDisplayField(label: 'Files', indicator: '(선택)'),
         ),
       );
@@ -118,7 +53,7 @@ void main() {
     testWidgets('Space toggles a checkbox and Enter does not', (tester) async {
       var value = false;
       await tester.pumpWidget(
-        _app(
+        fontApp(
           StatefulBuilder(
             builder: (context, setState) => SeedCheckbox(
               label: 'Terms',
@@ -142,7 +77,9 @@ void main() {
       'FieldButton has no default chevron and can show plain values',
       (tester) async {
         await tester.pumpWidget(
-          _app(const SeedFieldButton(values: ['Value'], showValueChips: false)),
+          fontApp(
+            const SeedFieldButton(values: ['Value'], showValueChips: false),
+          ),
         );
         expect(find.byIcon(Icons.keyboard_arrow_down), findsNothing);
         expect(find.byType(SeedChip), findsNothing);
@@ -154,7 +91,7 @@ void main() {
 
     testWidgets('labelWeight reaches every field composition', (tester) async {
       await tester.pumpWidget(
-        _app(
+        fontApp(
           SizedBox(
             width: 300,
             child: Column(
@@ -200,7 +137,7 @@ void main() {
     setUpAll(loadSeedTestFonts);
     testWidgets('TextInput has no clear button by default', (tester) async {
       await tester.pumpWidget(
-        _appBehavior(
+        fontApp(
           const SizedBox(width: 300, child: SeedTextInput(defaultValue: 'abc')),
         ),
       );
@@ -211,12 +148,12 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        _appBehavior(const SeedQuantityPicker(min: 0, max: 100)),
+        fontApp(const SeedQuantityPicker(min: 0, max: 100)),
       );
       expect(find.text('0'), findsOneWidget);
       final uncontrolled = tester.getSize(find.byType(Row).first).width;
       await tester.pumpWidget(
-        _appBehavior(const SeedQuantityPicker(min: 0, max: 100, value: 100)),
+        fontApp(const SeedQuantityPicker(min: 0, max: 100, value: 100)),
       );
       expect(tester.getSize(find.byType(Row).first).width, uncontrolled);
     });
@@ -230,7 +167,7 @@ void main() {
         'TimePicker rounds ${input.hour}:${input.minute} ties up at step $step',
         (tester) async {
           await tester.pumpWidget(
-            _appBehavior(
+            fontApp(
               SizedBox(
                 width: 320,
                 child: SeedTimePicker(defaultValue: input, minuteStep: step),
@@ -258,7 +195,7 @@ void main() {
     ) async {
       var changes = 0;
       await tester.pumpWidget(
-        _appBehavior(
+        fontApp(
           SizedBox(
             width: 360,
             height: 600,
@@ -283,7 +220,7 @@ void main() {
 
     testWidgets('error messages show the official icon', (tester) async {
       await tester.pumpWidget(
-        _appBehavior(
+        fontApp(
           const SizedBox(width: 300, child: SeedTextField(errorMessage: 'E')),
         ),
       );
@@ -321,8 +258,8 @@ void main() {
       final second = TextEditingController(text: 'second');
       addTearDown(first.dispose);
       addTearDown(second.dispose);
-      await tester.pumpWidget(host(SeedTextInput(controller: first)));
-      await tester.pumpWidget(host(SeedTextInput(controller: second)));
+      await tester.pumpWidget(themedApp(SeedTextInput(controller: first)));
+      await tester.pumpWidget(themedApp(SeedTextInput(controller: second)));
       expect(find.text('second'), findsOneWidget);
       expect(
         tester.widget<TextField>(find.byType(TextField)).controller,
@@ -341,8 +278,10 @@ void main() {
         final controller = TextEditingController(text: 'keep me');
         addTearDown(controller.dispose);
         controller.selection = const TextSelection.collapsed(offset: 3);
-        await tester.pumpWidget(host(SeedTextInput(controller: controller)));
-        await tester.pumpWidget(host(const SeedTextInput()));
+        await tester.pumpWidget(
+          themedApp(SeedTextInput(controller: controller)),
+        );
+        await tester.pumpWidget(themedApp(const SeedTextInput()));
         final current = tester
             .widget<TextField>(find.byType(TextField))
             .controller!;
@@ -363,10 +302,10 @@ void main() {
       addTearDown(first.dispose);
       addTearDown(second.dispose);
       await tester.pumpWidget(
-        host(SeedTextInput(initialValue: 'initial', focusNode: first)),
+        themedApp(SeedTextInput(initialValue: 'initial', focusNode: first)),
       );
       await tester.pumpWidget(
-        host(SeedTextInput(controller: controller, focusNode: second)),
+        themedApp(SeedTextInput(controller: controller, focusNode: second)),
       );
       expect(find.text('replacement'), findsOneWidget);
       expect(
@@ -389,7 +328,7 @@ void main() {
       String? saved;
       late StateSetter update;
       await tester.pumpWidget(
-        hostFghFollowupRegression(
+        seedApp(
           StatefulBuilder(
             builder: (context, setState) {
               update = setState;
@@ -425,7 +364,7 @@ void main() {
       (tester) async {
         SeedTextValueChange? change;
         await tester.pumpWidget(
-          hostInteractionParity(
+          koreanApp(
             SeedTextField(
               maxGraphemeCount: 2,
               onValueChanged: (value) => change = value,
@@ -449,7 +388,7 @@ void main() {
       var opened = 0;
       var cleared = 0;
       await tester.pumpWidget(
-        hostInteraction(
+        koreanAppCentered(
           SizedBox(
             width: 280,
             child: SeedInputButton(
@@ -476,7 +415,7 @@ void main() {
         final external = FocusNode();
         for (final explicit in [false, true]) {
           await tester.pumpWidget(
-            hostComponentAccessibilityOv(
+            scaledApp(
               SeedField(
                 label: 'Name',
                 child: SeedTextInput(focusNode: explicit ? external : null),
@@ -495,7 +434,7 @@ void main() {
           if (explicit) expect(external.hasFocus, isTrue);
         }
         await tester.pumpWidget(
-          hostComponentAccessibilityOv(
+          scaledApp(
             const SeedField(
               label: 'Disabled',
               disabled: true,
@@ -521,7 +460,7 @@ void main() {
     ) async {
       final form = GlobalKey<FormState>();
       await tester.pumpWidget(
-        hostStateParity(
+        koreanApp(
           Form(
             key: form,
             child: const SeedTextField(
@@ -535,6 +474,145 @@ void main() {
       form.currentState!.reset();
       await tester.pump();
       expect(find.text('Original'), findsOneWidget);
+    });
+  });
+
+  group('field description, count and chip semantics', () {
+    Widget host(Widget child) => MaterialApp(
+      theme: SeedThemeData.light().toThemeData(),
+      home: Scaffold(
+        body: Center(child: SizedBox(width: 350, child: child)),
+      ),
+    );
+    testWidgets('field associates both description and error with input', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      await tester.pumpWidget(
+        host(
+          const SeedTextField(
+            label: 'Name',
+            description: 'Use a full name',
+            errorMessage: 'Name is invalid',
+          ),
+        ),
+      );
+      final nodes = tester.semantics.simulatedAccessibilityTraversal();
+      expect(
+        nodes.any(
+          (n) =>
+              n.getSemanticsData().flagsCollection.isTextField &&
+              n.hint.contains('Use a full name') &&
+              n.hint.contains('Name is invalid'),
+        ),
+        isTrue,
+      );
+      expect(find.text('Name is invalid'), findsOneWidget);
+      expect(find.text('Use a full name'), findsNothing);
+      semantics.dispose();
+    });
+
+    for (final textarea in [false, true]) {
+      testWidgets(
+        'count and required marker are independent, textarea=$textarea',
+        (tester) async {
+          final formKey = GlobalKey<FormState>();
+          final controller = TextEditingController(text: 'abc');
+          addTearDown(controller.dispose);
+          final field = textarea
+              ? SeedTextField.textarea(
+                  controller: controller,
+                  label: 'Name',
+                  required: true,
+                  showRequiredIndicator: false,
+                  maxGraphemeCount: 2,
+                  hideCharacterCount: true,
+                )
+              : SeedTextField(
+                  controller: controller,
+                  label: 'Name',
+                  required: true,
+                  showRequiredIndicator: false,
+                  maxGraphemeCount: 2,
+                  hideCharacterCount: true,
+                );
+          await tester.pumpWidget(host(Form(key: formKey, child: field)));
+          final fieldWidget = tester.widget<SeedField>(find.byType(SeedField));
+          expect(fieldWidget.required, isTrue);
+          expect(find.text('*'), findsNothing);
+          expect(fieldWidget.characterCount, isNull);
+          expect(fieldWidget.maxCharacterCount, isNull);
+          expect(formKey.currentState!.validate(), isFalse);
+          expect(controller.text, 'abc');
+        },
+      );
+    }
+
+    testWidgets('field button chip deletion is independently accessible', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      var opens = 0;
+      await tester.pumpWidget(
+        host(
+          SeedFieldButton(
+            label: 'Fruits',
+            defaultValues: const ['Apple'],
+            onPressed: () => opens++,
+          ),
+        ),
+      );
+      final nodes = tester.semantics.simulatedAccessibilityTraversal();
+      final action = nodes.singleWhere(
+        (n) =>
+            n.label.contains('Apple') &&
+            n.getSemanticsData().hasAction(SemanticsAction.tap) &&
+            n.label.toLowerCase().contains('delete'),
+      );
+      tester.binding.renderViews.single.owner!.semanticsOwner!.performAction(
+        action.id,
+        SemanticsAction.tap,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Apple'), findsNothing);
+      expect(opens, 0);
+      semantics.dispose();
+    });
+  });
+
+  group('field button indicator', () {
+    Widget host(Widget child, {double width = 320}) => MaterialApp(
+      theme: SeedThemeData.light().toThemeData(),
+      home: Scaffold(
+        body: Center(
+          child: SizedBox(width: width, child: child),
+        ),
+      ),
+    );
+
+    group('FieldButton.IndicatorText', () {
+      testWidgets('indicator is shown beside the label', (tester) async {
+        await tester.pumpWidget(
+          host(
+            SeedFieldButton(
+              label: 'Region',
+              indicator: 'Optional',
+              onPressed: () {},
+            ),
+          ),
+        );
+        final label = tester.getRect(find.text('Region'));
+        final indicator = tester.getRect(find.text('Optional'));
+        expect(indicator.left, greaterThan(label.right));
+        expect(indicator.center.dy, closeTo(label.center.dy, 2));
+      });
+
+      testWidgets('no indicator by default', (tester) async {
+        await tester.pumpWidget(
+          host(SeedFieldButton(label: 'Region', onPressed: () {})),
+        );
+        expect(find.text('Optional'), findsNothing);
+      });
     });
   });
 }

@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
+import 'support/seed_test_host.dart';
+
 Widget _tooltipApp({
   required ValueChanged<bool> onOpenChange,
   Duration? openDelay,
@@ -53,14 +55,6 @@ Future<TestGesture> _enterTrigger(WidgetTester tester) async {
   await tester.pump();
   return mouse;
 }
-
-Widget host(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: child),
-);
 
 void main() {
   testWidgets(
@@ -205,7 +199,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        host(
+        koreanApp(
           const Center(
             child: SeedHelpBubbleTooltip(
               title: 'Tooltip content',
@@ -228,6 +222,103 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Tooltip content'), findsNothing);
       await mouse.removePointer();
+    });
+  });
+
+  group('focus-out and group switching', () {
+    testWidgets(
+      'group switching proposes close even when previous tooltip is controlled',
+      (tester) async {
+        final first = <bool>[];
+        final second = <bool>[];
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Center(
+                child: SeedTooltipDelayGroup(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SeedHelpBubbleTooltip(
+                        open: true,
+                        title: 'first bubble',
+                        onOpenChange: first.add,
+                        child: const SizedBox(
+                          width: 80,
+                          height: 40,
+                          child: Text('first'),
+                        ),
+                      ),
+                      SeedHelpBubbleTooltip(
+                        title: 'second bubble',
+                        onOpenChange: second.add,
+                        child: const SizedBox(
+                          width: 80,
+                          height: 40,
+                          child: Text('second'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+        await mouse.addPointer(location: const Offset(0, 0));
+        await mouse.moveTo(tester.getCenter(find.text('second')));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 1));
+        expect(first, [false]);
+        expect(second, [true]);
+        expect(find.text('first bubble'), findsOneWidget);
+        await mouse.removePointer();
+      },
+    );
+
+    testWidgets('tooltip focus closes immediately and reports focus-out', (
+      tester,
+    ) async {
+      final focus = FocusNode();
+      final outside = FocusNode();
+      addTearDown(focus.dispose);
+      addTearDown(outside.dispose);
+      final reasons = <SeedOverlayDismissReason>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: [
+                SeedHelpBubbleTooltip(
+                  title: 'tooltip',
+                  onOpenChanged: (open, reason) {
+                    if (!open) reasons.add(reason);
+                  },
+                  child: TextButton(
+                    focusNode: focus,
+                    onPressed: () {},
+                    child: const Text('trigger'),
+                  ),
+                ),
+                TextButton(
+                  focusNode: outside,
+                  onPressed: () {},
+                  child: const Text('outside'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      focus.requestFocus();
+      await tester.pump();
+      await tester.pump();
+      expect(find.text('tooltip'), findsOneWidget);
+      outside.requestFocus();
+      await tester.pump();
+      expect(reasons, [SeedOverlayDismissReason.focusOut]);
     });
   });
 }

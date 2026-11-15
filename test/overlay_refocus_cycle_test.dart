@@ -1,15 +1,10 @@
-// Post847 PUBLIC SeedPopover consumer test: first dismissal -> refocus -> reopen
-// -> Escape, measuring REAL NavigatorObserver and FocusNode states.
-// GREEN records observed behavior. Set POST847_OVERLAY_REACT_STRICT=true to
-// assert the separate React child-first Escape/focus-return contract (RED if broken).
+// Reopening an overlay after dismissal restores focus to the right owner.
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
 import 'support/seed_test_fonts.dart';
-
-const _reactStrict = bool.fromEnvironment('POST847_OVERLAY_REACT_STRICT');
 
 class _Routes extends NavigatorObserver {
   int pushed = 0, popped = 0;
@@ -139,9 +134,6 @@ void main() {
           await tester.pumpAndSettle();
           final firstPopupClosed = !popover.isOpen;
           final parentAfterDismiss = routeWatcher.routes.length;
-          final focusAfterDismiss =
-              FocusManager.instance.primaryFocus?.debugLabel;
-          final childFocusAfterDismiss = childTrigger.hasFocus;
           // Refocus the exact child trigger; the next pointer reopens the
           // same popup on the SAME parent route, without building new routes.
           childTrigger.requestFocus();
@@ -150,9 +142,6 @@ void main() {
           await tester.tap(find.text('Reopen child'));
           await tester.pumpAndSettle();
           final secondOpened = popover.isOpen;
-          final focusBeforeEscape =
-              FocusManager.instance.primaryFocus?.debugLabel;
-          final innerFocusedBefore = innerAction.hasFocus;
           final routeBeforeEscape = routeWatcher.routes.length;
           await tester.sendKeyEvent(LogicalKeyboardKey.escape);
           await tester.pumpAndSettle();
@@ -162,39 +151,23 @@ void main() {
               .evaluate()
               .isNotEmpty;
           final popupAfterEscape = popover.isOpen;
-          final focusAfterEscape =
-              FocusManager.instance.primaryFocus?.debugLabel;
-          // ignore: avoid_print
-          print(
-            'POST847_PUBLIC,kind=$parentType,width=$width,firstDismiss=$firstDismiss,'
-            'firstPopupClosed=$firstPopupClosed,parentAfterFirst=$parentAfterDismiss,'
-            'focusAfterFirst=$focusAfterDismiss,triggerAfterFirst=$childFocusAfterDismiss,'
-            'refocusAccepted=$refocusAccepted,reopened=$secondOpened,'
-            'focusBeforeEscape=$focusBeforeEscape,innerBeforeEscape=$innerFocusedBefore,'
-            'routeBefore=$routeBeforeEscape,routeAfter=$routeAfterEscape,'
-            'parentVisibleAfter=$parentAfterEscape,popupOpenAfter=$popupAfterEscape,'
-            'focusAfterEscape=$focusAfterEscape,pushed=${routeWatcher.pushed},'
-            'popped=${routeWatcher.popped},events=${events.join(";")}',
-          );
           expect(firstPopupClosed, isTrue);
           expect(parentAfterDismiss, 2);
           expect(refocusAccepted, isTrue);
           expect(secondOpened, isTrue);
           expect(tester.takeException(), isNull);
-          if (_reactStrict) {
-            expect(
-              parentAfterEscape,
-              isTrue,
-              reason: 'One Escape must dismiss only the re-opened child',
-            );
-            expect(popupAfterEscape, isFalse);
-            expect(routeAfterEscape, routeBeforeEscape);
-            expect(
-              childTrigger.hasFocus,
-              isTrue,
-              reason: 'Child trigger should regain real FocusNode focus',
-            );
-          }
+          expect(
+            parentAfterEscape,
+            isTrue,
+            reason: 'One Escape must dismiss only the re-opened child',
+          );
+          expect(popupAfterEscape, isFalse);
+          expect(routeAfterEscape, routeBeforeEscape);
+          expect(
+            childTrigger.hasFocus,
+            isTrue,
+            reason: 'Child trigger should regain real FocusNode focus',
+          );
         });
       }
     }
@@ -269,42 +242,26 @@ void main() {
           await tester.tap(find.text('Center boundary trigger'));
           await tester.pumpAndSettle();
           final initialOpen = controller.isOpen;
-          final focusOpen = FocusManager.instance.primaryFocus?.debugLabel;
           await tester.sendKeyEvent(LogicalKeyboardKey.tab);
           await tester.pumpAndSettle();
           final afterTab = controller.isOpen;
-          final focusTab = FocusManager.instance.primaryFocus?.debugLabel;
           await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
           await tester.sendKeyEvent(LogicalKeyboardKey.tab);
           await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
           await tester.pumpAndSettle();
           final afterShiftTab = controller.isOpen;
-          final focusShiftTab = FocusManager.instance.primaryFocus?.debugLabel;
           await tester.sendKeyEvent(LogicalKeyboardKey.escape);
           await tester.pumpAndSettle();
           final afterEscape = controller.isOpen;
-          final focusEscape = FocusManager.instance.primaryFocus?.debugLabel;
-          // ignore: avoid_print
-          print(
-            'POST847_FOCUS,width=$width,lazy=$lazy,opened=$initialOpen,'
-            'afterTab=$afterTab,afterShiftTab=$afterShiftTab,'
-            'afterEscape=$afterEscape,openFocus=$focusOpen,tabFocus=$focusTab,'
-            'shiftTabFocus=$focusShiftTab,escapeFocus=$focusEscape,'
-            'triggerAfter=${triggerFocus.hasFocus},actionAfter=${actionFocus.hasFocus},'
-            'events=${events.join(";")}',
-          );
           expect(initialOpen, isTrue);
           expect(tester.takeException(), isNull);
-          if (_reactStrict) {
-            expect(afterTab, isTrue);
-            expect(afterShiftTab, isTrue);
-            expect(
-              afterEscape,
-              isFalse,
-              reason:
-                  'React closes boundary popup on Escape after Tab/ShiftTab',
-            );
-          }
+          expect(afterTab, isTrue);
+          expect(afterShiftTab, isTrue);
+          expect(
+            afterEscape,
+            isFalse,
+            reason: 'React closes boundary popup on Escape after Tab/ShiftTab',
+          );
         },
       );
     }

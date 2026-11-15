@@ -10,8 +10,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
 import 'support/seed_test_fonts.dart';
-
-const bool _reactStrictRed = bool.fromEnvironment('REACT_STRICT_RED');
+import 'support/seed_test_host.dart';
 
 Widget _host({
   required SeedSnackbarController controller,
@@ -44,27 +43,6 @@ Future<void> _show(
   await tester.pump(const Duration(milliseconds: 330));
 }
 
-Widget _app(Widget child) => MaterialApp(
-  theme: SeedThemeData.light(fontFamily: seedTestFontFamily).toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
-
-Widget host(Widget child) => MaterialApp(
-  locale: const Locale('ko'),
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
-
-Widget hostStateParity(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: child),
-);
-
 void main() {
   testWidgets('actual mouse hover holds timer; leave expires once', (
     tester,
@@ -95,8 +73,6 @@ void main() {
     expect(closed, 1);
     expect(notifications, greaterThanOrEqualTo(2));
     // Capture observer count without relying on private queue/timer fields.
-    // ignore: avoid_print
-    print('hover: closed=$closed notifications=$notifications');
     await mouse.removePointer();
     await tester.pumpWidget(const SizedBox.shrink());
   });
@@ -132,8 +108,6 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('focus-public'), findsNothing);
     expect(closes, 1);
-    // ignore: avoid_print
-    print('focus: closes=$closes focusHasFocus=${focus.hasFocus}');
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
@@ -182,8 +156,6 @@ void main() {
     controller.close();
     await tester.pump(const Duration(milliseconds: 200));
     expect(closed, ['queued-A', 'queued-B', 'immediate-C']);
-    // ignore: avoid_print
-    print('strategy: closeOrder=$closed notifications=$updates');
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
@@ -276,10 +248,6 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('route-B'), findsNothing);
     expect(closed, ['route-A', 'route-B']);
-    // ignore: avoid_print
-    print(
-      'global provider routes=$routes closed=$closed notifications=$notifications',
-    );
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
@@ -323,29 +291,9 @@ void main() {
     controller.close();
     await tester.pump(const Duration(milliseconds: 200));
     expect(closed, 1);
-    // ignore: avoid_print
-    print('page-dispose: visible=false closedAfterExplicitClose=$closed');
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  // Historical React-strict probe. Flutter now uses the source-confirmed
-  // default immediate strategy; keep this optional test for that contract.
-  testWidgets('REACT_STRICT default-immediate expectation', (tester) async {
-    final controller = SeedSnackbarController();
-    addTearDown(controller.dispose);
-    await tester.pumpWidget(_host(controller: controller));
-    await _show(tester, controller, 'contract-A');
-    await _show(tester, controller, 'contract-B');
-    // React headless defaults to immediate, but first transitions through
-    // the dismissing state before promoting the second entry (200ms exit
-    // delay): use a 500ms observation instead of claiming instant paint.
-    // Flutter's default now also promotes B (while callers may explicitly
-    // request the legacy queued strategy).
-    await tester.pump(const Duration(milliseconds: 500));
-    await tester.pump(const Duration(milliseconds: 300));
-    // This is only a Flutter widget contract, not paired-browser parity.
-    expect(find.text('contract-B'), findsOneWidget);
-  }, skip: !_reactStrictRed);
   group('immediate queue', () {
     setUpAll(loadSeedTestFonts);
     testWidgets('immediate exits the current one before the next enters', (
@@ -355,7 +303,7 @@ void main() {
       addTearDown(controller.dispose);
       final closed = <String>[];
       await tester.pumpWidget(
-        _app(
+        fontApp(
           SeedSnackbarProvider(
             controller: controller,
             child: const SizedBox.expand(),
@@ -452,7 +400,7 @@ void main() {
       (tester) async {
         late BuildContext context;
         await tester.pumpWidget(
-          host(
+          koreanAppCentered(
             Builder(
               builder: (value) {
                 context = value;
@@ -484,7 +432,7 @@ void main() {
         );
         addTearDown(controller.dispose);
         await tester.pumpWidget(
-          hostStateParity(
+          koreanApp(
             SeedSnackbarProvider(
               controller: controller,
               child: const SizedBox.expand(),
@@ -509,5 +457,155 @@ void main() {
         await mouse.removePointer();
       },
     );
+  });
+
+  group('overlap tracking and discarded entries', () {
+    Widget host(SeedSnackbarController controller, Widget child) => MaterialApp(
+      theme: SeedThemeData.light().toThemeData(),
+      home: SeedSnackbarProvider(controller: controller, child: child),
+    );
+    testWidgets('tracks an obstacle moved without rebuilding or resizing it', (
+      tester,
+    ) async {
+      final controller = SeedSnackbarController();
+      addTearDown(controller.dispose);
+      final bottom = ValueNotifier<double>(300);
+      addTearDown(bottom.dispose);
+      const obstacle = SeedSnackbarAvoidOverlap(
+        child: SizedBox(key: ValueKey('obstacle'), width: 200, height: 80),
+      );
+      await tester.pumpWidget(
+        host(
+          controller,
+          Scaffold(
+            body: ValueListenableBuilder<double>(
+              valueListenable: bottom,
+              child: obstacle,
+              builder: (context, value, child) => Stack(
+                children: [
+                  AnimatedPositioned(
+                    duration: const Duration(milliseconds: 300),
+                    left: 0,
+                    right: 0,
+                    bottom: value,
+                    child: child!,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      bottom.value = 0;
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump();
+      controller.show(child: const SeedSnackbar(message: 'moved obstacle'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(
+        tester
+            .getRect(find.byType(SeedSnackbar))
+            .overlaps(tester.getRect(find.byKey(const ValueKey('obstacle')))),
+        isFalse,
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    for (final attachFirst in [false, true]) {
+      testWidgets('discard first unseen entry (attached=$attachFirst)', (
+        tester,
+      ) async {
+        final controller = SeedSnackbarController();
+        addTearDown(controller.dispose);
+        final callbacks = <String>[];
+        if (attachFirst) {
+          await tester.pumpWidget(host(controller, const SizedBox.expand()));
+        }
+        controller.show(
+          child: const Text('first'),
+          onDiscard: () => callbacks.add('discard'),
+          onClose: () => callbacks.add('close'),
+        );
+        controller.show(child: const Text('second'));
+        await tester.pump(const Duration(milliseconds: 200));
+        expect(callbacks, ['discard', 'close']);
+        if (!attachFirst) {
+          await tester.pumpWidget(host(controller, const SizedBox.expand()));
+        }
+        await tester.pump();
+        expect(find.text('second'), findsOneWidget);
+        await tester.pumpWidget(const SizedBox.shrink());
+      });
+    }
+
+    testWidgets('a displayed entry closes without discard', (tester) async {
+      final controller = SeedSnackbarController();
+      addTearDown(controller.dispose);
+      final callbacks = <String>[];
+      await tester.pumpWidget(host(controller, const SizedBox.expand()));
+      controller.show(
+        child: const Text('shown'),
+        onDiscard: () => callbacks.add('discard'),
+        onClose: () => callbacks.add('close'),
+      );
+      await tester.pump();
+      controller.show(child: const Text('next'));
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(callbacks, ['close']);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+  });
+
+  group('controller swap', () {
+    testWidgets('snackbar avoids a floating region after a controller swap', (
+      tester,
+    ) async {
+      final first = SeedSnackbarController();
+      final second = SeedSnackbarController();
+      addTearDown(first.dispose);
+      addTearDown(second.dispose);
+      const obstacle = Key('obstacle');
+      const message = Key('message');
+      Future<void> mount(SeedSnackbarController controller) =>
+          tester.pumpWidget(
+            seedAppTopLeft(
+              SeedSnackbarProvider(
+                controller: controller,
+                child: const Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Positioned(
+                      bottom: 10,
+                      left: 10,
+                      right: 10,
+                      child: SeedSnackbarAvoidOverlap(
+                        child: SizedBox(key: obstacle, height: 90),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+      await mount(first);
+      first.show(child: const SizedBox(key: message, width: 120, height: 50));
+      await tester.pumpAndSettle();
+      expect(
+        tester.getRect(find.byKey(message)).bottom,
+        lessThanOrEqualTo(tester.getRect(find.byKey(obstacle)).top),
+      );
+      await mount(second);
+      second.show(child: const SizedBox(key: message, width: 120, height: 50));
+      await tester.pumpAndSettle();
+      expect(
+        tester.getRect(find.byKey(message)).bottom,
+        lessThanOrEqualTo(tester.getRect(find.byKey(obstacle)).top),
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
   });
 }

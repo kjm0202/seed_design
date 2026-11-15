@@ -2,13 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
-Widget hostMannerAttachment(Widget child) => MaterialApp(
-  locale: const Locale('ko'),
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
+import 'support/seed_test_host.dart';
 
 void main() {
   group('level boundaries', () {
@@ -33,7 +27,7 @@ void main() {
       'manner temperatures preserve Celsius precision with an emote',
       (tester) async {
         await tester.pumpWidget(
-          hostMannerAttachment(
+          koreanAppCentered(
             const Column(
               mainAxisSize: MainAxisSize.min,
               children: [

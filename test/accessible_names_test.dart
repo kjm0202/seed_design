@@ -5,11 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
 import 'support/seed_test_fonts.dart';
-
-Widget _app(Widget child) => MaterialApp(
-  theme: SeedThemeData.light(fontFamily: seedTestFontFamily).toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
+import 'support/seed_test_host.dart';
 
 void main() {
   setUpAll(loadSeedTestFonts);
@@ -20,7 +16,7 @@ void main() {
     ) async {
       final handle = tester.ensureSemantics();
       await tester.pumpWidget(
-        _app(
+        fontApp(
           SizedBox(
             width: 300,
             child: SeedSegmentedControl<int>(
@@ -43,7 +39,7 @@ void main() {
     ) async {
       final handle = tester.ensureSemantics();
       await tester.pumpWidget(
-        _app(
+        fontApp(
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -89,7 +85,7 @@ void main() {
         ),
       ];
       await tester.pumpWidget(
-        _app(
+        fontApp(
           const SizedBox(
             width: 240,
             child: Column(
@@ -124,7 +120,7 @@ void main() {
     ) async {
       final handle = tester.ensureSemantics();
       await tester.pumpWidget(
-        _app(const SeedTextField(label: 'Name', placeholder: 'Type')),
+        fontApp(const SeedTextField(label: 'Name', placeholder: 'Type')),
       );
       final unnamedTaps = tester.semantics
           .simulatedAccessibilityTraversal()
@@ -142,7 +138,7 @@ void main() {
     ) async {
       final handle = tester.ensureSemantics();
       await tester.pumpWidget(
-        _app(
+        fontApp(
           SeedListLinkItem(
             uri: Uri.parse('https://example.com'),
             titleText: 'Row',

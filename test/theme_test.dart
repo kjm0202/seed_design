@@ -2,20 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
-Widget host(Widget child, {ThemeData? theme}) => MaterialApp(
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: theme ?? SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
-
-Widget hostInteraction(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
+import 'support/seed_test_host.dart';
 
 void main() {
   testWidgets('partial color theme also supplies fallback text foreground', (
@@ -25,7 +12,7 @@ void main() {
       fg: const SeedColorScheme.dark().fg,
     );
     await tester.pumpWidget(
-      host(
+      themedApp(
         Builder(
           builder: (context) => Text(
             'Custom foreground',
@@ -166,7 +153,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        host(
+        themedApp(
           SeedTheme(
             data: SeedThemeData.dark(),
             child: Builder(
@@ -228,7 +215,7 @@ void main() {
     ) async {
       for (final kind in ['dialog', 'sheet', 'menu', 'panel']) {
         await tester.pumpWidget(
-          hostInteraction(
+          koreanAppCentered(
             SeedTheme(
               data: SeedThemeData.dark(fontFamily: 'LocalFont'),
               child: Builder(

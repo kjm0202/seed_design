@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
+import 'support/seed_test_host.dart';
+
 Widget _host(Widget child, {TextDirection direction = TextDirection.ltr}) {
   return MaterialApp(
     theme: SeedThemeData.light().toThemeData(),
@@ -14,22 +16,6 @@ Widget _host(Widget child, {TextDirection direction = TextDirection.ltr}) {
     ),
   );
 }
-
-Widget host(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
-
-Widget hostComponentBehaviorRegress(Widget child) => MaterialApp(
-  locale: const Locale('ko'),
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
 
 SeedSideNavigation navigation({String? selectedId, VoidCallback? onParent}) =>
     SeedSideNavigation(
@@ -353,7 +339,7 @@ void main() {
     testWidgets('RTL segments move in reading order', (tester) async {
       var selected = 0;
       await tester.pumpWidget(
-        host(
+        koreanAppCentered(
           Directionality(
             textDirection: TextDirection.rtl,
             child: StatefulBuilder(
@@ -384,7 +370,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        hostComponentBehaviorRegress(
+        koreanAppCentered(
           SeedSegmentedControl(
             segments: const [
               SeedSegment(value: 1, label: 'One', enabled: false),
@@ -404,6 +390,66 @@ void main() {
             .color,
         SeedThemeData.light().colorScheme.bg.disabled,
       );
+    });
+  });
+
+  group('custom child height and invalid semantics', () {
+    testWidgets('segment custom child determines control height', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        seedAppTopLeft(
+          SizedBox(
+            width: 300,
+            child: SeedSegmentedControl<int>(
+              segments: [
+                SeedSegment(
+                  value: 0,
+                  child: LayoutBuilder(
+                    builder: (_, _) => const SizedBox(
+                      key: ValueKey('tall'),
+                      height: 80,
+                      child: Text('Tall'),
+                    ),
+                  ),
+                ),
+                SeedSegment(value: 1, label: 'Other'),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(tester.getSize(find.byKey(const ValueKey('tall'))).height, 80);
+      expect(
+        tester.getSize(find.byType(SeedSegmentedControl<int>)).height,
+        greaterThanOrEqualTo(100),
+      );
+    });
+
+    testWidgets('segment exposes invalid status on its semantics', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(
+        seedAppTopLeft(
+          SeedSegmentedControl<int>(
+            segments: [
+              SeedSegment(value: 0, label: 'Invalid', invalid: true),
+              SeedSegment(value: 1, label: 'Valid'),
+            ],
+          ),
+        ),
+      );
+      expect(
+        tester
+            .getSemantics(find.text('Invalid'))
+            .getSemanticsData()
+            .validationResult,
+        SemanticsValidationResult.invalid,
+      );
+      handle.dispose();
     });
   });
 }

@@ -2,12 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
-Widget _host(Widget child) => MaterialApp(
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(
-    body: Align(alignment: Alignment.topLeft, child: child),
-  ),
-);
+import 'support/seed_test_host.dart';
 
 class _Counter extends StatefulWidget {
   const _Counter();
@@ -29,7 +24,7 @@ class _CounterState extends State<_Counter> {
 void main() {
   testWidgets('keeps the content size while loading, even with a larger '
       'indicator', (tester) async {
-    Widget build(bool loading) => _host(
+    Widget build(bool loading) => seedAppTopLeft(
       SeedLoadingIndicator(
         key: const ValueKey('indicator'),
         loading: loading,
@@ -56,7 +51,7 @@ void main() {
 
   testWidgets('default indicator is a 24px SeedProgressCircle', (tester) async {
     await tester.pumpWidget(
-      _host(
+      seedAppTopLeft(
         const SeedLoadingIndicator(
           loading: true,
           child: SizedBox(width: 80, height: 40),
@@ -70,7 +65,7 @@ void main() {
   testWidgets('hidden content is not painted, not in semantics, and the '
       'indicator is announced once', (tester) async {
     final handle = tester.ensureSemantics();
-    Widget build(bool loading) => _host(
+    Widget build(bool loading) => seedAppTopLeft(
       SeedLoadingIndicator(
         loading: loading,
         semanticsLabel: '저장 중',
@@ -97,7 +92,7 @@ void main() {
   });
 
   testWidgets('content keeps its state across loading changes', (tester) async {
-    Widget build(bool loading) => _host(
+    Widget build(bool loading) => seedAppTopLeft(
       SeedLoadingIndicator(
         loading: loading,
         disableOnLoading: false,
@@ -119,7 +114,7 @@ void main() {
       var taps = 0;
       final node = FocusNode();
       await tester.pumpWidget(
-        _host(
+        seedAppTopLeft(
           SeedLoadingIndicator(
             key: ValueKey(disable),
             loading: true,
@@ -148,7 +143,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      _host(
+      seedAppTopLeft(
         const SizedBox(
           width: 300,
           height: 48,

@@ -5,24 +5,12 @@ import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
 import 'support/seed_test_fonts.dart';
-
-Widget _app(Widget child) => MaterialApp(
-  theme: SeedThemeData.light(fontFamily: seedTestFontFamily).toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
+import 'support/seed_test_host.dart';
 
 Future<void> _key(WidgetTester tester, LogicalKeyboardKey key) async {
   await tester.sendKeyEvent(key);
   await tester.pumpAndSettle();
 }
-
-Widget host(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
 
 void main() {
   setUpAll(loadSeedTestFonts);
@@ -37,7 +25,7 @@ void main() {
           addTearDown(tester.view.reset);
           var selected = false;
           await tester.pumpWidget(
-            _app(
+            fontApp(
               StatefulBuilder(
                 builder: (context, refresh) => Column(
                   children: [
@@ -95,7 +83,7 @@ void main() {
         second.dispose();
       });
       await tester.pumpWidget(
-        _app(
+        fontApp(
           SeedPopoverTrigger(
             controller: controller,
             onOpenChange: (open, reason) {
@@ -178,7 +166,7 @@ void main() {
           trigger.dispose();
         });
         await tester.pumpWidget(
-          _app(
+          fontApp(
             SeedHelpBubbleTrigger(
               controller: controller,
               title: 'Contextual help',
@@ -216,7 +204,7 @@ void main() {
       final changes = <String>[];
       addTearDown(trigger.dispose);
       await tester.pumpWidget(
-        _app(
+        fontApp(
           SeedHelpBubbleTooltip(
             title: 'Tooltip content',
             openDelay: Duration.zero,
@@ -259,7 +247,7 @@ void main() {
       childTrigger.dispose();
     });
     await tester.pumpWidget(
-      _app(
+      fontApp(
         SeedPopoverTrigger(
           controller: parent,
           onOpenChange: (open, reason) {
@@ -332,7 +320,7 @@ void main() {
         outside.dispose();
       });
       await tester.pumpWidget(
-        _app(
+        fontApp(
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -470,7 +458,7 @@ void main() {
       addTearDown(focusNode.dispose);
       var activations = 0;
       await tester.pumpWidget(
-        host(
+        koreanAppCentered(
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -542,7 +530,7 @@ void main() {
       (tester) async {
         var calls = 0;
         await tester.pumpWidget(
-          host(
+          koreanAppCentered(
             SeedButton(
               label: 'Disabled',
               enabled: false,
@@ -554,6 +542,52 @@ void main() {
         await tester.sendKeyEvent(LogicalKeyboardKey.tab);
         await tester.sendKeyEvent(LogicalKeyboardKey.enter);
         expect(calls, 0);
+      },
+    );
+  });
+
+  group('Enter key release', () {
+    testWidgets(
+      'Enter release clears the press after Enter activation changes',
+      (tester) async {
+        final focusNode = FocusNode();
+        addTearDown(focusNode.dispose);
+        var activateOnEnter = true;
+        late StateSetter update;
+        await tester.pumpWidget(
+          MaterialApp(
+            home: StatefulBuilder(
+              builder: (context, setState) {
+                update = setState;
+                return SeedPressable(
+                  focusNode: focusNode,
+                  activateOnEnter: activateOnEnter,
+                  onTap: () {},
+                  builder: (context, pressed) =>
+                      Text(pressed ? 'pressed' : 'idle'),
+                );
+              },
+            ),
+          ),
+        );
+        focusNode.requestFocus();
+        await tester.pump();
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.enter);
+        await tester.pump();
+        expect(find.text('pressed'), findsOneWidget);
+
+        update(() => activateOnEnter = false);
+        await tester.pump();
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.enter);
+        await tester.pump();
+        expect(find.text('idle'), findsOneWidget);
+
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.space);
+        await tester.pump();
+        expect(find.text('pressed'), findsOneWidget);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.space);
+        await tester.pump();
+        expect(find.text('idle'), findsOneWidget);
       },
     );
   });

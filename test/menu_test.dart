@@ -6,19 +6,9 @@ import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
 import 'support/seed_test_fonts.dart';
+import 'support/seed_test_host.dart';
 
-Widget _app(Widget child) => MaterialApp(
-  theme: SeedThemeData.light(fontFamily: seedTestFontFamily).toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
-
-Widget host(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: child),
-);
+import 'package:flutter/semantics.dart';
 
 void main() {
   setUpAll(loadSeedTestFonts);
@@ -27,7 +17,7 @@ void main() {
   ) async {
     final tapped = <String>[];
     await tester.pumpWidget(
-      _app(
+      fontApp(
         SeedMenu(
           groups: [
             SeedMenuGroupData(
@@ -75,7 +65,7 @@ void main() {
   testWidgets('a pointer-opened menu activates nothing until an arrow key', (
     tester,
   ) async {
-    await tester.pumpWidget(_app(menu()));
+    await tester.pumpWidget(fontApp(menu()));
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
     expect(pressableOf(tester, 'First').focusNode?.hasPrimaryFocus, isFalse);
@@ -87,7 +77,7 @@ void main() {
   testWidgets('a keyboard-opened menu activates its first item', (
     tester,
   ) async {
-    await tester.pumpWidget(_app(menu()));
+    await tester.pumpWidget(fontApp(menu()));
     await tester.sendKeyEvent(LogicalKeyboardKey.tab);
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
@@ -624,7 +614,7 @@ void main() {
       (tester) async {
         var count = 0;
         await tester.pumpWidget(
-          host(
+          koreanApp(
             SeedMenuTrigger(
               triggerBuilder: (_, open, toggle) =>
                   TextButton(onPressed: toggle, child: const Text('Menu open')),
@@ -795,8 +785,8 @@ void main() {
         tester.view.physicalSize = Size(width, width == 390 ? 844 : 800);
         addTearDown(tester.view.reset);
         final menu = SeedOverlayController();
-        final confirm = FocusNode(debugLabel: 'round4-confirm');
-        final trigger = FocusNode(debugLabel: 'round4-menu-trigger');
+        final confirm = FocusNode(debugLabel: 'confirm');
+        final trigger = FocusNode(debugLabel: 'menu-trigger');
         addTearDown(() {
           menu.dispose();
           confirm.dispose();
@@ -971,5 +961,226 @@ void main() {
         expect(find.text('Item'), findsNothing);
       });
     }
+  });
+
+  group('open focus and group semantics', () {
+    FocusNode? itemFocus(WidgetTester tester, String label) => tester
+        .widget<SeedPressable>(
+          find
+              .ancestor(
+                of: find.text(label),
+                matching: find.byType(SeedPressable),
+              )
+              .first,
+        )
+        .focusNode;
+    testWidgets(
+      'reopening during exit with ArrowUp focuses and reveals last enabled item',
+      (tester) async {
+        final triggerFocus = FocusNode();
+        addTearDown(triggerFocus.dispose);
+        await tester.pumpWidget(
+          seedAppCentered(
+            SeedMenuTrigger(
+              triggerBuilder: (_, open, toggle) => TextButton(
+                focusNode: triggerFocus,
+                onPressed: toggle,
+                child: const Text('Open'),
+              ),
+              builder: (_) => SeedMenu(
+                maxHeight: 120,
+                groups: [
+                  SeedMenuGroupData(
+                    items: [
+                      for (var i = 0; i < 12; i++)
+                        SeedMenuItemData(label: 'Item $i', enabled: i != 11),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pump();
+        // The portal remains mounted during the exit animation.
+        expect(find.byType(SeedMenu), findsOneWidget);
+        triggerFocus.requestFocus();
+        await tester.pump();
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+        await tester.pump();
+        await tester.pumpAndSettle();
+        expect(itemFocus(tester, 'Item 10')?.hasPrimaryFocus, isTrue);
+        final scroll = tester.state<ScrollableState>(
+          find
+              .descendant(
+                of: find.byType(SeedMenu),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
+        expect(scroll.position.pixels, greaterThan(0));
+        final viewport = tester.getRect(find.byType(SeedMenu));
+        expect(
+          viewport.contains(tester.getCenter(find.text('Item 10'))),
+          isTrue,
+        );
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pump();
+        triggerFocus.requestFocus();
+        await tester.pump();
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await tester.pumpAndSettle();
+        expect(itemFocus(tester, 'Item 0')?.hasPrimaryFocus, isTrue);
+        expect(scroll.position.pixels, 0);
+      },
+    );
+
+    testWidgets('retained anchored menu focuses on every open transition', (
+      tester,
+    ) async {
+      final controller = SeedOverlayController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        seedAppCentered(
+          SeedAnchoredOverlay(
+            controller: controller,
+            lazyMount: false,
+            unmountOnExit: false,
+            triggerBuilder: (_, open, toggle) =>
+                TextButton(onPressed: toggle, child: const Text('Open')),
+            overlayBuilder: (_) => const SeedMenu(
+              groups: [
+                SeedMenuGroupData(items: [SeedMenuItemData(label: 'First')]),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      controller.open();
+      await tester.pumpAndSettle();
+      expect(itemFocus(tester, 'First')?.hasPrimaryFocus, isTrue);
+      controller.close();
+      await tester.pumpAndSettle();
+      controller.open();
+      await tester.pumpAndSettle();
+      expect(itemFocus(tester, 'First')?.hasPrimaryFocus, isTrue);
+    });
+
+    testWidgets(
+      'menu groups expose a label and their item semantics as children',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+        await tester.pumpWidget(
+          seedAppCentered(
+            const SeedMenu(
+              groups: [
+                SeedMenuGroupData(
+                  label: 'Edit actions',
+                  items: [SeedMenuItemData(label: 'Copy')],
+                ),
+                SeedMenuGroupData(
+                  label: 'Danger actions',
+                  items: [SeedMenuItemData(label: 'Delete')],
+                ),
+              ],
+            ),
+          ),
+        );
+        for (final (group, item) in [
+          ('Edit actions', 'Copy'),
+          ('Danger actions', 'Delete'),
+        ]) {
+          final node = tester.getSemantics(find.bySemanticsLabel(group));
+          final children = <SemanticsNode>[];
+          node.visitChildren((child) {
+            children.add(child);
+            return true;
+          });
+          expect(
+            children.any(
+              (child) =>
+                  child.getSemanticsData().label.contains(item) &&
+                  child.getSemanticsData().role == SemanticsRole.menuItem,
+            ),
+            isTrue,
+          );
+        }
+        handle.dispose();
+      },
+    );
+  });
+
+  group('keyboard opening', () {
+    for (final (key, item) in [
+      (LogicalKeyboardKey.arrowDown, 'first'),
+      (LogicalKeyboardKey.arrowUp, 'last'),
+    ]) {
+      testWidgets('menu opens with ${key.keyLabel} and activates $item', (
+        tester,
+      ) async {
+        final selected = <String>[];
+        await tester.pumpWidget(
+          seedAppTopLeft(
+            SeedMenuTrigger(
+              triggerBuilder: (_, open, toggle) =>
+                  TextButton(onPressed: toggle, child: const Text('Open')),
+              builder: (_) => SeedMenu(
+                groups: [
+                  SeedMenuGroupData(
+                    items: [
+                      const SeedMenuItemData(label: 'Disabled', enabled: false),
+                      SeedMenuItemData(
+                        label: 'First',
+                        onTap: () => selected.add('first'),
+                      ),
+                      SeedMenuItemData(
+                        label: 'Last',
+                        onTap: () => selected.add('last'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pump();
+        await tester.sendKeyEvent(key);
+        await tester.pumpAndSettle();
+        expect(find.byType(SeedMenu), findsOneWidget);
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+        expect(selected, [item]);
+        expect(find.byType(SeedMenu), findsNothing);
+      });
+    }
+  });
+
+  group('menu sheet item height', () {
+    testWidgets('menu sheet items keep the official 52px minimum height', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        koreanAppTopLeft(
+          SeedMenuSheet(
+            groups: [
+              SeedMenuGroupData(items: [SeedMenuItemData(label: '추가')]),
+            ],
+          ),
+          width: 390,
+        ),
+      );
+      final item = find.ancestor(
+        of: find.text('추가'),
+        matching: find.byType(InkWell),
+      );
+      expect(tester.getSize(item.first).height, greaterThanOrEqualTo(52));
+    });
   });
 }

@@ -4,15 +4,7 @@ import 'package:flutter/gestures.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
-Widget host(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(
-    body: Center(child: SizedBox(width: 360, child: child)),
-  ),
-);
+import 'support/seed_test_host.dart';
 
 void main() {
   test(
@@ -92,7 +84,7 @@ void main() {
       String? value;
       late StateSetter update;
       await tester.pumpWidget(
-        host(
+        koreanAppNarrow(
           StatefulBuilder(
             builder: (context, setState) {
               update = setState;
@@ -133,7 +125,7 @@ void main() {
   testWidgets('controlled empty radio group rejects proposals', (tester) async {
     final proposals = <String?>[];
     await tester.pumpWidget(
-      host(
+      koreanAppNarrow(
         SeedRadioGroup<String>(
           controlled: true,
           defaultValue: 'a',
@@ -168,7 +160,7 @@ void main() {
     Object? value;
     late StateSetter update;
     await tester.pumpWidget(
-      host(
+      koreanAppNarrow(
         StatefulBuilder(
           builder: (context, setState) {
             update = setState;
@@ -207,7 +199,7 @@ void main() {
   ) async {
     final proposals = <String>[];
     await tester.pumpWidget(
-      host(
+      koreanAppNarrow(
         SeedSegmentedControl<String>(
           controlled: true,
           defaultValue: 'a',
@@ -236,7 +228,7 @@ void main() {
       final cells = <int, SeedDateCellInfo>{};
       final seed = DateTime(2026, 4, 1);
       await tester.pumpWidget(
-        host(
+        koreanAppNarrow(
           SeedDatePicker(
             mode: mode,
             controlled: true,
@@ -287,7 +279,7 @@ void main() {
         late StateSetter update;
         final cells = <int, SeedDateCellInfo>{};
         await tester.pumpWidget(
-          host(
+          koreanAppNarrow(
             StatefulBuilder(
               builder: (context, setState) {
                 update = setState;
@@ -326,7 +318,7 @@ void main() {
     late StateSetter update;
     final cells = <int, SeedDateCellInfo>{};
     await tester.pumpWidget(
-      host(
+      koreanAppNarrow(
         StatefulBuilder(
           builder: (context, setState) {
             update = setState;
@@ -365,7 +357,7 @@ void main() {
   ) async {
     final proposals = <Set<int>>[];
     await tester.pumpWidget(
-      host(
+      koreanAppNarrow(
         SeedSelect<int>(
           multiple: true,
           controlled: true,
@@ -410,7 +402,7 @@ void main() {
       var locale = const Locale('en', 'US');
       late StateSetter update;
       await tester.pumpWidget(
-        host(
+        koreanAppNarrow(
           StatefulBuilder(
             builder: (context, setState) {
               update = setState;
@@ -445,7 +437,7 @@ void main() {
     final controller = SeedTabsController();
     addTearDown(controller.dispose);
     await tester.pumpWidget(
-      host(
+      koreanAppNarrow(
         SeedTabsView(
           selectedIndex: 0,
           controller: controller,
@@ -472,7 +464,7 @@ void main() {
       final edits = <String>[];
       String? saved;
       await tester.pumpWidget(
-        host(
+        koreanAppNarrow(
           Form(
             key: form,
             child: SeedTextField(
@@ -494,7 +486,7 @@ void main() {
       await tester.pump();
       expect(controller.text, 'initial');
       expect(form.currentState!.validate(), isTrue);
-      await tester.pumpWidget(host(const SizedBox()));
+      await tester.pumpWidget(koreanAppNarrow(const SizedBox()));
       // The widget does not dispose a caller-owned controller.
       controller.text = 'still usable';
     },
@@ -508,7 +500,7 @@ void main() {
       var open = true;
       late StateSetter update;
       await tester.pumpWidget(
-        host(
+        koreanAppNarrow(
           StatefulBuilder(
             builder: (context, setState) {
               update = setState;
@@ -557,7 +549,7 @@ void main() {
   ) async {
     final events = <(bool, SeedOverlayDismissReason)>[];
     await tester.pumpWidget(
-      host(
+      koreanAppNarrow(
         SeedHelpBubbleTooltip(
           open: false,
           openDelay: Duration.zero,

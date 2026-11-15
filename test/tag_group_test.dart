@@ -11,6 +11,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
 import 'support/seed_test_fonts.dart';
+import 'support/seed_test_host.dart';
+
 
 const _labels = ['광고', '끌올 3시간 전', '서초4동'];
 
@@ -55,8 +57,6 @@ Widget _host({
   ),
 );
 
-const _strict = bool.fromEnvironment('SEED_PHASE4B_TAG_REACT_STRICT');
-
 Widget _screen(
   double width,
   SeedTagGroupSize size,
@@ -95,19 +95,6 @@ Widget _screen(
     ),
   );
 }
-
-Widget host(Widget child) => MaterialApp(
-  locale: const Locale('ko'),
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
-
-Widget hostFghFollowupRegression(Widget child) => MaterialApp(
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: child),
-);
 
 void main() {
   setUpAll(loadSeedTestFonts);
@@ -225,7 +212,7 @@ void main() {
                 final semantics =
                     tester
                         .binding
-                                // ignore: deprecated_member_use
+                        // ignore: deprecated_member_use
                         .pipelineOwner
                         .semanticsOwner
                         ?.rootSemanticsNode
@@ -252,7 +239,7 @@ void main() {
                   lessThanOrEqualTo(width + .1),
                 );
                 if (override) expect(observed['hasOverrideAX'], isTrue);
-                if (_strict && width == 600 && scale == 1) {
+                if (width == 600 && scale == 1) {
                   // Official React 220px demo renders all three short labels
                   // completely; a 600px group cannot legitimately clip them.
                   expect(
@@ -278,7 +265,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        host(
+        koreanAppCentered(
           MediaQuery(
             data: const MediaQueryData(textScaler: TextScaler.linear(2)),
             child: const SizedBox(
@@ -304,7 +291,7 @@ void main() {
         var separatorWidth = 20.0;
         late StateSetter update;
         await tester.pumpWidget(
-          hostFghFollowupRegression(
+          seedApp(
             StatefulBuilder(
               builder: (context, setState) {
                 update = setState;
@@ -343,5 +330,86 @@ void main() {
         );
       },
     );
+  });
+
+  group('tag actions', () {
+    Widget host(Widget child) => MaterialApp(
+      theme: SeedThemeData.light().toThemeData(),
+      home: Scaffold(
+        body: Center(child: SizedBox(width: 350, child: child)),
+      ),
+    );
+
+    testWidgets('tag suffix remains an independently accessible action', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      var presses = 0;
+      await tester.pumpWidget(
+        host(
+          SeedTagGroup(
+            items: [
+              SeedTagItem(
+                label: 'Location',
+                semanticsLabel: 'Place',
+                suffix: IconButton(
+                  onPressed: () => presses++,
+                  tooltip: 'Edit place',
+                  icon: const Icon(Icons.edit),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+      final nodes = tester.semantics.simulatedAccessibilityTraversal();
+      expect(nodes.any((n) => n.label.contains('Place')), isTrue);
+      final action = nodes.singleWhere(
+        (n) => n.getSemanticsData().tooltip.contains('Edit place'),
+      );
+      expect(action.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+      tester.binding.renderViews.single.owner!.semanticsOwner!.performAction(
+        action.id,
+        SemanticsAction.tap,
+      );
+      await tester.pump();
+      expect(presses, 1);
+      semantics.dispose();
+    });
+
+    testWidgets('custom tag label retains an embedded action', (tester) async {
+      final semantics = tester.ensureSemantics();
+      var presses = 0;
+      await tester.pumpWidget(
+        host(
+          SeedTagGroup(
+            items: [
+              SeedTagItem(
+                label: 'Location',
+                semanticsLabel: 'Place',
+                labelWidget: TextButton(
+                  onPressed: () => presses++,
+                  child: const Text('Change place'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+      final nodes = tester.semantics.simulatedAccessibilityTraversal();
+      expect(nodes.any((n) => n.label.contains('Place')), isTrue);
+      final action = nodes.singleWhere(
+        (n) =>
+            n.label.contains('Change place') &&
+            n.getSemanticsData().hasAction(SemanticsAction.tap),
+      );
+      tester.binding.renderViews.single.owner!.semanticsOwner!.performAction(
+        action.id,
+        SemanticsAction.tap,
+      );
+      await tester.pump();
+      expect(presses, 1);
+      semantics.dispose();
+    });
   });
 }

@@ -1,15 +1,11 @@
-// Round3 isolated PUBLIC API probe: overlay popup Escape vs parent Navigator.
-// This is an observational Flutter widget test, not a React browser PASS.
-// Run optional strict mode with --dart-define=ROUND3_OVERLAY_REACT_STRICT=true
-// to enforce React's child-only first Escape contract separately.
+// Escape in a nested overlay popup closes only that popup and leaves the
+// parent route in place.
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
 import 'support/seed_test_fonts.dart';
-
-const _strict = bool.fromEnvironment('ROUND3_OVERLAY_REACT_STRICT');
 
 class _RouteWatch extends NavigatorObserver {
   int pushed = 0;
@@ -49,13 +45,13 @@ void main() {
               final observer = _RouteWatch();
               final openEvents = <String>[];
               final parentFocus = FocusNode(
-                debugLabel: 'round3-parent-trigger-$kind-$width',
+                debugLabel: 'parent-trigger-$kind-$width',
               );
               final childFocus = FocusNode(
-                debugLabel: 'round3-child-trigger-$kind-$width',
+                debugLabel: 'child-trigger-$kind-$width',
               );
               final innerActionFocus = FocusNode(
-                debugLabel: 'round3-inner-action-$kind-$width',
+                debugLabel: 'inner-action-$kind-$width',
               );
               addTearDown(() {
                 parentFocus.dispose();
@@ -150,14 +146,11 @@ void main() {
               await tester.tap(find.text('R3 open popup'));
               await tester.pumpAndSettle();
               expect(find.text('R3 inner action'), findsOneWidget);
-              final navigatorAfterChild = observer.active.length;
               if (focusMode == 'explicit') {
                 innerActionFocus.requestFocus();
                 await tester.pump();
               }
               final innerActionFocused = innerActionFocus.hasFocus;
-              final primaryBeforeEscape =
-                  FocusManager.instance.primaryFocus?.debugLabel;
               await tester.sendKeyEvent(LogicalKeyboardKey.escape);
               await tester.pumpAndSettle();
               final parentStillVisible = find
@@ -174,64 +167,36 @@ void main() {
                   .isNotEmpty;
               final navigatorAfterEscape = observer.active.length;
               final innerTriggerFocused = childFocus.hasFocus;
-              final primaryAfterFirst =
-                  FocusManager.instance.primaryFocus?.debugLabel;
               await tester.sendKeyEvent(LogicalKeyboardKey.escape);
               await tester.pumpAndSettle();
-              final navigatorAfterSecondEscape = observer.active.length;
-              final parentAfterSecondEscape = find
-                  .text(
-                    kind == 'dialog'
-                        ? 'R3 parent alive dialog'
-                        : 'R3 parent alive sheet',
-                  )
-                  .evaluate()
-                  .isNotEmpty;
-              // ignore: avoid_print
-              print(
-                'ROUND3_PUBLIC,$kind,width=$width,focusMode=$focusMode,mountMode=$mountMode,routeParent=$navigatorAfterParent,'
-                'routeChild=$navigatorAfterChild,routeEscape=$navigatorAfterEscape,'
-                'routeSecondEscape=$navigatorAfterSecondEscape,parentSecondEscape=$parentAfterSecondEscape,'
-                'pushed=${observer.pushed},popped=${observer.popped},'
-                'parentVisible=$parentStillVisible,childVisible=$innerStillVisible,'
-                'innerActionFocusedBefore=$innerActionFocused,'
-                'primaryBefore=$primaryBeforeEscape,'
-                'triggerFocusedAfter=$innerTriggerFocused,'
-                'parentTriggerFocus=${parentFocus.hasFocus},'
-                'primaryAfterFirst=$primaryAfterFirst,primary=${FocusManager.instance.primaryFocus?.debugLabel},'
-                'openEvents=${openEvents.join(";")}',
-              );
               expect(tester.takeException(), isNull);
-              if (_strict) {
-                if (focusMode == 'explicit') {
-                  expect(
-                    innerActionFocused,
-                    isTrue,
-                    reason: 'Real child FocusNode starts Escape',
-                  );
-                }
+              if (focusMode == 'explicit') {
                 expect(
-                  innerStillVisible,
-                  isFalse,
-                  reason: 'One Escape closes child popup',
-                );
-                expect(
-                  parentStillVisible,
+                  innerActionFocused,
                   isTrue,
-                  reason:
-                      'React retains parent Navigator layer after one Escape',
-                );
-                expect(
-                  navigatorAfterEscape,
-                  navigatorAfterParent,
-                  reason: 'The parent Navigator route must not be popped by child Escape',
-                );
-                expect(
-                  innerTriggerFocused,
-                  isTrue,
-                  reason: 'React expects focus returned to the child trigger',
+                  reason: 'Real child FocusNode starts Escape',
                 );
               }
+              expect(
+                innerStillVisible,
+                isFalse,
+                reason: 'One Escape closes child popup',
+              );
+              expect(
+                parentStillVisible,
+                isTrue,
+                reason: 'React retains parent Navigator layer after one Escape',
+              );
+              expect(
+                navigatorAfterEscape,
+                navigatorAfterParent,
+                reason: 'The parent Navigator route must not be popped by child Escape',
+              );
+              expect(
+                innerTriggerFocused,
+                isTrue,
+                reason: 'React expects focus returned to the child trigger',
+              );
             },
           );
         }
@@ -320,10 +285,6 @@ void main() {
 
         await tester.sendKeyEvent(LogicalKeyboardKey.escape);
         await tester.pumpAndSettle();
-        // ignore: avoid_print
-        print(
-          'R13_TRACKED_MENU_ESCAPE width=$width open=${controller.isOpen} events=$events',
-        );
         expect(
           controller.isOpen,
           isFalse,
@@ -436,7 +397,7 @@ void main() {
     );
   }
 
-  // Round13 post-8788661: a controlled multiple->single Accordion can hide
+  // A controlled multiple->single Accordion can hide
   // its still-open Menu. React keeps the trigger programmatically focusable
   // without exposing other hidden content to pointer/AX/Tab traversal.
   for (final width in [390.0, 800.0]) {

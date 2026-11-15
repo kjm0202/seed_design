@@ -658,7 +658,7 @@ void main() {
                     label: 'Parent',
                     icon: Icons.settings,
                     subItems: [
-                      // 12-04: no onTap, not disabled.
+                      // No onTap, not disabled.
                       const SeedSideNavSubItem(id: 'plain', label: 'Plain'),
                       SeedSideNavSubItem(
                         id: 'child',
@@ -736,9 +736,7 @@ void main() {
       await tester.pumpAndSettle();
     });
 
-    testWidgets('a sub item without onTap stays enabled (12-04)', (
-      tester,
-    ) async {
+    testWidgets('a sub item without onTap stays enabled', (tester) async {
       final handle = tester.ensureSemantics();
       await tester.pumpWidget(sidebar());
       await tester.tap(find.byIcon(Icons.settings));

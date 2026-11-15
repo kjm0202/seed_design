@@ -70,10 +70,7 @@ Future<void> openForm(WidgetTester tester, {required double width}) async {
 
 // Flutter consumer-contract probes for the retained Form/Attachment INC cases.
 // These do not certify a native OS IME, real file chooser or React browser run.
-Future<void> openFormFormAttachmentContract(
-  WidgetTester tester,
-  Size size,
-) async {
+Future<void> openAttachmentForm(WidgetTester tester, Size size) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
@@ -482,7 +479,7 @@ void main() {
       testWidgets(
         'form phone then sms: both JSON payloads and fresh entry $size',
         (tester) async {
-          await openFormFormAttachmentContract(tester, size);
+          await openAttachmentForm(tester, size);
           final group = tester.widget<SeedRadioGroup<String>>(
             find.byType(SeedRadioGroup<String>),
           );
@@ -548,7 +545,7 @@ void main() {
       testWidgets(
         'form invalid draft blur then corrected email in JSON $size',
         (tester) async {
-          await openFormFormAttachmentContract(tester, size);
+          await openAttachmentForm(tester, size);
           await tester.enterText(textInputAt(0), '테스트 사용자');
           await tester.enterText(textInputAt(1), 'not-an-email');
           tester.testTextInput.hide();
@@ -641,242 +638,258 @@ void main() {
         ('/attachment-field', 'AttachmentDropzoneReorderable (all files)'),
         ('/attachment-display-field', 'AttachmentDisplayReorderable'),
       ]) {
-        testWidgets('$label keeps order and focus across keyboard cancel/drop', (
-          tester,
-        ) async {
-          await _open(tester, route);
-          final fieldFinder = find.byWidgetPredicate(
-            (widget) =>
-                widget is SeedAttachmentDisplayField && widget.label == label,
-          );
-          final field = tester.widget<SeedAttachmentDisplayField>(fieldFinder);
-          final controller = field.controller!;
-          controller.addEntries([
-            for (var i = 0; i < 3; i++)
-              SeedAttachmentItem(
-                id: 'keyboard-$i',
-                name: 'keyboard-$i.pdf',
+        testWidgets(
+          '$label keeps order and focus across keyboard cancel/drop',
+          (tester) async {
+            await _open(tester, route);
+            final fieldFinder = find.byWidgetPredicate(
+              (widget) =>
+                  widget is SeedAttachmentDisplayField && widget.label == label,
+            );
+            final field = tester.widget<SeedAttachmentDisplayField>(
+              fieldFinder,
+            );
+            final controller = field.controller!;
+            controller.addEntries([
+              for (var i = 0; i < 3; i++)
+                SeedAttachmentItem(
+                  id: 'keyboard-$i',
+                  name: 'keyboard-$i.pdf',
+                  type: SeedAttachmentType.file,
+                ),
+            ]);
+            await tester.pumpAndSettle();
+            final item = find.byKey(const ValueKey('keyboard-0'));
+            await tester.ensureVisible(item);
+            await tester.pumpAndSettle();
+            final node = _keyboardReorderNode(tester, item);
+            await _tabUntilFocused(tester, node);
+            final filename = find.bySemanticsLabel('keyboard-0.pdf');
+            final semantics = tester.ensureSemantics();
+            await tester.pump();
+            expect(filename, findsOneWidget);
+            final start = SeedLocalizations.label(
+              tester.element(item),
+              SeedLabel.reorderStartHint,
+            );
+            String moving(int position) => SeedLocalizations.label(
+              tester.element(item),
+              SeedLabel.reorderMovingHint,
+            ).replaceAll('{position}', '$position');
+            expect(_reorderHint(tester, item).hint, start);
+            expect(
+              _semanticsText(_reorderHint(tester, item)),
+              contains('keyboard-0.pdf'),
+            );
+            await tester.sendKeyEvent(LogicalKeyboardKey.space);
+            await tester.pumpAndSettle();
+            expect(_reorderHint(tester, item).hint, moving(1));
+            await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+            await tester.pumpAndSettle();
+            expect(find.text('2 / 3'), findsOneWidget);
+            expect(_reorderHint(tester, item).hint, moving(2));
+            await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+            await tester.pumpAndSettle();
+            expect(controller.items.first.id, 'keyboard-0');
+            expect(find.text('2 / 3'), findsNothing);
+            expect(node.hasPrimaryFocus, isTrue);
+            expect(_reorderHint(tester, item).hint, start);
+
+            await tester.sendKeyEvent(LogicalKeyboardKey.space);
+            await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+            await tester.sendKeyEvent(LogicalKeyboardKey.space);
+            await tester.pumpAndSettle();
+            expect(controller.items.map((item) => item.id), [
+              'keyboard-1',
+              'keyboard-0',
+              'keyboard-2',
+            ]);
+            expect(node.hasPrimaryFocus, isTrue);
+            expect(_reorderHint(tester, item).hint, start);
+            semantics.dispose();
+            expect(tester.takeException(), isNull);
+          },
+        );
+
+        testWidgets(
+          '$label skips disabled and readOnly items for keyboard reorder',
+          (tester) async {
+            await _open(tester, route);
+            final fieldFinder = find.byWidgetPredicate(
+              (widget) =>
+                  widget is SeedAttachmentDisplayField && widget.label == label,
+            );
+            final controller = tester
+                .widget<SeedAttachmentDisplayField>(fieldFinder)
+                .controller!;
+            final before = controller.items.map((item) => item.id).toList();
+            controller.addEntries([
+              const SeedAttachmentItem(
+                id: 'b1-movable',
+                name: 'b1-movable.pdf',
+                type: SeedAttachmentType.file,
+                status: SeedAttachmentStatus.error,
+              ),
+              const SeedAttachmentItem(
+                id: 'b1-disabled',
+                name: 'b1-disabled.pdf',
+                type: SeedAttachmentType.file,
+                enabled: false,
+              ),
+              const SeedAttachmentItem(
+                id: 'b1-readonly',
+                name: 'b1-readonly.pdf',
+                type: SeedAttachmentType.file,
+                readOnly: true,
+              ),
+              const SeedAttachmentItem(
+                id: 'b1-tail',
+                name: 'b1-tail.pdf',
                 type: SeedAttachmentType.file,
               ),
-          ]);
-          await tester.pumpAndSettle();
-          final item = find.byKey(const ValueKey('keyboard-0'));
-          await tester.ensureVisible(item);
-          await tester.pumpAndSettle();
-          final node = _keyboardReorderNode(tester, item);
-          await _tabUntilFocused(tester, node);
-          final filename = find.bySemanticsLabel('keyboard-0.pdf');
-          final semantics = tester.ensureSemantics();
-          await tester.pump();
-          expect(filename, findsOneWidget);
-          final start = SeedLocalizations.label(
-            tester.element(item),
-            SeedLabel.reorderStartHint,
-          );
-          String moving(int position) => SeedLocalizations.label(
-            tester.element(item),
-            SeedLabel.reorderMovingHint,
-          ).replaceAll('{position}', '$position');
-          expect(_reorderHint(tester, item).hint, start);
-          expect(
-            _semanticsText(_reorderHint(tester, item)),
-            contains('keyboard-0.pdf'),
-          );
-          await tester.sendKeyEvent(LogicalKeyboardKey.space);
-          await tester.pumpAndSettle();
-          expect(_reorderHint(tester, item).hint, moving(1));
-          await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
-          await tester.pumpAndSettle();
-          expect(find.text('2 / 3'), findsOneWidget);
-          expect(_reorderHint(tester, item).hint, moving(2));
-          await tester.sendKeyEvent(LogicalKeyboardKey.escape);
-          await tester.pumpAndSettle();
-          expect(controller.items.first.id, 'keyboard-0');
-          expect(find.text('2 / 3'), findsNothing);
-          expect(node.hasPrimaryFocus, isTrue);
-          expect(_reorderHint(tester, item).hint, start);
-
-          await tester.sendKeyEvent(LogicalKeyboardKey.space);
-          await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
-          await tester.sendKeyEvent(LogicalKeyboardKey.space);
-          await tester.pumpAndSettle();
-          expect(controller.items.map((item) => item.id), [
-            'keyboard-1',
-            'keyboard-0',
-            'keyboard-2',
-          ]);
-          expect(node.hasPrimaryFocus, isTrue);
-          expect(_reorderHint(tester, item).hint, start);
-          semantics.dispose();
-          expect(tester.takeException(), isNull);
-        });
-
-        testWidgets('$label skips disabled and readOnly items for keyboard reorder', (
-          tester,
-        ) async {
-          await _open(tester, route);
-          final fieldFinder = find.byWidgetPredicate(
-            (widget) =>
-                widget is SeedAttachmentDisplayField && widget.label == label,
-          );
-          final controller = tester
-              .widget<SeedAttachmentDisplayField>(fieldFinder)
-              .controller!;
-          final before = controller.items.map((item) => item.id).toList();
-          controller.addEntries([
-            const SeedAttachmentItem(
-              id: 'b1-movable',
-              name: 'b1-movable.pdf',
-              type: SeedAttachmentType.file,
-              status: SeedAttachmentStatus.error,
-            ),
-            const SeedAttachmentItem(
-              id: 'b1-disabled',
-              name: 'b1-disabled.pdf',
-              type: SeedAttachmentType.file,
-              enabled: false,
-            ),
-            const SeedAttachmentItem(
-              id: 'b1-readonly',
-              name: 'b1-readonly.pdf',
-              type: SeedAttachmentType.file,
-              readOnly: true,
-            ),
-            const SeedAttachmentItem(
-              id: 'b1-tail',
-              name: 'b1-tail.pdf',
-              type: SeedAttachmentType.file,
-            ),
-          ]);
-          await tester.pumpAndSettle();
-          List<String> ids() => controller.items.map((item) => item.id).toList();
-          final added = ['b1-movable', 'b1-disabled', 'b1-readonly', 'b1-tail'];
-          expect(ids(), [...before, ...added]);
-          Finder item(String id) => find.descendant(
-            of: fieldFinder,
-            matching: find.byKey(ValueKey(id)),
-          );
-          await tester.ensureVisible(item('b1-movable'));
-          await tester.pumpAndSettle();
-          final keyboardHandle = find.byWidgetPredicate(
-            (widget) => widget is Focus && widget.onKeyEvent != null,
-          );
-          // Locked items get no keyboard reorder handle and no hint.
-          for (final id in ['b1-disabled', 'b1-readonly']) {
-            final handle = find.ancestor(of: item(id), matching: keyboardHandle);
-            expect(
-              handle.evaluate().any(
-                (element) => find
-                    .descendant(
-                      of: find.byElementPredicate((e) => e == element),
-                      matching: item('b1-movable'),
-                    )
-                    .evaluate()
-                    .isEmpty,
-              ),
-              isFalse,
-              reason: '$id has its own keyboard handle',
-            );
-          }
-
-          final movable = _keyboardReorderNode(tester, item('b1-movable'));
-          // The lazy list builds the tail only once it scrolls into view.
-          bool tailFocused() =>
-              item('b1-tail').evaluate().isNotEmpty &&
-              _keyboardReorderNode(tester, item('b1-tail')).hasPrimaryFocus;
-          await _tabUntilFocused(tester, movable);
-          // Real Tab presses from the movable item reach the tail without
-          // stopping inside the locked items.
-          for (var i = 0; i < 10 && !tailFocused(); i++) {
-            await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+            ]);
             await tester.pumpAndSettle();
-            final focused = FocusManager.instance.primaryFocus!.context!;
+            List<String> ids() =>
+                controller.items.map((item) => item.id).toList();
+            final added = [
+              'b1-movable',
+              'b1-disabled',
+              'b1-readonly',
+              'b1-tail',
+            ];
+            expect(ids(), [...before, ...added]);
+            Finder item(String id) => find.descendant(
+              of: fieldFinder,
+              matching: find.byKey(ValueKey(id)),
+            );
+            await tester.ensureVisible(item('b1-movable'));
+            await tester.pumpAndSettle();
+            final keyboardHandle = find.byWidgetPredicate(
+              (widget) => widget is Focus && widget.onKeyEvent != null,
+            );
+            // Locked items get no keyboard reorder handle and no hint.
             for (final id in ['b1-disabled', 'b1-readonly']) {
-              var inside = false;
-              focused.visitAncestorElements((element) {
-                if (element.widget.key == ValueKey(id)) inside = true;
-                return !inside;
-              });
-              expect(inside, isFalse, reason: 'Tab skips $id');
-            }
-          }
-          expect(tailFocused(), isTrue);
-          expect(ids(), [...before, ...added]);
-
-          // The movable neighbour still reorders past the locked items.
-          await tester.sendKeyEvent(LogicalKeyboardKey.space);
-          await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
-          await tester.sendKeyEvent(LogicalKeyboardKey.space);
-          await tester.pumpAndSettle();
-          expect(ids(), [
-            ...before,
-            'b1-movable',
-            'b1-disabled',
-            'b1-tail',
-            'b1-readonly',
-          ]);
-
-          // Retry and removal still work on the movable item.
-          await tester.scrollUntilVisible(
-            item('b1-movable'),
-            -100,
-            scrollable: find
-                .descendant(of: fieldFinder, matching: find.byType(Scrollable))
-                .first,
-          );
-          await tester.pumpAndSettle();
-          final retry = find.descendant(
-            of: item('b1-movable'),
-            matching: find.bySemanticsLabel(
-              SeedLocalizations.label(
-                tester.element(item('b1-movable')),
-                SeedLabel.retryUpload,
-              ),
-            ),
-          );
-          final semantics = tester.ensureSemantics();
-          await tester.pump();
-          await tester.tap(retry);
-          await tester.pump();
-          expect(
-            controller.items
-                .firstWhere((entry) => entry.id == 'b1-movable')
-                .status,
-            SeedAttachmentStatus.uploading,
-          );
-          // Let the simulated upload finish.
-          await tester.pump(const Duration(seconds: 2));
-          await tester.pumpAndSettle();
-          final remove = find.descendant(
-            of: item('b1-movable'),
-            matching: find.bySemanticsLabel(
-              SeedLocalizations.label(
-                tester.element(item('b1-movable')),
-                SeedLabel.deleteFile,
-              ),
-            ),
-          );
-          await tester.tap(remove.first);
-          await tester.pumpAndSettle();
-          expect(ids(), [...before, 'b1-disabled', 'b1-tail', 'b1-readonly']);
-          // Locked items keep no remove action.
-          for (final id in ['b1-disabled', 'b1-readonly']) {
-            expect(
-              find.descendant(
+              final handle = find.ancestor(
                 of: item(id),
-                matching: find.bySemanticsLabel(
-                  SeedLocalizations.label(
-                    tester.element(item(id)),
-                    SeedLabel.deleteFile,
-                  ),
+                matching: keyboardHandle,
+              );
+              expect(
+                handle.evaluate().any(
+                  (element) => find
+                      .descendant(
+                        of: find.byElementPredicate((e) => e == element),
+                        matching: item('b1-movable'),
+                      )
+                      .evaluate()
+                      .isEmpty,
+                ),
+                isFalse,
+                reason: '$id has its own keyboard handle',
+              );
+            }
+
+            final movable = _keyboardReorderNode(tester, item('b1-movable'));
+            // The lazy list builds the tail only once it scrolls into view.
+            bool tailFocused() =>
+                item('b1-tail').evaluate().isNotEmpty &&
+                _keyboardReorderNode(tester, item('b1-tail')).hasPrimaryFocus;
+            await _tabUntilFocused(tester, movable);
+            // Real Tab presses from the movable item reach the tail without
+            // stopping inside the locked items.
+            for (var i = 0; i < 10 && !tailFocused(); i++) {
+              await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+              await tester.pumpAndSettle();
+              final focused = FocusManager.instance.primaryFocus!.context!;
+              for (final id in ['b1-disabled', 'b1-readonly']) {
+                var inside = false;
+                focused.visitAncestorElements((element) {
+                  if (element.widget.key == ValueKey(id)) inside = true;
+                  return !inside;
+                });
+                expect(inside, isFalse, reason: 'Tab skips $id');
+              }
+            }
+            expect(tailFocused(), isTrue);
+            expect(ids(), [...before, ...added]);
+
+            // The movable neighbour still reorders past the locked items.
+            await tester.sendKeyEvent(LogicalKeyboardKey.space);
+            await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+            await tester.sendKeyEvent(LogicalKeyboardKey.space);
+            await tester.pumpAndSettle();
+            expect(ids(), [
+              ...before,
+              'b1-movable',
+              'b1-disabled',
+              'b1-tail',
+              'b1-readonly',
+            ]);
+
+            // Retry and removal still work on the movable item.
+            await tester.scrollUntilVisible(
+              item('b1-movable'),
+              -100,
+              scrollable: find
+                  .descendant(
+                    of: fieldFinder,
+                    matching: find.byType(Scrollable),
+                  )
+                  .first,
+            );
+            await tester.pumpAndSettle();
+            final retry = find.descendant(
+              of: item('b1-movable'),
+              matching: find.bySemanticsLabel(
+                SeedLocalizations.label(
+                  tester.element(item('b1-movable')),
+                  SeedLabel.retryUpload,
                 ),
               ),
-              findsNothing,
             );
-          }
-          semantics.dispose();
-          expect(tester.takeException(), isNull);
-        });
+            final semantics = tester.ensureSemantics();
+            await tester.pump();
+            await tester.tap(retry);
+            await tester.pump();
+            expect(
+              controller.items
+                  .firstWhere((entry) => entry.id == 'b1-movable')
+                  .status,
+              SeedAttachmentStatus.uploading,
+            );
+            // Let the simulated upload finish.
+            await tester.pump(const Duration(seconds: 2));
+            await tester.pumpAndSettle();
+            final remove = find.descendant(
+              of: item('b1-movable'),
+              matching: find.bySemanticsLabel(
+                SeedLocalizations.label(
+                  tester.element(item('b1-movable')),
+                  SeedLabel.deleteFile,
+                ),
+              ),
+            );
+            await tester.tap(remove.first);
+            await tester.pumpAndSettle();
+            expect(ids(), [...before, 'b1-disabled', 'b1-tail', 'b1-readonly']);
+            // Locked items keep no remove action.
+            for (final id in ['b1-disabled', 'b1-readonly']) {
+              expect(
+                find.descendant(
+                  of: item(id),
+                  matching: find.bySemanticsLabel(
+                    SeedLocalizations.label(
+                      tester.element(item(id)),
+                      SeedLabel.deleteFile,
+                    ),
+                  ),
+                ),
+                findsNothing,
+              );
+            }
+            semantics.dispose();
+            expect(tester.takeException(), isNull);
+          },
+        );
       }
 
       for (final width in [320.0, 390.0, 800.0]) {
@@ -895,7 +908,7 @@ void main() {
             controller.addEntries([
               for (var index = 0; index < 5; index++)
                 SeedAttachmentItem(
-                  id: 'round6-route-file-$index',
+                  id: 'route-file-$index',
                   type: SeedAttachmentType.file,
                   name:
                       'Long filename that must preserve the document extension $index.pdf',
@@ -908,7 +921,7 @@ void main() {
 
             final input = find
                 .ancestor(
-                  of: find.byKey(const ValueKey('round6-route-file-0')),
+                  of: find.byKey(const ValueKey('route-file-0')),
                   matching: find.byType(SeedAttachmentInput),
                 )
                 .first;
@@ -922,13 +935,9 @@ void main() {
 
             final scroll = _position(tester, list);
             expect(scroll.maxScrollExtent, greaterThan(0));
-            await _dragEdge(
-              tester,
-              id: 'round6-route-file-0',
-              edgeX: width - 8,
-            );
+            await _dragEdge(tester, id: 'route-file-0', edgeX: width - 8);
             expect(scroll.pixels, greaterThan(0));
-            expect(controller.items.first.id, isNot('round6-route-file-0'));
+            expect(controller.items.first.id, isNot('route-file-0'));
             expect(controller.items.map((item) => item.id).toSet().length, 5);
             expect(tester.takeException(), isNull);
           },
@@ -953,7 +962,7 @@ void main() {
             controller.addEntries([
               for (var index = 0; index < 5; index++)
                 SeedAttachmentItem(
-                  id: 'round6-route-display-$index',
+                  id: 'route-display-$index',
                   type: SeedAttachmentType.image,
                 ),
             ]);
@@ -964,7 +973,7 @@ void main() {
             final list = find.descendant(
               of: find
                   .ancestor(
-                    of: find.byKey(const ValueKey('round6-route-display-0')),
+                    of: find.byKey(const ValueKey('route-display-0')),
                     matching: find.byType(SeedAttachmentInput),
                   )
                   .first,
@@ -973,13 +982,9 @@ void main() {
             final scroll = _position(tester, list);
             expect(scroll.maxScrollExtent, greaterThan(0));
             expect(tester.getRect(list).right, closeTo(width, .01));
-            await _dragEdge(
-              tester,
-              id: 'round6-route-display-0',
-              edgeX: width - 8,
-            );
+            await _dragEdge(tester, id: 'route-display-0', edgeX: width - 8);
             expect(scroll.pixels, greaterThan(0));
-            expect(controller.items.first.id, isNot('round6-route-display-0'));
+            expect(controller.items.first.id, isNot('route-display-0'));
             expect(controller.items.map((item) => item.id).toSet().length, 5);
             expect(tester.takeException(), isNull);
           },

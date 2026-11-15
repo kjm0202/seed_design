@@ -1,8 +1,3 @@
-// Post927b: PUBLIC Flutter consumer contract ONLY, no browser parity claim.
-// Do not substitute a WidgetTester GREEN for React strict/browser SPA evidence.
-// Round3 isolated PUBLIC API consumer tests. No React/Flutter SPA browser inference.
-// Differentiator vs Round2: sample release at exact pump frame offsets and
-// verify cancellation after READY retreat, followed by fresh async cycle.
 import 'dart:async';
 
 import 'package:flutter/gestures.dart';
@@ -10,10 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
-Widget host(Widget child) => MaterialApp(
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: child),
-);
+import 'support/seed_test_host.dart';
 
 SeedProgressCircle indicator(WidgetTester tester) =>
     tester.widget<SeedProgressCircle>(find.byType(SeedProgressCircle));
@@ -29,14 +21,6 @@ Future<TestGesture> startPull(
   return gesture;
 }
 
-Widget hostStateParity(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: child),
-);
-
 void main() {
   for (final kind in [PointerDeviceKind.touch, PointerDeviceKind.mouse]) {
     for (final bouncing in [false, true]) {
@@ -47,7 +31,7 @@ void main() {
         var refreshes = 0;
         var ready = 0;
         await tester.pumpWidget(
-          host(
+          seedApp(
             SeedPullToRefresh(
               onReady: () => ready++,
               onRefresh: () {
@@ -109,7 +93,7 @@ void main() {
       addTearDown(controller.dispose);
       var refreshes = 0;
       await tester.pumpWidget(
-        host(
+        seedApp(
           SeedPullToRefresh(
             onRefresh: () async => refreshes++,
             child: ListView(
@@ -134,7 +118,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      host(
+      seedApp(
         SeedPullToRefresh(
           onRefresh: () async {},
           child: ListView(
@@ -164,7 +148,7 @@ void main() {
     var refreshes = 0;
     var ready = 0;
     await tester.pumpWidget(
-      host(
+      seedApp(
         SeedPullToRefresh(
           onReady: () => ready++,
           onRefresh: () async => refreshes++,
@@ -200,7 +184,7 @@ void main() {
       var enabled = true;
       late StateSetter update;
       await tester.pumpWidget(
-        host(
+        seedApp(
           StatefulBuilder(
             builder: (context, setState) {
               update = setState;
@@ -243,7 +227,7 @@ void main() {
     var refreshes = 0;
     for (final mode in ['local', 'prevent', 'disabled', 'predicate']) {
       await tester.pumpWidget(
-        host(
+        seedApp(
           SeedPullToRefresh(
             key: ValueKey(mode),
             enabled: mode != 'disabled',
@@ -277,7 +261,7 @@ void main() {
       addTearDown(scroll.dispose);
       var refreshes = 0;
       await tester.pumpWidget(
-        host(
+        seedApp(
           SeedPullToRefresh(
             onRefresh: () async => refreshes++,
             child: ListView(
@@ -319,7 +303,7 @@ void main() {
     addTearDown(controller.dispose);
     var refreshes = 0;
     await tester.pumpWidget(
-      host(
+      seedApp(
         SeedPullToRefresh(
           onRefresh: () async => refreshes++,
           child: ListView(
@@ -353,7 +337,7 @@ void main() {
   ) async {
     var refreshes = 0;
     await tester.pumpWidget(
-      host(
+      seedApp(
         SeedPullToRefresh(
           threshold: 50,
           displacementMultiplier: 0.5,
@@ -389,7 +373,7 @@ void main() {
         addTearDown(() => tester.binding.setSurfaceSize(null));
         var refreshes = 0;
         await tester.pumpWidget(
-          host(
+          seedApp(
             SeedPullToRefresh(
               onRefresh: () async => refreshes++,
               child: ListView(
@@ -458,7 +442,7 @@ void main() {
           final pending = <Completer<void>>[];
           var refreshes = 0;
           await tester.pumpWidget(
-            host(
+            seedApp(
               SeedPullToRefresh(
                 onRefresh: () {
                   refreshes++;
@@ -534,7 +518,7 @@ void main() {
     var refreshes = 0;
     final completion = Completer<void>();
     await tester.pumpWidget(
-      host(
+      seedApp(
         SeedPullToRefresh(
           onRefresh: () {
             refreshes++;
@@ -699,11 +683,6 @@ void main() {
           );
           expect(startOffset, greaterThan(200));
           expect(tester.takeException(), isNull);
-          debugPrint(
-            'POST927B GREEN owner/cancel $surface: initialOffset=$startOffset, '
-            'cancelCallback=0, rearmedReady=$readyCount, completedCallback=$callbackCount, '
-            'loadingSuppressedOverlap=true, finalIndicator=0',
-          );
         },
       );
 
@@ -786,7 +765,6 @@ void main() {
             lessThan(240),
             reason: 'gesture belongs to nested inner scroll owner',
           );
-          final innerAfterOwnDrag = inner.offset;
           expect(
             ready,
             0,
@@ -882,12 +860,6 @@ void main() {
             0,
           );
           expect(tester.takeException(), isNull);
-          debugPrint(
-            'POST927B GREEN nested/protect $surface: outerInitial=110, '
-            'innerInitial=240, innerAfterDrag=$innerAfterOwnDrag, '
-            'innerAtTopReady=0, protectedReady=0, outerFreshReady=$ready, '
-            'completedCallback=$callbacks, finalIndicator=0',
-          );
         },
       );
 
@@ -976,10 +948,6 @@ void main() {
             0,
           );
           expect(tester.takeException(), isNull);
-          debugPrint(
-            'POST927B GREEN rejection $surface: rejectedFutureReset=true, '
-            'freshReady=$ready, totalCallback=$callbacks, finalIndicator=0',
-          );
         },
       );
     }
@@ -1461,7 +1429,7 @@ void main() {
       var refreshes = 0, ready = 0;
       final completion = Completer<void>();
       await tester.pumpWidget(
-        hostStateParity(
+        koreanApp(
           SeedPullToRefresh(
             onRefresh: () {
               refreshes++;
@@ -1483,7 +1451,7 @@ void main() {
       completion.complete();
       await tester.pumpAndSettle();
       await tester.pumpWidget(
-        hostStateParity(
+        koreanApp(
           SeedPullToRefresh(
             preventPull: true,
             onRefresh: () async {

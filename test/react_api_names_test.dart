@@ -3,15 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
-Widget host(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(
-    body: Center(child: SizedBox(width: 360, child: child)),
-  ),
-);
+import 'support/seed_test_host.dart';
 
 const options = [
   SeedSelectGroup<int>(
@@ -43,7 +35,7 @@ void main() {
   ) async {
     final changes = <List<int>>[];
     await tester.pumpWidget(
-      host(
+      koreanAppNarrow(
         SeedSelect<int>(
           groups: options,
           defaultValue: const [1],
@@ -78,7 +70,7 @@ void main() {
     (tester) async {
       final changes = <List<int>>[];
       await tester.pumpWidget(
-        host(
+        koreanAppNarrow(
           SeedSelect<int>(
             groups: options,
             multiple: true,
@@ -132,7 +124,7 @@ void main() {
     (tester) async {
       final changes = <List<int>>[];
       await tester.pumpWidget(
-        host(
+        koreanAppNarrow(
           SeedSelect<int>(
             groups: options,
             multiple: true,
@@ -164,7 +156,7 @@ void main() {
     (tester) async {
       final changes = <bool>[];
       await tester.pumpWidget(
-        host(
+        koreanAppNarrow(
           SeedSwitch(
             defaultChecked: true,
             onCheckedChange: changes.add,
@@ -178,7 +170,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(changes, [false, true]);
       await tester.pumpWidget(
-        host(
+        koreanAppNarrow(
           SeedSwitch(
             key: const ValueKey('controlled'),
             checked: false,
@@ -200,7 +192,7 @@ void main() {
     (tester) async {
       final changes = <bool>[];
       await tester.pumpWidget(
-        host(
+        koreanAppNarrow(
           SeedReactionButton(
             defaultPressed: true,
             onPressedChange: changes.add,
@@ -220,7 +212,7 @@ void main() {
     (tester) async {
       final changes = <SeedDateRange?>[];
       await tester.pumpWidget(
-        host(
+        koreanAppNarrow(
           SeedDatePicker.range(
             defaultValue: SeedDateRange(start: DateTime(2026, 4, 10)),
             onValueChange: changes.add,
@@ -243,7 +235,7 @@ void main() {
     (tester) async {
       final changes = <List<DateTime>>[];
       await tester.pumpWidget(
-        host(
+        koreanAppNarrow(
           SeedDatePicker.multiple(
             defaultValue: [DateTime(2026, 4, 20)],
             onValueChange: changes.add,
@@ -266,7 +258,7 @@ void main() {
     (tester) async {
       final opens = <(bool, SeedOverlayDismissReason)>[];
       await tester.pumpWidget(
-        host(
+        koreanAppNarrow(
           SeedSelect<int>(
             groups: options,
             onOpenChange: (open, reason) => opens.add((open, reason)),
@@ -282,7 +274,7 @@ void main() {
 
       final tooltip = <bool>[];
       await tester.pumpWidget(
-        host(
+        koreanAppNarrow(
           SeedHelpBubbleTooltip(
             title: 'Tip',
             openDelay: Duration.zero,
@@ -307,7 +299,7 @@ void main() {
     (tester) async {
       final selected = <String>[];
       await tester.pumpWidget(
-        host(
+        koreanAppNarrow(
           SeedSegmentedControl<String>(
             value: 'a',
             onValueChange: selected.add,
@@ -322,7 +314,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(selected, ['b']);
       final text = <SeedTextValueChange>[];
-      await tester.pumpWidget(host(SeedTextField(onValueChange: text.add)));
+      await tester.pumpWidget(
+        koreanAppNarrow(SeedTextField(onValueChange: text.add)),
+      );
       await tester.enterText(find.byType(TextField), '한글');
       await tester.pump();
       expect(text.single.value, '한글');
@@ -335,7 +329,7 @@ void main() {
   ) async {
     final changes = <String>[];
     await tester.pumpWidget(
-      host(
+      koreanAppNarrow(
         SeedTabsView(
           defaultValue: 'second',
           onValueChange: changes.add,
@@ -360,7 +354,7 @@ void main() {
     final proposals = <SeedTablePaginationValue>[];
     final reasons = <SeedTablePageChangeReason>[];
     await tester.pumpWidget(
-      host(
+      koreanAppNarrow(
         SeedTablePagination(
           value: const SeedTablePaginationValue(page: 3, pageSize: 10),
           totalItems: 100,
@@ -389,7 +383,7 @@ void main() {
       SeedTablePageChangeReason.next,
     ]);
     await tester.pumpWidget(
-      host(
+      koreanAppNarrow(
         const SeedTablePagination(
           key: ValueKey('uncontrolled'),
           defaultValue: SeedTablePaginationValue(page: 3, pageSize: 10),

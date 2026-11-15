@@ -3,13 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
-Widget host(Widget child) => MaterialApp(
-  locale: const Locale('ko'),
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
+import 'support/seed_test_host.dart';
 
 SeedSideNavigation navigation({String? selectedId, VoidCallback? onParent}) =>
     SeedSideNavigation(
@@ -28,23 +22,13 @@ SeedSideNavigation navigation({String? selectedId, VoidCallback? onParent}) =>
       ],
     );
 
-Widget _host(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(
-    body: Center(child: SizedBox(width: 340, child: child)),
-  ),
-);
-
 void main() {
   group('dividers', () {
     testWidgets('list can suppress dividers through wrapped children', (
       tester,
     ) async {
       await tester.pumpWidget(
-        host(
+        koreanAppCentered(
           const SeedList(
             showDividers: false,
             children: [
@@ -59,11 +43,13 @@ void main() {
       );
       expect(find.byType(SeedDivider), findsNothing);
       await tester.pumpWidget(
-        host(const SeedListItem(titleText: 'Standalone')),
+        koreanAppCentered(const SeedListItem(titleText: 'Standalone')),
       );
       expect(find.byType(SeedDivider), findsNothing);
       await tester.pumpWidget(
-        host(const SeedListItem(titleText: 'Explicit', showDivider: true)),
+        koreanAppCentered(
+          const SeedListItem(titleText: 'Explicit', showDivider: true),
+        ),
       );
       expect(find.byType(SeedDivider), findsOneWidget);
     });
@@ -77,7 +63,7 @@ void main() {
         var activated = 0;
         final semantics = tester.ensureSemantics();
         await tester.pumpWidget(
-          _host(
+          koreanAppCompact(
             SeedList(
               children: [
                 SeedListLinkItem(
@@ -108,7 +94,7 @@ void main() {
         await tester.pump();
         expect(activated, 2);
         await tester.pumpWidget(
-          _host(
+          koreanAppCompact(
             SeedListLinkItem(
               titleText: 'Disabled guide',
               uri: uri,

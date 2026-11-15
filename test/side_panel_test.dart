@@ -7,6 +7,7 @@ import 'package:seed_design/seed_design.dart';
 
 import 'support/official_spec.dart';
 import 'support/seed_test_fonts.dart';
+import 'support/seed_test_host.dart';
 
 // Official packages/css/recipes/side-panel.css:133-201:
 // Header min(70+safeTop), body flex:1 overflow-y:auto with pb48,
@@ -96,14 +97,6 @@ Future<void> mount(
   );
   await tester.pumpAndSettle();
 }
-
-Widget host(Widget child) => MaterialApp(
-  locale: const Locale('ko'),
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
 
 void main() {
   for (final viewport in [390.0, 800.0, 1024.0, 1440.0]) {
@@ -590,9 +583,98 @@ void main() {
       await tester.binding.setSurfaceSize(const Size(800, 700));
       addTearDown(() => tester.binding.setSurfaceSize(null));
       await tester.pumpWidget(
-        host(const SeedSidePanel(title: 'Panel', width: 720, body: SizedBox())),
+        koreanAppCentered(
+          const SeedSidePanel(title: 'Panel', width: 720, body: SizedBox()),
+        ),
       );
       expect(tester.getSize(find.byType(SeedSidePanel)).width, 640);
+    });
+  });
+
+  group('responsive panel and swipe policy', () {
+    Future<void> mount(
+      WidgetTester tester,
+      Widget child, {
+      double width = 390,
+    }) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = Size(width, 800);
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: SeedThemeData.light().toThemeData(),
+          home: Scaffold(body: child),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets(
+      'responsive panel keeps custom content and close configuration',
+      (tester) async {
+        var closes = 0;
+        await mount(
+          tester,
+          SeedSidePanelTrigger(
+            triggerBuilder: (_, open, toggle) =>
+                TextButton(onPressed: toggle, child: const Text('Open')),
+            builder: (_) => SeedSidePanel(
+              title: 'Fallback',
+              titleWidget: const Text('Custom title'),
+              descriptionWidget: const Text('Custom description'),
+              bodyPadding: const EdgeInsets.all(30),
+              showCloseButton: true,
+              onClose: () => closes++,
+              body: const Text('Panel body'),
+            ),
+          ),
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+        expect(find.text('Custom title'), findsOneWidget);
+        expect(find.text('Custom description'), findsOneWidget);
+        expect(
+          tester
+              .widget<SeedBottomSheet>(find.byType(SeedBottomSheet))
+              .contentPadding,
+          const EdgeInsets.all(30),
+        );
+        await tester.tap(find.byIcon(Icons.close_rounded));
+        await tester.pumpAndSettle();
+        expect(closes, 1);
+        expect(find.text('Panel body'), findsOneWidget);
+      },
+    );
+
+    testWidgets('panel swipe uses drag policy and escape remains independent', (
+      tester,
+    ) async {
+      final reasons = <SeedOverlayDismissReason>[];
+      await mount(
+        tester,
+        SeedSidePanelTrigger(
+          responsive: false,
+          closeOnInteractOutside: false,
+          closeOnEscape: false,
+          onOpenChange: (open, reason) {
+            if (!open) reasons.add(reason);
+          },
+          triggerBuilder: (_, open, toggle) =>
+              TextButton(onPressed: toggle, child: const Text('Open')),
+          builder: (_) =>
+              const SeedSidePanel(title: 'Panel', body: SizedBox(height: 150)),
+        ),
+        width: 1000,
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(find.text('Panel'), findsOneWidget);
+      await tester.fling(find.text('Panel'), const Offset(180, 0), 1000);
+      await tester.pumpAndSettle();
+      expect(find.text('Panel'), findsNothing);
+      expect(reasons, [SeedOverlayDismissReason.drag]);
     });
   });
 }

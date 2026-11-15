@@ -9,49 +9,9 @@ import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
 import 'support/seed_test_fonts.dart';
+import 'support/seed_test_host.dart';
 
-Widget host(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
-
-Widget hostFghFollowupRegression(Widget child) => MaterialApp(
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: child),
-);
-
-Widget hostComponentAccessibilityOv(
-  Widget child, {
-  double scale = 1,
-  bool dark = false,
-}) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme:
-      (dark
-              ? SeedThemeData.dark(fontFamily: seedTestFontFamily)
-              : SeedThemeData.light(fontFamily: seedTestFontFamily))
-          .toThemeData(),
-  home: Builder(
-    builder: (context) => MediaQuery(
-      data: MediaQuery.of(context)
-          .copyWith(textScaler: TextScaler.linear(scale)),
-      child: Scaffold(body: Center(child: child)),
-    ),
-  ),
-);
-
-Widget hostLayoutParity(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: child),
-);
+import 'package:flutter/rendering.dart';
 
 void main() {
   setUpAll(loadSeedTestFonts);
@@ -96,8 +56,6 @@ void main() {
     // State changes, rather than dispatch success or an image, are asserted.
     expect(events, contains('b'));
     expect(second.hasFocus, isTrue);
-    // ignore: avoid_print
-    print('RADIO_GROUP_SEMANTIC,first=selected-a,ArrowDown=selected-b,focus=b');
   });
 
   testWidgets('radio group: disabled item is not keyboard-selected', (
@@ -143,8 +101,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(events, isNot(contains('b')));
     expect(disabled.hasFocus, isFalse);
-    // ignore: avoid_print
-    print('RADIO_GROUP_SEMANTIC,disabled-b-skipped,events=$events');
   });
   group('native radio group', () {
     testWidgets(
@@ -152,7 +108,7 @@ void main() {
       (tester) async {
         int? selected = 0;
         await tester.pumpWidget(
-          host(
+          koreanAppCentered(
             StatefulBuilder(
               builder: (context, setState) => SeedRadioGroup<int>(
                 groupValue: selected,
@@ -186,7 +142,7 @@ void main() {
       (tester) async {
         final changes = <Object?>[];
         await tester.pumpWidget(
-          hostFghFollowupRegression(
+          seedApp(
             SeedSelectBoxGroup(
               defaultValue: 'a',
               onValueChanged: changes.add,
@@ -237,7 +193,7 @@ void main() {
     ) async {
       int? selected;
       await tester.pumpWidget(
-        hostComponentAccessibilityOv(
+        scaledApp(
           SeedRadioListItem<int>(
             title: 'Radio',
             value: 1,
@@ -277,7 +233,7 @@ void main() {
     ) async {
       final changes = <int>[];
       await tester.pumpWidget(
-        hostLayoutParity(
+        koreanApp(
           SeedChipRadioGroup<int>(
             defaultValue: 1,
             onChanged: changes.add,
@@ -304,7 +260,7 @@ void main() {
       'radio default selection can update without a controlled parent',
       (tester) async {
         await tester.pumpWidget(
-          hostLayoutParity(
+          koreanApp(
             const SeedRadioGroup<int>(
               defaultValue: 1,
               child: Column(
@@ -324,5 +280,123 @@ void main() {
         expect(selected, [false, true]);
       },
     );
+  });
+
+  group('RadioGroup field composition', () {
+    testWidgets('description renders in the footer below the options', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        koreanAppTopLeft(
+          SeedRadioGroup<String>(
+            label: '선호하는 연락 방법',
+            description: '연락 받고 싶은 방법을 선택해주세요.',
+            value: 'email',
+            child: const Column(
+              children: [
+                SeedRadio<String>(value: 'email', label: '이메일'),
+                SeedRadio<String>(value: 'sms', label: '문자'),
+              ],
+            ),
+          ),
+        ),
+      );
+      final label = tester.getRect(find.text('선호하는 연락 방법'));
+      final lastOption = tester.getRect(find.text('문자'));
+      final description = tester.getRect(find.text('연락 받고 싶은 방법을 선택해주세요.'));
+      expect(label.bottom, lessThan(lastOption.top));
+      expect(description.top, greaterThan(lastOption.bottom));
+    });
+
+    testWidgets('showRequiredIndicator adds the required mark', (tester) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(
+        koreanAppTopLeft(
+          SeedRadioGroup<String>(
+            label: '선호하는 연락 방법',
+            showRequiredIndicator: true,
+            value: 'email',
+            child: const SeedRadio<String>(value: 'email', label: '이메일'),
+          ),
+        ),
+      );
+      expect(find.bySemanticsLabel('필수 입력'), findsOneWidget);
+      handle.dispose();
+    });
+  });
+
+  group('group invalid state and error message', () {
+    Widget host(Widget child, {double width = 320}) => MaterialApp(
+      theme: SeedThemeData.light().toThemeData(),
+      home: Scaffold(
+        body: Center(
+          child: SizedBox(width: width, child: child),
+        ),
+      ),
+    );
+    group('RadioGroupField.ErrorMessage', () {
+      Widget group({required bool invalid, String? error}) => host(
+        SeedRadioGroup<String>(
+          label: 'Contact',
+          description: 'Pick one',
+          invalid: invalid,
+          errorMessage: error,
+          defaultValue: 'email',
+          child: const Column(
+            children: [
+              SeedRadio<String>(value: 'email', label: 'Email'),
+              SeedRadio<String>(value: 'sms', label: 'SMS'),
+            ],
+          ),
+        ),
+      );
+
+      testWidgets('the error is shown only while the group is invalid', (
+        tester,
+      ) async {
+        await tester.pumpWidget(group(invalid: false, error: 'Required'));
+        expect(find.text('Required'), findsNothing);
+        expect(find.text('Pick one'), findsOneWidget);
+
+        await tester.pumpWidget(group(invalid: true, error: 'Required'));
+        final error = find.text('Required');
+        expect(error, findsOneWidget);
+        expect(find.text('Pick one'), findsNothing);
+        expect(
+          tester.widget<Text>(error).style!.color,
+          SeedThemeData.light().colorScheme.fg.critical,
+        );
+        expect(
+          tester.getTopLeft(error).dy,
+          greaterThan(tester.getBottomLeft(find.text('SMS')).dy),
+        );
+      });
+
+      testWidgets('invalid without a message keeps the description', (
+        tester,
+      ) async {
+        await tester.pumpWidget(group(invalid: true));
+        expect(find.text('Pick one'), findsOneWidget);
+      });
+
+      testWidgets('invalid reaches the group and each option', (tester) async {
+        final semantics = tester.ensureSemantics();
+        await tester.pumpWidget(group(invalid: true, error: 'Required'));
+        SemanticsValidationResult of(Finder finder) =>
+            tester.getSemantics(finder).getSemanticsData().validationResult;
+        final options = find.byType(SeedRadio<String>);
+        expect(of(options.first), SemanticsValidationResult.invalid);
+        expect(of(options.last), SemanticsValidationResult.invalid);
+        // The radiogroup node itself carries the group name and aria-invalid.
+        final radioGroup = find.byType(RadioGroup<String>);
+        expect(of(radioGroup), SemanticsValidationResult.invalid);
+        expect(tester.getSemantics(radioGroup).label, 'Contact');
+
+        await tester.pumpWidget(group(invalid: false, error: 'Required'));
+        expect(of(options.first), SemanticsValidationResult.none);
+        expect(of(radioGroup), SemanticsValidationResult.none);
+        semantics.dispose();
+      });
+    });
   });
 }

@@ -10,27 +10,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
 import 'support/seed_test_fonts.dart';
-
-Widget _app(Widget child) => MaterialApp(
-  theme: SeedThemeData.light(fontFamily: seedTestFontFamily).toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
-
-Widget _host(Widget child, {double width = 300}) => MaterialApp(
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(
-    body: Center(
-      child: SizedBox(width: width, child: child),
-    ),
-  ),
-);
-
-Widget _hostWheelAccessibility(Widget child) => MaterialApp(
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(
-    body: Center(child: SizedBox(width: 360, child: child)),
-  ),
-);
+import 'support/seed_test_host.dart';
 
 List<SemanticsNode> _nodes(WidgetTester tester) {
   final result = <SemanticsNode>[];
@@ -48,45 +28,11 @@ List<SemanticsNode> _nodes(WidgetTester tester) {
   return result;
 }
 
-Widget host(Widget child) => MaterialApp(
-  locale: const Locale('ko'),
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
-
-Widget hostInputOverlayRegression(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
-
-Widget hostStateParity(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: child),
-);
-
-Widget hostReactParity(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(
-    body: Center(child: SizedBox(width: 360, child: child)),
-  ),
-);
-
 void main() {
   group('keyboard and pointer', () {
     setUpAll(loadSeedTestFonts);
 
-    Widget wheel(ValueChanged<int> onChange) => _app(
+    Widget wheel(ValueChanged<int> onChange) => fontApp(
       SeedWheelPicker(
         columns: [
           SeedWheelColumn.value<int>(
@@ -141,7 +87,7 @@ void main() {
         'Wheel fixed width leaves room for $flexibleCount flex columns',
         (tester) async {
           await tester.pumpWidget(
-            _host(
+            seedAppSized(
               SeedWheelPicker(
                 columns: [
                   SeedWheelColumn.typed<int>(items: [1], width: 100),
@@ -170,7 +116,7 @@ void main() {
         'fixed Wheel columns stay centered and shrink only when needed at $width',
         (tester) async {
           await tester.pumpWidget(
-            _host(
+            seedAppSized(
               SeedWheelPicker(
                 columns: [
                   SeedWheelColumn.typed<int>(items: [1], width: 120),
@@ -328,7 +274,7 @@ void main() {
           final handle = tester.ensureSemantics();
           final changes = <int>[];
           await tester.pumpWidget(
-            _hostWheelAccessibility(
+            seedAppNarrow(
               SeedWheelPicker(
                 columns: [
                   SeedWheelColumn.value<int>(
@@ -380,7 +326,7 @@ void main() {
           late StateSetter update;
           final changes = <int>[];
           await tester.pumpWidget(
-            _hostWheelAccessibility(
+            seedAppNarrow(
               StatefulBuilder(
                 builder: (context, setState) {
                   update = setState;
@@ -434,7 +380,7 @@ void main() {
       var enabled = true;
       late StateSetter update;
       await tester.pumpWidget(
-        host(
+        koreanAppCentered(
           StatefulBuilder(
             builder: (context, setState) {
               update = setState;
@@ -497,7 +443,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        host(
+        koreanAppCentered(
           SizedBox(
             width: 220,
             child: SeedWheelPicker(
@@ -525,7 +471,7 @@ void main() {
     testWidgets('wheel commits once after scrolling settles', (tester) async {
       final changes = <int>[];
       await tester.pumpWidget(
-        host(
+        koreanAppCentered(
           SizedBox(
             width: 220,
             child: SeedWheelPicker(
@@ -561,7 +507,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        host(
+        koreanAppCentered(
           SizedBox(
             width: 220,
             child: SeedWheelPicker(
@@ -594,7 +540,7 @@ void main() {
       var positions = [4, 2];
       late StateSetter updateParent;
       await tester.pumpWidget(
-        hostInputOverlayRegression(
+        koreanAppCentered(
           SizedBox(
             width: 280,
             child: StatefulBuilder(
@@ -653,7 +599,7 @@ void main() {
         var secondColumnInitialIndex = 1;
         late StateSetter updateParent;
         await tester.pumpWidget(
-          hostInputOverlayRegression(
+          koreanAppCentered(
             SizedBox(
               width: 280,
               child: StatefulBuilder(
@@ -715,7 +661,7 @@ void main() {
       (tester) async {
         final changes = <String>[];
         await tester.pumpWidget(
-          hostStateParity(
+          koreanApp(
             SeedWheelPicker(
               columns: [
                 SeedWheelColumn.value(
@@ -748,7 +694,7 @@ void main() {
       (tester) async {
         final changes = <int>[];
         await tester.pumpWidget(
-          hostReactParity(
+          koreanAppNarrow(
             SeedWheelPicker(
               columns: [
                 SeedWheelColumn.typed(
@@ -766,7 +712,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(changes, [2]);
         await tester.pumpWidget(
-          hostReactParity(
+          koreanAppNarrow(
             SeedWheelPicker(
               readOnly: true,
               columns: [
@@ -784,5 +730,179 @@ void main() {
         expect(changes, [2]);
       },
     );
+  });
+
+  group('committed value across reorder and reduced motion', () {
+    Widget host(Widget child, {bool reduceMotion = false}) => MaterialApp(
+      theme: SeedThemeData.light().toThemeData(),
+      home: MediaQuery(
+        data: MediaQueryData(disableAnimations: reduceMotion),
+        child: Scaffold(
+          body: Center(child: SizedBox(width: 300, child: child)),
+        ),
+      ),
+    );
+
+    int selectedItem(WidgetTester tester) =>
+        (tester
+                    .widget<ListWheelScrollView>(
+                      find.byType(ListWheelScrollView),
+                    )
+                    .controller!
+                as FixedExtentScrollController)
+            .selectedItem;
+    testWidgets('reordering a moving wheel keeps the last committed value', (
+      tester,
+    ) async {
+      var items = ['A', 'B', 'C', 'D'];
+      final changes = <String>[];
+      final steps = <String>[];
+      late StateSetter update;
+      await tester.pumpWidget(
+        host(
+          StatefulBuilder(
+            builder: (_, setState) {
+              update = setState;
+              return SeedWheelPicker(
+                columns: [
+                  SeedWheelColumn.value(
+                    items: items,
+                    onValueChange: (value, _) => changes.add(value),
+                    onIndexChange: (_, value) => steps.add(value),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      );
+      final wheel = find.byType(ListWheelScrollView);
+      final extent = tester.widget<ListWheelScrollView>(wheel).itemExtent;
+      final gesture = await tester.startGesture(tester.getCenter(wheel));
+      await gesture.moveBy(const Offset(0, -20));
+      await gesture.moveBy(Offset(0, -extent * 1.4));
+      await tester.pump();
+      expect(steps, isNotEmpty);
+      expect(changes, isEmpty);
+      update(() => items = ['D', 'C', 'A', 'B']);
+      await tester.pump();
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(selectedItem(tester), 2);
+      expect(changes, isEmpty);
+    });
+
+    testWidgets(
+      'value selection follows an in-place options reorder and removal',
+      (tester) async {
+        final items = ['A', 'B', 'C'];
+        final changes = <String>[];
+        late StateSetter update;
+        await tester.pumpWidget(
+          host(
+            StatefulBuilder(
+              builder: (context, setState) {
+                update = setState;
+                return SeedWheelPicker(
+                  columns: [
+                    SeedWheelColumn.value(
+                      items: items,
+                      defaultValue: items.contains('B') ? 'B' : null,
+                      onValueChange: (value, _) => changes.add(value),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        );
+        expect(selectedItem(tester), 1);
+        update(() {
+          items.insert(0, items.removeLast());
+        });
+        await tester.pumpAndSettle();
+        expect(selectedItem(tester), 2); // B
+        expect(changes, isEmpty);
+        update(() {
+          items.remove('B');
+        });
+        await tester.pumpAndSettle();
+        expect(selectedItem(tester), 0); // first remaining option
+        expect(changes, isEmpty);
+      },
+    );
+
+    testWidgets(
+      'reduced motion moves keyboard and tapped options immediately',
+      (tester) async {
+        final changes = <String>[];
+        await tester.pumpWidget(
+          host(
+            SeedWheelPicker(
+              columns: [
+                SeedWheelColumn.value(
+                  items: const ['A', 'B', 'C', 'D'],
+                  onValueChange: (value, _) => changes.add(value),
+                ),
+              ],
+            ),
+            reduceMotion: true,
+          ),
+        );
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await tester.pump();
+        expect(selectedItem(tester), 1);
+        expect(changes, ['B']);
+        await tester.tap(find.text('C'));
+        await tester.pump();
+        expect(selectedItem(tester), 2);
+        expect(changes, ['B', 'C']);
+      },
+    );
+
+    for (final constraint in [
+      'column disabled',
+      'column read-only',
+      'root read-only',
+    ]) {
+      testWidgets('$constraint cancels movement at the committed value', (
+        tester,
+      ) async {
+        var constrained = false;
+        late StateSetter update;
+        final changes = <String>[];
+        await tester.pumpWidget(
+          host(
+            StatefulBuilder(
+              builder: (context, setState) {
+                update = setState;
+                return SeedWheelPicker(
+                  readOnly: constraint == 'root read-only' && constrained,
+                  columns: [
+                    SeedWheelColumn.value(
+                      items: const ['A', 'B', 'C', 'D'],
+                      enabled: constraint != 'column disabled' || !constrained,
+                      readOnly: constraint == 'column read-only' && constrained,
+                      onValueChange: (value, _) => changes.add(value),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        );
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.sendKeyEvent(LogicalKeyboardKey.end);
+        await tester.pump(const Duration(milliseconds: 100));
+        update(() => constrained = true);
+        await tester.pumpAndSettle();
+        expect(selectedItem(tester), 0);
+        expect(changes, isEmpty);
+        update(() => constrained = false);
+        await tester.pumpAndSettle();
+        expect(selectedItem(tester), 0);
+      });
+    }
   });
 }

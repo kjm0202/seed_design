@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
 import 'support/seed_test_fonts.dart';
+import 'support/seed_test_host.dart';
 
 Finder get surface => find.descendant(
   of: find.byType(SeedBottomSheet),
@@ -114,29 +115,6 @@ const _description =
     'md 이상에서는 Side Panel, sm 이하에서는 Bottom Sheet로 표시됩니다. '
     '뷰포트를 줄여서 자동 전환을 확인해보세요.';
 
-Widget _app(Widget child) => MaterialApp(
-  theme: SeedThemeData.light(fontFamily: seedTestFontFamily).toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
-
-Widget host(Widget child, {double scale = 1, bool dark = false}) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme:
-      (dark
-              ? SeedThemeData.dark(fontFamily: seedTestFontFamily)
-              : SeedThemeData.light(fontFamily: seedTestFontFamily))
-          .toThemeData(),
-  home: Builder(
-    builder: (context) => MediaQuery(
-      data: MediaQuery.of(context)
-          .copyWith(textScaler: TextScaler.linear(scale)),
-      child: Scaffold(body: Center(child: child)),
-    ),
-  ),
-);
-
 Future<void> frames(WidgetTester tester, {int count = 400}) async {
   await tester.pump();
   for (var i = 0; i < count; i++) {
@@ -144,7 +122,7 @@ Future<void> frames(WidgetTester tester, {int count = 400}) async {
   }
 }
 
-Future<void> openSheetComponentAccessibilityOv(
+Future<void> openSnappingSheet(
   WidgetTester tester,
   SeedSheetController controller,
   List<int> changes, {
@@ -152,7 +130,7 @@ Future<void> openSheetComponentAccessibilityOv(
   bool handleOnly = false,
 }) async {
   await tester.pumpWidget(
-    host(
+    scaledApp(
       SeedBottomSheetTrigger(
         snapController: controller,
         snapPoints: [
@@ -183,15 +161,7 @@ Finder get sheetHandle => find
     )
     .first;
 
-Widget hostInteractionParity(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: child),
-);
-
-Future<void> mountOverlayLayout(
+Future<void> mountInViewport(
   WidgetTester tester,
   Widget child, {
   Size size = const Size(900, 700),
@@ -239,11 +209,6 @@ final menuGroups = [
     ],
   ),
 ];
-
-Widget hostOverlayAuditRegression(Widget child) => MaterialApp(
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: child),
-);
 
 void main() {
   setUpAll(loadSeedTestFonts);
@@ -741,7 +706,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        _app(
+        fontApp(
           Builder(
             builder: (context) => SeedButton(
               label: 'Open',
@@ -1219,7 +1184,7 @@ void main() {
     ) async {
       final controller = SeedSheetController();
       final changes = <int>[];
-      await openSheetComponentAccessibilityOv(tester, controller, changes);
+      await openSnappingSheet(tester, controller, changes);
       controller.snapTo(1);
       await frames(tester);
       expect(changes, [1]);
@@ -1246,7 +1211,7 @@ void main() {
     ) async {
       final controller = SeedSheetController();
       final changes = <int>[];
-      await openSheetComponentAccessibilityOv(
+      await openSnappingSheet(
         tester,
         controller,
         changes,
@@ -1268,7 +1233,7 @@ void main() {
         (tester) async {
           final controller = SeedSheetController();
           final changes = <int>[];
-          await openSheetComponentAccessibilityOv(
+          await openSnappingSheet(
             tester,
             controller,
             changes,
@@ -1294,7 +1259,7 @@ void main() {
       (tester) async {
         final controller = SeedSheetController();
         final changes = <int>[];
-        await openSheetComponentAccessibilityOv(
+        await openSnappingSheet(
           tester,
           controller,
           changes,
@@ -1317,7 +1282,7 @@ void main() {
       'sheet trigger exposes independent outside and Escape policies',
       (tester) async {
         await tester.pumpWidget(
-          host(
+          scaledApp(
             SeedBottomSheetTrigger(
               closeOnInteractOutside: false,
               closeOnEscape: true,
@@ -1347,7 +1312,7 @@ void main() {
         final controller = SeedSheetController();
         addTearDown(controller.dispose);
         await tester.pumpWidget(
-          hostInteractionParity(
+          koreanApp(
             SeedSnappingBottomSheet(
               controller: controller,
               sheet: SeedBottomSheet(
@@ -1381,7 +1346,7 @@ void main() {
       addTearDown(tester.view.reset);
       for (final size in [const Size(390, 800), const Size(900, 700)]) {
         const padding = EdgeInsets.only(left: 18, right: 74, bottom: 24);
-        await mountOverlayLayout(
+        await mountInViewport(
           tester,
           Builder(
             builder: (context) => TextButton(
@@ -1434,7 +1399,7 @@ void main() {
       'long menu groups scroll while the cancel action stays visible',
       (tester) async {
         addTearDown(tester.view.reset);
-        await mountOverlayLayout(
+        await mountInViewport(
           tester,
           SeedMenuSheet(
             title: '메뉴',
@@ -1471,7 +1436,7 @@ void main() {
         addTearDown(modal.dispose);
         var backgroundTaps = 0;
         await tester.pumpWidget(
-          hostOverlayAuditRegression(
+          seedApp(
             Builder(
               builder: (context) => Column(
                 children: [
@@ -1523,5 +1488,208 @@ void main() {
         await tester.pumpWidget(const SizedBox());
       },
     );
+  });
+
+  group('dismissal policies and snapping callbacks', () {
+    Future<void> mount(
+      WidgetTester tester,
+      Widget child, {
+      double width = 390,
+    }) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = Size(width, 800);
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: SeedThemeData.light().toThemeData(),
+          home: Scaffold(body: child),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('outside and drag policies are independent', (tester) async {
+      final reasons = <SeedOverlayDismissReason>[];
+      await mount(
+        tester,
+        SeedBottomSheetTrigger(
+          closeOnInteractOutside: false,
+          onOpenChange: (open, reason) {
+            if (!open) reasons.add(reason);
+          },
+          triggerBuilder: (_, open, toggle) =>
+              TextButton(onPressed: toggle, child: const Text('Open')),
+          builder: (_) => const SeedBottomSheet(
+            title: 'Sheet title',
+            content: SizedBox(height: 300),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      await tester.tapAt(const Offset(20, 30));
+      await tester.pumpAndSettle();
+      expect(find.text('Sheet title'), findsOneWidget);
+      await tester.fling(find.text('Sheet title'), const Offset(0, 250), 1200);
+      await tester.pumpAndSettle();
+      expect(find.text('Sheet title'), findsNothing);
+      expect(reasons, [SeedOverlayDismissReason.drag]);
+    });
+
+    testWidgets('a rejected drag restores the open sheet position', (
+      tester,
+    ) async {
+      await mount(
+        tester,
+        SeedBottomSheetTrigger(
+          canClose: (reason) => reason != SeedOverlayDismissReason.drag,
+          triggerBuilder: (_, open, toggle) =>
+              TextButton(onPressed: toggle, child: const Text('Open')),
+          builder: (_) => const SeedBottomSheet(
+            title: 'Sheet title',
+            content: SizedBox(height: 300),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      final title = find.text('Sheet title');
+      final position = tester.getTopLeft(title);
+      await tester.fling(title, const Offset(0, 250), 1200);
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(title), position);
+    });
+
+    testWidgets('snapping sheet forwards close and handle callbacks', (
+      tester,
+    ) async {
+      var closes = 0, taps = 0, updates = 0, ends = 0;
+      await mount(
+        tester,
+        SeedBottomSheetTrigger(
+          snapPoints: const [
+            SeedSheetSnapPoint.fraction(.4),
+            SeedSheetSnapPoint.fraction(.8),
+          ],
+          handleOnly: true,
+          triggerBuilder: (_, open, toggle) =>
+              TextButton(onPressed: toggle, child: const Text('Open')),
+          builder: (_) => SeedBottomSheet(
+            title: 'Snap sheet',
+            showHandle: true,
+            onClosePressed: () => closes++,
+            onHandleTap: () => taps++,
+            onHandleDrag: (_) => updates++,
+            onHandleDragEnd: () => ends++,
+            content: const SizedBox(height: 100),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      final sheet = find.byType(SeedBottomSheet);
+      final handle = find
+          .descendant(
+            of: sheet,
+            matching: find.byWidgetPredicate(
+              (w) => w is GestureDetector && w.onVerticalDragUpdate != null,
+            ),
+          )
+          .first;
+      await tester.tap(handle);
+      await tester.pumpAndSettle();
+      await tester.drag(handle, const Offset(0, 100));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.close_rounded));
+      await tester.pumpAndSettle();
+      expect((closes, taps, ends), (1, 1, 1));
+      expect(updates, greaterThan(0));
+      expect(find.text('Snap sheet'), findsOneWidget);
+    });
+  });
+
+  group('drag dismissal without backdrop dismissal', () {
+    testWidgets('sheet drag can dismiss independently of the backdrop', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        seedAppTopLeft(
+          Builder(
+            builder: (context) => TextButton(
+              onPressed: () => showSeedBottomSheet<void>(
+                context: context,
+                isDismissible: false,
+                dragDismissible: true,
+                snapPoints: const [SeedSheetSnapPoint.fraction(.5)],
+                handleOnly: true,
+                child: const SeedBottomSheet(
+                  title: 'Snapping sheet',
+                  showHandle: true,
+                  content: Text('Body'),
+                ),
+              ),
+              child: const Text('Show'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Show'));
+      await tester.pumpAndSettle();
+      await tester.tapAt(const Offset(8, 8));
+      await tester.pumpAndSettle();
+      final sheet = find.byType(SeedBottomSheet);
+      expect(sheet, findsOneWidget);
+      final handle = find
+          .descendant(
+            of: sheet,
+            matching: find.byWidgetPredicate(
+              (widget) =>
+                  widget is GestureDetector &&
+                  widget.onVerticalDragUpdate != null,
+            ),
+          )
+          .first;
+      await tester.drag(handle, const Offset(0, 140));
+      await tester.pumpAndSettle();
+      expect(sheet, findsNothing);
+    });
+  });
+
+  group('snapping sheet footer', () {
+    testWidgets('a snapping sheet footer follows the body content', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: SeedThemeData.light(fontFamily: seedTestFontFamily)
+              .toThemeData(),
+          home: Scaffold(
+            body: SeedBottomSheetTrigger(
+              snapPoints: const [
+                SeedSheetSnapPoint.fraction(.4),
+                SeedSheetSnapPoint.fraction(1),
+              ],
+              triggerBuilder: (_, open, toggle) =>
+                  TextButton(onPressed: toggle, child: const Text('Open')),
+              builder: (_) => const SeedBottomSheet(
+                title: 'Sheet',
+                content: SizedBox(height: 80, child: Text('Body')),
+                footer: Text('Footer note'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      final body = tester.getRect(find.text('Body'));
+      final footer = tester.getRect(find.text('Footer note'));
+      // Body (80px box) is followed directly by the footer, not pushed to the
+      // bottom of the expanded sheet viewport.
+      expect(footer.top - body.top, lessThan(80 + 60));
+    });
   });
 }

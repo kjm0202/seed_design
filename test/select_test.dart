@@ -7,20 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
 import 'support/seed_test_fonts.dart';
-
-Widget _appTypeahead(Widget child, {bool scaffold = true}) => MaterialApp(
-  theme: SeedThemeData.light(fontFamily: seedTestFontFamily).toThemeData(),
-  home: scaffold ? Scaffold(body: Center(child: child)) : Center(child: child),
-);
-
-Widget _host(Widget child, {double width = 300}) => MaterialApp(
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(
-    body: Center(
-      child: SizedBox(width: width, child: child),
-    ),
-  ),
-);
+import 'support/seed_test_host.dart';
 
 const _items = [
   SeedSelectGroup<String>(
@@ -31,7 +18,7 @@ const _items = [
   ),
 ];
 
-Widget _hostSelectTimeContract(Widget child) => mui.MaterialApp(
+Widget _narrowHost(Widget child) => mui.MaterialApp(
   theme: SeedThemeData.light().toThemeData(),
   home: mui.Scaffold(
     body: mui.Center(child: mui.SizedBox(width: 240, child: child)),
@@ -47,32 +34,6 @@ const _fruit = [
     ],
   ),
 ];
-
-Widget host(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: child),
-);
-
-Widget hostInputOverlayRegression(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
-
-Widget hostReactParity(Widget child) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(
-    body: Center(child: SizedBox(width: 360, child: child)),
-  ),
-);
 
 void main() {
   setUpAll(loadSeedTestFonts);
@@ -359,7 +320,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        _appTypeahead(
+        fontApp(
           SizedBox(
             width: 300,
             child: SeedSelect<String>(
@@ -378,7 +339,7 @@ void main() {
     ) async {
       final values = <List<String>>[];
       await tester.pumpWidget(
-        _appTypeahead(
+        fontApp(
           SizedBox(
             width: 300,
             child: SeedSelect<String>(
@@ -409,7 +370,7 @@ void main() {
     ) async {
       final values = <List<String>>[];
       await tester.pumpWidget(
-        _appTypeahead(
+        fontApp(
           SizedBox(
             width: 300,
             child: SeedSelect<String>(
@@ -439,7 +400,7 @@ void main() {
       (tester) async {
         final changes = <List<String>>[];
         await tester.pumpWidget(
-          _host(
+          seedAppSized(
             SeedSelect<String>(
               defaultValue: const ['a'],
               showClear: true,
@@ -481,7 +442,7 @@ void main() {
       (tester) async {
         final changes = <List<String>>[];
         await tester.pumpWidget(
-          _host(
+          seedAppSized(
             SeedSelect<String>(
               groups: const [
                 SeedSelectGroup(
@@ -992,7 +953,7 @@ void main() {
           addTearDown(tester.view.resetPhysicalSize);
           addTearDown(tester.view.resetDevicePixelRatio);
           await tester.pumpWidget(
-            _hostSelectTimeContract(
+            _narrowHost(
               const SeedSelect<String>(groups: _fruit, defaultValue: ['apple']),
             ),
           );
@@ -1023,7 +984,7 @@ void main() {
           addTearDown(tester.view.resetDevicePixelRatio);
           final proposed = <List<String>>[];
           await tester.pumpWidget(
-            _hostSelectTimeContract(
+            _narrowHost(
               SeedSelect<String>(
                 groups: _fruit,
                 value: const ['banana'],
@@ -1061,7 +1022,7 @@ void main() {
       (tester) async {
         int? selected;
         await tester.pumpWidget(
-          host(
+          koreanApp(
             Center(
               child: SizedBox(
                 width: 220,
@@ -1100,7 +1061,7 @@ void main() {
         late StateSetter updateParent;
         final selected = <int>[];
         await tester.pumpWidget(
-          hostInputOverlayRegression(
+          koreanAppCentered(
             SizedBox(
               width: 260,
               child: StatefulBuilder(
@@ -1174,7 +1135,7 @@ void main() {
     ) async {
       final changes = <Set<int>>[];
       await tester.pumpWidget(
-        hostReactParity(
+        koreanAppNarrow(
           SeedSelect<int>(
             multiple: true,
             onValuesChanged: changes.add,
@@ -1208,6 +1169,100 @@ void main() {
         {1, 2},
         {2},
       ]);
+    });
+  });
+
+  group('search text and unresolved values', () {
+    testWidgets(
+      'select searches independent text and keeps unresolved values',
+      (tester) async {
+        final groups = ValueNotifier<List<SeedSelectGroup<String>>>([]);
+        final selection = <List<String>>[];
+        addTearDown(groups.dispose);
+        await tester.pumpWidget(
+          seedAppTopLeft(
+            SizedBox(
+              width: 250,
+              child: ValueListenableBuilder(
+                valueListenable: groups,
+                builder: (_, options, _) => SeedSelect<String>(
+                  groups: options,
+                  multiple: true,
+                  defaultValue: const ['missing'],
+                  formatSelectedValue: (items) => items
+                      .map(
+                        (entry) =>
+                            entry.item?.textValue ??
+                            'Waiting for ${entry.value}',
+                      )
+                      .join(', '),
+                  onValueChange: selection.add,
+                ),
+              ),
+            ),
+          ),
+        );
+        expect(find.text('Waiting for missing'), findsOneWidget);
+
+        groups.value = const [
+          SeedSelectGroup(
+            items: [
+              SeedSelectItem(
+                value: 'missing',
+                label: 'Loaded',
+                textValue: 'Resolved',
+              ),
+              SeedSelectItem(
+                value: 'pear',
+                label: 'Pear',
+                textValue: 'Fruit',
+                typeaheadLabel: 'z',
+              ),
+            ],
+          ),
+        ];
+        await tester.pumpAndSettle();
+        expect(find.text('Resolved'), findsOneWidget);
+        await tester.tap(find.byType(SeedInputButton));
+        await tester.pumpAndSettle();
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyZ);
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+        expect(selection, [
+          ['missing', 'pear'],
+        ]);
+      },
+    );
+
+    testWidgets('a resolved empty label does not display the placeholder', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        seedAppTopLeft(
+          const SizedBox(
+            width: 250,
+            child: SeedSelect<String>(
+              placeholder: 'Choose',
+              defaultValue: ['value'],
+              groups: [
+                SeedSelectGroup(
+                  items: [
+                    SeedSelectItem(
+                      value: 'value',
+                      label: 'Visible option',
+                      textValue: '',
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      expect(find.text('Choose'), findsNothing);
+      await tester.tap(find.byType(SeedInputButton));
+      await tester.pumpAndSettle();
+      expect(find.text('Visible option'), findsOneWidget);
     });
   });
 }

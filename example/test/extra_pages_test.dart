@@ -1,4 +1,4 @@
-// Strict React ActivityCategorySheet direct-root guard:
+// Official ActivityCategorySheet at the root of the history:
 // Stackflow pop() cannot pop the only history activity, so the sheet remains.
 // Pushed CategorySheet from Form still sends its result and closes normally.
 import 'dart:async';

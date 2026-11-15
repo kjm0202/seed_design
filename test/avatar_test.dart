@@ -7,32 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
 import 'support/seed_test_fonts.dart';
-
-Widget host(Widget child, {double scale = 1, bool dark = false}) => MaterialApp(
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  locale: const Locale('ko'),
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme:
-      (dark
-              ? SeedThemeData.dark(fontFamily: seedTestFontFamily)
-              : SeedThemeData.light(fontFamily: seedTestFontFamily))
-          .toThemeData(),
-  home: Builder(
-    builder: (context) => MediaQuery(
-      data: MediaQuery.of(context)
-          .copyWith(textScaler: TextScaler.linear(scale)),
-      child: Scaffold(body: Center(child: child)),
-    ),
-  ),
-);
-
-Widget hostComponentBehaviorRegress(Widget child) => MaterialApp(
-  locale: const Locale('ko'),
-  supportedLocales: const [Locale('en'), Locale('ko')],
-  localizationsDelegates: GlobalMaterialLocalizations.delegates,
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
+import 'support/seed_test_host.dart';
 
 void main() {
   group('placeholders', () {
@@ -44,7 +19,7 @@ void main() {
       for (final dark in [false, true]) {
         for (final custom in [false, true]) {
           await tester.pumpWidget(
-            host(
+            scaledApp(
               RepaintBoundary(
                 key: const Key('avatar'),
                 child: SeedAvatar(
@@ -84,7 +59,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        hostComponentBehaviorRegress(
+        koreanAppCentered(
           SeedAvatar(image: MemoryImage(Uint8List.fromList([1, 2, 3]))),
         ),
       );
@@ -98,7 +73,7 @@ void main() {
   });
 
   group('AvatarStack', () {
-    Widget host(Widget child, {bool isDark = false}) {
+    Widget scaledApp(Widget child, {bool isDark = false}) {
       return MaterialApp(
         theme: (isDark ? SeedThemeData.dark() : SeedThemeData.light())
             .toThemeData(),
@@ -110,7 +85,7 @@ void main() {
       'SeedAvatarStack stacks avatars with negative gap and stroke separation',
       (tester) async {
         await tester.pumpWidget(
-          host(
+          scaledApp(
             SeedAvatarStack(
               size: SeedAvatarSize.medium,
               maxVisible: 2,

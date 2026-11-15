@@ -3,10 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
 
-Widget _host(Widget child) => MaterialApp(
-  theme: SeedThemeData.light().toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
+import 'support/seed_test_host.dart';
 
 void main() {
   for (final width in [390.0, 800.0]) {
@@ -23,7 +20,7 @@ void main() {
       var selected = 0;
       final changes = <int>[];
       await tester.pumpWidget(
-        _host(
+        seedAppCentered(
           StatefulBuilder(
             builder: (_, update) => SeedTabs(
               items: const [
@@ -60,7 +57,7 @@ void main() {
       (tester) async {
         size(tester);
         await tester.pumpWidget(
-          _host(
+          seedAppCentered(
             const SeedAccordion(
               items: [
                 SeedAccordionItem(
@@ -104,7 +101,7 @@ void main() {
       size(tester);
       final values = <int>[];
       await tester.pumpWidget(
-        _host(
+        seedAppCentered(
           SizedBox(
             width: 300,
             child: SeedWheelPicker(
@@ -135,7 +132,7 @@ void main() {
       size(tester);
       final values = <int>[];
       await tester.pumpWidget(
-        _host(
+        seedAppCentered(
           SizedBox(
             width: 300,
             child: SeedWheelPicker(
@@ -173,7 +170,7 @@ void main() {
       var changes = 0;
       var opens = 0;
       await tester.pumpWidget(
-        _host(
+        seedAppCentered(
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
