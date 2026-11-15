@@ -4,6 +4,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import '../layout/seed_middle_truncate.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../foundations/colors/seed_color_scheme.dart';
@@ -1401,58 +1402,24 @@ class _RemoveButtonNotch extends CustomClipper<Path> {
   bool shouldReclip(_RemoveButtonNotch oldClipper) => false;
 }
 
-/// Fits two lines while keeping the extension visible and the full spoken name.
+/// Fits two lines while keeping the extension visible, as the official
+/// `AttachmentInput.ItemName` does with `MiddleTruncate`.
 class _SeedAttachmentFileName extends StatelessWidget {
   const _SeedAttachmentFileName({required this.name, required this.style});
   final String name;
   final TextStyle style;
 
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) {
-      final painter = TextPainter(
-        textDirection: Directionality.of(context),
-        textScaler: MediaQuery.textScalerOf(context),
-        locale: Localizations.maybeLocaleOf(context),
-        maxLines: 2,
-      );
-      final effectiveStyle = DefaultTextStyle.of(context).style.merge(style);
-      bool fits(String text) {
-        painter.text = TextSpan(text: text, style: effectiveStyle);
-        painter.layout(maxWidth: constraints.maxWidth);
-        return !painter.didExceedMaxLines;
-      }
-
-      var display = name;
-      if (!fits(name)) {
-        final graphemes = name.characters.toList();
-        final dot = graphemes.lastIndexOf('.');
-        final extensionLength = dot > 0 ? graphemes.length - dot : 0;
-        String shortened(int count) {
-          final suffix = math.min(extensionLength, count);
-          return '${graphemes.take(count - suffix).join()}…${graphemes.skip(graphemes.length - suffix).join()}';
-        }
-
-        var low = 0;
-        var high = graphemes.length - 1;
-        while (low < high) {
-          final mid = (low + high + 1) ~/ 2;
-          if (fits(shortened(mid))) {
-            low = mid;
-          } else {
-            high = mid - 1;
-          }
-        }
-        display = shortened(low);
-      }
-      painter.dispose();
-      return Text(
-        display,
-        style: style,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        semanticsLabel: name,
-      );
-    },
-  );
+  Widget build(BuildContext context) {
+    // The official splitFileName: the last dot starts the extension unless it
+    // is the first character (a dotfile).
+    final characters = name.characters.toList();
+    final dot = characters.lastIndexOf('.');
+    return SeedMiddleTruncate(
+      name,
+      end: dot > 0 ? characters.length - dot : 0,
+      maxLines: 2,
+      style: style,
+    );
+  }
 }

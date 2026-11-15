@@ -124,6 +124,7 @@ export 'src/components/callout/seed_callout.dart';
 
 // Components - Disclosure
 export 'src/components/disclosure/seed_accordion.dart';
+export 'src/components/disclosure/seed_collapsible.dart';
 
 // Components - Selection
 export 'src/components/selection/seed_checkbox.dart';
@@ -175,6 +176,7 @@ export 'src/components/layout/seed_content_placeholder.dart';
 export 'src/components/layout/seed_identity_placeholder.dart';
 export 'src/components/layout/seed_footer.dart';
 export 'src/components/layout/seed_consistent_width.dart';
+export 'src/components/layout/seed_middle_truncate.dart';
 
 // Components - List
 export 'src/components/list/seed_list.dart';
