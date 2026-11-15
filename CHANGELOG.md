@@ -1,4 +1,6 @@
-## Unreleased
+## 2.0.0
+
+Based on SEED Design React/CSS 3.3.0.
 
 ### Breaking changes
 
@@ -66,21 +68,27 @@
 - **Aspect Ratio:** Make `SeedAspectRatio.ratio` optional, defaulting to 4/3.
 - **Attachments:** Add `SeedAttachmentInput.scrollPadding` (default `EdgeInsets.zero`) for scroll content in regular and reorderable lists.
 - **Bottom Sheet:** Add `onClosePressed`, constraint overrides, and `dragDismissible` on `showSeedBottomSheet`.
+- **Breakpoints:** Add `SeedBreakpoint` (the official `base`, `sm`, `md`, `lg`, and `xl`, with `SeedBreakpoint.of(context)` for the viewport) and `SeedResponsiveValue<T>` for per-breakpoint values.
 - **Buttons:** Add `disableOnLoading` to ContextualFloatingButton, ReactionButton, and ToggleButton.
 - **Callout:** Add `showCloseButton`.
+- **Checkbox:** Add `SeedCheckboxGroup`, which stacks checkboxes with the official 4px gap.
 - **Checkbox / Radio / Switch:** Add `invalid` and `required`.
+- **Collapsible:** Add `SeedCollapsible`, `SeedCollapsibleTrigger`, and `SeedCollapsibleContent`, the official headless Collapsible, with `SeedCollapsible.of` for the open state.
 - **Colors:** Add light and dark `SeedPalette.grayAlpha100Light`–`grayAlpha1000Dark` colors and `SeedColorScheme.banner` (`SeedBannerColors`).
 - **Consistent Width:** Add `SeedConsistentWidth`.
 - **Date Picker:** Add `SeedDatePickerLayout.twoWeeks`, which shows two weeks and moves by two weeks.
+- **Date Picker:** Add `wheelBuilder`, with `SeedDatePickerWheelRenderProps` and `SeedDatePickerWheelColumn`, to replace the year/month wheel.
 - **Dialog / Sheets:** Accept route builders and Navigator, route, and focus options in dialog and sheet helpers.
 - **Docs:** Add English and Korean migration guides.
 - **FAB:** Add optional Hero tags and tooltips to `SeedFloatingActionButton`.
 - **Field / Text Input:** Add `description` to Field and `placeholder` to TextInput; keep `helperText` and `hintText` as compatibility inputs.
 - **Field Button:** Add `showValueChips` to `SeedFieldButton` to choose chips or plain text.
+- **Field Button:** Add `SeedFieldButton.indicator`.
 - **Fieldset:** Add `required`, `labelBold`, `errorMessage`, and `errorIcon` to `SeedFieldset`.
 - **Footer:** Add `SeedFooterLink.uri` for link semantics.
 - **Form Field:** Add `forceErrorText` and `restorationId` to `SeedFormField`.
 - **Grid:** Add CSS-style `colSpan`, one-based start/end lines, and full-span placement via `SeedGridItem.full`.
+- **Image Frame:** Add `SeedImageFrameIndicator` and `SeedImageFrameIcon` for corner slots and floaters.
 - **Input Button:** Add `showDefaultSuffix` and `contentScale` to `SeedInputButton`.
 - **Invalid state:** Add `invalid` to Field, TextInput, InputButton, Select, and QuantityPicker; deprecate the corresponding `isInvalid`, `hasError`, and `isError` inputs.
 - **Labels and indicators:** Add `labelWeight` to TextField, FieldButton, Select, Slider, RadioGroup, and attachment fields.
@@ -89,6 +97,8 @@
 - **Loading Indicator:** Add `SeedLoadingIndicator`.
 - **Localization:** Add `SeedLocalizations` for locale-aware, overridable labels keyed by `SeedLabel`; omitted labels follow the locale and explicit strings take precedence.
 - **Material bridge:** Add opt-in `preserveComponentThemes` (default false); when enabled, supplied Material component theme fields take precedence and SEED fills the rest.
+- **Middle Truncate:** Add `SeedMiddleTruncate`, which shortens text in the middle and keeps its last `end` characters; attachment file names now use it.
+- **Modals:** Add `SeedModalScope`, which tells modal content how it is presented, including `shouldUseBottomSheet` for responsive dialogs and side panels.
 - **Navigation Menu:** Add `SeedNavigationMenu` with its root, trigger, content, group, and item widgets.
 - **Overlays:** Add ordered `flipFallbackSides` to HelpBubbleTrigger and AnchoredOverlay, and `fitMinExtent` and `tabExitsContent` to AnchoredOverlay.
 - **Pagination:** Add `SeedPagination.visibleItemCount` for 7 or 9 controls including arrows; `maxVisibleSlots` still counts page slots.
@@ -96,6 +106,7 @@
 - **Pressable:** Add `activateOnEnter: false` to activate on Space only, and `unfocusOnDisabledTap`, which blurs the focused input on a pointer tap on a disabled choice row, as native controls do.
 - **Pressable:** Add `semanticsReadOnly` and `semanticsValidationResult` to `SeedPressable`, and `focusVisible` and `surfaceSize` to `SeedInteractionState`.
 - **Radio:** Add `rowBuilder` to Radio and `tone` to RadioListItem.
+- **Radio:** Add `invalid` and `errorMessage` to `SeedRadioGroup`; an invalid group marks its options invalid and shows the message in place of the description.
 - **Safe area:** Add `extendSafeAreaX` to Tabs, TabBar, TabsView, ChipTabsView, PageBanner, AttachmentInput, and the attachment fields.
 - **Scroll Area:** Add `focusableWhenScrollable`.
 - **Scroll Fog:** Add `SeedScrollFogMask`.
@@ -106,6 +117,7 @@
 - **Select:** Add `textValue` and `typeaheadLabel` to `SeedSelectItem` for separate display and search text.
 - **SelectBox:** Add `SeedSelectBoxGroup.radio` for an explicit radio group.
 - **Semantics:** Add `semanticsLabel` to SegmentedControl, Select, InputButton, SelectBoxGroup, ChipRadioGroup, Menu, and Popover.
+- **Side Navigation:** Add `SeedSideNavigationProvider`, `SeedSideNavigationContextValue`, and `SeedSideNavigationInset`, so content beside the navigation can read and toggle its collapsed state.
 - **Side Panel:** Add `closeOnInteractOutside` and `closeOnEscape` to `SeedSidePanelTrigger`.
 - **Slider:** Add `jumpMultiplier`.
 - **Snackbar:** Add `showSeedSnackbar.onVisible`, and `onDiscard` on `SeedSnackbarController.show` for entries removed before they are shown.
@@ -240,6 +252,8 @@
 - **Web:** Use path URLs and a GitHub Pages `404.html` app shell so showcase routes open directly and survive page refreshes.
 
 ## 1.0.0
+
+Based on SEED Design React/CSS 3.0.1.
 
 ### Breaking changes
 

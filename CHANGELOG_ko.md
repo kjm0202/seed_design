@@ -1,4 +1,6 @@
-## Unreleased
+## 2.0.0
+
+SEED Design React/CSS 3.3.0 기준입니다.
 
 ### 브레이킹 체인지
 
@@ -66,21 +68,27 @@
 - **Aspect Ratio:** `SeedAspectRatio.ratio`를 생략할 수 있으며 기본값은 4/3입니다.
 - **Attachments:** 일반 목록과 순서 변경 가능한 목록의 스크롤 콘텐츠용 `SeedAttachmentInput.scrollPadding`(기본값 `EdgeInsets.zero`)을 추가합니다.
 - **Bottom Sheet:** `onClosePressed`, 제약 조건 재정의, `showSeedBottomSheet`의 `dragDismissible`을 추가합니다.
+- **Breakpoints:** 공식 `base`·`sm`·`md`·`lg`·`xl`을 나타내는 `SeedBreakpoint`(뷰포트 기준 `SeedBreakpoint.of(context)` 포함)와 breakpoint별 값을 담는 `SeedResponsiveValue<T>`를 추가합니다.
 - **Buttons:** ContextualFloatingButton, ReactionButton, ToggleButton에 `disableOnLoading`을 추가합니다.
 - **Callout:** `showCloseButton`을 추가합니다.
+- **Checkbox:** 체크박스를 공식 4px 간격으로 쌓는 `SeedCheckboxGroup`을 추가합니다.
 - **Checkbox / Radio / Switch:** `invalid`와 `required`를 추가합니다.
+- **Collapsible:** 공식 headless Collapsible에 대응하는 `SeedCollapsible`, `SeedCollapsibleTrigger`, `SeedCollapsibleContent`와 열림 상태를 읽는 `SeedCollapsible.of`를 추가합니다.
 - **Colors:** 밝은·어두운 테마의 `SeedPalette.grayAlpha100Light`–`grayAlpha1000Dark` 색과 `SeedColorScheme.banner`(`SeedBannerColors`)를 추가합니다.
 - **Consistent Width:** `SeedConsistentWidth`를 추가합니다.
 - **Date Picker:** 두 주를 표시하고 2주씩 이동하는 `SeedDatePickerLayout.twoWeeks`를 추가합니다.
+- **Date Picker:** 연·월 휠을 바꿀 수 있는 `wheelBuilder`와 `SeedDatePickerWheelRenderProps`, `SeedDatePickerWheelColumn`을 추가합니다.
 - **Dialog / Sheets:** Dialog와 시트 도우미 함수가 라우트 빌더와 Navigator, 라우트, 포커스 옵션을 받습니다.
 - **Docs:** 영어·한국어 마이그레이션 가이드를 추가합니다.
 - **FAB:** `SeedFloatingActionButton`에 선택적인 Hero 태그와 툴팁을 추가합니다.
 - **Field / Text Input:** Field에 `description`을, TextInput에 `placeholder`를 추가합니다. `helperText`와 `hintText`는 호환 입력으로 유지합니다.
 - **Field Button:** `SeedFieldButton`에 칩과 일반 텍스트 중 표시 방식을 고르는 `showValueChips`를 추가합니다.
+- **Field Button:** `SeedFieldButton.indicator`를 추가합니다.
 - **Fieldset:** `SeedFieldset`에 `required`, `labelBold`, `errorMessage`, `errorIcon`을 추가합니다.
 - **Footer:** 링크 의미 정보를 위한 `SeedFooterLink.uri`를 추가합니다.
 - **Form Field:** `SeedFormField`에 `forceErrorText`와 `restorationId`를 추가합니다.
 - **Grid:** CSS 방식의 `colSpan`, 1부터 시작하는 시작·끝 선, `SeedGridItem.full`을 통한 전체 너비 배치를 추가합니다.
+- **Image Frame:** 모서리 슬롯과 floater에 쓰는 `SeedImageFrameIndicator`, `SeedImageFrameIcon`을 추가합니다.
 - **Input Button:** `SeedInputButton`에 `showDefaultSuffix`와 `contentScale`을 추가합니다.
 - **Invalid state:** Field, TextInput, InputButton, Select, QuantityPicker에 `invalid`를 추가하고, 해당하는 `isInvalid`, `hasError`, `isError` 입력은 사용 중단 예정으로 표시합니다.
 - **Labels and indicators:** TextField, FieldButton, Select, Slider, RadioGroup, 첨부 필드에 `labelWeight`를 추가합니다.
@@ -89,6 +97,8 @@
 - **Loading Indicator:** `SeedLoadingIndicator`를 추가합니다.
 - **Localization:** 로케일을 따르고 재정의할 수 있는 라벨을 `SeedLabel` 키로 제공하는 `SeedLocalizations`를 추가합니다. 생략한 라벨은 로케일을 따르고, 명시한 문자열이 우선합니다.
 - **Material bridge:** 선택형 `preserveComponentThemes`(기본값 false)를 추가합니다. 활성화하면 지정한 Material 컴포넌트 테마 필드가 우선하고 SEED가 나머지를 채웁니다.
+- **Middle Truncate:** 텍스트 가운데를 줄이고 끝의 `end` 글자를 남기는 `SeedMiddleTruncate`를 추가합니다. 첨부 파일 이름도 이 위젯을 사용합니다.
+- **Modals:** 모달 콘텐츠가 현재 표시 형태를 알 수 있는 `SeedModalScope`를 추가합니다. 반응형 다이얼로그·사이드 패널이 바텀시트로 바뀌었는지는 `shouldUseBottomSheet`로 확인합니다.
 - **Navigation Menu:** `SeedNavigationMenu`와 root, trigger, content, group, item 위젯을 추가합니다.
 - **Overlays:** HelpBubbleTrigger와 AnchoredOverlay에 순서를 지정하는 `flipFallbackSides`를, AnchoredOverlay에 `fitMinExtent`와 `tabExitsContent`를 추가합니다.
 - **Pagination:** 화살표를 포함해 컨트롤 7개 또는 9개를 표시하는 `SeedPagination.visibleItemCount`를 추가합니다. `maxVisibleSlots`는 계속 페이지 슬롯 수를 의미합니다.
@@ -96,6 +106,7 @@
 - **Pressable:** Space로만 활성화하는 `activateOnEnter: false`와, 비활성 선택 행을 포인터로 탭하면 네이티브 컨트롤처럼 포커스된 입력을 해제하는 `unfocusOnDisabledTap`을 추가합니다.
 - **Pressable:** `SeedPressable`에 `semanticsReadOnly`와 `semanticsValidationResult`를, `SeedInteractionState`에 `focusVisible`과 `surfaceSize`를 추가합니다.
 - **Radio:** Radio에 `rowBuilder`를, RadioListItem에 `tone`을 추가합니다.
+- **Radio:** `SeedRadioGroup`에 `invalid`와 `errorMessage`를 추가합니다. invalid인 그룹은 하위 옵션도 invalid로 노출하고, 설명 자리에 오류 메시지를 표시합니다.
 - **Safe area:** Tabs, TabBar, TabsView, ChipTabsView, PageBanner, AttachmentInput, 첨부 필드에 `extendSafeAreaX`를 추가합니다.
 - **Scroll Area:** `focusableWhenScrollable`을 추가합니다.
 - **Scroll Fog:** `SeedScrollFogMask`를 추가합니다.
@@ -106,6 +117,7 @@
 - **Select:** 표시 문구와 검색어를 따로 지정하는 `SeedSelectItem`의 `textValue`와 `typeaheadLabel`을 추가합니다.
 - **SelectBox:** 명시적인 라디오 그룹을 만드는 `SeedSelectBoxGroup.radio`를 추가합니다.
 - **Semantics:** SegmentedControl, Select, InputButton, SelectBoxGroup, ChipRadioGroup, Menu, Popover에 `semanticsLabel`을 추가합니다.
+- **Side Navigation:** 내비게이션 옆 콘텐츠에서 접힘 상태를 읽고 바꿀 수 있는 `SeedSideNavigationProvider`, `SeedSideNavigationContextValue`, `SeedSideNavigationInset`을 추가합니다.
 - **Side Panel:** `SeedSidePanelTrigger`에 `closeOnInteractOutside`와 `closeOnEscape`를 추가합니다.
 - **Slider:** `jumpMultiplier`를 추가합니다.
 - **Snackbar:** `showSeedSnackbar.onVisible`과, 표시되기 전에 제거된 항목을 알리는 `SeedSnackbarController.show`의 `onDiscard`를 추가합니다.
@@ -240,6 +252,8 @@
 - **Web:** 쇼케이스 경로가 직접 열리고 새로고침 후에도 유지되도록 경로 URL과 GitHub Pages `404.html` 앱 셸을 사용합니다.
 
 ## 1.0.0
+
+SEED Design React/CSS 3.0.1 기준입니다.
 
 ### 브레이킹 체인지
 
