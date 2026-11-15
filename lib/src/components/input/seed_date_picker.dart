@@ -138,6 +138,7 @@ class SeedDatePicker extends StatefulWidget {
     this.cellHeight = 48,
     this.dateCellSupplement,
     this.dateCellContent,
+    this.wheelBuilder,
     this.semanticsLabel,
     this.showReset = false,
     this.onReset,
@@ -206,6 +207,7 @@ class SeedDatePicker extends StatefulWidget {
     double cellHeight = 48,
     Widget Function(BuildContext, SeedDateCellInfo)? dateCellSupplement,
     Widget Function(BuildContext, SeedDateCellInfo)? dateCellContent,
+    Widget Function(BuildContext, SeedDatePickerWheelRenderProps)? wheelBuilder,
     String? semanticsLabel,
     bool showReset = false,
     VoidCallback? onReset,
@@ -240,6 +242,7 @@ class SeedDatePicker extends StatefulWidget {
          cellHeight: cellHeight,
          dateCellSupplement: dateCellSupplement,
          dateCellContent: dateCellContent,
+         wheelBuilder: wheelBuilder,
          semanticsLabel: semanticsLabel,
          showReset: showReset,
          onReset: onReset,
@@ -283,6 +286,7 @@ class SeedDatePicker extends StatefulWidget {
     double cellHeight = 48,
     Widget Function(BuildContext, SeedDateCellInfo)? dateCellSupplement,
     Widget Function(BuildContext, SeedDateCellInfo)? dateCellContent,
+    Widget Function(BuildContext, SeedDatePickerWheelRenderProps)? wheelBuilder,
     String? semanticsLabel,
     bool showReset = false,
     VoidCallback? onReset,
@@ -316,6 +320,7 @@ class SeedDatePicker extends StatefulWidget {
          cellHeight: cellHeight,
          dateCellSupplement: dateCellSupplement,
          dateCellContent: dateCellContent,
+         wheelBuilder: wheelBuilder,
          semanticsLabel: semanticsLabel,
          showReset: showReset,
          onReset: onReset,
@@ -447,6 +452,15 @@ class SeedDatePicker extends StatefulWidget {
   /// Only one of the two can be supplied.
   final Widget Function(BuildContext, SeedDateCellInfo)? dateCellSupplement,
       dateCellContent;
+
+  /// Replaces the year/month wheel, as the render function of the official
+  /// `DatePickerWheel` does. Null draws the default [SeedWheelPicker].
+  ///
+  /// The wheel exists in the month layout (inline) and in the week and
+  /// two-week layouts (in a popover); the two-month and continuous layouts
+  /// have none.
+  final Widget Function(BuildContext, SeedDatePickerWheelRenderProps)?
+  wheelBuilder;
 
   /// Optional accessibility name of the calendar.
   final String? semanticsLabel;
@@ -1064,6 +1078,47 @@ class _SeedDatePickerState extends State<SeedDatePicker>
       (i) => firstMonth + i,
     );
     final selectedMonth = _headerMonth.month;
+    final builder = widget.wheelBuilder;
+    if (builder != null) {
+      return builder(
+        context,
+        SeedDatePickerWheelRenderProps(
+          size: small ? SeedWheelPickerSize.small : SeedWheelPickerSize.medium,
+          height: small ? 180 : _monthPickerHeight,
+          enabled: !_isDisabled,
+          readOnly: widget.readOnly,
+          columns: [
+            SeedDatePickerWheelColumn(
+              id: SeedDatePickerWheelColumnId.year,
+              semanticsLabel: _korean ? '연도' : 'Year',
+              options: [
+                for (var value = _firstYear; value <= _lastYear; value++)
+                  (value: value, label: _korean ? '$value년' : '$value'),
+              ],
+              value: year,
+              onValueChange: (value) =>
+                  _setView(DateTime(value, selectedMonth)),
+              loop: false,
+            ),
+            SeedDatePickerWheelColumn(
+              id: SeedDatePickerWheelColumnId.month,
+              semanticsLabel: _korean ? '월' : 'Month',
+              options: [
+                for (final value in months)
+                  (
+                    value: value,
+                    label: DateFormat.MMM(_locale)
+                        .format(DateTime(year, value)),
+                  ),
+              ],
+              value: selectedMonth,
+              onValueChange: (value) => _setView(DateTime(year, value)),
+              loop: months.length == 12,
+            ),
+          ],
+        ),
+      );
+    }
     return SeedWheelPicker(
       height: small ? 180 : _monthPickerHeight,
       size: small ? SeedWheelPickerSize.small : SeedWheelPickerSize.medium,

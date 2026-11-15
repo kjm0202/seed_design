@@ -25,6 +25,54 @@ enum SeedModalType {
   sidePanel,
 }
 
+/// The official `useResponsiveDialogContext` and
+/// `useResponsiveSidePanelContext`: how the enclosing [SeedModalTrigger]
+/// is currently presenting its content.
+///
+/// Available to the trigger's `builder` and everything below it.
+class SeedModalScope extends InheritedWidget {
+  /// Describes a modal presented as [type] that was requested as
+  /// [requestedType].
+  const SeedModalScope({
+    super.key,
+    required this.type,
+    required this.requestedType,
+    required super.child,
+  });
+
+  /// The presentation in use now.
+  final SeedModalType type;
+
+  /// The presentation the trigger was created for.
+  final SeedModalType requestedType;
+
+  /// The official `shouldUseBottomSheet`: true while a responsive dialog or
+  /// side panel is shown as a bottom sheet because the viewport is narrow.
+  bool get shouldUseBottomSheet =>
+      type == SeedModalType.bottomSheet &&
+      requestedType != SeedModalType.bottomSheet;
+
+  /// The nearest modal presentation, or null outside modal content.
+  static SeedModalScope? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<SeedModalScope>();
+
+  /// The nearest modal presentation. Throws outside modal content, like the
+  /// official hooks.
+  static SeedModalScope of(BuildContext context) {
+    final scope = maybeOf(context);
+    assert(
+      scope != null,
+      'SeedModalScope.of() was called outside the content of a '
+      'SeedModalTrigger.',
+    );
+    return scope!;
+  }
+
+  @override
+  bool updateShouldNotify(SeedModalScope oldWidget) =>
+      type != oldWidget.type || requestedType != oldWidget.requestedType;
+}
+
 /// Controlled modal lifecycle, shared by dialogs, sheets and panels.
 ///
 /// `open` has precedence over [controller], followed by internal state
@@ -315,7 +363,21 @@ class _SeedModalTriggerState extends State<SeedModalTrigger>
     }
   }
 
+  // The scope sits above the builder so that the builder's own context can
+  // read the resolved presentation.
   Widget _content(
+    BuildContext context,
+    SeedModalType type, {
+    GlobalKey? bodyKey,
+  }) => SeedModalScope(
+    type: type,
+    requestedType: widget.type,
+    child: Builder(
+      builder: (context) => _contentBody(context, type, bodyKey: bodyKey),
+    ),
+  );
+
+  Widget _contentBody(
     BuildContext context,
     SeedModalType type, {
     GlobalKey? bodyKey,

@@ -513,3 +513,24 @@ class _SeedCheckboxControl extends StatelessWidget {
     );
   }
 }
+
+/// The official `CheckboxGroup`: stacks checkboxes vertically with the
+/// group's 4px gap.
+///
+/// It only lays the options out. For a labelled group with a description or
+/// an error, wrap it in a [SeedFieldset].
+class SeedCheckboxGroup extends StatelessWidget {
+  /// Creates a vertical checkbox group from [children].
+  const SeedCheckboxGroup({super.key, required this.children});
+
+  /// The checkboxes, in order.
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    mainAxisSize: MainAxisSize.min,
+    crossAxisAlignment: CrossAxisAlignment.start,
+    spacing: SeedDimension.x1,
+    children: children,
+  );
+}

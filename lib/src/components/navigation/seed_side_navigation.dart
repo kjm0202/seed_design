@@ -147,6 +147,141 @@ class SeedSideNavGroup {
   final List<SeedSideNavItem> items;
 }
 
+/// The official `useSideNavigationContext` value: the collapsed state of the
+/// nearest side navigation and the means to change it.
+///
+/// Read it with [SeedSideNavigationProvider.of] or
+/// [SeedSideNavigationProvider.maybeOf].
+class SeedSideNavigationContextValue {
+  const SeedSideNavigationContextValue._(this.collapsed, this._setCollapsed);
+
+  /// Whether the side navigation is collapsed to its icon-only width.
+  final bool collapsed;
+
+  final ValueChanged<bool> _setCollapsed;
+
+  /// Requests the given collapsed state. A parent-controlled navigation only
+  /// reports the request through its `onCollapsedChange`.
+  void setCollapsed(bool collapsed) => _setCollapsed(collapsed);
+
+  /// Requests the opposite of the current [collapsed] state, as the official
+  /// `SideNavigation.Trigger` does.
+  void toggle() => _setCollapsed(!collapsed);
+}
+
+class _SeedSideNavigationScope extends InheritedWidget {
+  const _SeedSideNavigationScope({required this.value, required super.child});
+
+  final SeedSideNavigationContextValue value;
+
+  @override
+  bool updateShouldNotify(_SeedSideNavigationScope oldWidget) =>
+      value.collapsed != oldWidget.value.collapsed;
+}
+
+/// The official `SideNavigation.Provider`: owns the collapsed state above a
+/// [SeedSideNavigation] and its sibling content, so that a control outside
+/// the navigation (for example a menu button in a [SeedSideNavigationInset])
+/// can read and toggle it.
+///
+/// A [SeedSideNavigation] below a provider follows the provider's state
+/// unless its own `collapsed` is set. Without a provider the navigation owns
+/// its state as before, and still exposes it to its own `header` and
+/// `footer` through [maybeOf].
+class SeedSideNavigationProvider extends StatefulWidget {
+  /// Creates a provider. [collapsed] is parent-controlled when non-null;
+  /// otherwise [defaultCollapsed] (false) seeds internal state.
+  /// [onCollapsedChange] receives each requested state.
+  const SeedSideNavigationProvider({
+    super.key,
+    this.collapsed,
+    this.defaultCollapsed = false,
+    this.onCollapsedChange,
+    required this.child,
+  });
+
+  /// Parent-controlled collapsed state, or null when managed here.
+  final bool? collapsed;
+
+  /// Initial collapsed state when [collapsed] is null.
+  final bool defaultCollapsed;
+
+  /// Receives the next collapsed state when a change is requested.
+  final ValueChanged<bool>? onCollapsedChange;
+
+  /// Subtree containing the navigation and the content beside it.
+  final Widget child;
+
+  /// The nearest side navigation state, or null outside a provider and a
+  /// [SeedSideNavigation].
+  static SeedSideNavigationContextValue? maybeOf(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<_SeedSideNavigationScope>()
+          ?.value;
+
+  /// The nearest side navigation state. Throws outside a provider and a
+  /// [SeedSideNavigation], like the official strict hook.
+  static SeedSideNavigationContextValue of(BuildContext context) {
+    final value = maybeOf(context);
+    assert(
+      value != null,
+      'SeedSideNavigationProvider.of() was called outside a '
+      'SeedSideNavigationProvider or SeedSideNavigation.',
+    );
+    return value!;
+  }
+
+  @override
+  State<SeedSideNavigationProvider> createState() =>
+      _SeedSideNavigationProviderState();
+}
+
+class _SeedSideNavigationProviderState
+    extends State<SeedSideNavigationProvider> {
+  late bool _uncontrolled = widget.defaultCollapsed;
+
+  bool get _collapsed => widget.collapsed ?? _uncontrolled;
+
+  void _setCollapsed(bool next) {
+    if (next == _collapsed) return;
+    if (widget.collapsed == null) setState(() => _uncontrolled = next);
+    widget.onCollapsedChange?.call(next);
+  }
+
+  @override
+  Widget build(BuildContext context) => _SeedSideNavigationScope(
+    value: SeedSideNavigationContextValue._(_collapsed, _setCollapsed),
+    child: widget.child,
+  );
+}
+
+/// The official `SideNavigation.Inset`: the content area beside a
+/// [SeedSideNavigation]. It takes the remaining width of the enclosing [Row]
+/// and, like the official `overflow-y: auto`, scrolls vertically.
+///
+/// Set [scrollable] to false when [child] brings its own scroll view (a
+/// `ListView`, a `CustomScrollView`, a `Scaffold`); it then receives the
+/// bounded height directly. This is a Flutter extension.
+class SeedSideNavigationInset extends StatelessWidget {
+  /// Creates the content area; must be a child of a [Row] or horizontal
+  /// [Flex].
+  const SeedSideNavigationInset({
+    super.key,
+    required this.child,
+    this.scrollable = true,
+  });
+
+  /// Page content shown beside the navigation.
+  final Widget child;
+
+  /// Whether to wrap [child] in a vertical scroll view; true by default.
+  final bool scrollable;
+
+  @override
+  Widget build(BuildContext context) =>
+      Expanded(child: scrollable ? SingleChildScrollView(child: child) : child);
+}
+
 /// A SEED Design Side Navigation drawer/sidebar component for desktop and tablet.
 class SeedSideNavigation extends StatefulWidget {
   /// Builds a sidebar with [groups], optional [header], and [footer].
@@ -263,8 +398,13 @@ class _SeedSideNavigationState extends State<SeedSideNavigation> {
   // Open collapsed-sidebar flyout (SeedNavigationMenu value).
   String? _flyout;
 
+  // An enclosing SeedSideNavigationProvider owns the state unless this
+  // widget is controlled directly.
+  SeedSideNavigationContextValue? get _provider =>
+      SeedSideNavigationProvider.maybeOf(context);
+
   bool get _collapsed =>
-      (widget._isCollapsed ?? _uncontrolledCollapsed) ||
+      (widget._isCollapsed ?? _provider?.collapsed ?? _uncontrolledCollapsed) ||
       (widget.collapseBelow != null &&
           MediaQuery.sizeOf(context).width < widget.collapseBelow!);
 
@@ -348,10 +488,17 @@ class _SeedSideNavigationState extends State<SeedSideNavigation> {
     item.onOpenChanged?.call(next);
   }
 
-  void _handleToggleCollapse() {
-    final next = !_collapsed;
+  void _handleToggleCollapse() => _requestCollapsed(!_collapsed);
+
+  void _requestCollapsed(bool next) {
+    if (next == _collapsed) return;
     if (widget._isCollapsed == null) {
-      setState(() => _uncontrolledCollapsed = next);
+      final provider = _provider;
+      if (provider != null) {
+        provider.setCollapsed(next);
+      } else {
+        setState(() => _uncontrolledCollapsed = next);
+      }
     }
     widget.onToggleCollapsed?.call();
     widget.onCollapsedChanged?.call(next);
@@ -386,6 +533,33 @@ class _SeedSideNavigationState extends State<SeedSideNavigation> {
                   ? SeedPalette.gray100Dark
                   : SeedPalette.gray100Light));
 
+    // Header and footer widgets read the effective state, including a
+    // collapse forced by [SeedSideNavigation.collapseBelow].
+    return _SeedSideNavigationScope(
+      value: SeedSideNavigationContextValue._(_collapsed, _requestCollapsed),
+      child: _buildNavigation(
+        context,
+        colors: colors,
+        typography: typography,
+        currentWidth: currentWidth,
+        reduceMotion: reduceMotion,
+        rtl: rtl,
+        hasCollapseTrigger: hasCollapseTrigger,
+        effectiveBgColor: effectiveBgColor,
+      ),
+    );
+  }
+
+  Widget _buildNavigation(
+    BuildContext context, {
+    required SeedColorScheme colors,
+    required SeedTypography typography,
+    required double currentWidth,
+    required bool reduceMotion,
+    required bool rtl,
+    required bool hasCollapseTrigger,
+    required Color effectiveBgColor,
+  }) {
     return Semantics(
       container: true,
       role: SemanticsRole.navigation,

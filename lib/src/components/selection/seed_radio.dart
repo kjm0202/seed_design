@@ -71,6 +71,8 @@ class SeedRadio<T> extends StatefulWidget {
   final FocusNode? focusNode;
 
   /// Exposed to assistive technology, as the official hidden input does.
+  ///
+  /// An option inside an invalid [SeedRadioGroup] is invalid as well.
   final bool invalid, required;
 
   /// Creates a radio option with the required [value].
@@ -110,6 +112,8 @@ class _SeedRadioState<T> extends State<SeedRadio<T>> with RadioClient<T> {
   @override
   bool get tristate => false;
   bool _scopeEnabled = true;
+  bool _groupInvalid = false;
+  bool get _invalid => widget.invalid || _groupInvalid;
   @override
   bool get enabled =>
       widget.enabled &&
@@ -120,6 +124,11 @@ class _SeedRadioState<T> extends State<SeedRadio<T>> with RadioClient<T> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _scopeEnabled = SeedControlScope.enabledOf(context);
+    _groupInvalid =
+        context
+            .dependOnInheritedWidgetOfExactType<_SeedRadioGroupScope>()
+            ?.invalid ??
+        false;
     registry = RadioGroup.maybeOf<T>(context);
   }
 
@@ -141,11 +150,11 @@ class _SeedRadioState<T> extends State<SeedRadio<T>> with RadioClient<T> {
   @override
   Widget build(BuildContext context) {
     final control = _buildControl(context);
-    return !widget.invalid && !widget.required
+    return !_invalid && !widget.required
         ? control
         : Semantics(
             isRequired: widget.required ? true : null,
-            validationResult: widget.invalid
+            validationResult: _invalid
                 ? SemanticsValidationResult.invalid
                 : SemanticsValidationResult.none,
             child: control,
@@ -369,6 +378,8 @@ class SeedRadioGroup<T> extends StatelessWidget {
   /// When [controlled] is true, null [value] means no selection. Otherwise
   /// null allows [defaultValue] to seed internal form state. The group emits
   /// [onValueChange] on user input; [onChanged] is a deprecated alias.
+  /// [invalid] defaults to false; [errorMessage] is shown only while it is
+  /// true.
   const SeedRadioGroup({
     super.key,
     T? value,
@@ -383,6 +394,8 @@ class SeedRadioGroup<T> extends StatelessWidget {
     this.description,
     this.indicator,
     this.showRequiredIndicator = false,
+    this.invalid = false,
+    this.errorMessage,
     this.enabled = true,
   }) : groupValue = value ?? groupValue,
        assert(value == null || groupValue == null),
@@ -403,6 +416,17 @@ class SeedRadioGroup<T> extends StatelessWidget {
   /// the caller's responsibility.
   final bool showRequiredIndicator;
 
+  /// The official `invalid`: marks the group and every option in it as
+  /// invalid for assistive technology. Defaults to false. Validation itself
+  /// is the caller's responsibility.
+  final bool invalid;
+
+  /// The official RadioGroupField `errorMessage`.
+  ///
+  /// Shown in the footer in place of [description] only while [invalid] is
+  /// true, as in the official composition, and announced when it appears.
+  final String? errorMessage;
+
   /// Enables all nested options; true by default.
   final bool enabled;
 
@@ -420,6 +444,7 @@ class SeedRadioGroup<T> extends StatelessWidget {
       label: label,
       labelBold: labelWeight == SeedFieldLabelWeight.bold,
       description: description,
+      errorMessage: invalid ? errorMessage : null,
       indicator: indicator,
       required: showRequiredIndicator,
       enabled: enabled,
@@ -430,9 +455,27 @@ class SeedRadioGroup<T> extends StatelessWidget {
           onChanged?.call(next);
         },
         // RadioGroup already owns role="radiogroup"; this merges the official
-        // aria-labelledby name into that node.
-        child: Semantics(label: label, child: child),
+        // aria-labelledby name and aria-invalid into that node.
+        child: Semantics(
+          label: label,
+          validationResult: invalid
+              ? SemanticsValidationResult.invalid
+              : SemanticsValidationResult.none,
+          child: _SeedRadioGroupScope(invalid: invalid, child: child),
+        ),
       ),
     ),
   );
+}
+
+/// Carries the group's `invalid` state to its options, which are never
+/// invalid independently in the official implementation.
+class _SeedRadioGroupScope extends InheritedWidget {
+  const _SeedRadioGroupScope({required this.invalid, required super.child});
+
+  final bool invalid;
+
+  @override
+  bool updateShouldNotify(_SeedRadioGroupScope oldWidget) =>
+      invalid != oldWidget.invalid;
 }

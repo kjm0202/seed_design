@@ -655,8 +655,8 @@ class SeedFieldButton extends StatefulWidget {
   /// Flutter extension. [onValuesChange] receives immutable proposed lists,
   /// while deprecated [onValuesChanged] is its alias. [onPressed] opens
   /// application-owned pickers; it does not populate choices by itself.
-  /// [label], [description], [errorMessage], [placeholder], [labelWeight]
-  /// and [required] configure the surrounding Field. [prefixIcon], [suffixIcon],
+  /// [label], [description], [errorMessage], [placeholder], [labelWeight],
+  /// [indicator] and [required] configure the surrounding Field. [prefixIcon], [suffixIcon],
   /// [prefixText] and [suffixText] decorate the trigger. [showValueChips] is a
   /// Flutter extension (default true); false displays comma-separated values.
   /// [showClear] defaults false; [enabled] true; [readOnly] false; [size] large.
@@ -684,6 +684,7 @@ class SeedFieldButton extends StatefulWidget {
     this.size = SeedInputButtonSize.large,
     this.required = false,
     this.showRequiredIndicator,
+    this.indicator,
   }) : onValuesChanged = onValuesChange ?? onValuesChanged,
        assert(onValuesChange == null || onValuesChanged == null);
 
@@ -727,6 +728,9 @@ class SeedFieldButton extends StatefulWidget {
   /// Controls marker visibility independently of [required]; null follows it.
   final bool? showRequiredIndicator;
 
+  /// Text beside the label, as React FieldButton's `indicator`.
+  final String? indicator;
+
   /// Input trigger size, default large at 52 logical pixels.
   final SeedInputButtonSize size;
 
@@ -756,6 +760,7 @@ class _SeedFieldButtonState extends State<SeedFieldButton> {
       errorMessage: widget.errorMessage,
       required: widget.required,
       showRequiredIndicator: widget.showRequiredIndicator,
+      indicatorText: widget.indicator,
       child: SeedInputButton(
         value: values.join(', '),
         placeholder: widget.placeholder,

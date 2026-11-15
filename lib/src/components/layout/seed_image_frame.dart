@@ -106,7 +106,6 @@ class SeedImageFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.seedColor;
-    final typography = context.seedTypography;
     final effectiveRadius = borderRadius ?? SeedBorderRadius.r2;
     final effectiveRatio = customRatio ?? ratio.aspectRatio;
 
@@ -155,22 +154,8 @@ class SeedImageFrame extends StatelessWidget {
               Positioned(
                 right: 6,
                 bottom: 6,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: SeedPalette.staticBlackAlpha800,
-                    borderRadius: SeedBorderRadius.full,
-                  ),
-                  child: Text(
-                    badge!,
-                    textAlign: TextAlign.center,
-                    style: typography.t1Medium.copyWith(
-                      color: SeedPalette.staticWhite,
-                    ),
-                  ),
+                child: SeedImageFrameIndicator(
+                  child: Text(badge!, textAlign: TextAlign.center),
                 ),
               ),
 
@@ -318,6 +303,58 @@ class SeedImageFrameFloater extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The official `ImageFrameIndicator`: a small pill over the image, such as
+/// a page count (`1/5`) or a remaining count (`+9`).
+///
+/// Place it in a corner slot of [SeedImageFrame] or in a
+/// [SeedImageFrameFloater].
+class SeedImageFrameIndicator extends StatelessWidget {
+  /// Creates an indicator around [child], usually a [Text].
+  const SeedImageFrameIndicator({super.key, required this.child});
+
+  /// Indicator content, painted as t1 medium in static white by default.
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: const BoxDecoration(
+      color: SeedPalette.staticBlackAlpha800,
+      borderRadius: SeedBorderRadius.full,
+    ),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: SeedDimension.x1_5,
+        vertical: SeedDimension.x0_5,
+      ),
+      child: DefaultTextStyle.merge(
+        style: context.seedTypography.t1Medium.copyWith(
+          color: SeedPalette.staticWhite,
+        ),
+        child: child,
+      ),
+    ),
+  );
+}
+
+/// The official `ImageFrameIcon`: an icon over the image in static white,
+/// which stays legible in both light and dark themes.
+///
+/// Place it in a corner slot of [SeedImageFrame] or in a
+/// [SeedImageFrameFloater].
+class SeedImageFrameIcon extends StatelessWidget {
+  /// Creates an overlay icon from [icon], the official `svg`.
+  const SeedImageFrameIcon({super.key, required this.icon});
+
+  /// The icon widget; it inherits the static white color.
+  final Widget icon;
+
+  @override
+  Widget build(BuildContext context) => IconTheme.merge(
+    data: const IconThemeData(color: SeedPalette.staticWhite),
+    child: icon,
+  );
 }
 
 /// A heart toggle with controlled or local state and accessible pressed feedback.

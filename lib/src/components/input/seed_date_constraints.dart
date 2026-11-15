@@ -1,5 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'seed_wheel_picker.dart';
+
 /// Returns the calendar date of [date] at local midnight, discarding time.
 ///
 /// This does not convert [date] to another time zone.
@@ -209,4 +211,77 @@ class SeedDateCellInfo {
       readOnly,
       disabled,
       focused;
+}
+
+/// Which wheel a [SeedDatePickerWheelColumn] drives.
+enum SeedDatePickerWheelColumnId {
+  /// The year wheel.
+  year,
+
+  /// The month wheel.
+  month,
+}
+
+/// The official `DatePickerWheelColumn`: one column of the year/month wheel
+/// passed to [SeedDatePicker.wheelBuilder].
+@immutable
+class SeedDatePickerWheelColumn {
+  /// Describes one wheel column.
+  const SeedDatePickerWheelColumn({
+    required this.id,
+    required this.semanticsLabel,
+    required this.options,
+    required this.value,
+    required this.onValueChange,
+    required this.loop,
+  });
+
+  /// Whether this is the year or the month column.
+  final SeedDatePickerWheelColumnId id;
+
+  /// Accessible name of the column, the official `aria-label`.
+  final String semanticsLabel;
+
+  /// Selectable years, or month numbers from 1 to 12, with their labels.
+  /// Months outside the picker's range are left out.
+  final List<({int value, String label})> options;
+
+  /// The year or month number currently shown.
+  final int value;
+
+  /// Moves the calendar to the given year or month number.
+  final ValueChanged<int> onValueChange;
+
+  /// Whether the column wraps around; true for a full 12-month column.
+  final bool loop;
+}
+
+/// The official `DatePickerWheelRenderProps`: what a custom year/month wheel
+/// needs to draw itself. Passed to [SeedDatePicker.wheelBuilder].
+@immutable
+class SeedDatePickerWheelRenderProps {
+  /// Describes the wheel to draw.
+  const SeedDatePickerWheelRenderProps({
+    required this.size,
+    required this.height,
+    required this.enabled,
+    required this.readOnly,
+    required this.columns,
+  });
+
+  /// Medium in the month layout; small in the week and two-week popover.
+  final SeedWheelPickerSize size;
+
+  /// Height the default wheel occupies, in logical pixels. In Flutter this
+  /// stands in for the official `itemSize` and `visibleItemCount`.
+  final double height;
+
+  /// False while the picker is disabled.
+  final bool enabled;
+
+  /// True while the picker is read-only.
+  final bool readOnly;
+
+  /// The year column followed by the month column.
+  final List<SeedDatePickerWheelColumn> columns;
 }

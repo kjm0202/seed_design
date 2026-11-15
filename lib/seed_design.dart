@@ -71,6 +71,9 @@ export 'src/foundations/typography/seed_typography.dart';
 // Foundations - Dimensions & Spacing
 export 'src/foundations/dimensions/seed_dimension.dart';
 
+// Foundations - Breakpoints
+export 'src/foundations/breakpoint/seed_breakpoint.dart';
+
 // Foundations - Radius
 export 'src/foundations/radius/seed_radius.dart';
 
