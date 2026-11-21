@@ -438,9 +438,14 @@ class _SpaActivityPage extends StatelessWidget {
     }
     if (body is SpaOwnScaffold) return body;
     if (activity == 'ActivitySideNavigation') {
+      // No AppBar here. Side insets are applied here; the page itself lets
+      // the side navigation surface bleed under the status bar and insets
+      // only its content (see _withStatusBarBleed).
       return Scaffold(
         backgroundColor: context.seedColor.bg.layerDefault,
-        body: body,
+        body: body == null
+            ? null
+            : SafeArea(top: false, bottom: false, child: body),
       );
     }
 

@@ -40,3 +40,11 @@ class SpaOwnScaffold extends StatelessWidget {
   Widget build(BuildContext context) =>
       mui.Material(type: mui.MaterialType.transparency, child: child);
 }
+
+/// Left/right system insets for the body of a [SpaOwnScaffold] page.
+///
+/// The shared SPA shell wraps every generated page body in the same
+/// horizontal-only [SafeArea]; pages that own their Scaffold apply it here so
+/// side cutouts or a foldable's status column do not cover their content.
+Widget spaSideSafeArea(Widget child) =>
+    SafeArea(top: false, bottom: false, child: child);

@@ -317,15 +317,17 @@ class _AppBarSlotPage extends StatelessWidget {
             ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const Text(
-            'AppBar.Slot은 커스텀 요소에 stackflow 트랜지션 애니메이션을 적용합니다. 이 페이지에서 뒤로 swipe하면 검색바가 IconButton과 동일하게 fade 트랜지션됩니다.',
-          ),
-          _gap,
-          _button('이 액티비티 다시 열기', () => navigate('ActivityAppBarSlot')),
-        ],
+      body: spaSideSafeArea(
+        ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            const Text(
+              'AppBar.Slot은 커스텀 요소에 stackflow 트랜지션 애니메이션을 적용합니다. 이 페이지에서 뒤로 swipe하면 검색바가 IconButton과 동일하게 fade 트랜지션됩니다.',
+            ),
+            _gap,
+            _button('이 액티비티 다시 열기', () => navigate('ActivityAppBarSlot')),
+          ],
+        ),
       ),
     );
   }

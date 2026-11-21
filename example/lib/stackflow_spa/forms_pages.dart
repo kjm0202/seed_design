@@ -2285,14 +2285,19 @@ class _FormPageState extends State<_FormPage> {
           ),
         ),
         SeedSnackbarAvoidOverlap(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-            child: SeedButton(
-              label: '제출',
-              isFullWidth: true,
-              size: SeedButtonSize.large,
-              variant: SeedButtonVariant.neutralSolid,
-              onPressed: submit,
+          // The fixed footer sits outside the scroll view, so it must keep
+          // clear of the home indicator / gesture bar itself.
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              child: SeedButton(
+                label: '제출',
+                isFullWidth: true,
+                size: SeedButtonSize.large,
+                variant: SeedButtonVariant.neutralSolid,
+                onPressed: submit,
+              ),
             ),
           ),
         ),

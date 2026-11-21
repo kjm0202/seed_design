@@ -2069,246 +2069,254 @@ class _MenuDemoPageState extends State<_MenuDemoPage> {
         ),
       ],
     ),
-    body: ListView(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-      children: [
-        _section(
-          gap: 12,
-          'Basic Trigger',
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              _menuButton('Medium', _basicGroups()),
-              _menuButton('Small', const [
-                SeedMenuGroupData(
-                  items: [
-                    SeedMenuItemData(label: '추가', prefixIcon: Icon(Icons.add)),
-                    SeedMenuItemData(label: '수정', prefixIcon: Icon(Icons.edit)),
-                    SeedMenuItemData(
-                      label: '삭제',
-                      prefixIcon: Icon(Icons.delete),
-                      isDestructive: true,
-                    ),
-                  ],
-                ),
-              ], size: SeedMenuSize.small),
-            ],
-          ),
-        ),
-        _section(
-          gap: 12,
-          'Placement',
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              _menuButton(
-                align: SeedOverlayAlign.start,
-                'bottom-start',
-                _placementGroups(),
-                variant: SeedButtonVariant.neutralWeak,
-              ),
-              _menuButton(
-                'bottom-end',
-                _placementGroups(),
-                align: SeedOverlayAlign.end,
-                variant: SeedButtonVariant.neutralWeak,
-              ),
-              _menuButton(
-                'top',
-                _placementGroups(),
-                side: SeedOverlaySide.top,
-                align: SeedOverlayAlign.center,
-                variant: SeedButtonVariant.neutralWeak,
-              ),
-            ],
-          ),
-        ),
-        _section(
-          gap: 12,
-          'Anchor (Controlled)',
-          // React: <HStack align="center" gap="x4" justify="space-between">.
-          // The Switch keeps its intrinsic width (inline-flex root).
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            spacing: 16,
-            children: [
-              Flexible(
-                child: SeedSwitch(
-                  label: '메뉴',
-                  tone: SeedControlTone.neutral,
-                  checked: _anchorOpen,
-                  onCheckedChange: (v) => setState(() => _anchorOpen = v),
-                ),
-              ),
-              SeedMenuTrigger(
-                open: _anchorOpen,
-                onOpenChange: (next, reason) {
-                  if (!next && reason == SeedOverlayDismissReason.outside) {
-                    return;
-                  }
-                  setState(() => _anchorOpen = next);
-                },
-                triggerBuilder: (ctx, open, toggle) => ClipOval(
-                  child: Image.network(
-                    'https://avatars.githubusercontent.com/u/54893898?v=4',
-                    width: 80,
-                    height: 80,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => const CircleAvatar(
-                      radius: 40,
-                      child: Icon(Icons.person, size: 40),
-                    ),
-                  ),
-                ),
-                builder: (ctx) => const SeedMenu(
-                  groups: [
-                    SeedMenuGroupData(
-                      items: [
-                        SeedMenuItemData(label: '프로필 보기'),
-                        SeedMenuItemData(label: '메시지 보내기'),
-                      ],
-                    ),
-                    SeedMenuGroupData(
-                      items: [
-                        SeedMenuItemData(
-                          label: '숨기기',
-                          prefixIcon: Icon(Icons.visibility_off),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        _section(
-          gap: 12,
-          'Many Items (Scroll)',
-          _menuButton(
-            '30개 항목',
-            [
-              SeedMenuGroupData(
-                label: 'Recently Played',
-                items: [
-                  for (var i = 1; i <= 30; i++)
-                    SeedMenuItemData(label: 'Track $i'),
-                ],
-              ),
-            ],
-            variant: SeedButtonVariant.neutralWeak,
-            fullWidth: true,
-          ),
-        ),
-        _section(
-          gap: 12,
-          'Max Height',
-          Row(
-            children: [
-              _menuButton(
-                '30개 항목 (높이 제한)',
-                [
+    body: spaSideSafeArea(
+      ListView(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+        children: [
+          _section(
+            gap: 12,
+            'Basic Trigger',
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                _menuButton('Medium', _basicGroups()),
+                _menuButton('Small', const [
                   SeedMenuGroupData(
-                    label: 'Recently Played',
                     items: [
-                      for (var i = 1; i <= 30; i++)
-                        SeedMenuItemData(label: 'Track $i'),
+                      SeedMenuItemData(
+                        label: '추가',
+                        prefixIcon: Icon(Icons.add),
+                      ),
+                      SeedMenuItemData(
+                        label: '수정',
+                        prefixIcon: Icon(Icons.edit),
+                      ),
+                      SeedMenuItemData(
+                        label: '삭제',
+                        prefixIcon: Icon(Icons.delete),
+                        isDestructive: true,
+                      ),
                     ],
                   ),
-                ],
-                maxHeight: 160,
-                variant: SeedButtonVariant.neutralWeak,
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Text(
-                  '--seed-menu-max-height로 기본 480px 대신 160px까지만 열립니다 · 화면에 남은 공간이 더 좁으면 그쪽을 따릅니다',
-                  style: context.seedTypography.t3Regular.copyWith(
-                    color: context.seedColor.fg.neutralMuted,
-                  ),
-                ),
-              ),
-            ],
+                ], size: SeedMenuSize.small),
+              ],
+            ),
           ),
-        ),
-        _section(
-          gap: 12,
-          'onOpenChange Reason',
-          Row(
-            children: [
-              _menuButton(
-                'Reason 추적',
-                const [
-                  SeedMenuGroupData(items: [SeedMenuItemData(label: '항목')]),
-                ],
-                variant: SeedButtonVariant.neutralWeak,
-                onOpenChange: (open, reason) {
-                  // The React example prints the originating DOM reason, not
-                  // the Flutter port's equivalent enum identifier.
-                  setState(
-                    () => _lastReason = switch (reason) {
-                      SeedOverlayDismissReason.outside => 'interactOutside',
-                      SeedOverlayDismissReason.escapeKey => 'escapeKeyDown',
-                      _ => reason.name,
-                    },
-                  );
-                },
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Text(
-                  '마지막: $_lastReason',
-                  style: context.seedTypography.t3Regular.copyWith(
-                    color: context.seedColor.fg.neutralMuted,
-                  ),
+          _section(
+            gap: 12,
+            'Placement',
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                _menuButton(
+                  align: SeedOverlayAlign.start,
+                  'bottom-start',
+                  _placementGroups(),
+                  variant: SeedButtonVariant.neutralWeak,
                 ),
-              ),
-            ],
-          ),
-        ),
-        _section(
-          gap: 12,
-          'Menu → BottomSheet',
-          _menuButton('메뉴에서 시트 열기', [
-            SeedMenuGroupData(
-              items: [
-                const SeedMenuItemData(
-                  label: '추가',
-                  prefixIcon: Icon(Icons.add),
+                _menuButton(
+                  'bottom-end',
+                  _placementGroups(),
+                  align: SeedOverlayAlign.end,
+                  variant: SeedButtonVariant.neutralWeak,
                 ),
-                SeedMenuItemData(
-                  label: 'BottomSheet 열기',
-                  prefixIcon: const Icon(Icons.ios_share),
-                  onTap: () =>
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (mounted) _openSheet(context);
-                      }),
+                _menuButton(
+                  'top',
+                  _placementGroups(),
+                  side: SeedOverlaySide.top,
+                  align: SeedOverlayAlign.center,
+                  variant: SeedButtonVariant.neutralWeak,
                 ),
               ],
             ),
-          ], fullWidth: true),
-        ),
-        _section(
-          gap: 12,
-          'Menu in BottomSheet',
-          _button(
-            'BottomSheet 열기',
-            () => _openSheet(context, showMenu: true),
-            variant: SeedButtonVariant.brandSolid,
           ),
-        ),
-        _section(
-          gap: 12,
-          'Menu in AlertDialog',
-          _button(
-            'AlertDialog 열기',
-            _openDialogWithMenu,
-            variant: SeedButtonVariant.brandSolid,
+          _section(
+            gap: 12,
+            'Anchor (Controlled)',
+            // React: <HStack align="center" gap="x4" justify="space-between">.
+            // The Switch keeps its intrinsic width (inline-flex root).
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              spacing: 16,
+              children: [
+                Flexible(
+                  child: SeedSwitch(
+                    label: '메뉴',
+                    tone: SeedControlTone.neutral,
+                    checked: _anchorOpen,
+                    onCheckedChange: (v) => setState(() => _anchorOpen = v),
+                  ),
+                ),
+                SeedMenuTrigger(
+                  open: _anchorOpen,
+                  onOpenChange: (next, reason) {
+                    if (!next && reason == SeedOverlayDismissReason.outside) {
+                      return;
+                    }
+                    setState(() => _anchorOpen = next);
+                  },
+                  triggerBuilder: (ctx, open, toggle) => ClipOval(
+                    child: Image.network(
+                      'https://avatars.githubusercontent.com/u/54893898?v=4',
+                      width: 80,
+                      height: 80,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => const CircleAvatar(
+                        radius: 40,
+                        child: Icon(Icons.person, size: 40),
+                      ),
+                    ),
+                  ),
+                  builder: (ctx) => const SeedMenu(
+                    groups: [
+                      SeedMenuGroupData(
+                        items: [
+                          SeedMenuItemData(label: '프로필 보기'),
+                          SeedMenuItemData(label: '메시지 보내기'),
+                        ],
+                      ),
+                      SeedMenuGroupData(
+                        items: [
+                          SeedMenuItemData(
+                            label: '숨기기',
+                            prefixIcon: Icon(Icons.visibility_off),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+          _section(
+            gap: 12,
+            'Many Items (Scroll)',
+            _menuButton(
+              '30개 항목',
+              [
+                SeedMenuGroupData(
+                  label: 'Recently Played',
+                  items: [
+                    for (var i = 1; i <= 30; i++)
+                      SeedMenuItemData(label: 'Track $i'),
+                  ],
+                ),
+              ],
+              variant: SeedButtonVariant.neutralWeak,
+              fullWidth: true,
+            ),
+          ),
+          _section(
+            gap: 12,
+            'Max Height',
+            Row(
+              children: [
+                _menuButton(
+                  '30개 항목 (높이 제한)',
+                  [
+                    SeedMenuGroupData(
+                      label: 'Recently Played',
+                      items: [
+                        for (var i = 1; i <= 30; i++)
+                          SeedMenuItemData(label: 'Track $i'),
+                      ],
+                    ),
+                  ],
+                  maxHeight: 160,
+                  variant: SeedButtonVariant.neutralWeak,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    '--seed-menu-max-height로 기본 480px 대신 160px까지만 열립니다 · 화면에 남은 공간이 더 좁으면 그쪽을 따릅니다',
+                    style: context.seedTypography.t3Regular.copyWith(
+                      color: context.seedColor.fg.neutralMuted,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          _section(
+            gap: 12,
+            'onOpenChange Reason',
+            Row(
+              children: [
+                _menuButton(
+                  'Reason 추적',
+                  const [
+                    SeedMenuGroupData(items: [SeedMenuItemData(label: '항목')]),
+                  ],
+                  variant: SeedButtonVariant.neutralWeak,
+                  onOpenChange: (open, reason) {
+                    // The React example prints the originating DOM reason, not
+                    // the Flutter port's equivalent enum identifier.
+                    setState(
+                      () => _lastReason = switch (reason) {
+                        SeedOverlayDismissReason.outside => 'interactOutside',
+                        SeedOverlayDismissReason.escapeKey => 'escapeKeyDown',
+                        _ => reason.name,
+                      },
+                    );
+                  },
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    '마지막: $_lastReason',
+                    style: context.seedTypography.t3Regular.copyWith(
+                      color: context.seedColor.fg.neutralMuted,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          _section(
+            gap: 12,
+            'Menu → BottomSheet',
+            _menuButton('메뉴에서 시트 열기', [
+              SeedMenuGroupData(
+                items: [
+                  const SeedMenuItemData(
+                    label: '추가',
+                    prefixIcon: Icon(Icons.add),
+                  ),
+                  SeedMenuItemData(
+                    label: 'BottomSheet 열기',
+                    prefixIcon: const Icon(Icons.ios_share),
+                    onTap: () =>
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted) _openSheet(context);
+                        }),
+                  ),
+                ],
+              ),
+            ], fullWidth: true),
+          ),
+          _section(
+            gap: 12,
+            'Menu in BottomSheet',
+            _button(
+              'BottomSheet 열기',
+              () => _openSheet(context, showMenu: true),
+              variant: SeedButtonVariant.brandSolid,
+            ),
+          ),
+          _section(
+            gap: 12,
+            'Menu in AlertDialog',
+            _button(
+              'AlertDialog 열기',
+              _openDialogWithMenu,
+              variant: SeedButtonVariant.brandSolid,
+            ),
+          ),
+        ],
+      ),
     ),
   );
 }
@@ -2913,290 +2921,292 @@ class _PopoverDemoPageState extends State<_PopoverDemoPage> {
         ),
       ],
     ),
-    body: _popoverScroll(context, [
-      _popoverGroup(context, '기본'),
-      _popoverSection(
-        hint: 'title, description, 닫기 버튼이 모두 있는 기본 구성입니다.',
-        'Header / Body / Footer',
-        Center(
-          child: _popoverButton(
-            '기본',
-            title: '제목',
-            description: '설명을 작성할 수 있어요',
+    body: spaSideSafeArea(
+      _popoverScroll(context, [
+        _popoverGroup(context, '기본'),
+        _popoverSection(
+          hint: 'title, description, 닫기 버튼이 모두 있는 기본 구성입니다.',
+          'Header / Body / Footer',
+          Center(
+            child: _popoverButton(
+              '기본',
+              title: '제목',
+              description: '설명을 작성할 수 있어요',
+            ),
           ),
         ),
-      ),
-      _popoverSection(
-        hint: 'title이 없으면 aria-labelledby를 붙이지 않고 aria-label을 이름으로 씁니다. description만 있으면 aria-describedby만 연결됩니다.',
-        '헤더 구성과 접근 가능한 이름',
-        Wrap(
-          alignment: WrapAlignment.center,
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            _popoverButton(
-              '닫기 버튼 없음',
-              title: 'showCloseButton=false',
-              showCloseButton: false,
-              bodyText: 'Escape 키, 바깥 클릭, 확인 버튼으로 닫을 수 있습니다.',
-            ),
-            _popoverButton(
-              '설명만',
-              title: '',
-              description: '이 popover는 title이 없습니다.',
-              bodyText: 'aria-describedby만 Description을 가리켜야 합니다.',
-            ),
-            _popoverButton(
-              '헤더 없음',
-              title: '',
-              semanticsLabel: '필터',
-              showCloseButton: false,
-              bodyText: 'Header 슬롯 자체가 렌더되지 않습니다.',
-              footerLabel: '적용',
-            ),
-          ],
-        ),
-      ),
-      _popoverGroup(context, '배치'),
-      _popoverSection(
-        hint: '열어둔 채로 placement를 바꿔보세요. 요청한 배치와 실제 배치는 다를 수 있고, 적용된 값은 content의 data-side / data-alignment에 찍힙니다.',
-        'placement 12종',
-        _column([
+        _popoverSection(
+          hint: 'title이 없으면 aria-labelledby를 붙이지 않고 aria-label을 이름으로 씁니다. description만 있으면 aria-describedby만 연결됩니다.',
+          '헤더 구성과 접근 가능한 이름',
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            alignment: WrapAlignment.center,
+            spacing: 12,
+            runSpacing: 12,
             children: [
-              for (var row = 0; row < placements.length; row += 3)
-                SizedBox(
-                  width: MediaQuery.sizeOf(context).width - 40,
-                  child: Row(
-                    children: [
-                      for (var i = row; i < row + 3; i++) ...[
-                        if (i > row) const SizedBox(width: 8),
-                        Expanded(
-                          child: _button(
-                            placements[i],
-                            () => setState(() => placement = placements[i]),
-                            size: SeedButtonSize.xsmall,
-                            variant: placement == placements[i]
-                                ? SeedButtonVariant.neutralSolid
-                                : SeedButtonVariant.neutralWeak,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
+              _popoverButton(
+                '닫기 버튼 없음',
+                title: 'showCloseButton=false',
+                showCloseButton: false,
+                bodyText: 'Escape 키, 바깥 클릭, 확인 버튼으로 닫을 수 있습니다.',
+              ),
+              _popoverButton(
+                '설명만',
+                title: '',
+                description: '이 popover는 title이 없습니다.',
+                bodyText: 'aria-describedby만 Description을 가리켜야 합니다.',
+              ),
+              _popoverButton(
+                '헤더 없음',
+                title: '',
+                semanticsLabel: '필터',
+                showCloseButton: false,
+                bodyText: 'Header 슬롯 자체가 렌더되지 않습니다.',
+                footerLabel: '적용',
+              ),
             ],
           ),
-          Center(
-            child: _popoverButton(
-              'placement=$placement',
-              triggerKey: const ValueKey('popover-placement-demo'),
-              title: placement,
-              placement: placement,
-              showCloseButton: false,
-              closeOnInteractOutside: false,
-              closeOnFocusOut: false,
-              bodyText: '요청 placement: $placement',
-            ),
-          ),
-        ]),
-      ),
-      _popoverSection(
-        hint: 'popover를 열어둔 채 값을 바꾸면 재배치가 실시간으로 보입니다.',
-        'positioning 옵션',
-        _column([
-          SeedSwitch(
-            label: 'flip',
-            checked: flip,
-            onCheckedChange: (v) => setState(() => flip = v),
-          ),
-          SeedSwitch(
-            label: 'slide',
-            checked: slide,
-            onCheckedChange: (v) => setState(() => slide = v),
-          ),
-          // React wraps the trigger in a centered flex Row.
-          Center(
-            child: _popoverButton(
-              '옵션 적용 popover',
-              title: 'positioning',
-              placement: 'top',
-              flip: flip,
-              slide: slide,
-              closeOnInteractOutside: false,
-              bodyText: 'flip $flip / slide $slide',
-            ),
-          ),
-        ]),
-      ),
-      _popoverGroup(context, '콘텐츠'),
-      _popoverSection(
-        hint: 'Body가 max-height를 넘으면 스크롤되고, 스크롤 시 상단 divider와 하단 scroll fog가 나타납니다.',
-        '긴 콘텐츠 스크롤',
-        _popoverButton(
-          '약관 동의',
-          title: '약관 동의',
-          description: '아래 내용을 확인해주세요',
-          customBody: (ctx) => _column([
-            for (var i = 1; i <= 24; i++)
-              Text('$i. 본문이 길어지면 Body만 스크롤되고 Header / Footer는 고정됩니다.'),
-          ], gap: 7),
         ),
-      ),
-      _popoverSection(
-        hint: 'Content는 width / maxWidth를, Body는 maxHeight / paddingX를 받습니다.',
-        '크기 style props',
-        Wrap(
-          alignment: WrapAlignment.center,
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            _popoverButton(
-              'width 고정',
-              title: 'width=400px',
-              fixedWidth: 400,
-              bodyText: '콘텐츠 길이와 무관하게 너비가 고정됩니다.',
+        _popoverGroup(context, '배치'),
+        _popoverSection(
+          hint: '열어둔 채로 placement를 바꿔보세요. 요청한 배치와 실제 배치는 다를 수 있고, 적용된 값은 content의 data-side / data-alignment에 찍힙니다.',
+          'placement 12종',
+          _column([
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (var row = 0; row < placements.length; row += 3)
+                  SizedBox(
+                    width: MediaQuery.sizeOf(context).width - 40,
+                    child: Row(
+                      children: [
+                        for (var i = row; i < row + 3; i++) ...[
+                          if (i > row) const SizedBox(width: 8),
+                          Expanded(
+                            child: _button(
+                              placements[i],
+                              () => setState(() => placement = placements[i]),
+                              size: SeedButtonSize.xsmall,
+                              variant: placement == placements[i]
+                                  ? SeedButtonVariant.neutralSolid
+                                  : SeedButtonVariant.neutralWeak,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+              ],
             ),
-            _popoverButton(
-              'Body 높이 제한',
-              title: 'maxHeight=120px',
-              maxWidth: 360,
-              // React's maxHeight belongs to PopoverBody; the header and
-              // footer remain outside that cap.
-              customBody: (ctx) => ConstrainedBox(
-                key: const ValueKey('popover-body-max-height-120'),
-                constraints: const BoxConstraints(maxHeight: 120),
-                child: SingleChildScrollView(
-                  child: _column([
-                    for (var i = 1; i <= 12; i++)
-                      Text('$i. 좌우 padding과 최대 높이를 직접 지정한 Body입니다.'),
-                  ]),
-                ),
+            Center(
+              child: _popoverButton(
+                'placement=$placement',
+                triggerKey: const ValueKey('popover-placement-demo'),
+                title: placement,
+                placement: placement,
+                showCloseButton: false,
+                closeOnInteractOutside: false,
+                closeOnFocusOut: false,
+                bodyText: '요청 placement: $placement',
               ),
             ),
-          ],
+          ]),
         ),
-      ),
-      _popoverGroup(context, '상태'),
-      _popoverSection(
-        hint: 'trigger / closeButton / escapeKeyDown / interactOutside / focusOut을 확인해보세요. Tab으로 바깥으로 이동하면 focusOut이 기록됩니다. cascadeDismiss는 안쪽 popover를 열어둔 채 아래 버튼으로 바깥을 직접 닫아야 나옵니다.',
-        'onOpenChange reason + 중첩 dismiss',
-        _column([
-          // React wraps the trigger in a centered flex Row.
-          Center(child: _nestedPopovers()),
-          // React log box: bg.neutralWeak, 12px monospace entries and a
-          // 13px fg.neutralSubtle placeholder (hintStyle).
-          Container(
-            constraints: const BoxConstraints(minHeight: 120),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: context.seedColor.bg.neutralWeak,
-              borderRadius: BorderRadius.circular(8),
+        _popoverSection(
+          hint: 'popover를 열어둔 채 값을 바꾸면 재배치가 실시간으로 보입니다.',
+          'positioning 옵션',
+          _column([
+            SeedSwitch(
+              label: 'flip',
+              checked: flip,
+              onCheckedChange: (v) => setState(() => flip = v),
             ),
-            child: _column(
-              eventLog.isEmpty
-                  ? [
-                      Text(
-                        '아직 이벤트가 없습니다.',
-                        style: TextStyle(
-                          fontSize: 13,
-                          height: 1.5,
-                          color: context.seedColor.fg.neutralSubtle,
-                        ),
-                      ),
-                    ]
-                  : [
-                      for (final entry in eventLog)
+            SeedSwitch(
+              label: 'slide',
+              checked: slide,
+              onCheckedChange: (v) => setState(() => slide = v),
+            ),
+            // React wraps the trigger in a centered flex Row.
+            Center(
+              child: _popoverButton(
+                '옵션 적용 popover',
+                title: 'positioning',
+                placement: 'top',
+                flip: flip,
+                slide: slide,
+                closeOnInteractOutside: false,
+                bodyText: 'flip $flip / slide $slide',
+              ),
+            ),
+          ]),
+        ),
+        _popoverGroup(context, '콘텐츠'),
+        _popoverSection(
+          hint: 'Body가 max-height를 넘으면 스크롤되고, 스크롤 시 상단 divider와 하단 scroll fog가 나타납니다.',
+          '긴 콘텐츠 스크롤',
+          _popoverButton(
+            '약관 동의',
+            title: '약관 동의',
+            description: '아래 내용을 확인해주세요',
+            customBody: (ctx) => _column([
+              for (var i = 1; i <= 24; i++)
+                Text('$i. 본문이 길어지면 Body만 스크롤되고 Header / Footer는 고정됩니다.'),
+            ], gap: 7),
+          ),
+        ),
+        _popoverSection(
+          hint: 'Content는 width / maxWidth를, Body는 maxHeight / paddingX를 받습니다.',
+          '크기 style props',
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              _popoverButton(
+                'width 고정',
+                title: 'width=400px',
+                fixedWidth: 400,
+                bodyText: '콘텐츠 길이와 무관하게 너비가 고정됩니다.',
+              ),
+              _popoverButton(
+                'Body 높이 제한',
+                title: 'maxHeight=120px',
+                maxWidth: 360,
+                // React's maxHeight belongs to PopoverBody; the header and
+                // footer remain outside that cap.
+                customBody: (ctx) => ConstrainedBox(
+                  key: const ValueKey('popover-body-max-height-120'),
+                  constraints: const BoxConstraints(maxHeight: 120),
+                  child: SingleChildScrollView(
+                    child: _column([
+                      for (var i = 1; i <= 12; i++)
+                        Text('$i. 좌우 padding과 최대 높이를 직접 지정한 Body입니다.'),
+                    ]),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        _popoverGroup(context, '상태'),
+        _popoverSection(
+          hint: 'trigger / closeButton / escapeKeyDown / interactOutside / focusOut을 확인해보세요. Tab으로 바깥으로 이동하면 focusOut이 기록됩니다. cascadeDismiss는 안쪽 popover를 열어둔 채 아래 버튼으로 바깥을 직접 닫아야 나옵니다.',
+          'onOpenChange reason + 중첩 dismiss',
+          _column([
+            // React wraps the trigger in a centered flex Row.
+            Center(child: _nestedPopovers()),
+            // React log box: bg.neutralWeak, 12px monospace entries and a
+            // 13px fg.neutralSubtle placeholder (hintStyle).
+            Container(
+              constraints: const BoxConstraints(minHeight: 120),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: context.seedColor.bg.neutralWeak,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: _column(
+                eventLog.isEmpty
+                    ? [
                         Text(
-                          entry,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontFamily: 'monospace',
+                          '아직 이벤트가 없습니다.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            height: 1.5,
+                            color: context.seedColor.fg.neutralSubtle,
                           ),
                         ),
-                    ],
-              gap: 4,
+                      ]
+                    : [
+                        for (final entry in eventLog)
+                          Text(
+                            entry,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontFamily: 'monospace',
+                            ),
+                          ),
+                      ],
+                gap: 4,
+              ),
             ),
+          ]),
+        ),
+        _popoverSection(
+          hint: '바깥을 눌러도 닫히지 않습니다. Escape와 닫기 버튼은 그대로 동작합니다.',
+          'closeOnInteractOutside=false',
+          _popoverButton(
+            '바깥 클릭 무시',
+            title: 'closeOnInteractOutside=false',
+            closeOnInteractOutside: false,
+            bodyText: '바깥 아무 데나 눌러보세요.',
           ),
-        ]),
-      ),
-      _popoverSection(
-        hint: '바깥을 눌러도 닫히지 않습니다. Escape와 닫기 버튼은 그대로 동작합니다.',
-        'closeOnInteractOutside=false',
-        _popoverButton(
-          '바깥 클릭 무시',
-          title: 'closeOnInteractOutside=false',
-          closeOnInteractOutside: false,
-          bodyText: '바깥 아무 데나 눌러보세요.',
         ),
-      ),
-      _popoverSection(
-        hint: '입력값을 적고 닫았다 다시 열어보세요. 기본값은 content를 남겨 입력과 스크롤 위치를 유지하고, unmountOnExit은 닫을 때 버립니다.',
-        'lazyMount / unmountOnExit',
-        Wrap(
-          alignment: WrapAlignment.center,
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            _popoverButton(
-              '기본 (유지)',
-              lazyMount: true,
-              title: '상태 유지',
-              customBody: (ctx) =>
-                  const SeedTextField(label: '메모', placeholder: '적고 닫아보세요'),
-            ),
-            _popoverButton(
-              'unmountOnExit',
-              unmountOnExit: true,
-              title: '상태 초기화',
-              customBody: (ctx) =>
-                  const SeedTextField(label: '메모', placeholder: '닫으면 사라집니다'),
-            ),
-            _popoverButton(
-              'lazyMount=false',
-              lazyMount: false,
-              title: '선마운트',
-              bodyText: '열기 전에도 content가 DOM에 있습니다.',
-            ),
-          ],
+        _popoverSection(
+          hint: '입력값을 적고 닫았다 다시 열어보세요. 기본값은 content를 남겨 입력과 스크롤 위치를 유지하고, unmountOnExit은 닫을 때 버립니다.',
+          'lazyMount / unmountOnExit',
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              _popoverButton(
+                '기본 (유지)',
+                lazyMount: true,
+                title: '상태 유지',
+                customBody: (ctx) =>
+                    const SeedTextField(label: '메모', placeholder: '적고 닫아보세요'),
+              ),
+              _popoverButton(
+                'unmountOnExit',
+                unmountOnExit: true,
+                title: '상태 초기화',
+                customBody: (ctx) =>
+                    const SeedTextField(label: '메모', placeholder: '닫으면 사라집니다'),
+              ),
+              _popoverButton(
+                'lazyMount=false',
+                lazyMount: false,
+                title: '선마운트',
+                bodyText: '열기 전에도 content가 DOM에 있습니다.',
+              ),
+            ],
+          ),
         ),
-      ),
-      _popoverGroup(context, '레이어'),
-      _popoverSection(
-        hint: 'BottomSheet / Dialog 안에서 열고, 스크림 위로 올라오는지와 닫을 때 focus가 어디로 돌아가는지 확인하세요.',
-        '다른 레이어 위의 popover',
-        Wrap(
-          alignment: WrapAlignment.center,
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            _button('BottomSheet 안에서', _openLayerSheet),
-            _button('Dialog 안에서', _openLayerDialog),
-          ],
+        _popoverGroup(context, '레이어'),
+        _popoverSection(
+          hint: 'BottomSheet / Dialog 안에서 열고, 스크림 위로 올라오는지와 닫을 때 focus가 어디로 돌아가는지 확인하세요.',
+          '다른 레이어 위의 popover',
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              _button('BottomSheet 안에서', _openLayerSheet),
+              _button('Dialog 안에서', _openLayerDialog),
+            ],
+          ),
         ),
-      ),
-      _popoverGroup(context, '포커스'),
-      _popoverSection(
-        hint: 'trigger 앞뒤에 focusable을 둬서 Tab / Shift+Tab 순회와 닫은 뒤 focus 복귀를 관찰합니다.',
-        'focus 경계',
-        Wrap(
-          alignment: WrapAlignment.center,
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            _button('이전 버튼', () {}),
-            _popoverButton(
-              '가운데 trigger',
-              title: '경계 테스트',
-              bodyText: 'Tab / Shift+Tab이 dialog 안에서 어떻게 도는지 봅니다.',
-            ),
-            _button('다음 버튼', () {}),
-          ],
+        _popoverGroup(context, '포커스'),
+        _popoverSection(
+          hint: 'trigger 앞뒤에 focusable을 둬서 Tab / Shift+Tab 순회와 닫은 뒤 focus 복귀를 관찰합니다.',
+          'focus 경계',
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              _button('이전 버튼', () {}),
+              _popoverButton(
+                '가운데 trigger',
+                title: '경계 테스트',
+                bodyText: 'Tab / Shift+Tab이 dialog 안에서 어떻게 도는지 봅니다.',
+              ),
+              _button('다음 버튼', () {}),
+            ],
+          ),
         ),
-      ),
-    ]),
+      ]),
+    ),
   );
 }
 

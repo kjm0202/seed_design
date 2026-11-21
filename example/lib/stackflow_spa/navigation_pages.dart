@@ -860,6 +860,44 @@ class _NavigationPageState extends State<_NavigationPage> {
     },
   );
 
+  /// Lets the side navigation surface run up behind the status bar while its
+  /// items start below it. The official recipe has no safe-area handling, so
+  /// the example app owns this inset. The strip mirrors the default surface
+  /// and right border that [SeedSideNavigation] paints for each tone.
+  Widget _withStatusBarBleed(Widget navigation) {
+    final top = MediaQuery.paddingOf(context).top;
+    if (top == 0) return navigation;
+    final colors = context.seedColor;
+    final strip = _navTone == SeedSideNavTone.transparent
+        ? null
+        : BoxDecoration(
+            color: colors.isDark
+                ? SeedPalette.gray100Dark
+                : SeedPalette.gray100Light,
+            border: Border(
+              right: BorderSide(color: colors.stroke.neutralMuted),
+            ),
+          );
+    return IntrinsicWidth(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          DecoratedBox(
+            decoration: strip ?? const BoxDecoration(),
+            child: SizedBox(height: top),
+          ),
+          Expanded(
+            child: MediaQuery.removePadding(
+              context: context,
+              removeTop: true,
+              child: navigation,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _sideNavigation() {
     final groups = [
       SeedSideNavGroup(
@@ -952,50 +990,52 @@ class _NavigationPageState extends State<_NavigationPage> {
           height: constraints.maxHeight,
           child: Row(
             children: [
-              SeedSideNavigation(
-                groups: groups,
-                selectedId: _navSelection,
-                collapsed: _collapsed,
-                onCollapsedChange: _setCollapsed,
-                showCollapseButton: true,
-                tone: _navTone,
-                width: 240,
-                footer: Semantics(
-                  container: true,
-                  button: true,
-                  selected: _navSelection == '알림',
-                  child: Tooltip(
-                    message: '알림',
-                    // The visible text already names the official button.
-                    excludeFromSemantics: true,
-                    child: InkWell(
-                      onTap: () => setState(() => _navSelection = '알림'),
-                      borderRadius: BorderRadius.circular(10),
-                      child: Container(
-                        height: 44,
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(10),
-                          color: _navSelection == '알림'
-                              ? context.seedColor.bg.transparentSelected
-                              : Colors.transparent,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: _collapsed
-                              ? MainAxisAlignment.center
-                              : MainAxisAlignment.start,
-                          children: [
-                            const Icon(Icons.notifications, size: 20),
-                            if (!_collapsed) ...[
-                              const SizedBox(width: 12),
-                              Text(
-                                '알림',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: context.seedTypography.t4Medium,
-                              ),
+              _withStatusBarBleed(
+                SeedSideNavigation(
+                  groups: groups,
+                  selectedId: _navSelection,
+                  collapsed: _collapsed,
+                  onCollapsedChange: _setCollapsed,
+                  showCollapseButton: true,
+                  tone: _navTone,
+                  width: 240,
+                  footer: Semantics(
+                    container: true,
+                    button: true,
+                    selected: _navSelection == '알림',
+                    child: Tooltip(
+                      message: '알림',
+                      // The visible text already names the official button.
+                      excludeFromSemantics: true,
+                      child: InkWell(
+                        onTap: () => setState(() => _navSelection = '알림'),
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          height: 44,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(10),
+                            color: _navSelection == '알림'
+                                ? context.seedColor.bg.transparentSelected
+                                : Colors.transparent,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: _collapsed
+                                ? MainAxisAlignment.center
+                                : MainAxisAlignment.start,
+                            children: [
+                              const Icon(Icons.notifications, size: 20),
+                              if (!_collapsed) ...[
+                                const SizedBox(width: 12),
+                                Text(
+                                  '알림',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: context.seedTypography.t4Medium,
+                                ),
+                              ],
                             ],
-                          ],
+                          ),
                         ),
                       ),
                     ),
@@ -1003,74 +1043,78 @@ class _NavigationPageState extends State<_NavigationPage> {
                 ),
               ),
               Expanded(
-                child: Align(
-                  alignment: Alignment.topCenter,
-                  child: SizedBox(
-                    width: _density == 'low'
-                        ? 720
-                        : _density == 'medium'
-                        ? (constraints.maxWidth >= 1280 ? 1040 : 720)
-                        : double.infinity,
-                    child: ListView(
-                      padding: const EdgeInsets.all(16),
-                      children: [
-                        Text(
-                          'Side Navigation Tone',
-                          style: context.seedTypography.t5Medium,
-                        ),
-                        const SizedBox(height: 8),
-                        _scrollableSelectGroup(
-                          columns: 2,
-                          child: SeedSelectBoxGroup(
-                            semanticsLabel: 'Side Navigation Tone',
+                child: SafeArea(
+                  left: false,
+                  bottom: false,
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: SizedBox(
+                      width: _density == 'low'
+                          ? 720
+                          : _density == 'medium'
+                          ? (constraints.maxWidth >= 1280 ? 1040 : 720)
+                          : double.infinity,
+                      child: ListView(
+                        padding: const EdgeInsets.all(16),
+                        children: [
+                          Text(
+                            'Side Navigation Tone',
+                            style: context.seedTypography.t5Medium,
+                          ),
+                          const SizedBox(height: 8),
+                          _scrollableSelectGroup(
                             columns: 2,
-                            value: _navTone.name,
-                            onValueChange: (value) {
-                              if (value is String) {
-                                setState(
-                                  () => _navTone = SeedSideNavTone.values
-                                      .byName(value),
-                                );
-                              }
-                            },
-                            children: [
-                              for (final tone in SeedSideNavTone.values)
-                                SeedSelectBox(
-                                  title: tone.name,
-                                  value: tone.name,
-                                  control: SeedSelectBoxControl.radiomark,
-                                ),
-                            ],
+                            child: SeedSelectBoxGroup(
+                              semanticsLabel: 'Side Navigation Tone',
+                              columns: 2,
+                              value: _navTone.name,
+                              onValueChange: (value) {
+                                if (value is String) {
+                                  setState(
+                                    () => _navTone = SeedSideNavTone.values
+                                        .byName(value),
+                                  );
+                                }
+                              },
+                              children: [
+                                for (final tone in SeedSideNavTone.values)
+                                  SeedSelectBox(
+                                    title: tone.name,
+                                    value: tone.name,
+                                    control: SeedSelectBoxControl.radiomark,
+                                  ),
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Layout Density',
-                          style: context.seedTypography.t5Medium,
-                        ),
-                        const SizedBox(height: 8),
-                        _scrollableSelectGroup(
-                          columns: 3,
-                          child: SeedSelectBoxGroup(
-                            semanticsLabel: 'Layout Density',
+                          const SizedBox(height: 16),
+                          Text(
+                            'Layout Density',
+                            style: context.seedTypography.t5Medium,
+                          ),
+                          const SizedBox(height: 8),
+                          _scrollableSelectGroup(
                             columns: 3,
-                            value: _density,
-                            onValueChange: (value) {
-                              if (value is String) {
-                                setState(() => _density = value);
-                              }
-                            },
-                            children: [
-                              for (final density in ['low', 'medium', 'high'])
-                                SeedSelectBox(
-                                  title: density,
-                                  value: density,
-                                  control: SeedSelectBoxControl.radiomark,
-                                ),
-                            ],
+                            child: SeedSelectBoxGroup(
+                              semanticsLabel: 'Layout Density',
+                              columns: 3,
+                              value: _density,
+                              onValueChange: (value) {
+                                if (value is String) {
+                                  setState(() => _density = value);
+                                }
+                              },
+                              children: [
+                                for (final density in ['low', 'medium', 'high'])
+                                  SeedSelectBox(
+                                    title: density,
+                                    value: density,
+                                    control: SeedSelectBoxControl.radiomark,
+                                  ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),

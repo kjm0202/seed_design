@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart'
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart'
     show BoxParentData, OverflowBoxFit, RenderShiftedBox;
+import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:seed_design/seed_design.dart';
 
 import 'spa_types.dart';
@@ -151,69 +152,71 @@ class _LayerBarPageState extends State<_LayerBarPage> {
       leading: _appBarIconStrip('Left', left),
       actions: [_appBarIconStrip('Right', right)],
     ),
-    body: _scrollPage([
-      _action(
-        'ActivityTransparentBar',
-        () => widget.navigate('ActivityTransparentBar'),
-      ),
-      _gap,
-      // Official buttons use PrefixIcon, not glyphs in the accessible name.
-      SeedButton(
-        label: 'Back',
-        prefixIcon: const Icon(Icons.chevron_left_rounded),
-        onPressed: widget.goBack,
-        variant: SeedButtonVariant.neutralWeak,
-        isFullWidth: true,
-      ),
-      _gap,
-      SeedButton(
-        label: 'ActivityHome',
-        prefixIcon: const Icon(Icons.home_outlined),
-        onPressed: () => widget.navigate('ActivityHome'),
-        variant: SeedButtonVariant.neutralWeak,
-        isFullWidth: true,
-      ),
-      _gap,
-      Row(
-        children: [
-          Expanded(
-            child: _action(
-              'Append Left',
-              () => setState(() => left++),
-              variant: SeedButtonVariant.neutralWeak,
+    body: spaSideSafeArea(
+      _scrollPage([
+        _action(
+          'ActivityTransparentBar',
+          () => widget.navigate('ActivityTransparentBar'),
+        ),
+        _gap,
+        // Official buttons use PrefixIcon, not glyphs in the accessible name.
+        SeedButton(
+          label: 'Back',
+          prefixIcon: const Icon(Icons.chevron_left_rounded),
+          onPressed: widget.goBack,
+          variant: SeedButtonVariant.neutralWeak,
+          isFullWidth: true,
+        ),
+        _gap,
+        SeedButton(
+          label: 'ActivityHome',
+          prefixIcon: const Icon(Icons.home_outlined),
+          onPressed: () => widget.navigate('ActivityHome'),
+          variant: SeedButtonVariant.neutralWeak,
+          isFullWidth: true,
+        ),
+        _gap,
+        Row(
+          children: [
+            Expanded(
+              child: _action(
+                'Append Left',
+                () => setState(() => left++),
+                variant: SeedButtonVariant.neutralWeak,
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _action(
-              'Append Right',
-              () => setState(() => right++),
-              variant: SeedButtonVariant.neutralWeak,
+            const SizedBox(width: 8),
+            Expanded(
+              child: _action(
+                'Append Right',
+                () => setState(() => right++),
+                variant: SeedButtonVariant.neutralWeak,
+              ),
             ),
-          ),
-        ],
-      ),
-      _gap,
-      Row(
-        children: [
-          Expanded(
-            child: _action(
-              'Remove Left',
-              () => setState(() => left = left > 0 ? left - 1 : 0),
-              variant: SeedButtonVariant.neutralWeak,
+          ],
+        ),
+        _gap,
+        Row(
+          children: [
+            Expanded(
+              child: _action(
+                'Remove Left',
+                () => setState(() => left = left > 0 ? left - 1 : 0),
+                variant: SeedButtonVariant.neutralWeak,
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _action(
-              'Remove Right',
-              () => setState(() => right = right > 0 ? right - 1 : 0),
-              variant: SeedButtonVariant.neutralWeak,
+            const SizedBox(width: 8),
+            Expanded(
+              child: _action(
+                'Remove Right',
+                () => setState(() => right = right > 0 ? right - 1 : 0),
+                variant: SeedButtonVariant.neutralWeak,
+              ),
             ),
-          ),
-        ],
-      ),
-    ], padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12)),
+          ],
+        ),
+      ], padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12)),
+    ),
   );
 }
 
@@ -724,9 +727,8 @@ class _SafeAreaBleedPageState extends State<_SafeAreaBleedPage> {
                   title: '안내',
                   description: '배경은 화면 끝까지, 글자는 safe area 안쪽에 있어요.',
                   extendSafeAreaX: _extend,
-                  onTap: () => SeedSnackbarProvider.of(context).show(
-                    child: const SeedSnackbar(message: '안내 배너를 눌렀습니다'),
-                  ),
+                  onTap: () => SeedSnackbarProvider.of(context)
+                      .show(child: const SeedSnackbar(message: '안내 배너를 눌렀습니다')),
                 ),
               ),
             ),
@@ -1675,49 +1677,68 @@ class _AppScreenTransparentPage extends StatelessWidget {
       _previewScreen(context, transparent: true);
 }
 
-Widget _previewScreen(BuildContext context, {bool transparent = false}) =>
-    Scaffold(
-      backgroundColor: transparent
-          ? (context.seedColor.isDark
-                ? SeedPalette.gray800Dark
-                : SeedPalette.gray800Light)
-          : context.seedColor.bg.layerDefault,
-      extendBodyBehindAppBar: transparent,
-      appBar: SeedTopNavigation(
-        titleText: 'Preview',
-        platform: SeedTopNavigationPlatform.cupertino,
-        gradient: transparent,
-        tone: transparent
-            ? SeedTopNavigationTone.transparent
-            : SeedTopNavigationTone.layer,
-        leading: (ModalRoute.of(context)?.isFirst ?? true)
-            ? SeedTopNavigationIconButton(
-                icon: const Icon(Icons.close),
-                // Transparent passes aria-label="Close"; Preview keeps the
-                // AppBarCloseButton default "닫기".
-                semanticsLabel: transparent ? 'Close' : '닫기',
-                // Official AppBarCloseButton is root-only; its default click
-                // handler does not navigate (app-bar.tsx:99-127).
-                onPressed: () {},
-              )
-            : const SizedBox.shrink(),
-        actions: [
-          SeedTopNavigationIconButton(
-            icon: const Icon(Icons.notifications),
-            semanticsLabel: 'Notification',
+Widget _previewScreen(BuildContext context, {bool transparent = false}) {
+  final background = transparent
+      ? (context.seedColor.isDark
+            ? SeedPalette.gray800Dark
+            : SeedPalette.gray800Light)
+      : context.seedColor.bg.layerDefault;
+  final screen = _previewScaffold(context, background, transparent);
+  if (!transparent) return screen;
+  // The transparent bar draws no surface of its own, so the status bar sits
+  // directly on the page background: pick icons that contrast with it.
+  final darkBackground =
+      ThemeData.estimateBrightnessForColor(background) == Brightness.dark;
+  return AnnotatedRegion<SystemUiOverlayStyle>(
+    value: darkBackground
+        ? SystemUiOverlayStyle.light
+        : SystemUiOverlayStyle.dark,
+    child: screen,
+  );
+}
+
+Widget _previewScaffold(
+  BuildContext context,
+  Color background,
+  bool transparent,
+) => Scaffold(
+  backgroundColor: background,
+  extendBodyBehindAppBar: transparent,
+  appBar: SeedTopNavigation(
+    titleText: 'Preview',
+    platform: SeedTopNavigationPlatform.cupertino,
+    gradient: transparent,
+    tone: transparent
+        ? SeedTopNavigationTone.transparent
+        : SeedTopNavigationTone.layer,
+    leading: (ModalRoute.of(context)?.isFirst ?? true)
+        ? SeedTopNavigationIconButton(
+            icon: const Icon(Icons.close),
+            // Transparent passes aria-label="Close"; Preview keeps the
+            // AppBarCloseButton default "닫기".
+            semanticsLabel: transparent ? 'Close' : '닫기',
+            // Official AppBarCloseButton is root-only; its default click
+            // handler does not navigate (app-bar.tsx:99-127).
             onPressed: () {},
-          ),
-        ],
+          )
+        : const SizedBox.shrink(),
+    actions: [
+      SeedTopNavigationIconButton(
+        icon: const Icon(Icons.notifications),
+        semanticsLabel: 'Notification',
+        onPressed: () {},
       ),
-      body: Center(
-        child: Text(
-          'Preview',
-          style: transparent
-              ? TextStyle(color: context.seedColor.fg.onNeutralSolid)
-              : null,
-        ),
-      ),
-    );
+    ],
+  ),
+  body: Center(
+    child: Text(
+      'Preview',
+      style: transparent
+          ? TextStyle(color: context.seedColor.fg.onNeutralSolid)
+          : null,
+    ),
+  ),
+);
 
 class _AppScreenAppBarCustomizationPage extends StatelessWidget {
   const _AppScreenAppBarCustomizationPage();
