@@ -1,0 +1,60 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: en-US
+early_access: false
+
+reviews:
+  profile: chill
+  high_level_summary: true
+  review_status: true
+  collapse_walkthrough: false
+  poem: false
+  auto_review:
+    enabled: true
+    drafts: false
+
+  path_filters:
+    - "!**/build/**"
+    - "!**/pubspec.lock"
+    - "!**/*.g.dart"
+    - "!**/*.freezed.dart"
+    - "!**/generated_plugin_registrant.*"
+    - "!**/generated_plugins.cmake"
+    - "!**/GeneratedPluginRegistrant.*"
+    - "!example/{android,ios,linux,macos,windows,web}/**"
+    - "!test/goldens/**"
+    - "!third_party/**"
+
+  path_instructions:
+    - path: "lib/**/*.dart"
+      instructions: |
+        This package is a Flutter port of the official SEED Design React
+        (current baseline: @seed-design/react 3.3.0).
+        - When a public widget's prop names, types, or default values change, check that
+          they match the official React API and flag unexplained deviations.
+        - Do not normalize names such as defaultValue/defaultValues/defaultChecked/defaultEntries
+          or onValueChange/onValuesChange/onOpenChange to a generic preference; check that each
+          follows the corresponding official component.
+        - Check that differences caused by Dart types or the Flutter lifecycle, and existing
+          compatibility aliases, are kept distinct from the official API.
+        - Check that public API changes come with consumer-facing widget tests.
+    - path: "test/**/*.dart"
+      instructions: |
+        Widget tests should verify consumer-visible behavior and the public API,
+        not implementation details.
+    - path: "example/**/*.dart"
+      instructions: |
+        This is the example (showcase) app. Focus on whether it uses the public API
+        in the recommended way.
+
+  tools:
+    markdownlint:
+      enabled: false
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "AGENTS.md"
