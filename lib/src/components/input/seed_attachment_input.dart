@@ -11,6 +11,7 @@ import '../../foundations/colors/seed_color_scheme.dart';
 import '../../foundations/colors/seed_palette.dart';
 import '../../foundations/dimensions/seed_dimension.dart';
 import '../../foundations/feedback/seed_scale_feedback.dart';
+import '../../foundations/motion/seed_motion.dart';
 import '../../foundations/radius/seed_radius.dart';
 import '../../foundations/typography/seed_typography.dart';
 import '../../theme/seed_theme.dart';
@@ -472,13 +473,41 @@ class SeedAttachmentInput extends StatelessWidget {
         );
       },
     );
-    Widget preview(SeedAttachmentItem item) => Opacity(
-      opacity: readOnly || item.readOnly || item.isDragging || !item.enabled
-          ? 0.5
-          : 1,
-      child: item.type == SeedAttachmentType.file
-          ? _buildFileItem(context, item, colors, typography)
-          : _buildImageItem(context, item, colors, typography),
+    // The drag proxy marks its subtree with [_AttachmentDragProxyScope], so the
+    // copy built into the overlay renders the official `dragging` state
+    // (React's [data-dragging]) instead of a drop shadow.
+    //
+    // The official type=image dragging state dims the whole item to 50%, while
+    // type=file keeps the item opaque and dims its thumbnail icon, name and
+    // size with the `dragging` colors.
+    Widget preview(SeedAttachmentItem item) => Builder(
+      builder: (context) {
+        final dragging =
+            item.isDragging || _AttachmentDragProxyScope.draggingOf(context);
+        final dimmed =
+            readOnly ||
+            item.readOnly ||
+            !item.enabled ||
+            (dragging && item.type == SeedAttachmentType.image);
+        return Opacity(
+          opacity: dimmed ? 0.5 : 1,
+          child: item.type == SeedAttachmentType.file
+              ? _buildFileItem(
+                  context,
+                  item,
+                  colors,
+                  typography,
+                  dragging: dragging,
+                )
+              : _buildImageItem(
+                  context,
+                  item,
+                  colors,
+                  typography,
+                  dragging: dragging,
+                ),
+        );
+      },
     );
     if (!showTrigger && items.isEmpty) return const SizedBox.shrink();
     // Flutter attaches reorder semantics to every child of its reorderable
@@ -540,8 +569,12 @@ class SeedAttachmentInput extends StatelessWidget {
     BuildContext context,
     SeedAttachmentItem item,
     SeedColorScheme colors,
-    SeedTypography typography,
-  ) {
+    SeedTypography typography, {
+    required bool dragging,
+  }) {
+    // type=file dragging uses fg.disabled for the thumbnail icon, name and
+    // size (attachment-input-item.yaml type=file.dragging).
+    final foreground = dragging ? colors.fg.disabled : null;
     return SizedBox(
       width: _attachmentFileTileWidth,
       height: _fileHeight(context, typography),
@@ -585,7 +618,7 @@ class SeedAttachmentInput extends StatelessWidget {
                       child: Icon(
                         Icons.insert_drive_file_outlined,
                         size: SeedDimension.x6,
-                        color: colors.fg.neutralSubtle,
+                        color: foreground ?? colors.fg.neutralSubtle,
                       ),
                     ),
                     const SizedBox(width: SeedDimension.x2_5),
@@ -598,7 +631,7 @@ class SeedAttachmentInput extends StatelessWidget {
                             _SeedAttachmentFileName(
                               name: item.name!,
                               style: typography.t2Medium.copyWith(
-                                color: colors.fg.neutral,
+                                color: foreground ?? colors.fg.neutral,
                               ),
                             ),
                           if (item.sizeText != null)
@@ -607,7 +640,7 @@ class SeedAttachmentInput extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: typography.t1Regular.copyWith(
-                                color: colors.fg.neutralSubtle,
+                                color: foreground ?? colors.fg.neutralSubtle,
                               ),
                             ),
                         ],
@@ -616,12 +649,9 @@ class SeedAttachmentInput extends StatelessWidget {
                   ],
                 ),
               ),
-            if (!readOnly &&
-                item.enabled &&
-                !item.readOnly &&
-                item.removeEnabled &&
-                !item.isDragging &&
-                onRemove != null)
+            // The official removeButton is display:none while dragging,
+            // because the root also disables its matching mask cutout.
+            if (_showsRemove(item, dragging: dragging))
               Positioned(
                 top: -SeedDimension.x1,
                 right: -SeedDimension.x1,
@@ -680,14 +710,17 @@ class SeedAttachmentInput extends StatelessWidget {
     BuildContext context,
     SeedAttachmentItem item,
     SeedColorScheme colors,
-    SeedTypography typography,
-  ) {
+    SeedTypography typography, {
+    required bool dragging,
+  }) {
     return Stack(
       clipBehavior: Clip.none,
       children: [
         // Thumbnail square container
         ClipPath(
-          clipper: _showsRemove(item) ? const _RemoveButtonNotch() : null,
+          clipper: _showsRemove(item, dragging: dragging)
+              ? const _RemoveButtonNotch()
+              : null,
           child: Container(
             width: itemSize,
             height: itemSize,
@@ -786,12 +819,7 @@ class SeedAttachmentInput extends StatelessWidget {
           ),
 
         // Delete button in top right
-        if (!readOnly &&
-            item.enabled &&
-            !item.readOnly &&
-            item.removeEnabled &&
-            !item.isDragging &&
-            onRemove != null)
+        if (_showsRemove(item, dragging: dragging))
           Positioned(
             top: -SeedDimension.x1,
             right: -SeedDimension.x1,
@@ -825,12 +853,13 @@ class SeedAttachmentInput extends StatelessWidget {
     );
   }
 
-  bool _showsRemove(SeedAttachmentItem item) =>
+  bool _showsRemove(SeedAttachmentItem item, {bool dragging = false}) =>
       !readOnly &&
       item.enabled &&
       !item.readOnly &&
       item.removeEnabled &&
       !item.isDragging &&
+      !dragging &&
       onRemove != null;
 
   Widget _buildRemoveButton(
@@ -1055,15 +1084,15 @@ class _AttachmentReorderListState extends State<_AttachmentReorderList> {
     }
   }
 
-  // Same decoration as Material's ReorderableListView default.
+  // The official item recipe has no drop shadow while dragging: the whole
+  // item shrinks by the standard SEED Scale Feedback
+  // (`:is([aria-grabbed=true], [data-dragging])` uses createScaleFeedbackStyles
+  // with FEEDBACK_SCALE_TRANSITION). Material's ReorderableListView default
+  // instead lifts the proxy with elevation, so replace it with that feedback
+  // and mark the copy as dragging for the item's `dragging` state.
   Widget _proxyDecorator(Widget child, int index, Animation<double> animation) {
-    return AnimatedBuilder(
-      animation: animation,
-      builder: (context, child) => Material(
-        elevation: Curves.easeInOut.transform(animation.value) * 6,
-        child: child,
-      ),
-      child: child,
+    return _AttachmentDragProxyScope(
+      child: _AttachmentDragFeedback(animation: animation, child: child),
     );
   }
 
@@ -1142,6 +1171,151 @@ class _AttachmentReorderListState extends State<_AttachmentReorderList> {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Marks the drag proxy's subtree so [SeedAttachmentInput] builds its copy in
+/// the item's `dragging` state, like React's `[data-dragging]` root. The
+/// consumer-facing [SeedAttachmentItem.isDragging] keeps its own meaning.
+class _AttachmentDragProxyScope extends InheritedWidget {
+  const _AttachmentDragProxyScope({required super.child});
+
+  /// Whether [context] is inside a drag proxy.
+  static bool draggingOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<_AttachmentDragProxyScope>() !=
+      null;
+
+  @override
+  bool updateShouldNotify(_AttachmentDragProxyScope oldWidget) => false;
+}
+
+/// Applies the official drag feedback to the dragged proxy: Scale Feedback
+/// derived from the item's rendered size, animated with the pressed-scale
+/// transition. The official item has no elevation while dragging.
+///
+/// The reorderable list's proxy animation runs 0 → 1 when the drag starts and
+/// reverses to 0 when it is dropped, so it doubles as the enter/exit progress.
+class _AttachmentDragFeedback extends StatelessWidget {
+  const _AttachmentDragFeedback({required this.animation, required this.child});
+
+  final Animation<double> animation;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) => _AttachmentDragScale(
+        // FEEDBACK_SCALE_TRANSITION in the official createScaleFeedbackStyles.
+        progress: SeedCurves.pressedScale.transform(animation.value),
+        disableAnimations: MediaQuery.disableAnimationsOf(context),
+        child: child!,
+      ),
+      child: child,
+    );
+  }
+}
+
+/// Scales [child] around its center by the standard SEED Scale Feedback.
+///
+/// The scale is computed in paint from this box's own laid-out size, the size
+/// React measures from the dragged element, so no post-frame measurement is
+/// needed. `scale = 1 - (1 - target) * progress`, with the target from
+/// [SeedScaleCalculator]; reduced motion stays at 1.
+class _AttachmentDragScale extends SingleChildRenderObjectWidget {
+  const _AttachmentDragScale({
+    required this.progress,
+    required this.disableAnimations,
+    required Widget super.child,
+  });
+
+  final double progress;
+  final bool disableAnimations;
+
+  @override
+  _RenderAttachmentDragScale createRenderObject(BuildContext context) =>
+      _RenderAttachmentDragScale(progress, disableAnimations);
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    _RenderAttachmentDragScale renderObject,
+  ) {
+    renderObject
+      ..progress = progress
+      ..disableAnimations = disableAnimations;
+  }
+}
+
+class _RenderAttachmentDragScale extends RenderProxyBox {
+  _RenderAttachmentDragScale(this._progress, this._disableAnimations);
+
+  double get progress => _progress;
+  double _progress;
+  set progress(double value) {
+    if (_progress == value) return;
+    _progress = value;
+    markNeedsPaint();
+  }
+
+  bool get disableAnimations => _disableAnimations;
+  bool _disableAnimations;
+  set disableAnimations(bool value) {
+    if (_disableAnimations == value) return;
+    _disableAnimations = value;
+    markNeedsPaint();
+  }
+
+  double get _scale {
+    if (_disableAnimations) return 1;
+    final target = SeedScaleCalculator.calculateScale(
+      width: size.width,
+      height: size.height,
+    );
+    return 1 - (1 - target) * _progress;
+  }
+
+  // T(center) * S * T(-center), as RenderTransform does for Alignment.center.
+  Matrix4 get _transform {
+    final scale = _scale;
+    return Matrix4.diagonal3Values(scale, scale, 1)..setTranslationRaw(
+      size.width * (1 - scale) / 2,
+      size.height * (1 - scale) / 2,
+      0,
+    );
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    if (child == null) return;
+    if (_scale == 1) {
+      super.paint(context, offset);
+      layer = null;
+      return;
+    }
+    final Layer? oldLayer = layer;
+    layer = context.pushTransform(
+      needsCompositing,
+      offset,
+      _transform,
+      super.paint,
+      oldLayer: oldLayer is TransformLayer ? oldLayer : null,
+    );
+  }
+
+  @override
+  void applyPaintTransform(RenderBox child, Matrix4 transform) {
+    transform.multiply(_transform);
+  }
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
+    return result.addWithPaintTransform(
+      transform: _transform,
+      position: position,
+      hitTest: (BoxHitTestResult result, Offset position) =>
+          super.hitTestChildren(result, position: position),
     );
   }
 }

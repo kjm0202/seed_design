@@ -5,10 +5,15 @@ import '../../foundations/motion/seed_motion.dart';
 import '../../foundations/radius/seed_radius.dart';
 import '../../theme/seed_theme.dart';
 
-/// Pressable shared by pagination controls. Unlike the dynamic scale of other
-/// pressables, the official recipes press these to the fixed `scale.s97`.
+/// Pressable shared by pagination controls.
+///
+/// SEED 3.4.0 replaced the fixed `scale.s97` press with the shared size-based
+/// Scale Feedback (`pressed.root.scaleScope: self`), so the whole control uses
+/// [SeedPressable]'s dynamic `(basis - 2) / basis` scale. Each control is
+/// 40 x 40 px, giving `basis = 40` and a pressed scale of 0.95.
 class SeedPaginationPressable extends StatelessWidget {
-  /// Creates a focusable pagination surface with the official 0.97 press scale.
+  /// Creates a focusable pagination surface with the official size-based press
+  /// scale.
   ///
   /// [semanticsLabel] names the control, [enabled] gates interaction,
   /// [onTap] runs on activation, [builder] draws its pressed visual state,
@@ -38,21 +43,11 @@ class SeedPaginationPressable extends StatelessWidget {
   /// Renders SEED press feedback and the supplied [builder].
   Widget build(BuildContext context) => SeedPressable(
     enabled: enabled,
-    enableScale: false,
     selected: selected,
     semanticsLabel: semanticsLabel,
     focusBorderRadius: SeedBorderRadius.r2,
     onTap: onTap,
-    builder: (context, isEngaged) => AnimatedScale(
-      scale:
-          SeedInteractionState.maybeOf(context)?.pressed == true &&
-              !MediaQuery.disableAnimationsOf(context)
-          ? 0.97
-          : 1,
-      duration: SeedDuration.pressedScale,
-      curve: SeedCurves.pressedScale,
-      child: builder(context, isEngaged),
-    ),
+    builder: builder,
   );
 }
 
