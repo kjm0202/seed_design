@@ -14,26 +14,15 @@ import 'support/seed_test_host.dart';
 const double _controlSize = 40;
 const double _pressedScale = (_controlSize - 2) / _controlSize;
 
-/// The [SeedPressable] that draws [content], for reading its press scale.
+/// The [SeedPressable] that draws [content].
 Finder _pressableAround(Finder content) =>
     find.ancestor(of: content, matching: find.byType(SeedPressable));
 
-/// The scale that [pressable] paints right now.
-///
-/// [SeedPressable] applies its scale with a [Transform]; it emits no transform
-/// at all while scaling is suppressed (reduced motion, or before the control
-/// was measured), which paints the same as a scale of one. The x axis of the
-/// matrix carries the scale, because `Transform.scale` leaves z untouched and
-/// [Matrix4.getMaxScaleOnAxis] would therefore always report at least 1.
-double _paintedScale(WidgetTester tester, Finder pressable) {
-  final transform = find.descendant(
-    of: pressable,
-    matching: find.byType(Transform),
-  );
-  if (transform.evaluate().isEmpty) return 1;
-  final matrix = tester.widget<Transform>(transform).transform;
-  return matrix.getRow(0).xyz.length;
-}
+/// The scale the control around [content] renders at right now: the painted
+/// width of [content] over its laid-out width. The press feedback scales the
+/// whole control, so its content shrinks by the same factor.
+double _renderedScale(WidgetTester tester, Finder content) =>
+    tester.getRect(content).width / tester.getSize(content).width;
 
 /// Presses and holds [target] until the press feedback settles.
 ///
@@ -73,11 +62,14 @@ void main() {
 
     final item = _pressableAround(find.text('1'));
     final box = find.descendant(of: item, matching: find.byType(Container));
-    expect(_paintedScale(tester, item), 1);
+    expect(_renderedScale(tester, find.text('1')), 1);
     expect(tester.getRect(box).height, closeTo(_controlSize, .01));
 
     final gesture = await _pressAndHold(tester, find.text('1'));
-    expect(_paintedScale(tester, item), closeTo(_pressedScale, .001));
+    expect(
+      _renderedScale(tester, find.text('1')),
+      closeTo(_pressedScale, .001),
+    );
     expect(
       tester.getRect(box).height,
       closeTo(_controlSize - 2, .01),
@@ -86,7 +78,7 @@ void main() {
 
     await gesture.up();
     await tester.pumpAndSettle();
-    expect(_paintedScale(tester, item), 1);
+    expect(_renderedScale(tester, find.text('1')), 1);
     expect(tester.getRect(box).height, closeTo(_controlSize, .01));
   });
 
@@ -109,12 +101,15 @@ void main() {
       expect(tester.getRect(box).height, closeTo(_controlSize, .01));
 
       final gesture = await _pressAndHold(tester, find.byIcon(icon));
-      expect(_paintedScale(tester, button), closeTo(_pressedScale, .001));
+      expect(
+        _renderedScale(tester, find.byIcon(icon)),
+        closeTo(_pressedScale, .001),
+      );
       expect(tester.getRect(box).height, closeTo(_controlSize - 2, .01));
 
       await gesture.up();
       await tester.pumpAndSettle();
-      expect(_paintedScale(tester, button), 1);
+      expect(_renderedScale(tester, find.byIcon(icon)), 1);
       expect(tester.getRect(box).height, closeTo(_controlSize, .01));
     }
   });
@@ -141,12 +136,15 @@ void main() {
       expect(tester.getRect(box).height, closeTo(_controlSize, .01));
 
       final gesture = await _pressAndHold(tester, find.byIcon(icon));
-      expect(_paintedScale(tester, button), closeTo(_pressedScale, .001));
+      expect(
+        _renderedScale(tester, find.byIcon(icon)),
+        closeTo(_pressedScale, .001),
+      );
       expect(tester.getRect(box).height, closeTo(_controlSize - 2, .01));
 
       await gesture.up();
       await tester.pumpAndSettle();
-      expect(_paintedScale(tester, button), 1);
+      expect(_renderedScale(tester, find.byIcon(icon)), 1);
       expect(tester.getRect(box).height, closeTo(_controlSize, .01));
     }
   });
@@ -159,18 +157,16 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final item = _pressableAround(find.text('1'));
       final itemGesture = await _pressAndHold(tester, find.text('1'));
-      expect(_paintedScale(tester, item), 1);
+      expect(_renderedScale(tester, find.text('1')), 1);
       await itemGesture.up();
       await tester.pumpAndSettle();
 
-      final next = _pressableAround(find.byIcon(Icons.chevron_right));
       final nextGesture = await _pressAndHold(
         tester,
         find.byIcon(Icons.chevron_right),
       );
-      expect(_paintedScale(tester, next), 1);
+      expect(_renderedScale(tester, find.byIcon(Icons.chevron_right)), 1);
       await nextGesture.up();
       await tester.pumpAndSettle();
     },
@@ -190,12 +186,11 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final next = _pressableAround(find.byIcon(Icons.chevron_right));
       final gesture = await _pressAndHold(
         tester,
         find.byIcon(Icons.chevron_right),
       );
-      expect(_paintedScale(tester, next), 1);
+      expect(_renderedScale(tester, find.byIcon(Icons.chevron_right)), 1);
       await gesture.up();
       await tester.pumpAndSettle();
     },
@@ -214,7 +209,7 @@ void main() {
     final item = _pressableAround(find.text('2'));
     final box = find.descendant(of: item, matching: find.byType(Container));
     final gesture = await _pressAndHold(tester, find.text('2'));
-    expect(_paintedScale(tester, item), 1);
+    expect(_renderedScale(tester, find.text('2')), 1);
     expect(tester.getRect(box).height, closeTo(_controlSize, .01));
     expect(
       (tester.widget<Container>(box).decoration! as BoxDecoration).color,
@@ -223,12 +218,11 @@ void main() {
     await gesture.up();
     await tester.pumpAndSettle();
 
-    final next = _pressableAround(find.byIcon(Icons.chevron_right));
     final nextGesture = await _pressAndHold(
       tester,
       find.byIcon(Icons.chevron_right),
     );
-    expect(_paintedScale(tester, next), 1);
+    expect(_renderedScale(tester, find.byIcon(Icons.chevron_right)), 1);
     await nextGesture.up();
     await tester.pumpAndSettle();
   });

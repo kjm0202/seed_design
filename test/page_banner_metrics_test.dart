@@ -1,3 +1,4 @@
+import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:seed_design/seed_design.dart';
@@ -321,6 +322,75 @@ void main() {
       final banner = _banner(tester);
       final link = tester.getRect(find.text('Action'));
       expect(banner.right - link.right, closeTo(40, 0.01));
+    });
+
+    testWidgets('the end of the link text stays the link\'s, not close\'s', (
+      tester,
+    ) async {
+      var links = 0;
+      var dismissals = 0;
+      await _pump(
+        tester,
+        SeedPageBanner(
+          description: 'Banner',
+          linkText: 'Action',
+          onLinkTap: () => links++,
+          dismissible: true,
+          onDismiss: () => dismissals++,
+        ),
+      );
+      final link = tester.getRect(find.text('Action'));
+      // The close target paints from 44px inside the end edge, 4px over the
+      // link text, which ends 40px inside it.
+      expect(
+        _banner(tester).right - tester.getRect(_closePressable()).left,
+        closeTo(44, 0.01),
+      );
+      await tester.tapAt(Offset(link.right - 2, link.center.dy));
+      await tester.pumpAndSettle();
+      expect(links, 1);
+      expect(dismissals, 0);
+
+      await tester.tap(_closePressable());
+      await tester.pumpAndSettle();
+      expect(links, 1);
+      expect(dismissals, 1);
+    });
+
+    testWidgets('a single-line link keeps a 40px tall target', (tester) async {
+      await _pump(tester, linkBanner());
+      expect(tester.getSize(_linkPressable()).height, closeTo(40, 0.01));
+    });
+
+    testWidgets('a multiline link grows instead of clipping', (tester) async {
+      const label = 'View\naccount\ndetails';
+      await _pump(
+        tester,
+        SeedPageBanner(
+          description: 'Banner',
+          linkText: label,
+          onLinkTap: () {},
+        ),
+      );
+      final banner = _banner(tester);
+      final text = tester.getRect(find.text(label));
+      final paragraph = tester.renderObject<RenderParagraph>(find.text(label));
+      final target = tester.getRect(
+        find
+            .ancestor(of: find.text(label), matching: find.byType(SeedPressable))
+            .first,
+      );
+      // Every line lays out: the paragraph is as tall as its three lines.
+      expect(
+        paragraph.size.height,
+        closeTo(paragraph.getMaxIntrinsicHeight(paragraph.size.width), 0.01),
+      );
+      expect(text.height, greaterThan(40));
+      // css `padding: 11px`: the target is the label plus 11px on each side.
+      expect(target.height, closeTo(text.height + 22, 0.01));
+      // The banner grows with the label and keeps its 10px block padding.
+      expect(text.top - banner.top, closeTo(10, 0.01));
+      expect(banner.bottom - text.bottom, closeTo(10, 0.01));
     });
 
     testWidgets('a wrapped link starts at the content edge', (tester) async {

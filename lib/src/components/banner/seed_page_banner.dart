@@ -183,16 +183,6 @@ class SeedPageBanner extends StatefulWidget {
       // plus half the scaled t4 line height; the icons offset themselves from
       // it instead of centering on the whole banner.
       final firstLineCenter = SeedDimension.x2_5 + t4LineHeight / 2;
-      final t3LineHeight =
-          textScaler.scale(SeedFontSize.t3) *
-          (SeedLineHeight.t3 / SeedFontSize.t3);
-      // The official link keeps its 40px target (t3 line height plus the 11px
-      // bleed on both sides) for touch, while only the line box joins the
-      // layout.
-      final linkTargetHeight = math.max(
-        SeedDimension.x10,
-        t3LineHeight + _linkTargetBleed * 2,
-      );
 
       // With neither close button nor chevron, the link's end bleed has no
       // reserved slot to run into, so the content box gives up 11px of the
@@ -253,8 +243,8 @@ class SeedPageBanner extends StatefulWidget {
                     // Wrap runs 11px past both content edges, and every item
                     // pads 11px back inline, so text and line breaks stay
                     // where they were while the link target bleeds 11px.
-                    child: _InlineBleed(
-                      bleed: _linkTargetBleed,
+                    child: _Bleed(
+                      horizontal: _linkTargetBleed,
                       child: Wrap(
                         alignment: WrapAlignment.spaceBetween,
                         // The official 6px gap, less both items' inline bleed.
@@ -297,36 +287,26 @@ class SeedPageBanner extends StatefulWidget {
                             ),
                           ),
                           if (linkText != null)
-                            // Only the padded t3 line takes part in the layout;
-                            // the 40px target is vertically centered on it.
-                            SizedBox(
-                              height: SeedDimension.x2_5 * 2 + t3LineHeight,
-                              child: OverflowBox(
-                                // The padded link takes part in the Wrap's
-                                // layout; the target overflows vertically.
-                                fit: OverflowBoxFit.deferToChild,
-                                minHeight: linkTargetHeight,
-                                maxHeight: linkTargetHeight,
-                                child: SeedPressable(
-                                  semanticsLabel: linkText,
-                                  focusRingInside: true,
-                                  onTap: onLinkTap,
-                                  builder: (context, linkPressed) => SizedBox(
-                                    height: linkTargetHeight,
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: _linkTargetBleed,
-                                      ),
-                                      child: Center(
-                                        widthFactor: 1,
-                                        heightFactor: 1,
-                                        child: Text(
-                                          linkText!,
-                                          style: typography.t3Bold.copyWith(
-                                            color: fgColor,
-                                          ),
-                                        ),
-                                      ),
+                            // css pads the link 11px on every side, so its
+                            // target is 40px per line and grows with the
+                            // label's lines. Only the label plus the x2_5
+                            // line padding joins the layout; the target bleeds
+                            // the remaining 1px above and below.
+                            _Bleed(
+                              vertical:
+                                  _linkTargetBleed - SeedDimension.x2_5,
+                              child: SeedPressable(
+                                semanticsLabel: linkText,
+                                focusRingInside: true,
+                                onTap: onLinkTap,
+                                builder: (context, linkPressed) => Padding(
+                                  padding: const EdgeInsets.all(
+                                    _linkTargetBleed,
+                                  ),
+                                  child: Text(
+                                    linkText!,
+                                    style: typography.t3Bold.copyWith(
+                                      color: fgColor,
                                     ),
                                   ),
                                 ),
@@ -361,33 +341,42 @@ class SeedPageBanner extends StatefulWidget {
                   // are not hit tested anyway.
                   top: firstLineCenter - SeedDimension.x10 / 2,
                   end: 0,
-                  width: SeedDimension.x10,
+                  // Unlike css, where the later close target wins taps on the
+                  // 4px it overlaps the content box, only the 36px past the
+                  // content box hit tests, so the end of a link label stays
+                  // the link's. The target still paints all 40px.
+                  width: SeedDimension.x10 - SeedDimension.x1,
                   height: SeedDimension.x10,
-                  child: SeedPressable(
-                    semanticsLabel: SeedLocalizations.label(
-                      context,
-                      SeedLabel.close,
-                    ),
-                    behavior: HitTestBehavior.opaque,
-                    focusBorderRadius: SeedBorderRadius.r2,
-                    focusRingInside: true,
-                    onTap: dismiss,
-                    builder: (context, isClosePressed) => AnimatedContainer(
-                      duration: SeedDuration.colorTransition,
-                      curve: SeedCurves.easing,
-                      width: SeedDimension.x10,
-                      height: SeedDimension.x10,
-                      decoration: BoxDecoration(
-                        color: isClosePressed
-                            ? colors.bg.transparentPressed
-                            : colors.bg.transparent,
-                        borderRadius: SeedBorderRadius.r2,
+                  child: OverflowBox(
+                    alignment: AlignmentDirectional.centerEnd,
+                    minWidth: SeedDimension.x10,
+                    maxWidth: SeedDimension.x10,
+                    child: SeedPressable(
+                      semanticsLabel: SeedLocalizations.label(
+                        context,
+                        SeedLabel.close,
                       ),
-                      child: Center(
-                        child: Icon(
-                          Icons.close_rounded,
-                          size: SeedDimension.x4,
-                          color: iconColor,
+                      behavior: HitTestBehavior.opaque,
+                      focusBorderRadius: SeedBorderRadius.r2,
+                      focusRingInside: true,
+                      onTap: dismiss,
+                      builder: (context, isClosePressed) => AnimatedContainer(
+                        duration: SeedDuration.colorTransition,
+                        curve: SeedCurves.easing,
+                        width: SeedDimension.x10,
+                        height: SeedDimension.x10,
+                        decoration: BoxDecoration(
+                          color: isClosePressed
+                              ? colors.bg.transparentPressed
+                              : colors.bg.transparent,
+                          borderRadius: SeedBorderRadius.r2,
+                        ),
+                        child: Center(
+                          child: Icon(
+                            Icons.close_rounded,
+                            size: SeedDimension.x4,
+                            color: iconColor,
+                          ),
                         ),
                       ),
                     ),
@@ -537,69 +526,100 @@ class _SeedPageBannerState extends State<SeedPageBanner> {
       : const SizedBox.shrink();
 }
 
-/// Lays its child out [bleed] wider on both inline sides and lets hit tests
-/// reach that overhang, like a CSS negative inline margin.
+/// Lays its child out [horizontal] wider on both inline sides and [vertical]
+/// taller on both block sides, and lets hit tests reach that overhang, like a
+/// CSS negative margin.
 ///
-/// Its own size, and so its parent's layout, keeps the incoming width; the
-/// parent must leave the [bleed] free on both sides for taps there to arrive.
-class _InlineBleed extends SingleChildRenderObjectWidget {
-  const _InlineBleed({required this.bleed, required super.child});
+/// Its own size, and so its parent's layout, is the child's less the bleed;
+/// the parent must leave the bleed free for taps there to arrive.
+class _Bleed extends SingleChildRenderObjectWidget {
+  const _Bleed({this.horizontal = 0, this.vertical = 0, required super.child});
 
-  final double bleed;
+  final double horizontal;
+  final double vertical;
 
   @override
   RenderObject createRenderObject(BuildContext context) =>
-      _RenderInlineBleed(bleed);
+      _RenderBleed(horizontal, vertical);
 
   @override
-  void updateRenderObject(
-    BuildContext context,
-    _RenderInlineBleed renderObject,
-  ) {
-    renderObject.bleed = bleed;
+  void updateRenderObject(BuildContext context, _RenderBleed renderObject) {
+    renderObject
+      ..horizontal = horizontal
+      ..vertical = vertical;
   }
 }
 
-class _RenderInlineBleed extends RenderShiftedBox {
-  _RenderInlineBleed(this._bleed) : super(null);
+class _RenderBleed extends RenderShiftedBox {
+  _RenderBleed(this._horizontal, this._vertical) : super(null);
 
-  double _bleed;
-  double get bleed => _bleed;
-  set bleed(double value) {
-    if (value == _bleed) return;
-    _bleed = value;
+  double _horizontal;
+  double get horizontal => _horizontal;
+  set horizontal(double value) {
+    if (value == _horizontal) return;
+    _horizontal = value;
+    markNeedsLayout();
+  }
+
+  double _vertical;
+  double get vertical => _vertical;
+  set vertical(double value) {
+    if (value == _vertical) return;
+    _vertical = value;
     markNeedsLayout();
   }
 
   BoxConstraints _childConstraints(BoxConstraints constraints) =>
       constraints.copyWith(
-        minWidth: constraints.minWidth + _bleed * 2,
-        maxWidth: constraints.maxWidth + _bleed * 2,
+        minWidth: constraints.minWidth + _horizontal * 2,
+        maxWidth: constraints.maxWidth + _horizontal * 2,
+        minHeight: constraints.minHeight + _vertical * 2,
+        maxHeight: constraints.maxHeight + _vertical * 2,
+      );
+
+  Size _shrink(BoxConstraints constraints, Size childSize) =>
+      constraints.constrain(
+        Size(
+          math.max(0, childSize.width - _horizontal * 2),
+          math.max(0, childSize.height - _vertical * 2),
+        ),
       );
 
   @override
-  double computeMinIntrinsicWidth(double height) =>
-      math.max(0, (child?.getMinIntrinsicWidth(height) ?? 0) - _bleed * 2);
+  double computeMinIntrinsicWidth(double height) => math.max(
+    0,
+    (child?.getMinIntrinsicWidth(height + _vertical * 2) ?? 0) -
+        _horizontal * 2,
+  );
 
   @override
-  double computeMaxIntrinsicWidth(double height) =>
-      math.max(0, (child?.getMaxIntrinsicWidth(height) ?? 0) - _bleed * 2);
+  double computeMaxIntrinsicWidth(double height) => math.max(
+    0,
+    (child?.getMaxIntrinsicWidth(height + _vertical * 2) ?? 0) -
+        _horizontal * 2,
+  );
 
   @override
-  double computeMinIntrinsicHeight(double width) =>
-      child?.getMinIntrinsicHeight(width + _bleed * 2) ?? 0;
+  double computeMinIntrinsicHeight(double width) => math.max(
+    0,
+    (child?.getMinIntrinsicHeight(width + _horizontal * 2) ?? 0) -
+        _vertical * 2,
+  );
 
   @override
-  double computeMaxIntrinsicHeight(double width) =>
-      child?.getMaxIntrinsicHeight(width + _bleed * 2) ?? 0;
+  double computeMaxIntrinsicHeight(double width) => math.max(
+    0,
+    (child?.getMaxIntrinsicHeight(width + _horizontal * 2) ?? 0) -
+        _vertical * 2,
+  );
 
   @override
   Size computeDryLayout(BoxConstraints constraints) {
     final child = this.child;
     if (child == null) return constraints.smallest;
-    final childSize = child.getDryLayout(_childConstraints(constraints));
-    return constraints.constrain(
-      Size(childSize.width - _bleed * 2, childSize.height),
+    return _shrink(
+      constraints,
+      child.getDryLayout(_childConstraints(constraints)),
     );
   }
 
@@ -611,15 +631,21 @@ class _RenderInlineBleed extends RenderShiftedBox {
       return;
     }
     child.layout(_childConstraints(constraints), parentUsesSize: true);
-    (child.parentData! as BoxParentData).offset = Offset(-_bleed, 0);
-    size = constraints.constrain(
-      Size(child.size.width - _bleed * 2, child.size.height),
+    (child.parentData! as BoxParentData).offset = Offset(
+      -_horizontal,
+      -_vertical,
     );
+    size = _shrink(constraints, child.size);
   }
 
   @override
   bool hitTest(BoxHitTestResult result, {required Offset position}) {
-    final bounds = Rect.fromLTRB(-_bleed, 0, size.width + _bleed, size.height);
+    final bounds = Rect.fromLTRB(
+      -_horizontal,
+      -_vertical,
+      size.width + _horizontal,
+      size.height + _vertical,
+    );
     if (bounds.contains(position) &&
         hitTestChildren(result, position: position)) {
       result.add(BoxHitTestEntry(this, position));

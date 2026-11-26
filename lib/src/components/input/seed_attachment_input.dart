@@ -1090,9 +1090,18 @@ class _AttachmentReorderListState extends State<_AttachmentReorderList> {
   // with FEEDBACK_SCALE_TRANSITION). Material's ReorderableListView default
   // instead lifts the proxy with elevation, so replace it with that feedback
   // and mark the copy as dragging for the item's `dragging` state.
+  //
+  // The proxy builds in the overlay, which only captures inherited themes,
+  // so the input's own reduced-motion setting is read here and passed on.
+  bool _disableAnimations = false;
+
   Widget _proxyDecorator(Widget child, int index, Animation<double> animation) {
     return _AttachmentDragProxyScope(
-      child: _AttachmentDragFeedback(animation: animation, child: child),
+      child: _AttachmentDragFeedback(
+        animation: animation,
+        disableAnimations: _disableAnimations,
+        child: child,
+      ),
     );
   }
 
@@ -1139,6 +1148,7 @@ class _AttachmentReorderListState extends State<_AttachmentReorderList> {
 
   @override
   Widget build(BuildContext context) {
+    _disableAnimations = MediaQuery.disableAnimationsOf(context);
     return CustomScrollView(
       controller: _controller,
       scrollDirection: Axis.horizontal,
@@ -1197,9 +1207,14 @@ class _AttachmentDragProxyScope extends InheritedWidget {
 /// The reorderable list's proxy animation runs 0 → 1 when the drag starts and
 /// reverses to 0 when it is dropped, so it doubles as the enter/exit progress.
 class _AttachmentDragFeedback extends StatelessWidget {
-  const _AttachmentDragFeedback({required this.animation, required this.child});
+  const _AttachmentDragFeedback({
+    required this.animation,
+    required this.disableAnimations,
+    required this.child,
+  });
 
   final Animation<double> animation;
+  final bool disableAnimations;
   final Widget child;
 
   @override
@@ -1209,7 +1224,7 @@ class _AttachmentDragFeedback extends StatelessWidget {
       builder: (context, child) => _AttachmentDragScale(
         // FEEDBACK_SCALE_TRANSITION in the official createScaleFeedbackStyles.
         progress: SeedCurves.pressedScale.transform(animation.value),
-        disableAnimations: MediaQuery.disableAnimationsOf(context),
+        disableAnimations: disableAnimations,
         child: child!,
       ),
       child: child,

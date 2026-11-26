@@ -99,16 +99,93 @@ void main() {
       _labelRect(tester, minuteWheel, '00').center.dx,
       closeTo(tester.getCenter(minuteWheel).dx, 0.5),
     );
-
-    // Every Korean period label and every two-digit minute label has the same
-    // width, so those labels look centered even when a column is end-aligned.
-    // Pin the exposed column alignment as well to catch that regression.
-    final columns = tester
-        .widget<SeedWheelPicker>(find.byType(SeedWheelPicker))
-        .columns;
-    expect(columns[0].alignment, Alignment.center);
-    expect(columns[1].alignment, AlignmentDirectional.centerEnd);
-    expect(columns[2].alignment, Alignment.center);
     expect(tester.takeException(), isNull);
+  });
+
+  // The hour column relies on the wheel placing even custom-built items by the
+  // column alignment, as React's full-width item row does with
+  // `justify-content`.
+  group('WheelPicker custom item builders follow the column alignment', () {
+    const columnWidth = 120.0;
+    const itemWidth = 40.0;
+    const itemKey = Key('custom-wheel-item');
+
+    Future<(Rect, Rect)> pumpColumn(
+      WidgetTester tester,
+      AlignmentGeometry alignment,
+      TextDirection textDirection,
+    ) async {
+      await tester.pumpWidget(
+        _host(
+          Align(
+            alignment: AlignmentDirectional.topStart,
+            child: SeedWheelPicker(
+              columns: [
+                SeedWheelColumn.typed<int>(
+                  items: const [1],
+                  width: columnWidth,
+                  alignment: alignment,
+                  itemBuilder: (context, item, isSelected) => SizedBox(
+                    key: itemKey,
+                    width: itemWidth,
+                    child: Text('$item'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          textDirection: textDirection,
+        ),
+      );
+      await tester.pumpAndSettle();
+      return (
+        tester.getRect(find.byType(ListWheelScrollView)),
+        tester.getRect(find.byKey(itemKey)),
+      );
+    }
+
+    for (final direction in TextDirection.values) {
+      testWidgets('centerEnd puts the item at the end edge ($direction)', (
+        tester,
+      ) async {
+        final (wheel, item) = await pumpColumn(
+          tester,
+          AlignmentDirectional.centerEnd,
+          direction,
+        );
+        expect(wheel.width, closeTo(columnWidth, 0.01));
+        expect(item.width, closeTo(itemWidth, 0.01));
+        if (direction == TextDirection.ltr) {
+          expect(item.right, closeTo(wheel.right, 0.5));
+        } else {
+          expect(item.left, closeTo(wheel.left, 0.5));
+        }
+      });
+
+      testWidgets('centerStart puts the item at the start edge ($direction)', (
+        tester,
+      ) async {
+        final (wheel, item) = await pumpColumn(
+          tester,
+          AlignmentDirectional.centerStart,
+          direction,
+        );
+        if (direction == TextDirection.ltr) {
+          expect(item.left, closeTo(wheel.left, 0.5));
+        } else {
+          expect(item.right, closeTo(wheel.right, 0.5));
+        }
+      });
+    }
+
+    testWidgets('center keeps the item centered', (tester) async {
+      final (wheel, item) = await pumpColumn(
+        tester,
+        Alignment.center,
+        TextDirection.ltr,
+      );
+      expect(item.width, closeTo(itemWidth, 0.01));
+      expect(item.center.dx, closeTo(wheel.center.dx, 0.5));
+    });
   });
 }

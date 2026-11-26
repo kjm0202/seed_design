@@ -133,6 +133,44 @@ void main() {
     await tester.pumpAndSettle();
   });
 
+  testWidgets('a local reduced-motion override reaches the dragged proxy', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 300);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    // Only the input disables animations; the platform and the overlay that
+    // hosts the proxy keep them on.
+    await tester.pumpWidget(
+      _host(
+        Builder(
+          builder: (context) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(disableAnimations: true),
+            child: const _Harness(count: 3),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final proxy = find.byKey(const ValueKey('file-0'));
+    final gesture = await _startDrag(tester, 'file-0');
+
+    expect(
+      find.descendant(of: proxy, matching: find.byIcon(Icons.close_rounded)),
+      findsNothing,
+    );
+    final layoutSize = tester.getSize(proxy);
+    final rendered = tester.getRect(proxy);
+    expect(rendered.width, closeTo(layoutSize.width, 1e-3));
+    expect(rendered.height, closeTo(layoutSize.height, 1e-3));
+
+    await gesture.up();
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('dragged proxy shows dragging state and restores after drop', (
     tester,
   ) async {
