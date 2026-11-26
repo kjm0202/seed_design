@@ -357,9 +357,26 @@ void main() {
       expect(dismissals, 1);
     });
 
-    testWidgets('a single-line link keeps a 40px tall target', (tester) async {
-      await _pump(tester, linkBanner());
-      expect(tester.getSize(_linkPressable()).height, closeTo(40, 0.01));
+    testWidgets('a single-line link takes taps across the banner height', (
+      tester,
+    ) async {
+      var links = 0;
+      await _pump(
+        tester,
+        SeedPageBanner(
+          description: 'Banner',
+          linkText: 'Action',
+          onLinkTap: () => links++,
+        ),
+      );
+      final banner = _banner(tester);
+      final x = tester.getCenter(find.text('Action')).dx;
+      // The 40px target covers the whole 39px banner, edge to edge.
+      await tester.tapAt(Offset(x, banner.top + 1));
+      await tester.pump();
+      await tester.tapAt(Offset(x, banner.bottom - 1));
+      await tester.pump();
+      expect(links, 2);
     });
 
     testWidgets('a multiline link grows instead of clipping', (tester) async {

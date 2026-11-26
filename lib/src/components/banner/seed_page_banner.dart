@@ -624,6 +624,18 @@ class _RenderBleed extends RenderShiftedBox {
   }
 
   @override
+  double? computeDryBaseline(
+    covariant BoxConstraints constraints,
+    TextBaseline baseline,
+  ) {
+    final childBaseline = child?.getDryBaseline(
+      _childConstraints(constraints),
+      baseline,
+    );
+    return childBaseline == null ? null : childBaseline - _vertical;
+  }
+
+  @override
   void performLayout() {
     final child = this.child;
     if (child == null) {
