@@ -4,9 +4,13 @@ Flutter 포트의 사용자 API와 동작은 공식 SEED Design React를 우선�
 
 - 컴포넌트의 prop 이름·타입·기본값을 바꾸기 전에 공식 소스를 확인한다.
   근거와 Dart 대응은 `doc/REACT_API_REFERENCE.md`, 유지할 계약은 `doc/PUBLIC_API_CONTRACT.md`에 기록한다.
-- 현재 비교 기준은 공식 React/CSS 3.3.0(태그 `@seed-design/react@3.3.0`, 커밋 `5c98c886e`)이다.
-  로컬 참고 소스는 `doc/react_package_3.3.0/packages/react`와 `doc/react_package_3.3.0/packages/react-headless` 아래에 있다.
-  토큰과 레시피는 같은 폴더의 `packages/rootage`·`packages/qvism-preset`, 공식 조합 예제는 `docs/registry/react`를 본다.
+- 현재 비교 기준은 공식 React 3.4.0(태그 `@seed-design/react@3.4.0`, 커밋 `4051269c`)과
+  CSS·rootage 3.4.1(태그 `@seed-design/css@3.4.1`, 커밋 `e174aa7b`)이다.
+  로컬 참고 저장소는 `doc/react_package_3.3.0`이다. 작업 트리는 3.3.0에 체크아웃되어 있으므로,
+  현재 기준 소스는 `git -C doc/react_package_3.3.0 show '@seed-design/css@3.4.1:<path>'`처럼 태그로 읽는다.
+  컴포넌트는 `packages/react`·`packages/react-headless`, 토큰과 레시피는 `packages/rootage`·`packages/qvism-preset`,
+  공식 조합 예제는 `docs/registry/react`를 본다.
+- 모바일 동작은 Lynx도 함께 본다. 로컬 사본은 `doc/lynx_package_1.4.3`(`@seed-design/lynx-react@1.4.3`)이다.
 - `doc/react_package`는 3.0.1 사본이다. 과거 버전과의 비교와 `tool/generate_content_placeholder_presets.py`의 입력으로만 쓰고,
   현재 API의 근거로 삼지 않는다.
 - 참고 폴더가 없거나 최신 여부가 중요하면 공식 GitHub 저장소와 seed-design.io 문서를 확인한다.
