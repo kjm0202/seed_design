@@ -1,3 +1,19 @@
+## 2.1.0
+
+Based on SEED Design React 3.4.0 and CSS/rootage 3.4.1.
+
+### Changes
+
+- **Attachments:** Scale a dragged item by its own size, as other pressables do, instead of lifting it with a Material elevation. Show a dragged image at 50% opacity and a dragged file in the disabled foreground color.
+- **Page Banner:** Follow the CSS 3.4.1 metrics. Keep the prefix icon at 16px and center it, the chevron, and the close button on the first line of text. Drop the 40px minimum height, so a single-line banner is 39px tall. Give the close button a 40×40 target with its icon 16px from the end edge, and extend the link's touch target 11px on every side without moving its text.
+- **Pagination:** Replace the fixed 0.97 press scale with the size-based Scale Feedback; 40px controls scale to 0.95.
+- **Time Picker:** End-align the hour column so one- and two-digit hours share their trailing edge.
+- **Wheel Picker:** Align the output of a custom `itemBuilder` to its column's alignment.
+
+### Example and web
+
+- **Foldables:** Keep demo pages clear of side and bottom system insets. Pages with their own Scaffold apply the shell's left and right safe area, side navigation sits below the status bar, the form's fixed submit button stays above the gesture bar, and the transparent AppScreen preview picks contrasting status bar icons.
+
 ## 2.0.0
 
 Based on SEED Design React/CSS 3.3.0.

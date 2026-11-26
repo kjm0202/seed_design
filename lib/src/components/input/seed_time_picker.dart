@@ -29,6 +29,10 @@ enum SeedTimePeriod {
 /// - Hour Column (1 ~ 12)
 /// - Minute Column (00 ~ 59 with optional [minuteStep])
 ///
+/// Hour labels are end-aligned as in React 3.4.0, so one-digit hours line up
+/// with "10".."12" on their trailing edge (the leading edge in RTL); the
+/// period and minute labels remain centered.
+///
 /// Like React's TimePicker, the default time is 00:00 and [minuteStep] is five.
 /// Flutter represents the value with [TimeOfDay] and follows the app locale
 /// when [locale] is omitted.
@@ -315,6 +319,10 @@ class _SeedTimePickerState extends State<SeedTimePicker> {
       width: intrinsicColumnWidth([
         for (var hour = 1; hour <= 12; hour++) hourFormatter.format(hour),
       ], minimumGlyphWidthRatio: 0.65),
+      // React 3.4.0 sets the hour column's item justify-content to flex-end,
+      // so one-digit hours share a trailing edge with "10".."12". centerEnd
+      // is the inline end, flipping to the left in RTL like the CSS recipe.
+      alignment: AlignmentDirectional.centerEnd,
       onStepChanged: (idx, stepDelta) {
         final prevHourIdx = _hour % 12;
         final newScrollIndex = prevHourIdx + stepDelta;

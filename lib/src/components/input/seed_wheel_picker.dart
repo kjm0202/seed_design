@@ -340,7 +340,14 @@ class _SeedWheelColumnImpl<T> extends SeedWheelColumn {
   ) {
     final item = items[index];
     if (itemBuilder != null) {
-      return itemBuilder!(context, item, isSelected);
+      // React's wheel item is a full-width flex row whose `justify-content`
+      // places the label on the inline axis (the TimePicker sets it to
+      // flex-end for hours). Custom builders must honor the column alignment
+      // too; the wheel otherwise wraps every item in `Center`.
+      return Align(
+        alignment: alignment,
+        child: itemBuilder!(context, item, isSelected),
+      );
     }
     final colors = context.seedColor;
     final typography = context.seedTypography;

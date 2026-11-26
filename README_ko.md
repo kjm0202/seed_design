@@ -23,7 +23,7 @@ dependencies:
   flutter:
     sdk: flutter
   material_ui: ^1.7.0
-  seed_design: ^2.0.0
+  seed_design: ^2.1.0
 ```
 
 ```sh

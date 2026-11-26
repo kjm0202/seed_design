@@ -1,5 +1,8 @@
+import 'dart:math' as math;
+
 import '../../localization/seed_localizations.dart';
 
+import 'package:flutter/rendering.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../foundations/dimensions/seed_dimension.dart';
@@ -7,6 +10,7 @@ import '../../foundations/feedback/seed_scale_feedback.dart';
 import '../../foundations/gradient/seed_gradient.dart';
 import '../../foundations/motion/seed_motion.dart';
 import '../../foundations/radius/seed_radius.dart';
+import '../../foundations/typography/seed_typography.dart';
 import '../../theme/seed_theme.dart';
 import '../layout/seed_safe_area_x.dart';
 
@@ -61,7 +65,8 @@ class SeedPageBanner extends StatefulWidget {
 
   /// Shows a close button even when [onDismiss] is omitted.
   final bool dismissible;
-  /// Optional leading icon, displayed at 16 logical pixels.
+  /// Optional leading icon, drawn at a fixed 16 logical pixels and vertically
+  /// centered on the first text line.
   final Widget? prefixIcon;
   /// Semantic tone, default [SeedPageBannerTone.neutral].
   final SeedPageBannerTone tone;
@@ -121,6 +126,8 @@ class SeedPageBanner extends StatefulWidget {
   bool get _isActionable => onTap != null;
 
   /// (target height 40 - t3 line height 18) / 2, as in the official recipe.
+  /// The link target extends this far above and below its line box, while the
+  /// line box alone takes part in the layout.
   static const double _linkTargetBleed = 11;
 
   Widget _scaleContent(Widget child) =>
@@ -167,109 +174,183 @@ class SeedPageBanner extends StatefulWidget {
                   : SeedGradients.glowMagic(isDark: colors.isDark))
             : null,
       );
+      final textScaler = MediaQuery.textScalerOf(context);
+      final t4LineHeight =
+          textScaler.scale(SeedFontSize.t4) *
+          (SeedLineHeight.t4 / SeedFontSize.t4);
+      // css 3.4.1 (#2776) keeps the prefix and suffix icons at 16px at every
+      // text scale. The first line's center is the root's x2_5 paddingBlock
+      // plus half the scaled t4 line height; the icons offset themselves from
+      // it instead of centering on the whole banner.
+      final firstLineCenter = SeedDimension.x2_5 + t4LineHeight / 2;
+
+      // With neither close button nor chevron, the link's end bleed has no
+      // reserved slot to run into, so the content box gives up 11px of the
+      // end padding to hold it.
+      final plainEnd = !hasCloseButton && !_isActionable;
       final body = Container(
-        constraints: const BoxConstraints(minHeight: SeedDimension.x10),
         // React bleeds the 40px link and close targets over the root padding
-        // with negative margins. Here the vertical padding belongs to the text
-        // and the end padding shrinks by the close target's 12px bleed, so the
-        // targets stay inside the root's hit-test bounds without growing the
-        // banner.
+        // with negative margins. Here the vertical padding lives on the text
+        // and link line boxes instead, so the targets cannot make the banner
+        // taller than its text, and the close target's 12px end bleed shrinks
+        // the end padding to 4px. The link's 11px inline bleed takes 11px of
+        // the start (and plain end) padding into the content box, which
+        // spacers give back, so Flutter hit tests the bled target.
         padding: EdgeInsetsDirectional.only(
-          start: SeedDimension.x4,
-          end: hasCloseButton ? SeedDimension.x1 : SeedDimension.x4,
+          start: SeedDimension.x4 - _linkTargetBleed,
+          end: hasCloseButton
+              ? SeedDimension.x1
+              : (plainEnd
+                    ? SeedDimension.x4 - _linkTargetBleed
+                    : SeedDimension.x4),
         ),
         // Always decorated, with an empty decoration when the bled layer
         // below paints the background, so Container builds the same tree
         // whatever extendSafeAreaX is.
         decoration: extendSafeAreaX ? const BoxDecoration() : decoration,
         child: _scaleContent(
-          Row(
-            // The official prefix icon sits on the first line of wrapped text;
-            // the suffix stays centered (alignSelf).
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Stack(
+            // The targets bleed past the content box; Flutter confines their
+            // hit testing to the banner anyway.
+            clipBehavior: Clip.none,
             children: [
-              if (prefixIcon != null) ...[
-                Padding(
-                  padding: const EdgeInsets.only(
-                    top: (SeedDimension.x10 - SeedDimension.x4) / 2,
-                  ),
-                  child: IconTheme(
-                    data: IconThemeData(color: iconColor, size: 16.0),
-                    child: prefixIcon!,
-                  ),
-                ),
-                const SizedBox(width: SeedDimension.x2),
-              ],
-              Expanded(
-                child: Wrap(
-                  alignment: WrapAlignment.spaceBetween,
-                  spacing: SeedDimension.x1_5,
-                  // The official 6px gap, less the text padding and link bleed
-                  // that overlap when the link wraps below the text.
-                  runSpacing:
-                      SeedDimension.x1_5 -
-                      SeedDimension.x2_5 -
-                      _linkTargetBleed,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(width: _linkTargetBleed),
+                  if (prefixIcon != null) ...[
                     Padding(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: SeedDimension.x2_5,
+                      // The 16px icon is centered on the first text line; it
+                      // does not scale with the text (css 3.4.1).
+                      padding: EdgeInsets.only(
+                        top: firstLineCenter - SeedDimension.x4 / 2,
                       ),
-                      child: Text.rich(
-                        TextSpan(
-                          children: [
-                            if (title != null)
-                              TextSpan(
-                                text: title,
-                                style: typography.t4Bold.copyWith(
-                                  color: fgColor,
-                                ),
-                              ),
-                            if (description != null)
-                              TextSpan(
-                                text: title == null
-                                    ? description
-                                    : '  $description',
-                                style: typography.t4Medium.copyWith(
-                                  color: fgColor,
-                                ),
-                              ),
-                          ],
+                      child: IconTheme(
+                        data: IconThemeData(
+                          color: iconColor,
+                          size: SeedDimension.x4,
                         ),
-                        style: typography.t4Medium.copyWith(color: fgColor),
+                        child: SizedBox.square(
+                          dimension: SeedDimension.x4,
+                          child: prefixIcon!,
+                        ),
                       ),
                     ),
-                    if (linkText != null)
-                      SeedPressable(
-                        semanticsLabel: linkText,
-                        focusRingInside: true,
-                        onTap: onLinkTap,
-                        builder: (context, linkPressed) => ConstrainedBox(
-                          constraints: const BoxConstraints(minHeight: 40),
-                          child: Center(
-                            widthFactor: 1,
-                            heightFactor: 1,
-                            child: Text(
-                              linkText!,
-                              style: typography.t3Bold.copyWith(color: fgColor),
+                    const SizedBox(width: SeedDimension.x2),
+                  ],
+                  Expanded(
+                    // css `margin: -11px; padding: 11px` on the link: the
+                    // Wrap runs 11px past both content edges, and every item
+                    // pads 11px back inline, so text and line breaks stay
+                    // where they were while the link target bleeds 11px.
+                    child: _Bleed(
+                      horizontal: _linkTargetBleed,
+                      child: Wrap(
+                        alignment: WrapAlignment.spaceBetween,
+                        // The official 6px gap, less both items' inline bleed.
+                        spacing: SeedDimension.x1_5 - _linkTargetBleed * 2,
+                        // The official 6px gap, less the vertical padding the
+                        // text and link line boxes carry so their targets stay
+                        // hittable without growing the banner.
+                        runSpacing: SeedDimension.x1_5 - SeedDimension.x2_5 * 2,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: _linkTargetBleed,
+                              vertical: SeedDimension.x2_5,
+                            ),
+                            child: Text.rich(
+                              TextSpan(
+                                children: [
+                                  if (title != null)
+                                    TextSpan(
+                                      text: title,
+                                      style: typography.t4Bold.copyWith(
+                                        color: fgColor,
+                                      ),
+                                    ),
+                                  if (description != null)
+                                    TextSpan(
+                                      text: title == null
+                                          ? description
+                                          : '  $description',
+                                      style: typography.t4Medium.copyWith(
+                                        color: fgColor,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              style: typography.t4Medium.copyWith(
+                                color: fgColor,
+                              ),
                             ),
                           ),
-                        ),
+                          if (linkText != null)
+                            // css pads the link 11px on every side, so its
+                            // target is 40px per line and grows with the
+                            // label's lines. Only the label plus the x2_5
+                            // line padding joins the layout; the target bleeds
+                            // the remaining 1px above and below.
+                            _Bleed(
+                              vertical:
+                                  _linkTargetBleed - SeedDimension.x2_5,
+                              child: SeedPressable(
+                                semanticsLabel: linkText,
+                                focusRingInside: true,
+                                onTap: onLinkTap,
+                                builder: (context, linkPressed) => Padding(
+                                  padding: const EdgeInsets.all(
+                                    _linkTargetBleed,
+                                  ),
+                                  child: Text(
+                                    linkText!,
+                                    style: typography.t3Bold.copyWith(
+                                      color: fgColor,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
-                  ],
-                ),
+                    ),
+                  ),
+                  // The close and suffix targets are overlaid below; reserve
+                  // their layout width so text does not run underneath them.
+                  if (hasCloseButton)
+                    const SizedBox(width: SeedDimension.x10 - SeedDimension.x1)
+                  else if (_isActionable)
+                    const SizedBox(width: SeedDimension.x2 + SeedDimension.x4)
+                  else
+                    const SizedBox(width: _linkTargetBleed),
+                ],
               ),
               if (hasCloseButton)
-                // Keeps the official 8px between the text and the 16px icon, with
-                // the 40px target's start edge overlapping the text by 4px.
-                SizedBox(
+                // React sets `margin: -12px` on the 40px target, which cancels
+                // the root's 16px inline padding down to its 4px icon overhang,
+                // so the target spans 4px to 44px inside the banner's end edge
+                // and its icon ends 16px inside it. The content box already
+                // ends 4px inside the banner, so the target sits flush with it.
+                PositionedDirectional(
+                  // css 3.4.1 (#2776) drops `align-self: center` and gives
+                  // the 40px target `marginTop: (lineHeight - 40) / 2`, so its
+                  // center sits on the first text line like the icons. A
+                  // single-line banner at 100% text is 1px shorter than the
+                  // target; it overflows by 0.5px, and taps outside the banner
+                  // are not hit tested anyway.
+                  top: firstLineCenter - SeedDimension.x10 / 2,
+                  end: 0,
+                  // Unlike css, where the later close target wins taps on the
+                  // 4px it overlaps the content box, only the 36px past the
+                  // content box hit tests, so the end of a link label stays
+                  // the link's. The target still paints all 40px.
                   width: SeedDimension.x10 - SeedDimension.x1,
                   height: SeedDimension.x10,
                   child: OverflowBox(
+                    alignment: AlignmentDirectional.centerEnd,
                     minWidth: SeedDimension.x10,
                     maxWidth: SeedDimension.x10,
-                    alignment: AlignmentDirectional.centerEnd,
                     child: SeedPressable(
                       semanticsLabel: SeedLocalizations.label(
                         context,
@@ -301,18 +382,20 @@ class SeedPageBanner extends StatefulWidget {
                     ),
                   ),
                 )
-              else if (_isActionable) ...[
-                const SizedBox(width: SeedDimension.x2),
-                Align(
-                  alignment: Alignment.center,
-                  heightFactor: 1,
+              else if (_isActionable)
+                // css 3.4.1 (#2776) drops `alignSelf: center` and offsets the
+                // suffix icon like the prefix icon, so it centers on the first
+                // text line rather than the whole banner.
+                PositionedDirectional(
+                  top: firstLineCenter - SeedDimension.x4 / 2,
+                  end: 0,
+                  width: SeedDimension.x4,
                   child: Icon(
                     Icons.chevron_right_rounded,
-                    size: 16.0,
+                    size: SeedDimension.x4,
                     color: iconColor,
                   ),
                 ),
-              ],
             ],
           ),
         ),
@@ -441,4 +524,145 @@ class _SeedPageBannerState extends State<SeedPageBanner> {
   Widget build(BuildContext context) => (widget.open ?? _open)
       ? widget._build(context, _dismiss)
       : const SizedBox.shrink();
+}
+
+/// Lays its child out [horizontal] wider on both inline sides and [vertical]
+/// taller on both block sides, and lets hit tests reach that overhang, like a
+/// CSS negative margin.
+///
+/// Its own size, and so its parent's layout, is the child's less the bleed;
+/// the parent must leave the bleed free for taps there to arrive.
+class _Bleed extends SingleChildRenderObjectWidget {
+  const _Bleed({this.horizontal = 0, this.vertical = 0, required super.child});
+
+  final double horizontal;
+  final double vertical;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderBleed(horizontal, vertical);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderBleed renderObject) {
+    renderObject
+      ..horizontal = horizontal
+      ..vertical = vertical;
+  }
+}
+
+class _RenderBleed extends RenderShiftedBox {
+  _RenderBleed(this._horizontal, this._vertical) : super(null);
+
+  double _horizontal;
+  double get horizontal => _horizontal;
+  set horizontal(double value) {
+    if (value == _horizontal) return;
+    _horizontal = value;
+    markNeedsLayout();
+  }
+
+  double _vertical;
+  double get vertical => _vertical;
+  set vertical(double value) {
+    if (value == _vertical) return;
+    _vertical = value;
+    markNeedsLayout();
+  }
+
+  BoxConstraints _childConstraints(BoxConstraints constraints) =>
+      constraints.copyWith(
+        minWidth: constraints.minWidth + _horizontal * 2,
+        maxWidth: constraints.maxWidth + _horizontal * 2,
+        minHeight: constraints.minHeight + _vertical * 2,
+        maxHeight: constraints.maxHeight + _vertical * 2,
+      );
+
+  Size _shrink(BoxConstraints constraints, Size childSize) =>
+      constraints.constrain(
+        Size(
+          math.max(0, childSize.width - _horizontal * 2),
+          math.max(0, childSize.height - _vertical * 2),
+        ),
+      );
+
+  @override
+  double computeMinIntrinsicWidth(double height) => math.max(
+    0,
+    (child?.getMinIntrinsicWidth(height + _vertical * 2) ?? 0) -
+        _horizontal * 2,
+  );
+
+  @override
+  double computeMaxIntrinsicWidth(double height) => math.max(
+    0,
+    (child?.getMaxIntrinsicWidth(height + _vertical * 2) ?? 0) -
+        _horizontal * 2,
+  );
+
+  @override
+  double computeMinIntrinsicHeight(double width) => math.max(
+    0,
+    (child?.getMinIntrinsicHeight(width + _horizontal * 2) ?? 0) -
+        _vertical * 2,
+  );
+
+  @override
+  double computeMaxIntrinsicHeight(double width) => math.max(
+    0,
+    (child?.getMaxIntrinsicHeight(width + _horizontal * 2) ?? 0) -
+        _vertical * 2,
+  );
+
+  @override
+  Size computeDryLayout(BoxConstraints constraints) {
+    final child = this.child;
+    if (child == null) return constraints.smallest;
+    return _shrink(
+      constraints,
+      child.getDryLayout(_childConstraints(constraints)),
+    );
+  }
+
+  @override
+  double? computeDryBaseline(
+    covariant BoxConstraints constraints,
+    TextBaseline baseline,
+  ) {
+    final childBaseline = child?.getDryBaseline(
+      _childConstraints(constraints),
+      baseline,
+    );
+    return childBaseline == null ? null : childBaseline - _vertical;
+  }
+
+  @override
+  void performLayout() {
+    final child = this.child;
+    if (child == null) {
+      size = constraints.smallest;
+      return;
+    }
+    child.layout(_childConstraints(constraints), parentUsesSize: true);
+    (child.parentData! as BoxParentData).offset = Offset(
+      -_horizontal,
+      -_vertical,
+    );
+    size = _shrink(constraints, child.size);
+  }
+
+  @override
+  bool hitTest(BoxHitTestResult result, {required Offset position}) {
+    final bounds = Rect.fromLTRB(
+      -_horizontal,
+      -_vertical,
+      size.width + _horizontal,
+      size.height + _vertical,
+    );
+    if (bounds.contains(position) &&
+        hitTestChildren(result, position: position)) {
+      result.add(BoxHitTestEntry(this, position));
+      return true;
+    }
+    return false;
+  }
 }
